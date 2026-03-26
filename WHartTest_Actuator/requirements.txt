@@ -1,0 +1,10 @@
+# UI自动化执行器依赖
+websockets>=12.0
+pydantic>=2.0
+httpx>=0.25.0
+tomli>=2.0  # TOML配置文件解析 (Python < 3.11)
+tomli_w>=1.0  # TOML配置文件写入
+playwright>=1.40.0  # Python原生Playwright
+
+# GUI 模式可选依赖 (设置 use_gui = true 时需要)
+# PySide6>=6.6.0

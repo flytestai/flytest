@@ -1,0 +1,77 @@
+# Environment files
+.env
+.cunzhi-memory
+.env.local
+.env.*.local
+*.env.*
+!*.env.example
+
+# IDE / Editor
+.vscode/
+.idea/
+.cursor/
+.claude/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+*.err
+logs/
+data
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+docker-images
+tmp-uiux-skill/
+ui-ux-pro-max-skill-main.zip
+WHartTest-master/
+WHartTest-master.zip
+*.zip
+
+# Cache directories
+.cache/
+.npm/
+.yarn/
+
+# Build artifacts
+build/
+dist/
+out/
+
+# Dependencies (handled by subdirectories, but backup)
+node_modules/
+nltk_data/
+
+# Python cache (handled by Django .gitignore, but backup)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Database files (project-wide)
+*.sqlite
+*.sqlite3
+*.db
+
+# Documentation build
+docs/_build/
+docs/.vitepress/cache/
+# Playwright截图目录
+playwright-screenshots/
+WHartTest_Django/chat_history.sqlite-shm
+WHartTest_Django/chat_history.sqlite-wal
+.gemini/settings.json
+WHartTest_Actuator/browsers/
+WHartTest_Django/celerybeat-schedule

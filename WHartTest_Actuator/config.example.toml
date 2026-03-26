@@ -1,0 +1,64 @@
+# UI自动化执行器配置文件
+# 复制此文件为 config.toml 并修改配置
+
+[server]
+# WebSocket服务器地址
+ws_url = "ws://127.0.0.1:8000/ws/ui/actuator/"
+# API服务器地址
+api_url = "http://127.0.0.1:8000"
+# 是否启用 GUI 登录窗口（需要安装 PySide6）
+# true = 使用图形界面登录（推荐）
+# false = 使用配置文件中的账号密码，适合服务器无头部署
+use_gui = true
+# API认证用户名（仅 use_gui=false 时有效）
+api_username = "admin"
+# API认证密码（仅 use_gui=false 时有效）
+api_password = "admin123"
+
+[actuator]
+# 执行器名称（可选，默认自动生成）
+# name = "my-actuator"
+# 执行器描述（可选）
+# description = "测试执行器"
+
+[browser]
+# 浏览器类型: chromium, firefox, webkit
+browser_type = "chromium"
+# 是否无头模式
+headless = false
+# 是否持久化浏览器上下文
+persistent = true
+# 持久化数据目录
+user_data_dir = "./data/browser"
+# 浏览器启动超时（秒）
+launch_timeout = 30
+# 操作超时（秒）
+action_timeout = 30
+
+[execution]
+# 失败重试次数
+retry_count = 3
+# 步骤间隔时间（毫秒）
+step_interval = 500
+# 截图保存目录
+screenshot_dir = "./data/screenshots"
+# 批量执行最大并发数（同时运行的用例数）
+max_concurrent = 3
+
+[trace]
+# 是否启用 Playwright Trace（用于调试回放）
+enabled = true
+# Trace 保存目录
+trace_dir = "./data/traces"
+# 是否记录截图
+screenshots = true
+# 是否记录 DOM 快照
+snapshots = true
+# 是否记录源代码
+sources = false
+
+[logging]
+# 日志级别: DEBUG, INFO, WARNING, ERROR
+level = "INFO"
+# 日志文件（可选，不设置则只输出到控制台）
+# file = "./data/logs/actuator.log"

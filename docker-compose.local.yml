@@ -1,0 +1,269 @@
+# 本地构建配置 - 用于开发环境
+# 使用方式: ./run_compose.sh local
+#
+# 此配置文件会从本地源代码构建所有镜像，适合开发调试使用
+#
+# 数据库配置:
+# - 默认使用 PostgreSQL（生产环境推荐）
+# - 如需使用 SQLite（本地开发），请设置环境变量 DATABASE_TYPE=sqlite 并注释掉 postgres 服务
+
+services:
+  # PostgreSQL 数据库服务（生产环境默认启用）
+  postgres:
+    image: ${DOCKER_POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: wharttest-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-wharttest}
+    ports:
+      - "0.0.0.0:8919:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 服务 - Celery的broker和backend
+  redis:
+    image: ${DOCKER_REDIS_IMAGE:-redis:7-alpine}
+    container_name: wharttest-redis
+    ports:
+      - "0.0.0.0:8911:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # 后端 Django 服务（包含Celery Worker和Beat）
+  backend:
+    # 本地构建模式
+    build:
+      context: ./FlyTest_Django
+      dockerfile: Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${DOCKER_PYTHON_BASE_IMAGE:-python:3.11-slim}
+        APT_BASE_URL: ${DOCKER_APT_BASE_URL:-http://deb.debian.org}
+        PIP_INDEX_URL: ${DOCKER_PIP_INDEX_URL:-https://pypi.org/simple}
+        PIP_INDEX_FALLBACKS: ${DOCKER_PIP_INDEX_FALLBACKS:-}
+        HF_ENDPOINT: ${DOCKER_HF_ENDPOINT:-https://huggingface.co}
+        NPM_REGISTRY: ${DOCKER_NPM_REGISTRY:-https://registry.npmjs.org}
+        PLAYWRIGHT_DOWNLOAD_HOST: ${DOCKER_PLAYWRIGHT_DOWNLOAD_HOST:-}
+    container_name: wharttest-backend
+    # 启动逻辑已移至 Dockerfile 的 ENTRYPOINT 和 supervisord.conf
+    ports:
+      - "0.0.0.0:8912:8000"
+    volumes:
+      - ./data:/app/data
+      - backend-static:/app/static
+      - ./FlyTest_Skills:/app/bundled_skills:ro
+    environment:
+      # 数据库配置
+      # 默认使用 PostgreSQL（生产环境推荐）
+      # 如需使用 SQLite（本地开发），请设置 DATABASE_TYPE=sqlite
+      - DATABASE_TYPE=${DATABASE_TYPE:-postgres}
+      # SQLite 配置（DATABASE_TYPE=sqlite 时使用）
+      - DATABASE_PATH=/app/data/db.sqlite3
+      # PostgreSQL 配置（DATABASE_TYPE=postgres 时使用）
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-wharttest}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      # 其他配置
+      - MEDIA_ROOT=/app/data/media
+      - DJANGO_DEBUG=True
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-change-this-in-production}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+      - DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:80,http://*:8913
+      - DJANGO_ADMIN_USERNAME=${DJANGO_ADMIN_USERNAME:-admin}
+      - DJANGO_ADMIN_EMAIL=${DJANGO_ADMIN_EMAIL:-admin@example.com}
+      - DJANGO_ADMIN_PASSWORD=${DJANGO_ADMIN_PASSWORD:-admin123456}
+      # Celery配置
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      # 内部API基础URL - 使用localhost因为在同一容器
+      - DJANGO_BASE_URL=http://localhost:8000
+      # Qdrant向量数据库
+      - QDRANT_URL=http://qdrant:6333
+      - HF_ENDPOINT=${DOCKER_HF_ENDPOINT:-https://huggingface.co}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端 Vue 服务
+  frontend:
+    # 本地构建模式
+    build:
+      context: ./FlyTest_Vue
+      dockerfile: Dockerfile
+      args:
+        NODE_BASE_IMAGE: ${DOCKER_NODE_BASE_IMAGE:-node:20-alpine}
+        NGINX_BASE_IMAGE: ${DOCKER_NGINX_BASE_IMAGE:-nginx:alpine}
+        NPM_REGISTRY: ${DOCKER_NPM_REGISTRY:-https://registry.npmjs.org}
+    container_name: wharttest-frontend
+    ports:
+      - "0.0.0.0:8913:80"
+    depends_on:
+      - backend
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # MCP 服务（独立容器）
+  mcp:
+    # 本地构建模式
+    build:
+      context: ./FlyTest_MCP
+      dockerfile: Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${DOCKER_PYTHON_BASE_IMAGE:-python:3.11-slim}
+        APT_BASE_URL: ${DOCKER_APT_BASE_URL:-http://deb.debian.org}
+        PIP_INDEX_URL: ${DOCKER_PIP_INDEX_URL:-https://pypi.org/simple}
+        PIP_INDEX_FALLBACKS: ${DOCKER_PIP_INDEX_FALLBACKS:-}
+    container_name: wharttest-mcp
+    user: root
+    environment:
+      # FlyTest Tools 配置
+      - WHARTTEST_BACKEND_URL=${WHARTTEST_BACKEND_URL:-http://backend:8000}
+      # 使用系统自动生成的默认API Key，生产环境请在.env中覆盖
+      - WHARTTEST_API_KEY=${WHARTTEST_API_KEY:-wharttest-default-mcp-key-2025}
+      # MS MCP API 配置（可选）
+      - MS_API_HOST=${MS_API_HOST:-http://ms.example.com}
+      - MS_ACCESS_KEY=${MS_ACCESS_KEY:-your_16byte_key1}
+      - MS_SECRET_KEY=${MS_SECRET_KEY:-your_16byte_key2}
+    ports:
+      - "0.0.0.0:8914:8006" # FlyTest_tools 服务端口
+      - "0.0.0.0:8915:8007" # ms_mcp_api 服务端口
+    volumes:
+      - ./data/playwright-screenshots:/tmp/playwright-output # 使用本地目录挂载
+    depends_on:
+      - backend
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Playwright MCP 服务（官方Docker镜像）
+  playwright-mcp:
+    image: ${DOCKER_PLAYWRIGHT_MCP_IMAGE:-mcr.microsoft.com/playwright/mcp}
+    container_name: wharttest-playwright-mcp
+    user: root # 以 root 用户运行,确保有权限写入挂载目录
+    entrypoint: node
+    command: [ "cli.js", "--no-sandbox", "--host", "0.0.0.0", "--allowed-hosts", "*", "--config", "/app/playwright-mcp-config.json" ]
+    ports:
+      - "0.0.0.0:8916:8931"
+    volumes:
+      - ./data/playwright-screenshots:/tmp/playwright-output # 使用本地目录挂载
+      - ./FlyTest_MCP/playwright-mcp-config.json:/app/playwright-mcp-config.json:ro # 挂载配置文件
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8931/mcp" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Xinference 模型推理服务（Embedding + Reranker）
+  # xinference:
+  #   image: xprobe/xinference:latest-cpu
+  #   container_name: wharttest-xinference
+  #   ports:
+  #     - "0.0.0.0:8917:9997"
+  #   volumes:
+  #     - xinference-data:/root/.xinference
+  #     - xinference-cache:/root/.cache/huggingface
+  #   environment:
+  #     - HF_ENDPOINT=https://hf-mirror.com
+  #   networks:
+  #     - wharttest-network
+  #   restart: unless-stopped
+  #   command: xinference-local -H 0.0.0.0
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9997/"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 60s
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 6G
+    # 启动后需要部署模型:
+    # Embedding: curl -X POST http://localhost:8917/v1/models -d '{"model_name": "bge-m3", "model_type": "embedding"}'
+    # Reranker:  curl -X POST http://localhost:8917/v1/models -d '{"model_name": "bge-reranker-v2-m3", "model_type": "rerank"}'
+
+  # Qdrant 向量数据库 - 知识库检索
+  qdrant:
+    image: ${DOCKER_QDRANT_IMAGE:-qdrant/qdrant:latest}
+    container_name: wharttest-qdrant
+    ports:
+      - "0.0.0.0:8918:6333"  # REST API
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - wharttest-network
+    restart: unless-stopped
+
+networks:
+  wharttest-network:
+    driver: bridge
+
+volumes:
+  backend-static:
+  redis-data:
+  postgres-data:
+  celery-beat-schedule:
+  xinference-data:
+  xinference-cache:
+  qdrant-data:
+    # db.sqlite3 和 media 改用本地目录挂载，不再需要 named volume
+    # playwright-screenshots 改用本地目录挂载，不再需要 named volume
+
+
+# 升级构建命令（如有需要）:
+
+# 分步骤命令:
+# docker compose -f docker-compose.local.yml build
+# docker compose -f docker-compose.local.yml up -d --force-recreate
+
+# 一步到位命令（如有需要）:
+# docker compose -f docker-compose.local.yml build && docker compose -f docker-compose.local.yml up -d --force-recreate

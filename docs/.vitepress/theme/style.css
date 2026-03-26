@@ -1,0 +1,12 @@
+/**
+ * Custom styles for FlyTest documentation
+ */
+
+/* Add any custom CSS here */
+.medium-zoom-overlay {
+  z-index: 2147483647; /* Ensure it's on top of everything */
+}
+
+.medium-zoom-image--opened {
+  z-index: 2147483647;
+}

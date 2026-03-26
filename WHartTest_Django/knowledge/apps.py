@@ -1,0 +1,67 @@
+from django.apps import AppConfig
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class KnowledgeConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'knowledge'
+    verbose_name = '知识库管理'
+
+    def ready(self):
+        """应用启动时的初始化"""
+        import sys
+        from django.db import connection
+        from django.db.utils import OperationalError
+        
+        # 注册信号处理器
+        import knowledge.signals  # noqa
+
+        # 只有在运行服务器时才执行预热，避免在迁移等命令中执行
+        if 'runserver' in sys.argv:
+            try:
+                # 检查数据库连接和表是否存在
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1 FROM knowledge_knowledgebase LIMIT 1;")
+                
+                # 预热向量存储缓存（在后台线程中执行，避免阻塞启动）
+                import threading
+                thread = threading.Thread(target=self.warmup_vector_stores)
+                thread.daemon = True
+                thread.start()
+            except OperationalError:
+                # 数据库或表不存在，跳过预热
+                logger.info("数据库或表不存在，跳过向量存储预热。")
+
+    def warmup_vector_stores(self):
+        """预热向量存储缓存"""
+        try:
+            import time
+            # 等待Django完全启动
+            time.sleep(5)
+
+            from .models import KnowledgeBase
+            from .services import KnowledgeBaseService
+
+            # 获取活跃的知识库（有文档的）
+            active_kbs = KnowledgeBase.objects.filter(
+                is_active=True,
+                documents__status='completed'
+            ).distinct()[:3]  # 只预热前3个，避免启动过慢
+
+            logger.info(f"开始预热 {active_kbs.count()} 个知识库的向量存储...")
+
+            for kb in active_kbs:
+                try:
+                    service = KnowledgeBaseService(kb)
+                    # 触发向量存储初始化
+                    _ = service.vector_manager.vector_store
+                    logger.info(f"知识库 {kb.name} 预热完成")
+                except Exception as e:
+                    logger.warning(f"知识库 {kb.name} 预热失败: {e}")
+
+            logger.info("向量存储预热完成")
+
+        except Exception as e:
+            logger.warning(f"向量存储预热失败: {e}")
