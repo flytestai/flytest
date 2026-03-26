@@ -1747,3 +1747,365 @@ h4,
 .arco-btn-primary:hover {
   box-shadow: 0 20px 34px rgba(var(--theme-accent-rgb), 0.22) !important;
 }
+
+.page-header,
+.filter-card,
+.content-card,
+.filter-section,
+.content-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before,
+.filter-card::before,
+.content-card::before,
+.filter-section::before,
+.content-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.32), transparent 26%),
+    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%);
+  pointer-events: none;
+}
+
+.page-header,
+.filter-card,
+.content-card {
+  border-radius: 24px !important;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 253, 0.92)) !important;
+  border: 1px solid rgba(149, 161, 187, 0.16) !important;
+  box-shadow: var(--theme-card-shadow) !important;
+  backdrop-filter: blur(16px);
+}
+
+.page-header h1,
+.page-header h2,
+.page-header .page-title {
+  margin: 0 !important;
+  color: var(--theme-text) !important;
+  font-size: clamp(1.45rem, 1.7vw, 2rem) !important;
+  font-weight: 700 !important;
+}
+
+.page-header p,
+.page-header .page-description,
+.page-header .header-subtitle {
+  color: var(--theme-text-secondary) !important;
+}
+
+.search-box,
+.action-buttons,
+.header-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-box .arco-input-wrapper,
+.search-box .arco-input-search,
+.search-box .arco-select-view,
+.filter-row .arco-input-wrapper,
+.filter-row .arco-select-view {
+  min-height: 46px;
+}
+
+.filter-row,
+.header-actions,
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.content-card,
+.filter-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 253, 0.9)) !important;
+  border: 1px solid rgba(149, 161, 187, 0.14) !important;
+  box-shadow: var(--theme-card-shadow) !important;
+}
+
+.content-card .arco-card-header,
+.filter-card .arco-card-header,
+.content-section .arco-card-header {
+  padding: 18px 22px !important;
+  border-bottom: 1px solid rgba(149, 161, 187, 0.12) !important;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.content-card .arco-card-body,
+.filter-card .arco-card-body {
+  padding: 20px 22px !important;
+}
+
+.permission-management,
+.user-management,
+.organization-management,
+.apikey-management,
+.remote-mcp-management,
+.automation-script-management,
+.template-management-view,
+.skills-management-view,
+.knowledge-management,
+.requirement-management,
+.test-execution-history-view,
+.test-suite-management-view,
+.project-management,
+.llm-config-management {
+  padding: 18px !important;
+}
+
+.permission-management .page-header,
+.user-management .page-header,
+.organization-management .page-header,
+.apikey-management .page-header,
+.remote-mcp-management .page-header,
+.automation-script-management .page-header,
+.skills-management-view .page-header,
+.knowledge-management .page-header,
+.requirement-management .page-header,
+.test-execution-history-view .filter-section,
+.test-suite-management-view .filter-section {
+  margin-bottom: 16px;
+}
+
+.arco-empty,
+.empty-state,
+.empty-data,
+.no-project-selected {
+  border-radius: 24px;
+}
+
+.arco-tag {
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+  padding-inline: 10px !important;
+}
+
+@media (max-width: 900px) {
+  .page-header {
+    padding: 16px 18px !important;
+  }
+
+  .permission-management,
+  .user-management,
+  .organization-management,
+  .apikey-management,
+  .remote-mcp-management,
+  .automation-script-management,
+  .template-management-view,
+  .skills-management-view,
+  .knowledge-management,
+  .requirement-management,
+  .test-execution-history-view,
+  .test-suite-management-view,
+  .project-management,
+  .llm-config-management {
+    padding: 14px !important;
+  }
+}
+
+.main-layout {
+  position: relative;
+  background:
+    radial-gradient(circle at top left, rgba(var(--theme-accent-rgb), 0.1), transparent 24%),
+    radial-gradient(circle at 84% 12%, rgba(15, 126, 168, 0.08), transparent 20%),
+    linear-gradient(180deg, #eef3fb 0%, #f8fafe 46%, #eef2f8 100%) !important;
+}
+
+.main-layout::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--theme-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--theme-grid-line) 1px, transparent 1px);
+  background-size: 36px 36px;
+  opacity: 0.34;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.32), transparent 72%);
+  pointer-events: none;
+}
+
+.main-layout > * {
+  position: relative;
+  z-index: 1;
+}
+
+.content {
+  padding: 14px !important;
+}
+
+.project-management,
+.knowledge-management,
+.requirement-management,
+.test-execution-history-view,
+.test-suite-management-view,
+.permission-management,
+.automation-script-management,
+.remote-mcp-management,
+.apikey-management,
+.user-management,
+.organization-management,
+.skills-management-view,
+.template-management-view,
+.llm-config-management,
+.review-report,
+.specialized-report-view,
+.report-detail,
+.document-detail,
+.dashboard-view {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.project-management,
+.knowledge-management,
+.requirement-management,
+.test-execution-history-view,
+.test-suite-management-view,
+.permission-management,
+.automation-script-management,
+.remote-mcp-management,
+.apikey-management,
+.user-management,
+.organization-management,
+.skills-management-view,
+.template-management-view,
+.llm-config-management,
+.review-report,
+.specialized-report-view,
+.report-detail,
+.document-detail,
+.dashboard-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-management .content-section,
+.knowledge-management .content-section,
+.requirement-management .content-section,
+.test-execution-history-view .content-section,
+.test-suite-management-view .content-section,
+.permission-management .permission-content,
+.remote-mcp-management .content-card,
+.automation-script-management .filter-card,
+.automation-script-management .content-card,
+.skills-management-view .skills-container,
+.template-management-view .template-list-card,
+.document-detail .info-card,
+.document-detail .modules-card,
+.report-detail .report-card,
+.review-report .report-container,
+.specialized-report-view .report-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 253, 0.9)) !important;
+  border: 1px solid rgba(149, 161, 187, 0.14) !important;
+  border-radius: 26px !important;
+  box-shadow: var(--theme-card-shadow) !important;
+  backdrop-filter: blur(18px);
+}
+
+.project-management .content-section,
+.knowledge-management .content-section,
+.requirement-management .content-section,
+.test-execution-history-view .content-section,
+.test-suite-management-view .content-section,
+.remote-mcp-management .content-card,
+.automation-script-management .content-card,
+.skills-management-view .skills-container,
+.template-management-view .template-list-card,
+.document-detail .info-card,
+.document-detail .modules-card,
+.report-detail .report-card,
+.review-report .report-container,
+.specialized-report-view .report-card {
+  overflow: hidden;
+}
+
+.testcase-management-container {
+  background: transparent !important;
+  gap: 16px;
+}
+
+.testcase-management-container .list-view-layout {
+  gap: 16px !important;
+}
+
+.testcase-management-container .module-panel-wrapper,
+.testcase-management-container .right-content-area {
+  border-radius: 28px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 253, 0.88)) !important;
+  border: 1px solid rgba(149, 161, 187, 0.14) !important;
+  box-shadow: var(--theme-card-shadow) !important;
+  backdrop-filter: blur(18px);
+}
+
+.testcase-management-container .right-content-area {
+  padding: 24px !important;
+}
+
+.chat-layout {
+  gap: 16px;
+  background: transparent !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.chat-sidebar,
+.chat-container {
+  border-radius: 28px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(246, 249, 253, 0.9)) !important;
+  border: 1px solid rgba(149, 161, 187, 0.14) !important;
+  box-shadow: var(--theme-card-shadow) !important;
+  backdrop-filter: blur(18px);
+}
+
+.chat-container {
+  overflow: hidden !important;
+}
+
+.chat-header-container,
+.chat-input-container {
+  background: rgba(255, 255, 255, 0.66) !important;
+  border-color: rgba(149, 161, 187, 0.12) !important;
+}
+
+.chat-messages {
+  background:
+    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.05), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(247, 250, 253, 0.66)) !important;
+}
+
+.no-project-selected,
+.no-permission-panel,
+.empty-state,
+.empty-data,
+.loading-state,
+.error-state {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 250, 253, 0.9)) !important;
+  border: 1px solid rgba(149, 161, 187, 0.14) !important;
+  box-shadow: var(--theme-card-shadow) !important;
+}
