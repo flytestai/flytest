@@ -30,6 +30,10 @@
             />
           </a-select>
         </div>
+        <div class="workspace-badge">
+          <span class="workspace-dot"></span>
+          <span>AI Workspace</span>
+        </div>
       </div>
       <div class="user-info">
         <button
@@ -1181,5 +1185,142 @@ onMounted(async () => {
 
 .collapse-button:hover {
   background: rgba(var(--theme-accent-rgb), 0.08);
+}
+
+.main-layout {
+  position: relative;
+}
+
+.main-layout::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(var(--theme-accent-rgb), 0.1), transparent 22%),
+    radial-gradient(circle at 88% 16%, rgba(15, 126, 168, 0.08), transparent 18%);
+  pointer-events: none;
+}
+
+.workspace-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.workspace-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #34d399, #0ea5e9);
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+}
+
+.header {
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.26), transparent 26%),
+    radial-gradient(circle at 82% 12%, rgba(var(--theme-accent-rgb), 0.1), transparent 20%);
+  pointer-events: none;
+}
+
+.header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.logo-mark {
+  position: relative;
+}
+
+.logo-mark::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 20px;
+  background: radial-gradient(circle, rgba(var(--theme-accent-rgb), 0.12), transparent 72%);
+  z-index: -1;
+}
+
+.project-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.project-selector :deep(.arco-select-view) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.sider {
+  position: relative;
+  overflow: hidden;
+}
+
+.sider::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), transparent 16%),
+    radial-gradient(circle at top center, rgba(var(--theme-accent-rgb), 0.08), transparent 24%);
+  pointer-events: none;
+}
+
+.menu {
+  position: relative;
+  z-index: 1;
+}
+
+:deep(.arco-menu-light .arco-menu-item),
+:deep(.arco-menu-light .arco-menu-inline-header) {
+  padding-left: 16px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+:deep(.arco-menu-light .arco-menu-inline .arco-menu-item) {
+  padding-left: 16px !important;
+}
+
+.content {
+  position: relative;
+  overflow: hidden;
+}
+
+.content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 18%),
+    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%);
+  pointer-events: none;
+}
+
+.content > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 1100px) {
+  .workspace-badge {
+    display: none;
+  }
 }
 </style>

@@ -428,7 +428,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .tag-item {
@@ -437,13 +437,15 @@ onBeforeUnmount(() => {
 }
 
 .tag {
-  padding: 4px 14px;
+  padding: 8px 20px;
   border: 1px solid rgba(100, 180, 255, 0.15);
   border-radius: 999px;
   background: rgba(100, 180, 255, 0.08);
   backdrop-filter: blur(4px);
   color: rgba(180, 210, 255, 0.85);
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: default;
   transition: transform 0.24s ease, border-color 0.24s ease, background-color 0.24s ease, color 0.24s ease;
 }
@@ -461,8 +463,8 @@ onBeforeUnmount(() => {
   left: 50%;
   top: calc(100% + 12px);
   z-index: 3;
-  width: min(240px, calc(100vw - 48px));
-  padding: 12px 14px;
+  width: min(280px, calc(100vw - 48px));
+  padding: 14px 16px;
   border: 1px solid rgba(100, 180, 255, 0.15);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(8, 18, 34, 0.9), rgba(10, 22, 40, 0.92));
@@ -493,15 +495,15 @@ onBeforeUnmount(() => {
   display: block;
   margin-bottom: 6px;
   color: #f3f8ff;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .tag-tooltip p {
   margin: 0;
   color: rgba(194, 213, 244, 0.82);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .tag-item:hover .tag-tooltip,
@@ -910,7 +912,7 @@ onBeforeUnmount(() => {
   }
 
   .brand-tags {
-    gap: 6px;
+    gap: 8px;
   }
 
   .tag-item {
@@ -918,13 +920,13 @@ onBeforeUnmount(() => {
   }
 
   .tag {
-    padding: 3px 10px;
-    font-size: 11px;
+    padding: 5px 12px;
+    font-size: 12px;
   }
 
   .tag-tooltip {
-    width: min(220px, calc(100vw - 36px));
-    padding: 11px 12px;
+    width: min(240px, calc(100vw - 36px));
+    padding: 12px 14px;
   }
 }
 </style>

@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 from typing import Optional, Callable, Any
+from urllib.parse import urlparse
 import websockets
 from websockets.client import WebSocketClientProtocol
 
@@ -34,14 +35,28 @@ class WebSocketClient:
     def set_message_handler(self, handler: Callable[[SocketDataModel], Any]):
         """设置消息处理器"""
         self._message_handler = handler
+
+    def _build_origin(self) -> Optional[str]:
+        source_url = getattr(self.config, 'api_url', None) if self.config else None
+        if not source_url:
+            source_url = self.url
+
+        parsed = urlparse(source_url)
+        if not parsed.netloc:
+            return None
+
+        scheme = 'https' if parsed.scheme in ('https', 'wss') else 'http'
+        return f'{scheme}://{parsed.netloc}'
     
     async def connect(self) -> bool:
         """建立WebSocket连接"""
         try:
             # 连接URL带上actuator_id
             connect_url = f"{self.url}?{self.actuator_id}"
+            origin = self._build_origin()
             self.websocket = await websockets.connect(
                 connect_url,
+                origin=origin,
                 ping_interval=30,
                 ping_timeout=10,
                 close_timeout=10

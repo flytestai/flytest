@@ -16,6 +16,33 @@
 
     <!-- 有权限时显示正常内容 -->
     <div v-else>
+      <section class="workspace-hero workspace-hero--projects">
+        <div class="workspace-hero-copy">
+          <span class="workspace-hero-eyebrow">Project Command</span>
+          <h2 class="workspace-hero-title">FlyTest 项目中枢</h2>
+          <p class="workspace-hero-description">
+            将项目、成员、环境与测试资产统一纳入智能测试驾驶舱，让 AI 生成、自动化执行与协同治理从一开始就拥有清晰的组织边界。
+          </p>
+          <div class="workspace-chip-row">
+            <span class="workspace-chip">项目矩阵</span>
+            <span class="workspace-chip">权限协同</span>
+            <span class="workspace-chip">环境基线</span>
+            <span class="workspace-chip">智能编排</span>
+          </div>
+        </div>
+        <div class="workspace-hero-stats">
+          <div class="workspace-stat-card">
+            <span class="workspace-stat-value">{{ pagination.total || projectData.length }}</span>
+            <span class="workspace-stat-label">项目总量</span>
+          </div>
+          <div class="workspace-stat-card">
+            <span class="workspace-stat-value">{{ hasProjectPermission ? 'OK' : '--' }}</span>
+            <span class="workspace-stat-label">管理权限</span>
+          </div>
+        </div>
+        <div class="workspace-hero-orb" aria-hidden="true"></div>
+      </section>
+
       <div class="page-header">
         <div class="search-box">
           <a-input-search
@@ -1104,5 +1131,35 @@ const deleteProject = (project: Project, event?: Event) => {
 
 :deep(.arco-table-container) {
   overflow-x: auto;
+}
+
+.project-management {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.page-header {
+  padding: 20px 22px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(246, 249, 253, 0.9));
+  border: 1px solid rgba(149, 161, 187, 0.14);
+  box-shadow: var(--theme-card-shadow);
+}
+
+:deep(.arco-table) {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.no-permission-content {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 253, 0.9));
+  border: 1px solid rgba(149, 161, 187, 0.14);
+  box-shadow: var(--theme-card-shadow);
+  border-radius: 24px;
 }
 </style>

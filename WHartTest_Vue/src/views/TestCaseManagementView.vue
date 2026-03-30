@@ -1,5 +1,6 @@
-<template>
+﻿<template>
   <div class="testcase-management-container">
+
     <!-- 始终显示模块管理面板 -->
     <div class="list-view-layout">
       <ModuleManagementPanel
@@ -727,3 +728,4 @@ onMounted(() => {
   /* 不要用 !important 覆盖 overflow 和 padding，让子组件自行控制滚动 */
 }
 </style>
+

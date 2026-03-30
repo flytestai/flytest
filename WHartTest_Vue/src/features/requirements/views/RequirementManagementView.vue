@@ -1,5 +1,32 @@
 <template>
   <div class="requirement-management">
+    <section class="workspace-hero workspace-hero--requirements">
+      <div class="workspace-hero-copy">
+        <span class="workspace-hero-eyebrow">Requirement Intelligence</span>
+        <h2 class="workspace-hero-title">{{ projectStore.currentProject?.name || '当前项目' }} 需求评审中心</h2>
+        <p class="workspace-hero-description">
+          让需求文档接入 AI 理解、结构化拆解与评审闭环，在上传、分析、复审到报告沉淀之间形成更专业的测试输入中台。
+        </p>
+        <div class="workspace-chip-row">
+          <span class="workspace-chip">AI 语义理解</span>
+          <span class="workspace-chip">结构化拆解</span>
+          <span class="workspace-chip">评审闭环</span>
+          <span class="workspace-chip">报告沉淀</span>
+        </div>
+      </div>
+      <div class="workspace-hero-stats">
+        <div class="workspace-stat-card">
+          <span class="workspace-stat-value">{{ pagination.total || documentList.length }}</span>
+          <span class="workspace-stat-label">需求文档</span>
+        </div>
+        <div class="workspace-stat-card">
+          <span class="workspace-stat-value">{{ currentProjectId || '--' }}</span>
+          <span class="workspace-stat-label">项目编号</span>
+        </div>
+      </div>
+      <div class="workspace-hero-orb" aria-hidden="true"></div>
+    </section>
+
     <!-- 搜索和筛选 -->
     <div class="filter-section">
       <div class="filter-row">
@@ -861,5 +888,40 @@ projectStore.$subscribe((_mutation, state) => {
   display: flex;
   justify-content: center;
   gap: 4px;
+}
+
+.requirement-management {
+  gap: 16px;
+}
+
+.filter-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-section::before,
+.content-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 22%),
+    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 22%);
+  pointer-events: none;
+}
+
+.filter-row,
+.content-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+.filter-section {
+  padding: 18px 22px;
+  border-radius: 24px;
+}
+
+.content-section {
+  border-radius: 26px;
 }
 </style>

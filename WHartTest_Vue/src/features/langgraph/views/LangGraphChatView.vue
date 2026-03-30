@@ -13,6 +13,33 @@
 
     <!-- 右侧聊天区域 -->
     <div class="chat-container">
+      <section class="workspace-hero workspace-hero--chat workspace-hero--compact">
+        <div class="workspace-hero-copy">
+          <span class="workspace-hero-eyebrow">AI Conversation</span>
+          <h2 class="workspace-hero-title">{{ projectStore.currentProject?.name || '当前项目' }} AI 对话中枢</h2>
+          <p class="workspace-hero-description">
+            让模型推理、知识检索、工具调用与执行反馈在一块高级工作台内连续协同，形成更有掌控感的智能测试交互体验。
+          </p>
+          <div class="workspace-chip-row">
+            <span class="workspace-chip">RAG 增强</span>
+            <span class="workspace-chip">工具编排</span>
+            <span class="workspace-chip">多轮推理</span>
+            <span class="workspace-chip">执行反馈</span>
+          </div>
+        </div>
+        <div class="workspace-hero-stats">
+          <div class="workspace-stat-card">
+            <span class="workspace-stat-value">{{ chatSessions.length }}</span>
+            <span class="workspace-stat-label">会话数量</span>
+          </div>
+          <div class="workspace-stat-card">
+            <span class="workspace-stat-value">{{ useKnowledgeBase ? 'ON' : 'OFF' }}</span>
+            <span class="workspace-stat-label">知识增强</span>
+          </div>
+        </div>
+        <div class="workspace-hero-orb" aria-hidden="true"></div>
+      </section>
+
       <ChatHeader
         ref="chatHeaderRef"
         :session-id="sessionId"
@@ -2299,5 +2326,55 @@ export default {
   max-height: 60vh;
   object-fit: contain;
   cursor: pointer;
+}
+
+.chat-layout {
+  gap: 16px;
+  padding: 0;
+}
+
+.chat-sidebar {
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.chat-container {
+  border-radius: 30px;
+}
+
+.chat-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 14%),
+    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 22%);
+  pointer-events: none;
+}
+
+.chat-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+.chat-header-container {
+  border-bottom: 1px solid rgba(149, 161, 187, 0.12);
+}
+
+.chat-input-container {
+  border-top: 1px solid rgba(149, 161, 187, 0.12);
+}
+
+.floating-tool-image-panel {
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 250, 253, 0.92));
+  border: 1px solid rgba(149, 161, 187, 0.14);
+  box-shadow: var(--theme-card-shadow-strong);
+  backdrop-filter: blur(18px);
+}
+
+.floating-panel-header {
+  background: rgba(245, 248, 252, 0.94);
 }
 </style>
