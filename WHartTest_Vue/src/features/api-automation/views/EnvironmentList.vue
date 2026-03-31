@@ -4,9 +4,9 @@
       <div class="header-left">
         <a-input-search
           v-model="searchKeyword"
+          class="toolbar-search"
           placeholder="搜索环境名称"
           allow-clear
-          style="width: 260px"
           @search="loadEnvironments"
           @clear="loadEnvironments"
         />
@@ -17,7 +17,7 @@
     </div>
 
     <div class="content-section">
-      <a-table :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id">
+      <a-table :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id" size="large">
         <template #columns>
           <a-table-column title="环境名称" data-index="name" :width="220" />
           <a-table-column title="基础地址" data-index="base_url" ellipsis tooltip />
@@ -325,6 +325,21 @@ defineExpose({
   justify-content: flex-end;
 }
 
+.toolbar-search {
+  width: 320px;
+  max-width: 100%;
+}
+
+.header-left :deep(.arco-input-wrapper),
+.header-right :deep(.arco-btn) {
+  min-height: 42px;
+}
+
+.header-right :deep(.arco-btn) {
+  padding-inline: 18px;
+  border-radius: 14px;
+}
+
 .content-section :deep(.arco-table-container) {
   border-radius: 24px;
   overflow: hidden;
@@ -386,7 +401,8 @@ defineExpose({
   }
 
   .header-left,
-  .header-right {
+  .header-right,
+  .toolbar-search {
     width: 100%;
   }
 

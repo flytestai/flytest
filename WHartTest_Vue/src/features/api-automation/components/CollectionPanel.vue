@@ -1,10 +1,16 @@
 <template>
   <div class="collection-panel-wrapper">
-    <a-card class="collection-panel" :bordered="false" title="接口集合">
+    <a-card class="collection-panel" :bordered="false">
       <div class="collection-panel-content">
+        <div class="collection-panel-head">
+          <div class="collection-panel-head__eyebrow">Collection Directory</div>
+          <div class="collection-panel-head__title">接口集合</div>
+          <div class="collection-panel-head__desc">选择一个接口集合后，右侧会直接切换到对应的接口与测试用例工作区。</div>
+        </div>
         <div class="collection-panel-header">
           <a-input-search
             v-model="searchKeyword"
+            class="collection-search"
             placeholder="搜索接口集合"
             allow-clear
             @search="onSearch"
@@ -286,8 +292,8 @@ defineExpose({
 
 <style scoped>
 .collection-panel-wrapper {
-  width: 320px;
-  min-width: 280px;
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   height: 100%;
   display: flex;
@@ -297,33 +303,64 @@ defineExpose({
 
 .collection-panel {
   height: 100%;
-  border-radius: 26px;
+  border-radius: 24px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-}
-
-.collection-panel :deep(.arco-card-header) {
-  padding: 22px 22px 10px;
-  border-bottom: none;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .collection-panel :deep(.arco-card-body) {
   height: 100%;
-  padding: 0 22px 22px;
+  padding: 22px;
 }
 
 .collection-panel-content {
   display: flex;
   height: 100%;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
+}
+
+.collection-panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.collection-panel-head__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.collection-panel-head__title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.collection-panel-head__desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #64748b;
 }
 
 .collection-panel-header {
   display: flex;
   gap: 12px;
-  margin-bottom: 4px;
+  align-items: center;
+}
+
+.collection-search {
+  flex: 1;
+}
+
+.collection-panel-header :deep(.arco-input-wrapper),
+.collection-actions :deep(.arco-btn) {
+  min-height: 42px;
 }
 
 .collection-actions {
@@ -332,13 +369,15 @@ defineExpose({
 }
 
 .collection-action-button {
-  min-width: 72px;
+  min-width: 84px;
+  padding-inline: 18px;
+  border-radius: 14px;
 }
 
 .tree-container {
   flex: 1;
   overflow: auto;
-  padding: 8px 4px 4px 0;
+  padding: 4px 2px 0 0;
 }
 
 .tree-container :deep(.arco-tree-node) {
@@ -346,9 +385,10 @@ defineExpose({
 }
 
 .tree-container :deep(.arco-tree-node-title) {
-  padding: 10px 14px;
-  border-radius: 14px;
+  padding: 12px 16px;
+  border-radius: 16px;
   font-size: 14px;
+  line-height: 1.6;
 }
 
 .tree-container :deep(.arco-tree-node-title:hover) {
@@ -369,8 +409,12 @@ defineExpose({
 @media (max-width: 768px) {
   .collection-panel-wrapper {
     width: 100%;
-    height: 340px;
+    height: 320px;
     min-width: 0;
+  }
+
+  .collection-panel-head__title {
+    font-size: 24px;
   }
 }
 </style>

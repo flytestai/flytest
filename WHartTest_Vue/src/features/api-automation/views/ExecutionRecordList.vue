@@ -4,9 +4,9 @@
       <div class="header-left">
         <a-input-search
           v-model="searchKeyword"
+          class="toolbar-search"
           placeholder="搜索执行记录"
           allow-clear
-          style="width: 260px"
           @search="loadRecords"
           @clear="loadRecords"
         />
@@ -17,7 +17,7 @@
     </div>
 
     <div class="content-section">
-      <a-table :data="filteredRecords" :loading="loading" :pagination="false" row-key="id">
+      <a-table :data="filteredRecords" :loading="loading" :pagination="false" row-key="id" size="large">
         <template #columns>
           <a-table-column title="接口名称" data-index="request_name" :width="220" ellipsis tooltip />
           <a-table-column title="方法" :width="90">
@@ -230,6 +230,21 @@ defineExpose({
   justify-content: flex-end;
 }
 
+.toolbar-search {
+  width: 320px;
+  max-width: 100%;
+}
+
+.header-left :deep(.arco-input-wrapper),
+.header-right :deep(.arco-btn) {
+  min-height: 42px;
+}
+
+.header-right :deep(.arco-btn) {
+  padding-inline: 18px;
+  border-radius: 14px;
+}
+
 .content-section :deep(.arco-table-container) {
   border-radius: 24px;
   overflow: hidden;
@@ -271,7 +286,8 @@ defineExpose({
   }
 
   .header-left,
-  .header-right {
+  .header-right,
+  .toolbar-search {
     width: 100%;
   }
 

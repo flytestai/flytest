@@ -1,17 +1,23 @@
 <template>
   <div class="test-case-list">
     <div class="page-header api-page-header">
-      <div class="header-left">
+      <div class="page-summary">
+        <div class="page-summary__eyebrow">Case Hub</div>
+        <div class="page-summary__title">测试用例</div>
+        <div class="page-summary__meta">
+          <span>{{ selectedCollectionName || '未选择接口集合' }}</span>
+          <span>共 {{ testCases.length }} 条测试用例</span>
+        </div>
+      </div>
+      <div class="page-toolbar">
         <a-input-search
           v-model="searchKeyword"
+          class="toolbar-search"
           placeholder="搜索测试用例"
           allow-clear
-          style="width: 260px"
           @search="loadTestCases"
           @clear="loadTestCases"
         />
-      </div>
-      <div class="header-right">
         <div class="toolbar-group toolbar-group--filter">
           <a-select
             v-model="selectedEnvironmentId"
@@ -49,6 +55,8 @@
         :loading="loading"
         :pagination="false"
         row-key="id"
+        size="large"
+        :scroll="{ x: 1160 }"
         :row-selection="testCaseRowSelection"
       >
         <template #columns>
@@ -135,6 +143,7 @@ import type { ApiEnvironment, ApiExecutionBatchResult, ApiExecutionRecord, ApiTe
 
 const props = defineProps<{
   selectedCollectionId?: number
+  selectedCollectionName?: string
 }>()
 
 const emit = defineEmits<{
@@ -388,32 +397,75 @@ defineExpose({
 }
 
 .api-page-header {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.1fr) minmax(520px, 1.6fr);
+  align-items: end;
   justify-content: space-between;
-  gap: 18px;
-  padding: 22px 24px;
+  gap: 22px;
+  padding: 24px 26px;
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
   border: 1px solid rgba(148, 163, 184, 0.14);
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
 }
 
-.header-left,
-.header-right {
+.page-summary,
+.page-toolbar {
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
 }
 
-.header-left {
-  flex: 1 1 260px;
-  min-width: 220px;
+.page-summary {
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
-.header-right {
-  flex: 1 1 520px;
+.page-summary__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.page-summary__title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.08;
+  color: #0f172a;
+}
+
+.page-summary__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #64748b;
+}
+
+.page-summary__meta span {
+  position: relative;
+  padding-right: 12px;
+}
+
+.page-summary__meta span:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.9);
+  transform: translateY(-50%);
+}
+
+.page-toolbar {
   justify-content: flex-end;
 }
 
@@ -429,7 +481,23 @@ defineExpose({
 }
 
 .toolbar-select {
-  width: 220px;
+  width: 240px;
+}
+
+.toolbar-search {
+  width: 320px;
+  max-width: 100%;
+}
+
+.page-toolbar :deep(.arco-input-wrapper),
+.toolbar-group :deep(.arco-select-view),
+.toolbar-group :deep(.arco-btn) {
+  min-height: 42px;
+}
+
+.toolbar-group :deep(.arco-btn) {
+  padding-inline: 16px;
+  border-radius: 14px;
 }
 
 .empty-tip-card {
@@ -481,7 +549,11 @@ defineExpose({
 }
 
 @media (max-width: 1200px) {
-  .header-right {
+  .api-page-header {
+    grid-template-columns: 1fr;
+  }
+
+  .page-toolbar {
     justify-content: flex-start;
   }
 }
@@ -489,13 +561,19 @@ defineExpose({
 @media (max-width: 768px) {
   .api-page-header {
     align-items: stretch;
+    padding: 20px;
   }
 
-  .header-left,
-  .header-right,
+  .page-summary,
+  .page-toolbar,
   .toolbar-group,
+  .toolbar-search,
   .toolbar-select {
     width: 100%;
+  }
+
+  .page-summary__title {
+    font-size: 24px;
   }
 
   .toolbar-select {

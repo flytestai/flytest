@@ -6,6 +6,7 @@
         v-show="activeTab === 'requests'"
         ref="requestListRef"
         :selected-collection-id="selectedCollectionId"
+        :selected-collection-name="selectedCollection?.name"
         @executed="executionRecordListRef?.refresh?.()"
         @updated="onRequestUpdated"
       />
@@ -13,6 +14,7 @@
         v-show="activeTab === 'test-cases'"
         ref="testCaseListRef"
         :selected-collection-id="selectedCollectionId"
+        :selected-collection-name="selectedCollection?.name"
         @executed="executionRecordListRef?.refresh?.()"
       />
       <EnvironmentList
@@ -43,6 +45,7 @@ const route = useRoute()
 const router = useRouter()
 
 const selectedCollectionId = ref<number | undefined>(undefined)
+const selectedCollection = ref<ApiCollection | null>(null)
 
 const collectionPanelRef = ref()
 const requestListRef = ref()
@@ -62,6 +65,7 @@ const activeTab = computed<ApiAutomationTab>(() => normalizeTab(route.query.tab)
 
 const onCollectionSelect = (collection: ApiCollection | null) => {
   selectedCollectionId.value = collection?.id
+  selectedCollection.value = collection
 }
 
 const onCollectionUpdated = () => {
@@ -112,46 +116,32 @@ watch(activeTab, newTab => {
 
 <style scoped>
 .api-automation-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr);
   width: 100%;
   height: 100%;
-  gap: 18px;
+  gap: 20px;
   overflow: hidden;
-  padding: 8px;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.82));
-  border-radius: 28px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .api-automation-layout {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
 .layout-content {
-  flex: 1;
+  min-width: 0;
   height: 100%;
   overflow: auto;
-  display: flex;
-  flex-direction: column;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94));
-  border-radius: 26px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-  padding: 28px;
+  display: block;
 }
 
 @media (max-width: 1200px) {
   .api-automation-layout {
-    gap: 14px;
-    padding: 4px;
-  }
-
-  .layout-content {
-    padding: 22px;
+    grid-template-columns: 272px minmax(0, 1fr);
+    gap: 16px;
   }
 }
 </style>

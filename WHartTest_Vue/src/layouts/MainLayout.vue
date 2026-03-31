@@ -102,8 +102,8 @@
     <a-layout class="inner-layout">
       <!-- 左侧菜单栏 -->
       <a-layout-sider
-        :width="170"
-        :collapsed-width="50"
+        :width="196"
+        :collapsed-width="56"
         :collapsed="collapsed"
         :trigger="null"
         hide-trigger
@@ -1204,11 +1204,12 @@ onMounted(async () => {
 
 :deep(.arco-menu-light .arco-menu-item),
 :deep(.arco-menu-light .arco-menu-inline-header) {
-  min-height: 44px;
-  margin-bottom: 6px;
+  min-height: 46px;
+  margin-bottom: 8px;
   border-radius: 16px;
   color: var(--theme-text-secondary);
   font-weight: 600;
+  font-size: 15px;
   transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
@@ -1353,12 +1354,12 @@ onMounted(async () => {
 
 :deep(.arco-menu-light .arco-menu-item),
 :deep(.arco-menu-light .arco-menu-inline-header) {
-  padding-left: 16px !important;
+  padding-left: 18px !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
 :deep(.arco-menu-light .arco-menu-inline .arco-menu-item) {
-  padding-left: 16px !important;
+  padding-left: 18px !important;
 }
 
 .content {
