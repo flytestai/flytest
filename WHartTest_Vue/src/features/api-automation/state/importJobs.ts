@@ -36,6 +36,11 @@ const clearImportJobPolling = () => {
   }
 }
 
+const removeTrackedJob = (jobId: number) => {
+  trackedImportJobIds.value = trackedImportJobIds.value.filter(id => id !== jobId)
+  persistTrackedImportJobs()
+}
+
 const rememberRecentImportJob = (job: ApiImportJob) => {
   recentImportJobs.value = [job, ...recentImportJobs.value.filter(item => item.id !== job.id)].slice(0, 8)
 }
@@ -54,6 +59,13 @@ const notifyJobFailed = (job: ApiImportJob) => {
   Notification.error({
     title: '接口文档解析失败',
     content: job.error_message || job.progress_message || '后台解析任务失败，请稍后重试。',
+  })
+}
+
+const notifyJobCanceled = (job: ApiImportJob) => {
+  Notification.info({
+    title: '接口文档解析已停止',
+    content: job.progress_message || '后台解析任务已手动停止。',
   })
 }
 
@@ -83,21 +95,26 @@ const pollImportJobs = async () => {
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
 
   jobs
-    .filter(job => job.status === 'success' || job.status === 'failed')
+    .filter(job => job.status === 'success' || job.status === 'failed' || job.status === 'canceled')
     .forEach(job => rememberRecentImportJob(job))
 
   for (const job of jobs) {
     if (job.status === 'success') {
-      trackedImportJobIds.value = trackedImportJobIds.value.filter(id => id !== job.id)
-      persistTrackedImportJobs()
+      removeTrackedJob(job.id)
       notifyJobSuccess(job)
       await emitFinished(job)
       continue
     }
     if (job.status === 'failed') {
-      trackedImportJobIds.value = trackedImportJobIds.value.filter(id => id !== job.id)
-      persistTrackedImportJobs()
+      removeTrackedJob(job.id)
       notifyJobFailed(job)
+      importTaskVisible.value = true
+      await emitFinished(job)
+      continue
+    }
+    if (job.status === 'canceled') {
+      removeTrackedJob(job.id)
+      notifyJobCanceled(job)
       importTaskVisible.value = true
       await emitFinished(job)
     }
@@ -141,6 +158,17 @@ const trackImportJob = (job: ApiImportJob) => {
   ensureImportJobPolling()
 }
 
+const cancelImportJob = async (jobId: number) => {
+  const res = await importJobApi.cancel(jobId)
+  const job = (res.data?.data || res.data) as ApiImportJob
+  activeImportJobs.value = [job, ...activeImportJobs.value.filter(item => item.id !== job.id)]
+  if (job.status === 'canceled') {
+    removeTrackedJob(job.id)
+    rememberRecentImportJob(job)
+  }
+  return job
+}
+
 const registerFinishedHandler = (handler: FinishedHandler) => {
   finishHandlers.add(handler)
   return () => {
@@ -156,6 +184,7 @@ export const useApiImportJobs = () => {
     importTaskVisible,
     syncProject,
     trackImportJob,
+    cancelImportJob,
     pollImportJobs,
     registerFinishedHandler,
     clearImportJobPolling,

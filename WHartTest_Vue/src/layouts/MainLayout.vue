@@ -134,11 +134,6 @@
             <a href="#" @click="checkProjectAndNavigate($event, '/requirements')">需求管理</a>
           </a-menu-item>
 
-          <a-menu-item key="ai-diagram" v-if="hasLangGraphChatPermission">
-            <template #icon><icon-mind-mapping /></template>
-            <a href="#" @click="checkProjectAndNavigate($event, '/ai-diagram')">智能图表</a>
-          </a-menu-item>
-
           <a-sub-menu key="api-automation" v-if="hasApiAutomationMenuItems">
             <template #icon><icon-code-block /></template>
             <template #title>
@@ -159,6 +154,10 @@
             <a-menu-item key="api-automation-execution-records" v-if="hasApiAutomationPermission">
               <template #icon><icon-history /></template>
               <a href="#" @click="checkProjectAndNavigate($event, '/api-automation?tab=execution-records')">执行历史</a>
+            </a-menu-item>
+            <a-menu-item key="api-automation-execution-report" v-if="hasApiAutomationPermission">
+              <template #icon><icon-bar-chart /></template>
+              <a href="#" @click="checkProjectAndNavigate($event, '/api-automation?tab=execution-report')">测试报告</a>
             </a-menu-item>
           </a-sub-menu>
 
@@ -308,6 +307,7 @@ import {
   IconExperiment,
   IconHome,
   IconComputer,
+  IconBarChart,
   IconSunFill,
   IconMoonFill,
 } from '@arco-design/web-vue/es/icon';
@@ -384,6 +384,7 @@ const activeMenu = computed(() => {
     if (tab === 'test-cases') return 'api-automation-test-cases';
     if (tab === 'environments') return 'api-automation-environments';
     if (tab === 'execution-records') return 'api-automation-execution-records';
+    if (tab === 'execution-report') return 'api-automation-execution-report';
     return 'api-automation-requests';
   }
   if (path.startsWith('/knowledge-management')) return 'knowledge-management';

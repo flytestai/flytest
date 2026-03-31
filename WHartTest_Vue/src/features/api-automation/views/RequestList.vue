@@ -336,7 +336,14 @@
           {{ importProgressError || '请检查文档是否包含接口名称、请求方式、请求地址、参数说明和成功响应描述。' }}
         </a-alert>
 
-        <div v-if="importProgressStatus === 'error'" class="import-progress-actions">
+        <div class="import-progress-actions" :class="{ 'is-error-only': importProgressStatus === 'error' }">
+          <a-button
+            v-if="currentImportJob && canCancelImportJob(currentImportJob)"
+            status="danger"
+            @click="handleCancelImportJob(currentImportJob)"
+          >
+            停止解析
+          </a-button>
           <a-button @click="resetImportProgress">返回重新导入</a-button>
         </div>
       </div>
@@ -639,7 +646,7 @@ const importProgressMessage = ref('')
 const importProgressError = ref('')
 const importProgressFileName = ref('')
 
-const { syncProject, trackImportJob, registerFinishedHandler } = useApiImportJobs()
+const { activeImportJobs, syncProject, trackImportJob, registerFinishedHandler, cancelImportJob } = useApiImportJobs()
 
 const importProgressSteps = [
   { title: '上传接口文档', description: '将 Word、PDF、Swagger 等接口文档上传到 FlyTest。' },
@@ -695,6 +702,15 @@ const importProgressRatio = computed(() => {
   const clamped = Math.max(0, Math.min(importProgressPercent.value, 100))
   return clamped / 100
 })
+
+const currentImportJob = computed(() => {
+  if (!projectId.value) return null
+  return activeImportJobs.value.find(job => job.project === projectId.value) || null
+})
+
+const canCancelImportJob = (job: ApiImportJob) => {
+  return (job.status === 'pending' || job.status === 'running') && !job.cancel_requested
+}
 
 const getImportStepClass = (index: number) => {
   if (importProgressStatus.value === 'error') {
@@ -805,6 +821,19 @@ const failImportProgress = (message: string) => {
   importProgressError.value = message
   importProgressPercent.value = Math.max(importProgressPercent.value, 20)
   syncProcessingStage()
+}
+
+const handleCancelImportJob = async (job: ApiImportJob) => {
+  try {
+    await cancelImportJob(job.id)
+    importProgressActive.value = true
+    importProgressStatus.value = 'processing'
+    importProgressMessage.value = '已发送停止解析请求，正在等待后台终止任务。'
+    Message.success('已发送停止解析请求')
+  } catch (error) {
+    console.error('[RequestList] 停止解析失败:', error)
+    Message.error('停止解析失败')
+  }
 }
 
 const stringifyJson = (value: any, fallback = '{}') => {
@@ -930,6 +959,14 @@ const handleRequestExpand = async (rowKey: string | number) => {
 
 const unregisterImportFinishedHandler = registerFinishedHandler(async job => {
   if (job.project !== projectId.value) return
+  if (job.status === 'canceled') {
+    clearImportProgressTimer()
+    importProgressActive.value = true
+    importProgressStatus.value = 'error'
+    importProgressError.value = job.error_message || job.progress_message || '文档解析已手动停止'
+    importProgressMessage.value = job.progress_message || '文档解析任务已取消'
+    return
+  }
   const result = job.result_payload
   if (!result) return
 

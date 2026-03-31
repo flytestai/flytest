@@ -24,6 +24,11 @@ AI_SUPPORTED_ASSERTIONS = {"status_code", "body_contains", "json_path"}
 DEFAULT_AI_NOTE = "AI 增强解析未生效，已回退到规则解析结果。"
 
 
+def _ensure_not_cancelled(cancel_callback):
+    if cancel_callback and cancel_callback():
+        raise RuntimeError("文档解析已手动停止")
+
+
 @dataclass
 class AIEnhancementResult:
     requested: bool
@@ -373,6 +378,7 @@ def enhance_import_result_with_ai(
     user,
     source_type: str,
     base_requests: list[ParsedRequestData],
+    cancel_callback=None,
 ) -> AIEnhancementResult:
     active_config = LLMConfig.objects.filter(is_active=True).first()
     if not active_config:
@@ -397,6 +403,7 @@ def enhance_import_result_with_ai(
         )
 
     try:
+        _ensure_not_cancelled(cancel_callback)
         document_content, content_source_type, marker_used = load_document_content_for_ai(file_path)
         chunks = _split_document_for_ai(document_content, max_chars=12000)
 
@@ -405,6 +412,7 @@ def enhance_import_result_with_ai(
         truncated_preparsed = False
 
         if len(chunks) == 1:
+            _ensure_not_cancelled(cancel_callback)
             payload, chunk_truncated, preparsed_truncated = _invoke_ai_for_chunk(
                 active_config=active_config,
                 prompt_template=prompt_template,
@@ -434,6 +442,7 @@ def enhance_import_result_with_ai(
             max_workers = min(len(chunks), 10)
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 for index, chunk in enumerate(chunks):
+                    _ensure_not_cancelled(cancel_callback)
                     futures.append(
                         executor.submit(
                             _invoke_ai_for_chunk,
@@ -450,6 +459,7 @@ def enhance_import_result_with_ai(
                     )
 
                 for future in as_completed(futures):
+                    _ensure_not_cancelled(cancel_callback)
                     payload, chunk_truncated, preparsed_truncated = future.result()
                     truncated_document = truncated_document or chunk_truncated
                     truncated_preparsed = truncated_preparsed or preparsed_truncated

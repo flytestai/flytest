@@ -212,6 +212,7 @@ class ApiImportJob(models.Model):
         ("running", "running"),
         ("success", "success"),
         ("failed", "failed"),
+        ("canceled", "canceled"),
     ]
 
     project = models.ForeignKey(
@@ -239,6 +240,7 @@ class ApiImportJob(models.Model):
     progress_percent = models.PositiveIntegerField(_("进度百分比"), default=0)
     progress_stage = models.CharField(_("当前阶段"), max_length=50, blank=True, default="")
     progress_message = models.TextField(_("阶段说明"), blank=True, default="")
+    cancel_requested = models.BooleanField(_("是否请求停止"), default=False)
     generate_test_cases = models.BooleanField(_("是否生成测试用例"), default=True)
     enable_ai_parse = models.BooleanField(_("是否启用AI增强解析"), default=True)
     result_payload = models.JSONField(_("结果载荷"), default=dict, blank=True)

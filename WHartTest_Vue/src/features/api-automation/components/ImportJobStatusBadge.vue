@@ -19,9 +19,20 @@
           <div v-for="job in visibleImportJobs" :key="job.id" class="import-task-card">
             <div class="import-task-head">
               <div class="import-task-name">{{ job.source_name }}</div>
-              <a-tag :color="getJobStatusColor(job)">
-                {{ getJobStatusLabel(job) }}
-              </a-tag>
+              <div class="import-task-head-actions">
+                <a-tag :color="getJobStatusColor(job)">
+                  {{ getJobStatusLabel(job) }}
+                </a-tag>
+                <a-button
+                  v-if="canCancel(job)"
+                  type="text"
+                  size="mini"
+                  status="danger"
+                  @click="handleCancel(job)"
+                >
+                  停止解析
+                </a-button>
+              </div>
             </div>
             <div class="import-task-desc">{{ job.progress_message || '正在准备解析接口文档。' }}</div>
             <div class="import-task-progress">
@@ -51,6 +62,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
 import { useApiImportJobs } from '../state/importJobs'
 import type { ApiImportJob } from '../types'
@@ -58,7 +70,7 @@ import type { ApiImportJob } from '../types'
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
 
-const { activeImportJobs, recentImportJobs, importTaskVisible, syncProject } = useApiImportJobs()
+const { activeImportJobs, recentImportJobs, importTaskVisible, syncProject, cancelImportJob } = useApiImportJobs()
 
 const importTaskSteps = [
   { key: 'uploaded', title: '文档已上传' },
@@ -72,20 +84,29 @@ const importTaskSteps = [
 
 const activeCount = computed(() => activeImportJobs.value.length)
 const failedJobs = computed(() => recentImportJobs.value.filter(job => job.status === 'failed').slice(0, 4))
+const canceledJobs = computed(() => recentImportJobs.value.filter(job => job.status === 'canceled').slice(0, 4))
 const visibleImportJobs = computed(() => {
   const activeIds = new Set(activeImportJobs.value.map(job => job.id))
-  const merged = [...activeImportJobs.value, ...failedJobs.value.filter(job => !activeIds.has(job.id))]
+  const merged = [
+    ...activeImportJobs.value,
+    ...failedJobs.value.filter(job => !activeIds.has(job.id)),
+    ...canceledJobs.value.filter(job => !activeIds.has(job.id)),
+  ]
   return merged.slice(0, 8)
 })
 
-const showBadge = computed(() => activeImportJobs.value.length > 0 || failedJobs.value.length > 0)
+const showBadge = computed(() => activeImportJobs.value.length > 0 || failedJobs.value.length > 0 || canceledJobs.value.length > 0)
 const badgeTone = computed(() => {
   if (failedJobs.value.length > 0 && activeImportJobs.value.length === 0) return 'error'
+  if (canceledJobs.value.length > 0 && activeImportJobs.value.length === 0) return 'idle'
   return activeImportJobs.value.length > 0 ? 'active' : 'idle'
 })
 const badgeTitle = computed(() => {
   if (failedJobs.value.length > 0 && activeImportJobs.value.length === 0) {
     return '文档解析异常'
+  }
+  if (canceledJobs.value.length > 0 && activeImportJobs.value.length === 0) {
+    return '文档解析已停止'
   }
   if (activeImportJobs.value.length > 1) {
     return `文档解析中 ${activeImportJobs.value.length} 项`
@@ -99,6 +120,8 @@ const badgeTitle = computed(() => {
 const getJobStatusColor = (job: ApiImportJob) => {
   if (job.status === 'success') return 'green'
   if (job.status === 'failed') return 'red'
+  if (job.status === 'canceled') return 'gray'
+  if (job.cancel_requested) return 'orange'
   if (job.status === 'running') return 'arcoblue'
   return 'gold'
 }
@@ -106,8 +129,24 @@ const getJobStatusColor = (job: ApiImportJob) => {
 const getJobStatusLabel = (job: ApiImportJob) => {
   if (job.status === 'success') return '已完成'
   if (job.status === 'failed') return '已失败'
+  if (job.status === 'canceled') return '已停止'
+  if (job.cancel_requested) return '停止中'
   if (job.status === 'running') return '解析中'
   return '排队中'
+}
+
+const canCancel = (job: ApiImportJob) => {
+  return (job.status === 'pending' || job.status === 'running') && !job.cancel_requested
+}
+
+const handleCancel = async (job: ApiImportJob) => {
+  try {
+    await cancelImportJob(job.id)
+    Message.success('已发送停止解析请求')
+  } catch (error) {
+    console.error('[ImportJobStatusBadge] 停止解析失败:', error)
+    Message.error('停止解析失败')
+  }
 }
 
 const getTaskStepState = (job: ApiImportJob, stepKey: string) => {
@@ -118,6 +157,12 @@ const getTaskStepState = (job: ApiImportJob, stepKey: string) => {
   if (job.status === 'failed') {
     if (stepKey === job.progress_stage) return 'failed'
     if (targetIndex !== -1 && currentIndex !== -1 && targetIndex < currentIndex) return 'finished'
+    return 'pending'
+  }
+
+  if (job.status === 'canceled') {
+    if (targetIndex !== -1 && currentIndex !== -1 && targetIndex < currentIndex) return 'finished'
+    if (stepKey === 'canceled' || stepKey === job.progress_stage) return 'failed'
     return 'pending'
   }
 
@@ -234,6 +279,13 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.import-task-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .import-task-name {

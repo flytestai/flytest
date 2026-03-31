@@ -100,6 +100,8 @@ export const importJobApi = {
     request.get<ApiImportJob[]>(`${BASE_URL}/import-jobs/`, { params }),
 
   get: (id: number) => request.get<ApiImportJob>(`${BASE_URL}/import-jobs/${id}/`),
+
+  cancel: (id: number) => request.post<ApiImportJob>(`${BASE_URL}/import-jobs/${id}/cancel/`),
 }
 
 export const environmentApi = {

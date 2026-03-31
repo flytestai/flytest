@@ -12,7 +12,7 @@ from projects.models import Project
 from .ai_parser import AIEnhancementResult
 from .ai_case_generator import AITestCaseGenerationResult, GeneratedCaseDraft
 from .document_import import ParsedRequestData
-from .models import ApiCollection, ApiRequest, ApiTestCase
+from .models import ApiCollection, ApiImportJob, ApiRequest, ApiTestCase
 from .services import build_request_url
 
 
@@ -198,6 +198,58 @@ class ApiAutomationImportDocumentTests(TestCase):
         self.assertEqual(payload["test_cases"][0]["request_name"], "AI Login")
         self.assertEqual(payload["generated_scripts"][0]["script"]["assertions"][1]["type"], "json_path")
 
+    @patch("api_automation.import_service._build_environment_drafts", return_value=[])
+    @patch("api_automation.import_service.import_requests_from_document")
+    @patch("api_automation.import_service.enhance_import_result_with_ai")
+    def test_pdf_import_prefers_ai_before_rule_parse(self, mock_enhance, mock_rule_parse, _mock_env_drafts):
+        mock_enhance.return_value = AIEnhancementResult(
+            requested=True,
+            used=True,
+            note="AI parsed PDF directly",
+            prompt_source="user_prompt",
+            prompt_name="API自动化解析",
+            model_name="gpt-5.4",
+            requests=[
+                ParsedRequestData(
+                    name="PDF Login",
+                    method="POST",
+                    url="/api/login",
+                    description="AI parsed from PDF",
+                    headers={},
+                    params={},
+                    body_type="json",
+                    body={"username": "demo", "password": "123456"},
+                    assertions=[{"type": "status_code", "expected": 200}],
+                    collection_name="auth",
+                )
+            ],
+        )
+
+        upload = SimpleUploadedFile(
+            "api.pdf",
+            b"%PDF-1.4 fake pdf content",
+            content_type="application/pdf",
+        )
+
+        response = self.client.post(
+            "/api/api-automation/requests/import-document/",
+            {
+                "collection_id": str(self.collection.id),
+                "generate_test_cases": "true",
+                "enable_ai_parse": "true",
+                "async_mode": "false",
+                "file": upload,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        payload = self._payload(response)
+        self.assertEqual(payload["source_type"], "ai_direct_document")
+        self.assertTrue(payload["ai_used"])
+        self.assertEqual(payload["items"][0]["name"], "PDF Login")
+        mock_rule_parse.assert_not_called()
+
     def test_test_case_list_endpoint_supports_collection_filter(self):
         request = ApiRequest.objects.create(
             collection=self.collection,
@@ -320,6 +372,27 @@ class ApiAutomationImportDocumentTests(TestCase):
 
         self.assertIn(response.status_code, {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND})
         self.assertEqual(ApiRequest.objects.count(), 0)
+
+    def test_import_job_can_be_canceled(self):
+        job = ApiImportJob.objects.create(
+            project=self.project,
+            collection=self.collection,
+            creator=self.user,
+            source_name="demo.pdf",
+            status="pending",
+            progress_percent=4,
+            progress_stage="uploaded",
+            progress_message="等待解析",
+            generate_test_cases=True,
+            enable_ai_parse=True,
+        )
+
+        response = self.client.post(f"/api/api-automation/import-jobs/{job.id}/cancel/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = self._payload(response)
+        self.assertEqual(payload["status"], "canceled")
+        self.assertTrue(payload["cancel_requested"])
 
     @patch("api_automation.views.generate_test_case_drafts_with_ai")
     def test_generate_test_cases_endpoint_creates_cases_for_selected_requests(self, mock_generate):
@@ -567,3 +640,41 @@ class ApiAutomationExecutionTests(TestCase):
         self.assertEqual(payload["request_snapshot"]["missing_variables"], [])
         environment.refresh_from_db()
         self.assertEqual(environment.variables["token"], "AUTO_TOKEN_123")
+
+    def test_execution_report_endpoint_returns_summary(self):
+        request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="Report endpoint request",
+            method="GET",
+            url="/api/reports",
+            created_by=self.user,
+        )
+        from .models import ApiExecutionRecord
+
+        ApiExecutionRecord.objects.create(
+            project=self.project,
+            request=request,
+            environment=None,
+            request_name=request.name,
+            method=request.method,
+            url=request.url,
+            status="success",
+            passed=True,
+            status_code=200,
+            response_time=120.5,
+            request_snapshot={},
+            response_snapshot={},
+            assertions_results=[],
+            executor=self.user,
+        )
+
+        response = self.client.get(
+            "/api/api-automation/execution-records/report/",
+            {"project": self.project.id, "days": 7},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = self._payload(response)
+        self.assertEqual(payload["summary"]["total_count"], 1)
+        self.assertEqual(payload["summary"]["success_count"], 1)
+        self.assertEqual(len(payload["recent_records"]), 1)

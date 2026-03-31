@@ -4,6 +4,7 @@ import threading
 import time
 import json
 import re
+from datetime import timedelta
 from pathlib import Path
 
 import httpx
@@ -66,6 +67,10 @@ BOOTSTRAP_OPTIONAL_EMPTY_VARIABLES = {
 }
 
 
+class ImportJobCancelled(Exception):
+    pass
+
+
 def get_accessible_projects(user):
     if user.is_superuser:
         return Project.objects.all()
@@ -81,17 +86,34 @@ def collect_collection_ids(root_collection: ApiCollection) -> list[int]:
     return collection_ids
 
 
-def _save_job(job_id: int, **fields):
+def _save_job(job_id: int, *, force: bool = False, **fields):
     job = ApiImportJob.objects.get(pk=job_id)
+    if not force and job.status == "canceled" and fields.get("status") != "canceled":
+        return job
     for key, value in fields.items():
         setattr(job, key, value)
     job.updated_at = timezone.now()
     job.save()
+    return job
+
+
+def _is_job_cancelled(job_id: int) -> bool:
+    return ApiImportJob.objects.filter(pk=job_id).filter(Q(cancel_requested=True) | Q(status="canceled")).exists()
 
 
 def _run_import_job(job_id: int, file_path: str):
     try:
         job = ApiImportJob.objects.select_related("collection", "project", "creator").get(pk=job_id)
+        if job.cancel_requested or job.status == "canceled":
+            _save_job(
+                job_id,
+                force=True,
+                status="canceled",
+                progress_stage="canceled",
+                progress_message="文档解析任务已取消。",
+                completed_at=timezone.now(),
+            )
+            return
         _save_job(
             job_id,
             status="running",
@@ -102,6 +124,8 @@ def _run_import_job(job_id: int, file_path: str):
         )
 
         def progress(percent: int, stage: str, message: str):
+            if _is_job_cancelled(job_id):
+                raise ImportJobCancelled("文档解析已手动停止")
             _save_job(
                 job_id,
                 status="running",
@@ -117,7 +141,10 @@ def _run_import_job(job_id: int, file_path: str):
             generate_test_cases=job.generate_test_cases,
             enable_ai_parse=job.enable_ai_parse,
             progress_callback=progress,
+            cancel_callback=lambda: _is_job_cancelled(job_id),
         )
+        if _is_job_cancelled(job_id):
+            raise ImportJobCancelled("文档解析已手动停止")
         _save_job(
             job_id,
             status="success",
@@ -127,6 +154,17 @@ def _run_import_job(job_id: int, file_path: str):
             result_payload=payload,
             error_message="",
             completed_at=timezone.now(),
+        )
+    except ImportJobCancelled as exc:
+        _save_job(
+            job_id,
+            force=True,
+            status="canceled",
+            progress_stage="canceled",
+            progress_message="文档解析任务已取消。",
+            error_message=str(exc),
+            completed_at=timezone.now(),
+            cancel_requested=True,
         )
     except Exception as exc:  # noqa: BLE001
         _save_job(
@@ -687,7 +725,7 @@ class ApiCollectionViewSet(BaseModelViewSet):
 class ApiImportJobViewSet(BaseModelViewSet):
     queryset = ApiImportJob.objects.select_related("project", "collection", "creator")
     serializer_class = ApiImportJobSerializer
-    http_method_names = ["get", "head", "options"]
+    http_method_names = ["get", "post", "head", "options"]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["source_name", "progress_message", "error_message"]
     ordering_fields = ["created_at", "updated_at", "completed_at", "progress_percent"]
@@ -705,6 +743,31 @@ class ApiImportJobViewSet(BaseModelViewSet):
         if status_value:
             queryset = queryset.filter(status=status_value)
         return queryset
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        job = self.get_object()
+        if job.status in {"success", "failed", "canceled"}:
+            serializer = self.get_serializer(job)
+            return Response(serializer.data)
+
+        update_fields = {
+            "cancel_requested": True,
+            "progress_message": "已收到停止解析请求，正在终止任务。",
+        }
+        if job.status == "pending":
+            update_fields.update(
+                {
+                    "status": "canceled",
+                    "progress_stage": "canceled",
+                    "progress_percent": min(job.progress_percent or 0, 100),
+                    "completed_at": timezone.now(),
+                }
+            )
+
+        _save_job(job.id, force=True, **update_fields)
+        serializer = self.get_serializer(ApiImportJob.objects.get(pk=job.id))
+        return Response(serializer.data)
 
 
 class ApiRequestViewSet(BaseModelViewSet):
@@ -973,7 +1036,7 @@ class ApiExecutionRecordViewSet(BaseModelViewSet):
         if days:
             try:
                 days_value = max(1, min(int(days), 90))
-                since = timezone.now() - timezone.timedelta(days=days_value)
+                since = timezone.now() - timedelta(days=days_value)
                 queryset = queryset.filter(created_at__gte=since)
             except ValueError:
                 return Response({"error": "days 参数必须是 1-90 之间的整数"}, status=status.HTTP_400_BAD_REQUEST)

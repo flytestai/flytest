@@ -257,10 +257,11 @@ export interface ApiImportJob {
   creator: number | null
   creator_name?: string
   source_name: string
-  status: 'pending' | 'running' | 'success' | 'failed'
+  status: 'pending' | 'running' | 'success' | 'failed' | 'canceled'
   progress_percent: number
   progress_stage?: string
   progress_message?: string
+  cancel_requested?: boolean
   generate_test_cases: boolean
   enable_ai_parse: boolean
   result_payload?: ApiImportResult | null

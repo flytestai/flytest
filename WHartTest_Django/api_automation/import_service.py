@@ -9,12 +9,19 @@ from urllib.parse import urlparse
 import yaml
 
 from .ai_parser import enhance_import_result_with_ai
-from .document_import import DocumentImportResult, ParsedRequestData, import_requests_from_document, load_document_content_for_ai
+from .document_import import (
+    DocumentImportResult,
+    MARKER_EXTENSIONS,
+    ParsedRequestData,
+    import_requests_from_document,
+    load_document_content_for_ai,
+)
 from .generation import generate_script_and_test_case
 from .models import ApiCollection, ApiEnvironment, ApiRequest, ApiTestCase
 from .serializers import ApiRequestSerializer, ApiTestCaseSerializer
 
 ProgressCallback = Callable[[int, str, str], None] | None
+CancelCallback = Callable[[], bool] | None
 
 ABSOLUTE_URL_PATTERN = re.compile(r"https?://[^\s\"'<>]+", re.I)
 LABELLED_URL_PATTERN = re.compile(r"^(?P<label>[^:：]{1,24})\s*[:：]\s*(?P<url>https?://[^\s\"'<>]+)", re.I)
@@ -75,6 +82,11 @@ ENVIRONMENT_PRIORITY = {
 def _report(progress_callback: ProgressCallback, percent: int, stage: str, message: str):
     if progress_callback:
         progress_callback(percent, stage, message)
+
+
+def _ensure_not_cancelled(cancel_callback: CancelCallback):
+    if cancel_callback and cancel_callback():
+        raise ValueError("文档解析已手动停止")
 
 
 def _normalize_request_key(method: str, url: str) -> tuple[str, str]:
@@ -461,47 +473,78 @@ def process_document_import(
     generate_test_cases: bool,
     enable_ai_parse: bool,
     progress_callback: ProgressCallback = None,
+    cancel_callback: CancelCallback = None,
 ) -> dict:
-    _report(progress_callback, 12, "rule_parse", "正在抽取文档正文并进行规则解析。")
-
+    _ensure_not_cancelled(cancel_callback)
+    suffix = Path(file_path).suffix.lower()
     ai_result = None
-    try:
-        import_result = import_requests_from_document(file_path)
-        parsed_requests = import_result.requests
-    except ValueError as exc:
-        if not enable_ai_parse:
-            raise
+    parsed_requests: list[ParsedRequestData] = []
 
-        import_result = DocumentImportResult(
-            source_type="ai_fallback",
-            requests=[],
-            marker_used=False,
-            note=f"规则解析未识别到接口，已切换为 AI 解析。原因: {exc}",
-        )
-        parsed_requests = []
-        _report(progress_callback, 48, "ai_parse", "规则解析未命中，正在切换到 AI 增强解析。")
+    if enable_ai_parse and suffix in MARKER_EXTENSIONS:
+        _report(progress_callback, 12, "ai_parse", "检测到 PDF/图片类文档，优先使用 AI 解析接口定义。")
         ai_result = enhance_import_result_with_ai(
             file_path=file_path,
             user=user,
-            source_type=import_result.source_type,
+            source_type="ai_direct_document",
             base_requests=[],
+            cancel_callback=cancel_callback,
         )
         if ai_result.requests:
+            import_result = DocumentImportResult(
+                source_type="ai_direct_document",
+                requests=ai_result.requests,
+                marker_used=True,
+                note="PDF/图片类文档已优先使用 AI 解析接口定义。",
+            )
             parsed_requests = ai_result.requests
         else:
-            raise ValueError(ai_result.note or str(exc))
+            _ensure_not_cancelled(cancel_callback)
+            _report(progress_callback, 24, "rule_parse", "AI 未识别到接口，回退到规则解析继续尝试。")
+            import_result = import_requests_from_document(file_path)
+            parsed_requests = import_result.requests
     else:
-        if enable_ai_parse:
-            _report(progress_callback, 48, "ai_parse", "正在使用 AI 对规则解析结果做增强补全。")
+        _report(progress_callback, 12, "rule_parse", "正在抽取文档正文并进行规则解析。")
+        try:
+            _ensure_not_cancelled(cancel_callback)
+            import_result = import_requests_from_document(file_path)
+            parsed_requests = import_result.requests
+        except ValueError as exc:
+            if not enable_ai_parse:
+                raise
+
+            import_result = DocumentImportResult(
+                source_type="ai_fallback",
+                requests=[],
+                marker_used=False,
+                note=f"规则解析未识别到接口，已切换为 AI 解析。原因: {exc}",
+            )
+            _report(progress_callback, 48, "ai_parse", "规则解析未命中，正在切换到 AI 增强解析。")
             ai_result = enhance_import_result_with_ai(
                 file_path=file_path,
                 user=user,
                 source_type=import_result.source_type,
-                base_requests=import_result.requests,
+                base_requests=[],
+                cancel_callback=cancel_callback,
             )
             if ai_result.requests:
                 parsed_requests = ai_result.requests
+            else:
+                raise ValueError(ai_result.note or str(exc))
+        else:
+            if enable_ai_parse:
+                _ensure_not_cancelled(cancel_callback)
+                _report(progress_callback, 48, "ai_parse", "正在使用 AI 对规则解析结果做增强补全。")
+                ai_result = enhance_import_result_with_ai(
+                    file_path=file_path,
+                    user=user,
+                    source_type=import_result.source_type,
+                    base_requests=import_result.requests,
+                    cancel_callback=cancel_callback,
+                )
+                if ai_result.requests:
+                    parsed_requests = ai_result.requests
 
+    _ensure_not_cancelled(cancel_callback)
     if not parsed_requests:
         raise ValueError(
             ai_result.note
@@ -510,9 +553,11 @@ def process_document_import(
             "或在文档中补充清晰的请求方式、路径、参数与 cURL 示例。"
         )
 
+    _ensure_not_cancelled(cancel_callback)
     _report(progress_callback, 76, "save_requests", "正在保存解析得到的接口请求。")
     created_requests = _create_imported_requests(collection, user, parsed_requests)
 
+    _ensure_not_cancelled(cancel_callback)
     _report(progress_callback, 88, "generate_cases", "正在生成接口脚本和测试用例。")
     created_test_cases = _create_generated_test_cases(
         collection.project,
