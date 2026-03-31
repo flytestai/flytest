@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .generation import build_request_script
-from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiRequest, ApiTestCase
+from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
 
 
 class ApiCollectionSerializer(serializers.ModelSerializer):
@@ -63,6 +63,16 @@ class ApiExecutionRecordSerializer(serializers.ModelSerializer):
         model = ApiExecutionRecord
         fields = "__all__"
         read_only_fields = ("created_at",)
+
+
+class ApiImportJobSerializer(serializers.ModelSerializer):
+    creator_name = serializers.CharField(source="creator.username", read_only=True)
+    collection_name = serializers.CharField(source="collection.name", read_only=True)
+
+    class Meta:
+        model = ApiImportJob
+        fields = "__all__"
+        read_only_fields = ("creator", "created_at", "updated_at", "completed_at")
 
 
 class ApiTestCaseSerializer(serializers.ModelSerializer):

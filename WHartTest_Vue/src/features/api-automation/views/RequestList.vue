@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="request-list">
     <div class="page-header api-page-header">
       <div class="header-left">
@@ -55,7 +55,7 @@
                 <a-button type="text" size="small" @click="executeRequest(record)">执行</a-button>
                 <a-button type="text" size="small" @click="openEditModal(record)">编辑</a-button>
                 <a-button type="text" size="small" @click="viewRequest(record)">详情</a-button>
-                <a-popconfirm content="确定删除该接口吗？" @ok="deleteRequest(record.id)">
+                <a-popconfirm content="确认删除该接口吗？" @ok="deleteRequest(record.id)">
                   <a-button type="text" size="small" status="danger">删除</a-button>
                 </a-popconfirm>
               </a-space>
@@ -70,6 +70,8 @@
       :title="editingRequest ? '编辑接口' : '新增接口'"
       width="900px"
       :ok-loading="submitLoading"
+      :mask-closable="!submitLoading"
+      :closable="!submitLoading"
       @before-ok="submitRequest"
       @cancel="resetEditor"
     >
@@ -81,6 +83,31 @@
       </div>
 
       <a-form v-if="editingRequest || createMode === 'manual'" :model="formState" layout="vertical">
+        <div v-if="!editingRequest && createMode === 'manual' && hasRequestDrafts" class="import-prefill-banner">
+          <div class="prefill-copy">
+            <div class="prefill-title">已同步最近一次文档解析结果</div>
+            <div class="prefill-description">
+              {{ draftSummary || '可以直接把解析结果回填到手动创建表单。' }}
+            </div>
+          </div>
+          <div class="prefill-actions">
+            <a-select
+              v-model="selectedRequestDraftIndex"
+              style="width: 260px"
+              @change="applySelectedRequestDraft"
+            >
+              <a-option
+                v-for="(draft, index) in requestDrafts"
+                :key="`${draft.label}-${index}`"
+                :value="index"
+                :label="draft.label"
+              />
+            </a-select>
+            <a-button @click="applySelectedRequestDraft()">回填字段</a-button>
+            <a-button type="text" @click="clearDraftsAndReset">清除草稿</a-button>
+          </div>
+        </div>
+
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="name" label="接口名称" :rules="[{ required: true, message: '请输入接口名称' }]">
@@ -163,17 +190,72 @@
         </a-form-item>
       </a-form>
 
+      <div v-else-if="importProgressActive" class="document-import-panel import-progress-panel">
+        <div class="import-progress-hero">
+          <div class="import-progress-badge">
+            {{
+              importProgressStatus === 'error'
+                ? '解析失败'
+                : importProgressStatus === 'success'
+                  ? '解析完成'
+                  : '智能解析中'
+            }}
+          </div>
+          <div class="import-progress-title">{{ importProgressFileName || '接口文档' }}</div>
+          <div class="import-progress-description">{{ importProgressMessage }}</div>
+        </div>
+
+        <div class="import-progress-bar">
+          <a-progress
+            :percent="importProgressRatio"
+            :show-text="false"
+            :status="
+              importProgressStatus === 'error'
+                ? 'danger'
+                : importProgressStatus === 'success'
+                  ? 'success'
+                  : undefined
+            "
+          />
+          <span class="import-progress-percent">{{ importProgressPercent }}%</span>
+        </div>
+
+        <div class="import-progress-step-list">
+          <div
+            v-for="(step, index) in importProgressSteps"
+            :key="step.title"
+            class="import-progress-step"
+            :class="getImportStepClass(index)"
+          >
+            <div class="import-progress-step-marker">{{ index + 1 }}</div>
+            <div class="import-progress-step-copy">
+              <div class="import-progress-step-title">{{ step.title }}</div>
+              <div class="import-progress-step-description">{{ step.description }}</div>
+            </div>
+          </div>
+        </div>
+
+        <a-alert v-if="importProgressStatus === 'error'" type="error" class="import-progress-alert">
+          <template #title>本次导入没有成功</template>
+          {{ importProgressError || '请检查文档是否包含接口名称、请求方式、请求地址、参数说明和成功响应描述。' }}
+        </a-alert>
+
+        <div v-if="importProgressStatus === 'error'" class="import-progress-actions">
+          <a-button @click="resetImportProgress">返回重新导入</a-button>
+        </div>
+      </div>
+
       <div v-else class="document-import-panel">
         <div class="import-hero-card">
           <div class="import-hero-badge">AI增强解析</div>
           <div class="import-hero-title">接口文档导入与自动化生成</div>
           <div class="import-hero-description">
             支持 Swagger / OpenAPI / Postman，以及 PDF、图片、PPTX、DOCX、XLSX、HTML、EPUB 等格式。
-            导入时会先做规则解析，再按需调用系统设置中的当前激活模型做 AI 增强解析，自动补全接口定义、断言，并批量生成脚本与测试用例。
+            导入时会先做规则解析，再按需调用系统设置中的当前激活模型进行 AI 增强解析，自动补全接口定义、断言，并批量生成脚本与测试用例。
           </div>
           <div class="import-hero-meta">
-            <span class="hero-pill">系统设置 > LLM配置</span>
-            <span class="hero-pill">提示词管理 > API自动化解析</span>
+            <span class="hero-pill">系统设置 &gt; LLM配置</span>
+            <span class="hero-pill">提示词管理 &gt; API自动化解析</span>
             <span class="hero-pill">失败自动回退规则解析</span>
           </div>
         </div>
@@ -296,10 +378,10 @@
                 ? importResult.ai_used
                   ? 'AI增强解析已生效'
                   : 'AI增强解析未生效，已回退到规则解析'
-                : '本次未启用AI增强解析'
+                : '本次未启用 AI 增强解析'
             }}
           </template>
-          {{ importResult.ai_note || '本次导入未返回额外 AI 解析说明。' }}
+          {{ importResult.ai_note || '本次导入未返回额外的 AI 解析说明。' }}
         </a-alert>
 
         <a-descriptions :column="2" bordered size="small">
@@ -363,16 +445,93 @@
         </a-tabs>
       </div>
     </a-drawer>
+
+    <a-drawer v-model:visible="importTaskVisible" width="420px" title="后台解析任务" :footer="false">
+      <div class="import-task-drawer">
+        <a-alert type="info" class="import-task-alert">
+          <template #title>关闭这个面板不会中断后台解析</template>
+          任务会在服务端继续执行，完成后会自动弹出结果通知。
+        </a-alert>
+
+        <a-empty v-if="!visibleImportJobs.length" description="当前没有可展示的解析任务" />
+
+        <div v-else class="import-task-list">
+          <div v-for="job in visibleImportJobs" :key="job.id" class="import-task-card">
+            <div class="import-task-head">
+              <div class="import-task-name">{{ job.source_name }}</div>
+              <a-tag
+                :color="
+                  job.status === 'success'
+                    ? 'green'
+                    : job.status === 'failed'
+                      ? 'red'
+                      : job.status === 'running'
+                        ? 'arcoblue'
+                        : 'gold'
+                "
+              >
+                {{
+                  job.status === 'success'
+                    ? '已完成'
+                    : job.status === 'failed'
+                      ? '已失败'
+                      : job.status === 'running'
+                        ? '解析中'
+                        : '排队中'
+                }}
+              </a-tag>
+            </div>
+            <div class="import-task-desc">{{ job.progress_message || '正在准备解析接口文档。' }}</div>
+            <div class="import-task-progress">
+              <a-progress :percent="Math.max(0, Math.min(job.progress_percent, 100)) / 100" :show-text="false" />
+              <span class="import-task-progress-text">{{ Math.max(0, Math.min(job.progress_percent, 100)) }}%</span>
+            </div>
+            <div class="import-task-steps">
+              <div
+                v-for="step in importTaskSteps"
+                :key="`${job.id}-${step.key}`"
+                class="import-task-step"
+                :class="`is-${getTaskStepState(job, step.key)}`"
+              >
+                <span class="import-task-step-dot"></span>
+                <span class="import-task-step-label">{{ step.title }}</span>
+              </div>
+            </div>
+            <div v-if="job.status === 'failed' && job.error_message" class="import-task-error">
+              失败原因：{{ job.error_message }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-drawer>
+
+    <button
+      v-if="visibleImportJobs.length"
+      class="import-task-float"
+      type="button"
+      @click="importTaskVisible = true"
+    >
+      <span class="import-task-float-badge">{{ visibleImportJobs.length }}</span>
+      <div class="import-task-float-copy">
+        <div class="import-task-float-title">文档解析中</div>
+        <div class="import-task-float-desc">{{ activeImportJobSummary }}</div>
+      </div>
+      <div class="import-task-float-progress">
+        <a-progress :percent="activeImportJobProgressRatio" :show-text="false" />
+      </div>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { Message } from '@arco-design/web-vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { Message, Notification } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
-import { apiRequestApi, environmentApi } from '../api'
+import { apiRequestApi, environmentApi, importJobApi } from '../api'
+import { useApiImportDrafts } from '../state/importDraft'
 import type {
   ApiEnvironment,
+  ApiImportJob,
   ApiExecutionRecord,
   ApiImportResult,
   ApiRequest,
@@ -390,6 +549,14 @@ const emit = defineEmits<{
 
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
+const {
+  requestDrafts,
+  draftSummary,
+  hasRequestDrafts,
+  saveDraftsFromImport,
+  getRequestDraft,
+  clearDrafts,
+} = useApiImportDrafts()
 
 const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 const methodColorMap: Record<string, string> = {
@@ -412,6 +579,7 @@ const selectedEnvironmentId = ref<number | undefined>(undefined)
 const editorVisible = ref(false)
 const resultVisible = ref(false)
 const importResultVisible = ref(false)
+const importTaskVisible = ref(false)
 const editingRequest = ref<ApiRequest | null>(null)
 const currentResult = ref<ApiExecutionRecord | null>(null)
 const importResult = ref<ApiImportResult | null>(null)
@@ -421,6 +589,38 @@ const documentDragging = ref(false)
 const createMode = ref<'manual' | 'document'>('manual')
 const generateTestCases = ref(true)
 const enableAiParse = ref(true)
+const selectedRequestDraftIndex = ref(0)
+const importProgressActive = ref(false)
+const importProgressPercent = ref(0)
+const importProgressStage = ref(0)
+const importProgressStatus = ref<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle')
+const importProgressMessage = ref('')
+const importProgressError = ref('')
+const importProgressFileName = ref('')
+const trackedImportJobIds = ref<number[]>([])
+const activeImportJobs = ref<ApiImportJob[]>([])
+const recentImportJobs = ref<ApiImportJob[]>([])
+
+const importProgressSteps = [
+  { title: '上传接口文档', description: '将 Word、PDF、Swagger 等接口文档上传到 FlyTest。' },
+  { title: '提取文档文本', description: '转换文档内容并抽取接口结构线索。' },
+  { title: '识别接口定义', description: '结合规则与 AI 解析请求方式、路径、参数和断言。' },
+  { title: '生成脚本与用例', description: '为识别出的接口批量生成可执行脚本和测试用例。' },
+  { title: '写入 FlyTest', description: '把接口、脚本和测试用例保存到当前集合。' },
+]
+
+const importTaskSteps = [
+  { key: 'uploaded', title: '文档已上传' },
+  { key: 'queued', title: '进入后台队列' },
+  { key: 'rule_parse', title: '规则解析' },
+  { key: 'ai_parse', title: 'AI增强解析' },
+  { key: 'save_requests', title: '写入接口' },
+  { key: 'generate_cases', title: '生成脚本与用例' },
+  { key: 'completed', title: '完成' },
+]
+
+let importProgressTimer: ReturnType<typeof window.setInterval> | null = null
+let importJobPollingTimer: ReturnType<typeof window.setInterval> | null = null
 
 const formState = ref({
   name: '',
@@ -443,6 +643,35 @@ const filteredRequests = computed(() => {
   })
 })
 
+const activeImportJobSummary = computed(() => {
+  if (activeImportJobs.value.length === 0 && recentImportJobs.value.length > 0) {
+    const latestJob = recentImportJobs.value[0]
+    return latestJob.status === 'failed'
+      ? '最近一次解析失败，点击查看原因'
+      : '最近一次解析已完成，点击查看记录'
+  }
+  if (!activeImportJobs.value.length) return '暂无后台任务'
+  if (activeImportJobs.value.length === 1) {
+    return activeImportJobs.value[0].progress_message || '正在解析接口文档'
+  }
+  return `当前有 ${activeImportJobs.value.length} 个文档解析任务在后台运行`
+})
+
+const activeImportJobProgressRatio = computed(() => {
+  if (activeImportJobs.value.length === 0 && recentImportJobs.value.length > 0) {
+    return recentImportJobs.value[0].status === 'success' ? 1 : 0
+  }
+  if (!activeImportJobs.value.length) return 0
+  const total = activeImportJobs.value.reduce((sum, item) => sum + Math.max(0, Math.min(item.progress_percent, 100)), 0)
+  return total / activeImportJobs.value.length / 100
+})
+
+const visibleImportJobs = computed(() => {
+  const activeIds = new Set(activeImportJobs.value.map(item => item.id))
+  const merged = [...activeImportJobs.value, ...recentImportJobs.value.filter(item => !activeIds.has(item.id))]
+  return merged.slice(0, 8)
+})
+
 const documentFileSummary = computed(() => {
   if (!documentFile.value) return ''
   const size = documentFile.value.size
@@ -450,6 +679,261 @@ const documentFileSummary = computed(() => {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / 1024 / 1024).toFixed(2)} MB`
 })
+
+const importProgressRatio = computed(() => {
+  const clamped = Math.max(0, Math.min(importProgressPercent.value, 100))
+  return clamped / 100
+})
+
+const getImportStepClass = (index: number) => {
+  if (importProgressStatus.value === 'error') {
+    if (index < importProgressStage.value) return 'is-finished'
+    if (index === importProgressStage.value) return 'is-error'
+    return 'is-pending'
+  }
+  if (importProgressStatus.value === 'success') {
+    return 'is-finished'
+  }
+  if (index < importProgressStage.value) return 'is-finished'
+  if (index === importProgressStage.value) return 'is-active'
+  return 'is-pending'
+}
+
+const clearImportProgressTimer = () => {
+  if (importProgressTimer) {
+    window.clearInterval(importProgressTimer)
+    importProgressTimer = null
+  }
+}
+
+const getImportJobStorageKey = () => `flytest-api-import-jobs:${projectId.value || 'unknown'}`
+
+const persistTrackedImportJobs = () => {
+  localStorage.setItem(getImportJobStorageKey(), JSON.stringify(trackedImportJobIds.value))
+}
+
+const loadTrackedImportJobs = () => {
+  try {
+    const raw = localStorage.getItem(getImportJobStorageKey())
+    trackedImportJobIds.value = raw ? JSON.parse(raw) : []
+  } catch {
+    trackedImportJobIds.value = []
+  }
+  activeImportJobs.value = []
+}
+
+const clearImportJobPolling = () => {
+  if (importJobPollingTimer) {
+    window.clearInterval(importJobPollingTimer)
+    importJobPollingTimer = null
+  }
+}
+
+const resetImportProgress = () => {
+  clearImportProgressTimer()
+  importProgressActive.value = false
+  importProgressPercent.value = 0
+  importProgressStage.value = 0
+  importProgressStatus.value = 'idle'
+  importProgressMessage.value = ''
+  importProgressError.value = ''
+  importProgressFileName.value = ''
+}
+
+const syncProcessingStage = () => {
+  const milestones = [28, 50, 74, 90, 97]
+
+  if (importProgressPercent.value < milestones[1]) {
+    importProgressStage.value = 1
+    importProgressMessage.value = '文档上传完成，正在抽取正文与接口结构。'
+    return
+  }
+  if (importProgressPercent.value < milestones[2]) {
+    importProgressStage.value = 2
+    importProgressMessage.value = '正在识别接口名称、请求方式、路径、参数与断言。'
+    return
+  }
+  if (importProgressPercent.value < milestones[3]) {
+    importProgressStage.value = 3
+    importProgressMessage.value = '正在生成前端可执行的接口脚本和测试用例。'
+    return
+  }
+  importProgressStage.value = 4
+  importProgressMessage.value = '正在把解析结果写入当前接口集合。'
+}
+
+const getTaskStepState = (job: ApiImportJob, stepKey: string) => {
+  const sequence = importTaskSteps.map(item => item.key)
+  const currentIndex = sequence.indexOf(job.progress_stage || '')
+  const targetIndex = sequence.indexOf(stepKey)
+
+  if (job.status === 'failed') {
+    if (stepKey === job.progress_stage) return 'failed'
+    if (targetIndex !== -1 && currentIndex !== -1 && targetIndex < currentIndex) return 'finished'
+    return 'pending'
+  }
+
+  if (job.status === 'success') {
+    return 'finished'
+  }
+
+  if (stepKey === job.progress_stage) return 'active'
+  if (targetIndex !== -1 && currentIndex !== -1 && targetIndex < currentIndex) return 'finished'
+  return 'pending'
+}
+
+const rememberRecentImportJob = (job: ApiImportJob) => {
+  recentImportJobs.value = [job, ...recentImportJobs.value.filter(item => item.id !== job.id)].slice(0, 6)
+}
+
+const startImportProgress = (fileName: string) => {
+  resetImportProgress()
+  importProgressActive.value = true
+  importProgressFileName.value = fileName
+  importProgressStatus.value = 'uploading'
+  importProgressStage.value = 0
+  importProgressPercent.value = 6
+  importProgressMessage.value = `正在上传 ${fileName}，并校验文档格式。`
+
+  clearImportProgressTimer()
+  importProgressTimer = window.setInterval(() => {
+    if (importProgressStatus.value === 'uploading') {
+      importProgressPercent.value = Math.min(importProgressPercent.value + 3, 24)
+      return
+    }
+    if (importProgressStatus.value !== 'processing') return
+
+    importProgressPercent.value = Math.min(importProgressPercent.value + 4, 97)
+    syncProcessingStage()
+  }, 700)
+}
+
+const handleImportUploadProgress = (event: { loaded?: number; total?: number }) => {
+  if (!importProgressActive.value) return
+
+  const total = event.total || 0
+  if (total > 0) {
+    const percent = Math.max(6, Math.min(28, Math.round((event.loaded || 0) / total * 28)))
+    importProgressPercent.value = Math.max(importProgressPercent.value, percent)
+  }
+
+  if (total > 0 && (event.loaded || 0) >= total) {
+    importProgressStatus.value = 'processing'
+    importProgressPercent.value = Math.max(importProgressPercent.value, 34)
+    syncProcessingStage()
+  }
+}
+
+const completeImportProgress = async (createdCount: number, testcaseCount: number) => {
+  clearImportProgressTimer()
+  importProgressActive.value = true
+  importProgressStatus.value = 'success'
+  importProgressStage.value = importProgressSteps.length - 1
+  importProgressPercent.value = 100
+  importProgressMessage.value = `解析完成，已生成 ${createdCount} 个接口和 ${testcaseCount} 个测试用例。`
+  await new Promise(resolve => window.setTimeout(resolve, 360))
+}
+
+const failImportProgress = (message: string) => {
+  clearImportProgressTimer()
+  importProgressActive.value = true
+  importProgressStatus.value = 'error'
+  importProgressError.value = message
+  importProgressPercent.value = Math.max(importProgressPercent.value, 20)
+  syncProcessingStage()
+}
+
+const handleImportJobSuccess = async (job: ApiImportJob) => {
+  activeImportJobs.value = activeImportJobs.value.filter(item => item.id !== job.id)
+  rememberRecentImportJob(job)
+  const result = job.result_payload
+  if (!result) {
+    Notification.warning({
+      title: '接口文档解析完成',
+      content: '任务已结束，但没有返回可展示的解析结果。',
+    })
+    return
+  }
+
+  importResult.value = result
+  importResultVisible.value = true
+  saveDraftsFromImport(result, projectId.value || job.project, props.selectedCollectionId || job.collection)
+  await loadRequests()
+  emit('updated')
+  Notification.success({
+    title: '接口文档解析完成',
+    content: `已生成 ${result.created_count || 0} 个接口和 ${result.created_testcase_count || 0} 个测试用例。`,
+  })
+}
+
+const handleImportJobFailed = (job: ApiImportJob) => {
+  activeImportJobs.value = activeImportJobs.value.filter(item => item.id !== job.id)
+  rememberRecentImportJob(job)
+  importTaskVisible.value = true
+  Notification.error({
+    title: '接口文档解析失败',
+    content: job.error_message || job.progress_message || '后台解析任务失败，请稍后重试。',
+  })
+}
+
+const pollImportJobs = async () => {
+  if (!trackedImportJobIds.value.length) {
+    clearImportJobPolling()
+    return
+  }
+
+  const currentIds = [...trackedImportJobIds.value]
+  const jobs = await Promise.all(
+    currentIds.map(async jobId => {
+      const res = await importJobApi.get(jobId)
+      return (res.data?.data || res.data) as ApiImportJob
+    })
+  )
+
+  activeImportJobs.value = jobs
+    .filter(job => job.status === 'pending' || job.status === 'running')
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+
+  jobs
+    .filter(job => job.status === 'success' || job.status === 'failed')
+    .forEach(job => rememberRecentImportJob(job))
+
+  for (const job of jobs) {
+    if (job.status === 'success') {
+      trackedImportJobIds.value = trackedImportJobIds.value.filter(id => id !== job.id)
+      persistTrackedImportJobs()
+      await handleImportJobSuccess(job)
+      continue
+    }
+    if (job.status === 'failed') {
+      trackedImportJobIds.value = trackedImportJobIds.value.filter(id => id !== job.id)
+      persistTrackedImportJobs()
+      handleImportJobFailed(job)
+    }
+  }
+
+  if (!trackedImportJobIds.value.length) {
+    clearImportJobPolling()
+  }
+}
+
+const ensureImportJobPolling = () => {
+  if (importJobPollingTimer || !trackedImportJobIds.value.length) return
+  importJobPollingTimer = window.setInterval(() => {
+    pollImportJobs().catch(error => {
+      console.error('[RequestList] 轮询导入任务失败:', error)
+    })
+  }, 5000)
+}
+
+const trackImportJob = (job: ApiImportJob) => {
+  if (!trackedImportJobIds.value.includes(job.id)) {
+    trackedImportJobIds.value.push(job.id)
+    persistTrackedImportJobs()
+  }
+  activeImportJobs.value = [job, ...activeImportJobs.value.filter(item => item.id !== job.id)]
+  ensureImportJobPolling()
+}
 
 const stringifyJson = (value: any, fallback = '{}') => {
   if (value === null || value === undefined || value === '') return fallback
@@ -515,7 +999,7 @@ const loadRequests = async () => {
     requests.value = Array.isArray(data) ? data : []
   } catch (error) {
     console.error('[RequestList] 获取接口失败:', error)
-    Message.error('获取接口列表失败')
+    Message.error(getErrorMessage(error))
     requests.value = []
   } finally {
     loading.value = false
@@ -529,6 +1013,8 @@ const resetEditor = () => {
   createMode.value = 'manual'
   generateTestCases.value = true
   enableAiParse.value = true
+  selectedRequestDraftIndex.value = 0
+  resetImportProgress()
   if (documentInputRef.value) {
     documentInputRef.value.value = ''
   }
@@ -546,8 +1032,33 @@ const resetEditor = () => {
   }
 }
 
+const fillFormFromRequestDraft = (draftIndex = selectedRequestDraftIndex.value) => {
+  const draft = getRequestDraft(draftIndex)
+  if (!draft) return
+
+  selectedRequestDraftIndex.value = draftIndex
+  formState.value = {
+    name: draft.form.name,
+    description: draft.form.description || '',
+    method: draft.form.method,
+    url: draft.form.url,
+    headersText: stringifyJson(draft.form.headers),
+    paramsText: stringifyJson(draft.form.params),
+    body_type: draft.form.body_type,
+    bodyText:
+      draft.form.body_type === 'raw'
+        ? stringifyJson(draft.form.body, '')
+        : stringifyJson(draft.form.body, '{}'),
+    assertionsText: stringifyJson(draft.form.assertions, '[]'),
+    timeout_ms: draft.form.timeout_ms || 30000,
+  }
+}
+
 const openCreateModal = () => {
   resetEditor()
+  if (hasRequestDrafts.value) {
+    fillFormFromRequestDraft(0)
+  }
   editorVisible.value = true
 }
 
@@ -567,6 +1078,16 @@ const openEditModal = (record: ApiRequest) => {
     timeout_ms: record.timeout_ms,
   }
   editorVisible.value = true
+}
+
+const applySelectedRequestDraft = (value?: string | number | boolean) => {
+  const index = typeof value === 'number' ? value : selectedRequestDraftIndex.value
+  fillFormFromRequestDraft(index)
+}
+
+const clearDraftsAndReset = () => {
+  clearDrafts()
+  resetEditor()
 }
 
 const handleDocumentChange = (event: Event) => {
@@ -657,23 +1178,40 @@ const submitManualRequest = async () => {
   }
 }
 
+const getErrorMessage = (error: any) => {
+  const rawMessage = error?.error || error?.data?.error || error?.message || '处理接口失败'
+  if (error?.status === 408 || /timeout/i.test(String(rawMessage))) {
+    return '接口文档解析超时，请稍后重试；如果文档较大，建议先关闭 AI 增强解析后再导入。'
+  }
+  if (String(rawMessage).includes('服务器无响应')) {
+    return '接口文档解析等待时间过长，请稍后重试；如果文档较大，建议先关闭 AI 增强解析后再导入。'
+  }
+  return rawMessage
+}
+
 const submitDocumentImport = async () => {
   if (!documentFile.value) {
     throw new Error('请先选择接口文档')
   }
-  const res = await apiRequestApi.importDocument(props.selectedCollectionId!, documentFile.value, {
-    generateTestCases: generateTestCases.value,
-    enableAiParse: enableAiParse.value,
-  })
-  const result = (res.data?.data || res.data) as ApiImportResult
-  importResult.value = result
-  importResultVisible.value = true
-  const aiMessage = result.ai_requested
-    ? result.ai_used
-      ? '，已应用AI增强解析'
-      : '，AI未生效，已回退到规则解析'
-    : ''
-  Message.success(`文档导入成功，已生成 ${result.created_count || 0} 个接口和 ${result.created_testcase_count || 0} 个测试用例${aiMessage}`)
+
+  startImportProgress(documentFile.value.name)
+  try {
+    const res = await apiRequestApi.importDocument(props.selectedCollectionId!, documentFile.value, {
+      generateTestCases: generateTestCases.value,
+      enableAiParse: enableAiParse.value,
+      onUploadProgress: handleImportUploadProgress,
+      asyncMode: true,
+    })
+    const job = (res.data?.data || res.data) as ApiImportJob
+    clearImportProgressTimer()
+    resetImportProgress()
+    trackImportJob(job)
+    importTaskVisible.value = true
+    Message.success('接口文档解析任务已提交，后台会继续执行，完成后会自动提示你。')
+  } catch (error: any) {
+    failImportProgress(getErrorMessage(error))
+    throw error
+  }
 }
 
 const submitRequest = async (done: (closed: boolean) => void) => {
@@ -687,17 +1225,20 @@ const submitRequest = async (done: (closed: boolean) => void) => {
   try {
     if (editingRequest.value || createMode.value === 'manual') {
       await submitManualRequest()
+      done(true)
+      editorVisible.value = false
+      resetEditor()
+      emit('updated')
+      loadRequests()
     } else {
       await submitDocumentImport()
+      done(true)
+      editorVisible.value = false
+      resetEditor()
     }
-    done(true)
-    editorVisible.value = false
-    resetEditor()
-    emit('updated')
-    loadRequests()
   } catch (error: any) {
     console.error('[RequestList] 保存接口失败:', error)
-    Message.error(error?.error || error?.message || '处理接口失败')
+    Message.error(getErrorMessage(error))
     done(false)
   } finally {
     submitLoading.value = false
@@ -731,6 +1272,9 @@ const executeRequest = async (record: ApiRequest) => {
 watch(
   () => projectId.value,
   () => {
+    loadTrackedImportJobs()
+    ensureImportJobPolling()
+    pollImportJobs().catch(() => undefined)
     loadEnvironments()
     loadRequests()
   },
@@ -744,6 +1288,11 @@ watch(
   },
   { immediate: true }
 )
+
+onUnmounted(() => {
+  clearImportProgressTimer()
+  clearImportJobPolling()
+})
 
 defineExpose({
   refresh: loadRequests,
@@ -776,6 +1325,44 @@ defineExpose({
   margin-bottom: 16px;
 }
 
+.import-prefill-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(20, 184, 166, 0.08)),
+    rgba(255, 255, 255, 0.92);
+}
+
+.prefill-copy {
+  min-width: 0;
+}
+
+.prefill-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.prefill-description {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.prefill-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .document-import-panel {
   display: flex;
   flex-direction: column;
@@ -784,6 +1371,152 @@ defineExpose({
 
 .import-alert {
   margin-bottom: 0;
+}
+
+.import-progress-panel {
+  gap: 18px;
+}
+
+.import-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-progress-percent {
+  min-width: 52px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.import-progress-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(15, 118, 110, 0.12)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 252, 0.92));
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.import-progress-badge {
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.import-progress-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.import-progress-description {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.import-progress-step-list {
+  display: grid;
+  gap: 12px;
+}
+
+.import-progress-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.86);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.import-progress-step.is-active {
+  border-color: rgba(59, 130, 246, 0.26);
+  box-shadow: 0 16px 34px rgba(59, 130, 246, 0.12);
+  transform: translateY(-1px);
+}
+
+.import-progress-step.is-finished {
+  border-color: rgba(20, 184, 166, 0.22);
+  background:
+    linear-gradient(135deg, rgba(20, 184, 166, 0.08), rgba(255, 255, 255, 0.96)),
+    rgba(255, 255, 255, 0.92);
+}
+
+.import-progress-step.is-error {
+  border-color: rgba(239, 68, 68, 0.24);
+  background:
+    linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0.96)),
+    rgba(255, 255, 255, 0.92);
+}
+
+.import-progress-step-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.import-progress-step.is-active .import-progress-step-marker {
+  background: linear-gradient(135deg, #2563eb, #14b8a6);
+  color: #fff;
+}
+
+.import-progress-step.is-finished .import-progress-step-marker {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #fff;
+}
+
+.import-progress-step.is-error .import-progress-step-marker {
+  background: linear-gradient(135deg, #dc2626, #f97316);
+  color: #fff;
+}
+
+.import-progress-step-copy {
+  min-width: 0;
+}
+
+.import-progress-step-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.import-progress-step-description {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.import-progress-alert {
+  margin-bottom: 0;
+}
+
+.import-progress-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .import-hero-card {
@@ -990,6 +1723,193 @@ defineExpose({
   margin-bottom: 4px;
 }
 
+.import-task-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.import-task-alert {
+  margin-bottom: 0;
+}
+
+.import-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.import-task-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.import-task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.import-task-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.import-task-desc {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.import-task-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.import-task-progress-text {
+  min-width: 44px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.import-task-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 14px;
+}
+
+.import-task-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.import-task-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.5);
+  flex-shrink: 0;
+}
+
+.import-task-step.is-finished {
+  color: #0f766e;
+}
+
+.import-task-step.is-finished .import-task-step-dot {
+  background: #14b8a6;
+}
+
+.import-task-step.is-active {
+  color: #2563eb;
+}
+
+.import-task-step.is-active .import-task-step-dot {
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+.import-task-step.is-failed {
+  color: #dc2626;
+}
+
+.import-task-step.is-failed .import-task-step-dot {
+  background: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+}
+
+.import-task-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(254, 242, 242, 0.96);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.import-task-float {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 280px;
+  padding: 14px 16px;
+  border: 1px solid rgba(59, 130, 246, 0.16);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(20, 184, 166, 0.1)),
+    rgba(255, 255, 255, 0.94);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.14);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.import-task-float:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 44px rgba(15, 23, 42, 0.18);
+}
+
+.import-task-float-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #14b8a6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.import-task-float-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.import-task-float-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.import-task-float-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+}
+
+.import-task-float-progress {
+  width: 96px;
+  flex-shrink: 0;
+}
+
 .import-tags {
   margin-bottom: 12px;
 }
@@ -1011,10 +1931,18 @@ defineExpose({
     grid-template-columns: 1fr;
   }
 
+  .import-prefill-banner,
   .selected-file-card,
   .import-option-card {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .import-task-float {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    min-width: 0;
   }
 }
 </style>

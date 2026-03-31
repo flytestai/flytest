@@ -42,6 +42,9 @@ ENDPOINT_PATTERN = re.compile(
 )
 HEADING_PATTERN = re.compile(r"(?m)^(#{1,6})\s+(?P<title>.+)$")
 CODE_BLOCK_PATTERN = re.compile(r"```(?P<lang>[a-zA-Z0-9_-]*)\n(?P<content>.*?)```", re.S)
+URL_IN_TEXT_PATTERN = re.compile(r"((?:https?://|/)[^\s`\"'<>]+)")
+STATUS_CODE_TEXT_PATTERN = re.compile(r"(?:status(?:\s*code)?|状态码|响应码)\s*[:：]?\s*(\d{3})", re.I)
+JSON_PATH_TEXT_PATTERN = re.compile(r"((?:data|result|response)(?:\.[A-Za-z0-9_-]+)+)")
 
 
 @dataclass
@@ -275,6 +278,16 @@ def parse_openapi_document(spec: dict[str, Any]) -> list[ParsedRequestData]:
     servers = spec.get("servers") or []
     if servers and isinstance(servers[0], dict):
         base_url = str(servers[0].get("url") or "").strip()
+    elif spec.get("swagger"):
+        host = str(spec.get("host") or "").strip()
+        base_path = str(spec.get("basePath") or "").strip()
+        schemes = spec.get("schemes") or ["http"]
+        scheme = str(schemes[0]).strip() if schemes else "http"
+        if host:
+            normalized_base_path = ""
+            if base_path:
+                normalized_base_path = base_path if base_path.startswith("/") else f"/{base_path}"
+            base_url = f"{scheme}://{host}{normalized_base_path}"
 
     for path, path_item in (spec.get("paths") or {}).items():
         if not isinstance(path_item, dict):
@@ -575,6 +588,12 @@ def extract_requests_from_markdown(markdown: str) -> list[ParsedRequestData]:
             seen.add(dedupe_key)
             requests.append(parsed)
 
+    for parsed in extract_requests_from_structured_text(markdown):
+        dedupe_key = (parsed.method, parsed.url)
+        if dedupe_key not in seen:
+            seen.add(dedupe_key)
+            requests.append(parsed)
+
     headings = list(HEADING_PATTERN.finditer(markdown))
     code_blocks = list(CODE_BLOCK_PATTERN.finditer(markdown))
 
@@ -617,6 +636,360 @@ def extract_requests_from_markdown(markdown: str) -> list[ParsedRequestData]:
         raise ValueError("未能从接口文档中识别到接口，请优先上传 Swagger/OpenAPI/Postman 文件，或包含清晰 cURL 示例的接口文档。")
 
     return requests
+
+
+def extract_requests_from_structured_text(markdown: str) -> list[ParsedRequestData]:
+    requests: list[ParsedRequestData] = []
+    candidate = create_structured_candidate()
+
+    for raw_line in markdown.splitlines():
+        line = normalize_structured_line(raw_line)
+        if not line:
+            finalized = finalize_structured_candidate(candidate)
+            if finalized:
+                requests.append(finalized)
+            candidate = create_structured_candidate()
+            continue
+
+        label, value = split_structured_label(line)
+        field_type = match_structured_field(label) if label else None
+
+        if field_type == "name":
+            finalized = finalize_structured_candidate(candidate)
+            if finalized:
+                requests.append(finalized)
+                candidate = create_structured_candidate()
+            candidate["name"] = value or candidate["name"]
+            continue
+
+        if field_type == "method":
+            method = extract_method_from_text(value)
+            if method:
+                candidate["method"] = method
+            continue
+
+        if field_type == "url":
+            url = extract_url_from_text(value)
+            if url:
+                candidate["url"] = url
+            continue
+
+        if field_type == "headers":
+            candidate["headers"].update(parse_key_value_payload(value))
+            continue
+
+        if field_type == "query":
+            candidate["query_params"].update(parse_parameter_payload(value))
+            continue
+
+        if field_type == "request_params":
+            candidate["request_params"].update(parse_parameter_payload(value))
+            continue
+
+        if field_type == "body":
+            body_type, body = parse_body_payload(value)
+            if body_type != "none":
+                candidate["body_type"] = body_type
+                candidate["body"] = body
+            continue
+
+        if field_type == "success":
+            candidate["success_notes"].append(value)
+            continue
+
+        if field_type == "description":
+            candidate["description_lines"].append(value)
+            continue
+
+        inline_method = extract_method_from_text(line)
+        inline_url = extract_url_from_text(line)
+        if inline_method and inline_url:
+            finalized = finalize_structured_candidate(candidate)
+            if finalized:
+                requests.append(finalized)
+                candidate = create_structured_candidate()
+            candidate["method"] = inline_method
+            candidate["url"] = inline_url
+            if not candidate["name"]:
+                candidate["name"] = line
+            continue
+
+        if not candidate["name"] and looks_like_structured_name(line):
+            candidate["name"] = line
+            continue
+
+        candidate["description_lines"].append(line)
+
+    finalized = finalize_structured_candidate(candidate)
+    if finalized:
+        requests.append(finalized)
+
+    deduped_requests: list[ParsedRequestData] = []
+    seen: set[tuple[str, str]] = set()
+    for item in requests:
+        key = (item.method, item.url)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped_requests.append(item)
+    return deduped_requests
+
+
+def create_structured_candidate() -> dict[str, Any]:
+    return {
+        "name": "",
+        "method": "",
+        "url": "",
+        "headers": {},
+        "query_params": {},
+        "request_params": {},
+        "body_type": "none",
+        "body": {},
+        "description_lines": [],
+        "success_notes": [],
+    }
+
+
+def normalize_structured_line(line: str) -> str:
+    normalized = line.strip()
+    normalized = re.sub(r"^#{1,6}\s*", "", normalized)
+    normalized = re.sub(r"^[\-\*\u2022]\s*", "", normalized)
+    normalized = re.sub(r"^\d+\.\s*", "", normalized)
+    normalized = re.sub("^\\d+\u3001\\s*", "", normalized)
+    return normalized.strip()
+
+
+def split_structured_label(line: str) -> tuple[str | None, str]:
+    for separator in ("\uFF1A", ":"):
+        if separator in line:
+            label, value = line.split(separator, 1)
+            return label.strip(), value.strip()
+    return None, line
+
+
+def match_structured_field(label: str | None) -> str | None:
+    if not label:
+        return None
+    normalized = re.sub(r"\s+", "", label).lower()
+    field_aliases = {
+        "name": {
+            "\u63a5\u53e3\u540d\u79f0",
+            "\u63a5\u53e3\u540d",
+            "api\u540d\u79f0",
+            "apiname",
+            "\u540d\u79f0",
+            "name",
+        },
+        "method": {
+            "\u8bf7\u6c42\u65b9\u5f0f",
+            "\u8bf7\u6c42\u65b9\u6cd5",
+            "method",
+            "httpmethod",
+        },
+        "url": {
+            "\u8bf7\u6c42\u5730\u5740",
+            "\u63a5\u53e3\u5730\u5740",
+            "\u8bf7\u6c42\u8def\u5f84",
+            "\u63a5\u53e3\u8def\u5f84",
+            "\u8bf7\u6c42url",
+            "\u63a5\u53e3url",
+            "url",
+            "path",
+            "endpoint",
+        },
+        "headers": {"\u8bf7\u6c42\u5934", "header", "headers"},
+        "query": {
+            "\u67e5\u8be2\u53c2\u6570",
+            "query",
+            "queryparams",
+            "querystring",
+            "url\u53c2\u6570",
+        },
+        "request_params": {
+            "\u8bf7\u6c42\u53c2\u6570",
+            "\u5165\u53c2",
+            "\u53c2\u6570",
+            "requestparams",
+            "path\u53c2\u6570",
+            "pathparams",
+        },
+        "body": {
+            "\u8bf7\u6c42\u4f53",
+            "body",
+            "body\u53c2\u6570",
+            "\u8bf7\u6c42\u62a5\u6587",
+            "bodypayload",
+        },
+        "success": {
+            "\u6210\u529f\u54cd\u5e94",
+            "\u54cd\u5e94\u7ed3\u679c",
+            "\u8fd4\u56de\u7ed3\u679c",
+            "\u8fd4\u56de\u793a\u4f8b",
+            "\u54cd\u5e94\u793a\u4f8b",
+            "\u54cd\u5e94\u5185\u5bb9",
+            "\u8fd4\u56de\u5185\u5bb9",
+            "\u8fd4\u56de\u5b57\u6bb5",
+        },
+        "description": {
+            "\u63a5\u53e3\u63cf\u8ff0",
+            "\u63cf\u8ff0",
+            "\u8bf4\u660e",
+            "\u7528\u9014",
+            "\u529f\u80fd\u8bf4\u660e",
+        },
+    }
+    for field_type, aliases in field_aliases.items():
+        if normalized in aliases:
+            return field_type
+    return None
+
+
+def looks_like_structured_name(line: str) -> bool:
+    if extract_url_from_text(line):
+        return False
+    if extract_method_from_text(line):
+        return False
+    if len(line) > 80:
+        return False
+    return bool(re.search(r"[\u4e00-\u9fffA-Za-z]", line))
+
+
+def extract_method_from_text(value: str) -> str | None:
+    matched = re.search(r"\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b", value, re.I)
+    if not matched:
+        return None
+    method = matched.group(1).upper()
+    return method if method in HTTP_METHODS else None
+
+
+def extract_url_from_text(value: str) -> str | None:
+    matched = URL_IN_TEXT_PATTERN.search(value)
+    if not matched:
+        return None
+    return matched.group(1).rstrip(".,;，；)")
+
+
+def parse_key_value_payload(value: str) -> dict[str, Any]:
+    parsed_json = try_parse_json(value)
+    if isinstance(parsed_json, dict):
+        return parsed_json
+
+    pairs: dict[str, Any] = {}
+    for key, raw_value in re.findall(r"([A-Za-z_][A-Za-z0-9_.-]*)\s*(?:=|:|：)\s*([^,\n，；;]+)", value):
+        pairs[key] = raw_value.strip()
+    return pairs
+
+
+def parse_parameter_payload(value: str) -> dict[str, Any]:
+    parsed_json = try_parse_json(value)
+    if isinstance(parsed_json, dict):
+        return parsed_json
+
+    pairs = parse_key_value_payload(value)
+    if pairs:
+        return pairs
+
+    params: dict[str, Any] = {}
+    for token in re.split(r"[,\n，；;、]+", value):
+        token = token.strip()
+        if not token:
+            continue
+        matched = re.match(r"([A-Za-z_][A-Za-z0-9_.-]*)", token)
+        if not matched:
+            continue
+        key = matched.group(1)
+        params[key] = f"{{{{{key}}}}}"
+    return params
+
+
+def parse_body_payload(value: str) -> tuple[str, Any]:
+    parsed_json = try_parse_json(value)
+    if parsed_json is not None:
+        return "json", parsed_json
+
+    parsed_params = parse_parameter_payload(value)
+    if parsed_params:
+        return "json", parsed_params
+
+    stripped = value.strip()
+    if stripped:
+        return "raw", stripped
+    return "none", {}
+
+
+def extract_success_status_from_text(text: str, method: str) -> int:
+    matched = STATUS_CODE_TEXT_PATTERN.search(text)
+    if matched:
+        try:
+            return int(matched.group(1))
+        except ValueError:
+            pass
+    if method == "POST" and any(
+        keyword in text for keyword in ("\u521b\u5efa", "\u65b0\u589e", "create")
+    ):
+        return 201
+    return 200
+
+
+def extract_success_assertions(text: str, method: str) -> list[dict[str, Any]]:
+    assertions: list[dict[str, Any]] = [{"type": "status_code", "expected": extract_success_status_from_text(text, method)}]
+    seen_paths: set[str] = set()
+    for path in JSON_PATH_TEXT_PATTERN.findall(text):
+        if path in seen_paths:
+            continue
+        seen_paths.add(path)
+        assertions.append(
+            {
+                "type": "json_path",
+                "path": path,
+                "operator": "not_equals",
+                "expected": None,
+            }
+        )
+        if len(seen_paths) >= 3:
+            break
+    return assertions
+
+
+def finalize_structured_candidate(candidate: dict[str, Any]) -> ParsedRequestData | None:
+    method = extract_method_from_text(candidate["method"]) or "GET"
+    url = extract_url_from_text(candidate["url"])
+    if not url:
+        return None
+
+    params = dict(candidate["query_params"])
+    body_type = candidate["body_type"]
+    body = candidate["body"]
+
+    if candidate["request_params"]:
+        if method in {"GET", "DELETE", "HEAD", "OPTIONS"}:
+            params.update(candidate["request_params"])
+        elif body_type == "none":
+            body_type = "json"
+            body = candidate["request_params"]
+
+    success_text = " ".join(candidate["success_notes"]).strip()
+    description_parts = [part for part in candidate["description_lines"] if part]
+    if success_text:
+        description_parts.append(success_text)
+    description = " ".join(description_parts)[:5000]
+
+    name = candidate["name"].strip() if candidate["name"] else ""
+    if not name:
+        name = f"{method} {url}"
+
+    return ParsedRequestData(
+        name=name[:120],
+        method=method,
+        url=url,
+        description=description,
+        headers=candidate["headers"],
+        params=params,
+        body_type=body_type if body_type in {"none", "json", "form", "raw"} else "none",
+        body=body if body_type != "none" else {},
+        assertions=extract_success_assertions(success_text, method),
+        collection_name=guess_collection_name_from_path(url),
+    )
 
 
 def extract_requests_from_curl(markdown: str) -> list[ParsedRequestData]:

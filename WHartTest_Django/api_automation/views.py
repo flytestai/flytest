@@ -1,30 +1,31 @@
 import os
 import tempfile
+import threading
 import time
 from pathlib import Path
 
 import httpx
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import filters, status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 
 from projects.models import Project
 from wharttest_django.viewsets import BaseModelViewSet
 
-from .generation import generate_script_and_test_case
-from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiRequest, ApiTestCase
+from .import_service import process_document_import
+from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
 from .serializers import (
     ApiCollectionSerializer,
     ApiEnvironmentSerializer,
     ApiExecutionRecordSerializer,
+    ApiImportJobSerializer,
     ApiRequestSerializer,
     ApiTestCaseSerializer,
 )
-from .document_import import ParsedRequestData, import_requests_from_document
-from .ai_parser import enhance_import_result_with_ai
 from .services import VariableResolver, build_request_url, evaluate_assertions
 
 
@@ -41,6 +42,72 @@ def collect_collection_ids(root_collection: ApiCollection) -> list[int]:
         child = root_collection.children.model.objects.get(id=child_id)
         collection_ids.extend(collect_collection_ids(child))
     return collection_ids
+
+
+def _save_job(job_id: int, **fields):
+    job = ApiImportJob.objects.get(pk=job_id)
+    for key, value in fields.items():
+        setattr(job, key, value)
+    job.updated_at = timezone.now()
+    job.save()
+
+
+def _run_import_job(job_id: int, file_path: str):
+    try:
+        job = ApiImportJob.objects.select_related("collection", "project", "creator").get(pk=job_id)
+        _save_job(
+            job_id,
+            status="running",
+            progress_percent=8,
+            progress_stage="queued",
+            progress_message="任务已开始，正在准备解析接口文档。",
+            error_message="",
+        )
+
+        def progress(percent: int, stage: str, message: str):
+            _save_job(
+                job_id,
+                status="running",
+                progress_percent=max(0, min(percent, 100)),
+                progress_stage=stage,
+                progress_message=message,
+            )
+
+        payload = process_document_import(
+            collection=job.collection,
+            user=job.creator,
+            file_path=file_path,
+            generate_test_cases=job.generate_test_cases,
+            enable_ai_parse=job.enable_ai_parse,
+            progress_callback=progress,
+        )
+        _save_job(
+            job_id,
+            status="success",
+            progress_percent=100,
+            progress_stage="completed",
+            progress_message="接口文档解析完成。",
+            result_payload=payload,
+            error_message="",
+            completed_at=timezone.now(),
+        )
+    except Exception as exc:  # noqa: BLE001
+        _save_job(
+            job_id,
+            status="failed",
+            progress_stage="failed",
+            progress_message="接口文档解析失败。",
+            error_message=str(exc),
+            completed_at=timezone.now(),
+        )
+    finally:
+        if os.path.exists(file_path):
+            os.unlink(file_path)
+
+
+def _start_import_job(job_id: int, file_path: str):
+    worker = threading.Thread(target=_run_import_job, args=(job_id, file_path), daemon=True)
+    worker.start()
 
 
 class ApiCollectionViewSet(BaseModelViewSet):
@@ -74,6 +141,29 @@ class ApiCollectionViewSet(BaseModelViewSet):
         return Response(serializer.data)
 
 
+class ApiImportJobViewSet(BaseModelViewSet):
+    queryset = ApiImportJob.objects.select_related("project", "collection", "creator")
+    serializer_class = ApiImportJobSerializer
+    http_method_names = ["get", "head", "options"]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["source_name", "progress_message", "error_message"]
+    ordering_fields = ["created_at", "updated_at", "completed_at", "progress_percent"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset().filter(project__in=get_accessible_projects(self.request.user))
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(creator=self.request.user)
+
+        project_id = self.request.query_params.get("project")
+        status_value = self.request.query_params.get("status")
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        if status_value:
+            queryset = queryset.filter(status=status_value)
+        return queryset
+
+
 class ApiRequestViewSet(BaseModelViewSet):
     queryset = ApiRequest.objects.select_related("collection", "collection__project", "created_by")
     serializer_class = ApiRequestSerializer
@@ -105,6 +195,30 @@ class ApiRequestViewSet(BaseModelViewSet):
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        collection_id = request.data.get("collection")
+        method = str(request.data.get("method") or "").upper().strip()
+        url = str(request.data.get("url") or "").strip()
+        if collection_id and method and url:
+            collection = ApiCollection.objects.filter(
+                pk=collection_id,
+                project__in=get_accessible_projects(request.user),
+            ).first()
+            if collection:
+                existing = (
+                    ApiRequest.objects.filter(
+                        collection__project=collection.project,
+                        method=method,
+                        url=url,
+                    )
+                    .select_related("collection", "collection__project", "created_by")
+                    .first()
+                )
+                if existing:
+                    serializer = self.get_serializer(existing)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
+
     @action(detail=False, methods=["post"], parser_classes=[MultiPartParser, FormParser], url_path="import-document")
     def import_document(self, request):
         file = request.FILES.get("file")
@@ -121,6 +235,7 @@ class ApiRequestViewSet(BaseModelViewSet):
         )
         generate_test_cases = str(request.data.get("generate_test_cases", "true")).lower() in {"1", "true", "yes", "on"}
         enable_ai_parse = str(request.data.get("enable_ai_parse", "true")).lower() in {"1", "true", "yes", "on"}
+        async_mode = str(request.data.get("async_mode", "true")).lower() in {"1", "true", "yes", "on"}
 
         suffix = Path(file.name).suffix or ""
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
@@ -128,61 +243,32 @@ class ApiRequestViewSet(BaseModelViewSet):
                 temp_file.write(chunk)
             temp_path = temp_file.name
 
+        if async_mode:
+            job = ApiImportJob.objects.create(
+                project=collection.project,
+                collection=collection,
+                creator=request.user,
+                source_name=file.name,
+                status="pending",
+                progress_percent=4,
+                progress_stage="uploaded",
+                progress_message="文档已上传，正在进入后台解析队列。",
+                generate_test_cases=generate_test_cases,
+                enable_ai_parse=enable_ai_parse,
+            )
+            _start_import_job(job.id, temp_path)
+            serializer = ApiImportJobSerializer(job)
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
         try:
-            import_result = import_requests_from_document(temp_path)
-            ai_result = None
-            parsed_requests = import_result.requests
-
-            if enable_ai_parse:
-                ai_result = enhance_import_result_with_ai(
-                    file_path=temp_path,
-                    user=request.user,
-                    source_type=import_result.source_type,
-                    base_requests=import_result.requests,
-                )
-                if ai_result.requests:
-                    parsed_requests = ai_result.requests
-
-            created_requests = self._create_imported_requests(collection, request.user, parsed_requests)
-            created_test_cases = self._create_generated_test_cases(
-                collection.project,
-                request.user,
-                created_requests,
-                parsed_requests,
-                enabled=generate_test_cases,
+            payload = process_document_import(
+                collection=collection,
+                user=request.user,
+                file_path=temp_path,
+                generate_test_cases=generate_test_cases,
+                enable_ai_parse=enable_ai_parse,
             )
-            serializer = self.get_serializer(created_requests, many=True)
-            serialized_requests = serializer.data
-            generated_scripts = [
-                {
-                    "request_id": item["id"],
-                    "request_name": item["name"],
-                    "collection_name": item.get("collection_name"),
-                    "script": item["generated_script"],
-                }
-                for item in serialized_requests
-            ]
-            testcase_serializer = ApiTestCaseSerializer(created_test_cases, many=True)
-            return Response(
-                {
-                    "created_count": len(created_requests),
-                    "generated_script_count": len(generated_scripts),
-                    "created_testcase_count": len(created_test_cases),
-                    "source_type": import_result.source_type,
-                    "marker_used": import_result.marker_used,
-                    "note": import_result.note,
-                    "ai_requested": enable_ai_parse,
-                    "ai_used": bool(ai_result and ai_result.used),
-                    "ai_note": ai_result.note if ai_result else "",
-                    "ai_prompt_source": ai_result.prompt_source if ai_result else None,
-                    "ai_prompt_name": ai_result.prompt_name if ai_result else None,
-                    "ai_model_name": ai_result.model_name if ai_result else None,
-                    "items": serialized_requests,
-                    "generated_scripts": generated_scripts,
-                    "test_cases": testcase_serializer.data,
-                },
-                status=status.HTTP_201_CREATED,
-            )
+            return Response(payload, status=status.HTTP_201_CREATED)
         except ValueError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         finally:
@@ -306,83 +392,6 @@ class ApiRequestViewSet(BaseModelViewSet):
 
         serializer = ApiExecutionRecordSerializer(record)
         return Response(serializer.data)
-
-    def _create_imported_requests(
-        self,
-        root_collection: ApiCollection,
-        user,
-        parsed_requests: list[ParsedRequestData],
-    ) -> list[ApiRequest]:
-        created_requests: list[ApiRequest] = []
-        child_collections: dict[str, ApiCollection] = {}
-
-        for parsed in parsed_requests:
-            target_collection = root_collection
-            if parsed.collection_name and parsed.collection_name.strip():
-                normalized_name = parsed.collection_name.strip()[:100]
-                if normalized_name and normalized_name != root_collection.name:
-                    if normalized_name not in child_collections:
-                        child_collection, _ = ApiCollection.objects.get_or_create(
-                            project=root_collection.project,
-                            parent=root_collection,
-                            name=normalized_name,
-                            defaults={
-                                "creator": user,
-                                "order": 0,
-                            },
-                        )
-                        child_collections[normalized_name] = child_collection
-                    target_collection = child_collections[normalized_name]
-
-            created_requests.append(
-                ApiRequest.objects.create(
-                    collection=target_collection,
-                    name=parsed.name[:120],
-                    description=parsed.description[:5000],
-                    method=parsed.method,
-                    url=parsed.url,
-                    headers=parsed.headers,
-                    params=parsed.params,
-                    body_type=parsed.body_type,
-                    body=parsed.body,
-                    assertions=parsed.assertions,
-                    timeout_ms=30000,
-                    order=0,
-                    created_by=user,
-                )
-            )
-
-        return created_requests
-
-    def _create_generated_test_cases(
-        self,
-        project: Project,
-        user,
-        created_requests: list[ApiRequest],
-        parsed_requests: list[ParsedRequestData],
-        *,
-        enabled: bool,
-    ) -> list[ApiTestCase]:
-        if not enabled:
-            return []
-
-        generated_cases: list[ApiTestCase] = []
-        for request, parsed in zip(created_requests, parsed_requests, strict=False):
-            script, testcase_payload = generate_script_and_test_case(parsed)
-            generated_cases.append(
-                ApiTestCase.objects.create(
-                    project=project,
-                    request=request,
-                    name=testcase_payload["name"][:160],
-                    description=testcase_payload["description"],
-                    status=testcase_payload["status"],
-                    tags=testcase_payload["tags"],
-                    script=script,
-                    assertions=testcase_payload["assertions"],
-                    creator=user,
-                )
-            )
-        return generated_cases
 
 
 class ApiEnvironmentViewSet(BaseModelViewSet):

@@ -152,6 +152,14 @@ service.interceptors.response.use(
     let message = '未知错误';
     let status = 500;
 
+    if (error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')) {
+      return Promise.reject({
+        success: false,
+        status: 408,
+        error: '请求超时，请稍后重试；如果是接口文档导入，建议先关闭 AI 增强解析或更换更精简的文档后再试。',
+      });
+    }
+
     // 检查是否是401错误（未授权）
     if (response && response.status === 401) {
       // 如果是登录请求返回401，说明凭据错误，直接返回后端的错误信息，不触发token刷新逻辑

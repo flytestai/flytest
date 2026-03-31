@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import logging
 import re
@@ -137,7 +138,7 @@ def get_api_automation_prompt(user) -> tuple[str | None, str | None, str | None]
     return None, None, None
 
 
-def safe_llm_invoke(llm, messages, max_retries: int = 3):
+def safe_llm_invoke(llm, messages, max_retries: int = 2):
     last_error = None
     for _ in range(max_retries):
         try:
@@ -147,6 +148,8 @@ def safe_llm_invoke(llm, messages, max_retries: int = 3):
         except Exception as exc:  # noqa: BLE001
             last_error = exc
             logger.warning("API automation AI invoke failed: %s", exc)
+            if "timed out" in str(exc).lower():
+                break
             continue
     raise last_error or RuntimeError("LLM returned empty content")
 
@@ -155,6 +158,35 @@ def _truncate_text(value: str, limit: int) -> tuple[str, bool]:
     if len(value) <= limit:
         return value, False
     return value[:limit], True
+
+
+def _split_document_for_ai(document_content: str, max_chars: int = 12000) -> list[str]:
+    if len(document_content) <= max_chars:
+        return [document_content]
+
+    paragraphs = [segment.strip() for segment in re.split(r"\n\s*\n", document_content) if segment.strip()]
+    if not paragraphs:
+        return [document_content[:max_chars]]
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_length = 0
+
+    for paragraph in paragraphs:
+        piece = paragraph if len(paragraph) <= max_chars else paragraph[:max_chars]
+        projected_length = current_length + len(piece) + (2 if current else 0)
+        if current and projected_length > max_chars:
+            chunks.append("\n\n".join(current))
+            current = [piece]
+            current_length = len(piece)
+            continue
+        current.append(piece)
+        current_length = projected_length
+
+    if current:
+        chunks.append("\n\n".join(current))
+
+    return chunks or [document_content[:max_chars]]
 
 
 def _normalized_request_key(method: str, url: str) -> tuple[str, str]:
@@ -243,8 +275,23 @@ def _serialize_requests_for_prompt(parsed_requests: list[ParsedRequestData]) -> 
             for item in parsed_requests
         ],
         ensure_ascii=False,
-        indent=2,
+        separators=(",", ":"),
     )
+
+
+def _select_relevant_requests(chunk_content: str, base_requests: list[ParsedRequestData], limit: int = 12) -> list[ParsedRequestData]:
+    if not base_requests:
+        return []
+
+    chunk_lower = chunk_content.lower()
+    matched: list[ParsedRequestData] = []
+    for item in base_requests:
+        identifiers = [item.url.lower(), item.name.lower()]
+        if any(identifier and identifier in chunk_lower for identifier in identifiers):
+            matched.append(item)
+        if len(matched) >= limit:
+            break
+    return matched or base_requests[:limit]
 
 
 def _merge_ai_requests(
@@ -274,6 +321,50 @@ def _merge_ai_requests(
         merged_map[_normalized_request_key(normalized.method, normalized.url)] = normalized
 
     return list(merged_map.values()) or base_requests
+
+
+def _invoke_ai_for_chunk(
+    *,
+    active_config: LLMConfig,
+    prompt_template: str,
+    file_path: str,
+    content_source_type: str,
+    marker_used: bool,
+    chunk_content: str,
+    chunk_index: int,
+    chunk_total: int,
+    related_requests: list[ParsedRequestData],
+) -> tuple[dict[str, Any] | list[Any] | None, bool, bool]:
+    llm = create_llm_instance(active_config, temperature=0.1)
+    trimmed_chunk, truncated_chunk = _truncate_text(chunk_content, 12000)
+    preparsed_requests_json, truncated_preparsed = _truncate_text(
+        _serialize_requests_for_prompt(related_requests),
+        6000,
+    )
+
+    formatted_prompt = format_prompt_template(
+        prompt_template,
+        document_content=trimmed_chunk,
+        source_type=f"{content_source_type} chunk {chunk_index + 1}/{chunk_total}",
+        file_name=f"{Path(file_path).name} [chunk {chunk_index + 1}/{chunk_total}]",
+        marker_used=marker_used,
+        preparsed_requests_json=preparsed_requests_json,
+    )
+
+    response = safe_llm_invoke(
+        llm,
+        [
+            SystemMessage(
+                content=(
+                    "你是专业的 API 自动化测试分析助手。"
+                    "你必须只返回合法 JSON，不要输出 Markdown，不要解释。"
+                )
+            ),
+            HumanMessage(content=formatted_prompt),
+        ],
+    )
+    payload = extract_json_from_response(getattr(response, "content", ""))
+    return payload, truncated_chunk, truncated_preparsed
 
 
 def enhance_import_result_with_ai(
@@ -306,34 +397,66 @@ def enhance_import_result_with_ai(
         )
 
     try:
-        llm = create_llm_instance(active_config, temperature=0.1)
         document_content, content_source_type, marker_used = load_document_content_for_ai(file_path)
-        document_content, truncated_document = _truncate_text(document_content, 50000)
-        preparsed_requests_json, truncated_preparsed = _truncate_text(_serialize_requests_for_prompt(base_requests), 15000)
+        chunks = _split_document_for_ai(document_content, max_chars=12000)
 
-        formatted_prompt = format_prompt_template(
-            prompt_template,
-            document_content=document_content,
-            source_type=content_source_type or source_type,
-            file_name=Path(file_path).name,
-            marker_used=marker_used,
-            preparsed_requests_json=preparsed_requests_json,
-        )
+        payloads: list[dict[str, Any] | list[Any]] = []
+        truncated_document = len(chunks) > 1
+        truncated_preparsed = False
 
-        response = safe_llm_invoke(
-            llm,
-            [
-                SystemMessage(
-                    content=(
-                        "你是专业的 API 自动化测试分析助手。"
-                        "你必须只返回合法 JSON，不要输出 Markdown，不要解释。"
+        if len(chunks) == 1:
+            payload, chunk_truncated, preparsed_truncated = _invoke_ai_for_chunk(
+                active_config=active_config,
+                prompt_template=prompt_template,
+                file_path=file_path,
+                content_source_type=content_source_type or source_type,
+                marker_used=marker_used,
+                chunk_content=chunks[0],
+                chunk_index=0,
+                chunk_total=1,
+                related_requests=_select_relevant_requests(chunks[0], base_requests),
+            )
+            truncated_document = truncated_document or chunk_truncated
+            truncated_preparsed = truncated_preparsed or preparsed_truncated
+            if payload is None:
+                return AIEnhancementResult(
+                    requested=True,
+                    used=False,
+                    note="AI 返回结果无法解析为 JSON，已回退到规则解析结果。",
+                    prompt_source=prompt_source,
+                    prompt_name=prompt_name,
+                    model_name=active_config.name,
+                    requests=base_requests,
+                )
+            payloads.append(payload)
+        else:
+            futures = []
+            max_workers = min(len(chunks), 10)
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                for index, chunk in enumerate(chunks):
+                    futures.append(
+                        executor.submit(
+                            _invoke_ai_for_chunk,
+                            active_config=active_config,
+                            prompt_template=prompt_template,
+                            file_path=file_path,
+                            content_source_type=content_source_type or source_type,
+                            marker_used=marker_used,
+                            chunk_content=chunk,
+                            chunk_index=index,
+                            chunk_total=len(chunks),
+                            related_requests=_select_relevant_requests(chunk, base_requests),
+                        )
                     )
-                ),
-                HumanMessage(content=formatted_prompt),
-            ],
-        )
-        payload = extract_json_from_response(getattr(response, "content", ""))
-        if payload is None:
+
+                for future in as_completed(futures):
+                    payload, chunk_truncated, preparsed_truncated = future.result()
+                    truncated_document = truncated_document or chunk_truncated
+                    truncated_preparsed = truncated_preparsed or preparsed_truncated
+                    if payload is not None:
+                        payloads.append(payload)
+
+        if not payloads:
             return AIEnhancementResult(
                 requested=True,
                 used=False,
@@ -344,14 +467,20 @@ def enhance_import_result_with_ai(
                 requests=base_requests,
             )
 
-        merged_requests = _merge_ai_requests(base_requests, payload)
+        merged_requests = list(base_requests)
+        for payload in payloads:
+            merged_requests = _merge_ai_requests(merged_requests, payload)
+
         notes: list[str] = ["已应用 AI 增强解析。"]
+        if len(chunks) > 1:
+            notes.append(f"文档过大，已切分为 {len(chunks)} 份并发解析。")
         if truncated_document:
-            notes.append("文档内容过长，已截断后送入模型。")
+            notes.append("部分文档分片内容过长，已截断后送入模型。")
         if truncated_preparsed:
             notes.append("预解析结果过长，已截断后送入模型。")
-        if isinstance(payload, dict) and payload.get("summary"):
-            notes.append(str(payload["summary"]).strip())
+        for payload in payloads:
+            if isinstance(payload, dict) and payload.get("summary"):
+                notes.append(str(payload["summary"]).strip())
 
         return AIEnhancementResult(
             requested=True,

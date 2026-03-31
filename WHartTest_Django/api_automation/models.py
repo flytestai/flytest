@@ -206,6 +206,57 @@ class ApiExecutionRecord(models.Model):
         return f"{self.request_name} - {self.created_at}"
 
 
+class ApiImportJob(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "pending"),
+        ("running", "running"),
+        ("success", "success"),
+        ("failed", "failed"),
+    ]
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="api_import_jobs",
+        verbose_name=_("所属项目"),
+    )
+    collection = models.ForeignKey(
+        ApiCollection,
+        on_delete=models.CASCADE,
+        related_name="import_jobs",
+        verbose_name=_("目标集合"),
+    )
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_api_import_jobs",
+        verbose_name=_("创建人"),
+    )
+    source_name = models.CharField(_("源文档名称"), max_length=255)
+    status = models.CharField(_("任务状态"), max_length=20, choices=STATUS_CHOICES, default="pending")
+    progress_percent = models.PositiveIntegerField(_("进度百分比"), default=0)
+    progress_stage = models.CharField(_("当前阶段"), max_length=50, blank=True, default="")
+    progress_message = models.TextField(_("阶段说明"), blank=True, default="")
+    generate_test_cases = models.BooleanField(_("是否生成测试用例"), default=True)
+    enable_ai_parse = models.BooleanField(_("是否启用AI增强解析"), default=True)
+    result_payload = models.JSONField(_("结果载荷"), default=dict, blank=True)
+    error_message = models.TextField(_("错误信息"), blank=True, default="")
+    completed_at = models.DateTimeField(_("完成时间"), null=True, blank=True)
+    created_at = models.DateTimeField(_("创建时间"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("更新时间"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("API 导入任务")
+        verbose_name_plural = _("API 导入任务")
+        ordering = ["-created_at"]
+        db_table = "api_automation_import_job"
+
+    def __str__(self) -> str:
+        return f"{self.source_name} - {self.status}"
+
+
 class ApiTestCase(models.Model):
     STATUS_CHOICES = [
         ("draft", "draft"),

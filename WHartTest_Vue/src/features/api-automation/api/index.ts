@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from 'axios'
 import request from '@/utils/request'
 import type {
   ApiCollection,
@@ -6,6 +7,7 @@ import type {
   ApiEnvironmentForm,
   ApiExecutionRecord,
   ApiImportResult,
+  ApiImportJob,
   ApiRequest,
   ApiRequestForm,
   ApiTestCase,
@@ -37,7 +39,12 @@ export const apiRequestApi = {
   importDocument: (
     collectionId: number,
     file: File,
-    options?: { generateTestCases?: boolean; enableAiParse?: boolean }
+    options?: {
+      generateTestCases?: boolean
+      enableAiParse?: boolean
+      onUploadProgress?: (event: AxiosProgressEvent) => void
+      asyncMode?: boolean
+    }
   ) => {
     const formData = new FormData()
     formData.append('collection_id', String(collectionId))
@@ -48,7 +55,13 @@ export const apiRequestApi = {
     if (options?.enableAiParse !== undefined) {
       formData.append('enable_ai_parse', String(options.enableAiParse))
     }
-    return request.post<ApiImportResult>(`${BASE_URL}/requests/import-document/`, formData)
+    if (options?.asyncMode !== undefined) {
+      formData.append('async_mode', String(options.asyncMode))
+    }
+    return request.post<ApiImportJob | ApiImportResult>(`${BASE_URL}/requests/import-document/`, formData, {
+      onUploadProgress: options?.onUploadProgress,
+      timeout: 10 * 60 * 1000,
+    })
   },
 
   update: (id: number, data: Partial<ApiRequestForm>) =>
@@ -60,6 +73,13 @@ export const apiRequestApi = {
     request.post<ApiExecutionRecord>(`${BASE_URL}/requests/${id}/execute/`, {
       environment_id: environmentId,
     }),
+}
+
+export const importJobApi = {
+  list: (params?: { project?: number; status?: string }) =>
+    request.get<ApiImportJob[]>(`${BASE_URL}/import-jobs/`, { params }),
+
+  get: (id: number) => request.get<ApiImportJob>(`${BASE_URL}/import-jobs/${id}/`),
 }
 
 export const environmentApi = {

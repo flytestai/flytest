@@ -145,7 +145,29 @@ export interface ApiImportResult {
   ai_prompt_source?: string | null
   ai_prompt_name?: string | null
   ai_model_name?: string | null
+  environment_draft?: Partial<ApiEnvironmentForm> | null
   items: ApiRequest[]
   generated_scripts: ApiGeneratedScript[]
   test_cases: ApiTestCase[]
+}
+
+export interface ApiImportJob {
+  id: number
+  project: number
+  collection: number
+  collection_name?: string
+  creator: number | null
+  creator_name?: string
+  source_name: string
+  status: 'pending' | 'running' | 'success' | 'failed'
+  progress_percent: number
+  progress_stage?: string
+  progress_message?: string
+  generate_test_cases: boolean
+  enable_ai_parse: boolean
+  result_payload?: ApiImportResult | null
+  error_message?: string | null
+  completed_at?: string | null
+  created_at: string
+  updated_at: string
 }

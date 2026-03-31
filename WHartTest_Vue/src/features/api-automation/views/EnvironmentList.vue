@@ -54,6 +54,19 @@
       @before-ok="submitEnvironment"
       @cancel="resetEditor"
     >
+      <div v-if="!editingEnvironment && environmentDraft" class="env-prefill-banner">
+        <div class="env-prefill-copy">
+          <div class="env-prefill-title">已根据最近一次文档解析准备环境草稿</div>
+          <div class="env-prefill-description">
+            {{ draftSummary || '基础地址、公共请求头和环境变量已经自动回填。' }}
+          </div>
+        </div>
+        <div class="env-prefill-actions">
+          <a-button @click="fillEnvironmentFromDraft">重新回填</a-button>
+          <a-button type="text" @click="clearDrafts">清除草稿</a-button>
+        </div>
+      </div>
+
       <a-form ref="formRef" :model="formState" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -106,10 +119,12 @@ import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
 import { environmentApi } from '../api'
+import { useApiImportDrafts } from '../state/importDraft'
 import type { ApiEnvironment, ApiEnvironmentForm } from '../types'
 
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
+const { environmentDraft, draftSummary, getEnvironmentDraft, clearDrafts } = useApiImportDrafts()
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -179,8 +194,22 @@ const resetEditor = () => {
   }
 }
 
+const fillEnvironmentFromDraft = () => {
+  const draft = getEnvironmentDraft()
+  if (!draft) return
+  formState.value = {
+    name: draft.name || '文档解析环境草稿',
+    base_url: draft.base_url || '',
+    commonHeadersText: stringifyJson(draft.common_headers || {}),
+    variablesText: stringifyJson(draft.variables || {}),
+    timeout_ms: draft.timeout_ms || 30000,
+    is_default: draft.is_default || false,
+  }
+}
+
 const openCreateModal = () => {
   resetEditor()
+  fillEnvironmentFromDraft()
   editorVisible.value = true
 }
 
@@ -279,6 +308,44 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.env-prefill-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(20, 184, 166, 0.08)),
+    rgba(255, 255, 255, 0.92);
+}
+
+.env-prefill-copy {
+  min-width: 0;
+}
+
+.env-prefill-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.env-prefill-description {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.env-prefill-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 </style>

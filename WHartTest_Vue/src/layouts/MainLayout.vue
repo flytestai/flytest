@@ -138,10 +138,28 @@
             <a href="#" @click="checkProjectAndNavigate($event, '/ai-diagram')">智能图表</a>
           </a-menu-item>
 
-          <a-menu-item key="api-automation" v-if="hasApiAutomationPermission">
+          <a-sub-menu key="api-automation" v-if="hasApiAutomationMenuItems">
             <template #icon><icon-code-block /></template>
-            <a href="#" @click="checkProjectAndNavigate($event, '/api-automation')">API自动化</a>
-          </a-menu-item>
+            <template #title>
+              <span @click="handleApiAutomationClick">API自动化</span>
+            </template>
+            <a-menu-item key="api-automation-requests" v-if="hasApiAutomationPermission">
+              <template #icon><icon-code-block /></template>
+              <a href="#" @click="checkProjectAndNavigate($event, '/api-automation?tab=requests')">接口管理</a>
+            </a-menu-item>
+            <a-menu-item key="api-automation-test-cases" v-if="hasApiAutomationPermission">
+              <template #icon><icon-folder /></template>
+              <a href="#" @click="checkProjectAndNavigate($event, '/api-automation?tab=test-cases')">测试用例</a>
+            </a-menu-item>
+            <a-menu-item key="api-automation-environments" v-if="hasApiAutomationPermission">
+              <template #icon><icon-tool /></template>
+              <a href="#" @click="checkProjectAndNavigate($event, '/api-automation?tab=environments')">环境配置</a>
+            </a-menu-item>
+            <a-menu-item key="api-automation-execution-records" v-if="hasApiAutomationPermission">
+              <template #icon><icon-history /></template>
+              <a href="#" @click="checkProjectAndNavigate($event, '/api-automation?tab=execution-records')">执行历史</a>
+            </a-menu-item>
+          </a-sub-menu>
 
           <a-menu-item key="ui-automation" v-if="hasUiAutomationPermission">
             <template #icon><icon-computer /></template>
@@ -359,7 +377,13 @@ const activeMenu = computed(() => {
   if (path.startsWith('/llm-configs')) return 'llm-configs';
   if (path.startsWith('/langgraph-chat')) return 'langgraph-chat';
   if (path.startsWith('/ai-diagram')) return 'ai-diagram';
-  if (path.startsWith('/api-automation')) return 'api-automation';
+  if (path.startsWith('/api-automation')) {
+    const tab = String(router.currentRoute.value.query.tab || 'requests');
+    if (tab === 'test-cases') return 'api-automation-test-cases';
+    if (tab === 'environments') return 'api-automation-environments';
+    if (tab === 'execution-records') return 'api-automation-execution-records';
+    return 'api-automation-requests';
+  }
   if (path.startsWith('/knowledge-management')) return 'knowledge-management';
   if (path.startsWith('/api-keys')) return 'api-keys';
   if (path.startsWith('/remote-mcp-configs')) return 'remote-mcp-configs';
@@ -404,6 +428,10 @@ const hasApiAutomationPermission = computed(() => {
   return authStore.hasPermission('api_automation.view_apicollection') ||
          authStore.hasPermission('api_automation.view_apirequest') ||
          authStore.hasPermission('api_automation.view_apienvironment');
+});
+
+const hasApiAutomationMenuItems = computed(() => {
+  return hasApiAutomationPermission.value;
 });
 
 const hasUiAutomationPermission = computed(() => {
@@ -497,6 +525,21 @@ const handleTestManagementClick = (event: MouseEvent) => {
   });
 };
 
+const handleApiAutomationClick = (event: MouseEvent) => {
+  if (event) {
+    event.stopPropagation();
+  }
+
+  if (collapsed.value) {
+    collapsed.value = false;
+    openKeys.value = ['api-automation'];
+  } else if (openKeys.value.includes('api-automation')) {
+    openKeys.value = openKeys.value.filter(key => key !== 'api-automation');
+  } else {
+    openKeys.value.push('api-automation');
+  }
+};
+
 // 处理点击系统管理图标的事件
 const handleSystemManagementClick = (event: MouseEvent) => {
   // 阻止事件冒泡，防止触发其他事件
@@ -574,6 +617,10 @@ onMounted(async () => {
 
   // 加载项目列表
   await projectStore.fetchProjects();
+
+  if (router.currentRoute.value.path.startsWith('/api-automation') && !openKeys.value.includes('api-automation')) {
+    openKeys.value = [...openKeys.value, 'api-automation'];
+  }
   
   // 检查版本更新（后台执行，不阻塞页面）
   checkVersion();
