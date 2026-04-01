@@ -32,6 +32,29 @@
             <a-option v-for="item in environments" :key="item.id" :value="item.id" :label="item.name" />
           </a-select>
         </div>
+        <div v-if="selectedRequestId" class="toolbar-group toolbar-group--ai">
+          <a-button
+            :loading="caseGenerationLoadingMode === 'generate'"
+            :disabled="isCaseGenerationLoading"
+            @click="generateCasesForCurrentRequest('generate')"
+          >
+            AI生成
+          </a-button>
+          <a-button
+            :loading="caseGenerationLoadingMode === 'regenerate'"
+            :disabled="isCaseGenerationLoading"
+            @click="generateCasesForCurrentRequest('regenerate')"
+          >
+            重新生成
+          </a-button>
+          <a-button
+            :loading="caseGenerationLoadingMode === 'append'"
+            :disabled="isCaseGenerationLoading"
+            @click="generateCasesForCurrentRequest('append')"
+          >
+            追加生成
+          </a-button>
+        </div>
         <div class="toolbar-group toolbar-group--actions">
           <a-button :disabled="!selectedTestCaseIds.length" @click="executeSelectedTestCases">批量执行</a-button>
           <a-button status="danger" :disabled="!selectedTestCaseIds.length" @click="confirmDeleteSelectedTestCases">
@@ -230,8 +253,14 @@
 import { computed, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
-import { environmentApi, testCaseApi } from '../api'
-import type { ApiEnvironment, ApiExecutionBatchResult, ApiTestCase, ApiTestCaseForm } from '../types'
+import { apiRequestApi, environmentApi, testCaseApi } from '../api'
+import type {
+  ApiEnvironment,
+  ApiExecutionBatchResult,
+  ApiTestCase,
+  ApiTestCaseForm,
+  ApiTestCaseGenerationResult,
+} from '../types'
 
 interface TestCaseGroup {
   key: string
@@ -254,6 +283,8 @@ interface TestCaseEditorForm {
   assertionsText: string
 }
 
+type CaseGenerationMode = 'generate' | 'append' | 'regenerate'
+
 const props = defineProps<{
   selectedCollectionId?: number
   selectedCollectionName?: string
@@ -274,6 +305,7 @@ const environmentLoading = ref(false)
 const detailVisible = ref(false)
 const editorVisible = ref(false)
 const editorSubmitting = ref(false)
+const caseGenerationLoadingMode = ref<CaseGenerationMode | ''>('')
 const searchKeyword = ref('')
 const testCases = ref<ApiTestCase[]>([])
 const currentTestCase = ref<ApiTestCase | null>(null)
@@ -311,6 +343,8 @@ const statusLabelMap: Record<ApiTestCase['status'], string> = {
   ready: '就绪',
   disabled: '停用',
 }
+
+const isCaseGenerationLoading = computed(() => Boolean(caseGenerationLoadingMode.value))
 
 const currentScopeExecuteLabel = computed(() => {
   if (props.selectedRequestId) return '执行当前接口'
@@ -621,6 +655,45 @@ const confirmDeleteSelectedTestCases = () => {
       await deleteTestCases([...selectedTestCaseIds.value])
     },
   })
+}
+
+const showCaseGenerationMessage = (summary: ApiTestCaseGenerationResult, mode: CaseGenerationMode) => {
+  const modeLabelMap: Record<CaseGenerationMode, string> = {
+    generate: '生成',
+    append: '追加生成',
+    regenerate: '重新生成',
+  }
+  const text = `${modeLabelMap[mode]}完成：处理 ${summary.processed_requests}/${summary.total_requests} 个接口，新增 ${summary.created_testcase_count} 条测试用例。`
+  if (summary.skipped_requests) {
+    Message.warning(`${text} 跳过 ${summary.skipped_requests} 个已有用例的接口。`)
+    return
+  }
+  Message.success(text)
+}
+
+const generateCasesForCurrentRequest = async (mode: CaseGenerationMode) => {
+  if (!props.selectedRequestId) {
+    Message.warning('请先在左侧选择一个接口')
+    return
+  }
+
+  caseGenerationLoadingMode.value = mode
+  try {
+    const res = await apiRequestApi.generateTestCases({
+      scope: 'selected',
+      ids: [props.selectedRequestId],
+      mode,
+      count_per_request: 3,
+    })
+    const summary = res.data.data
+    showCaseGenerationMessage(summary, mode)
+    await loadTestCases()
+  } catch (error: any) {
+    console.error('[TestCaseList] AI 生成测试用例失败:', error)
+    Message.error(error?.error || 'AI 生成测试用例失败')
+  } finally {
+    caseGenerationLoadingMode.value = ''
+  }
 }
 
 const showBatchExecutionMessage = (label: string, summary: ApiExecutionBatchResult) => {

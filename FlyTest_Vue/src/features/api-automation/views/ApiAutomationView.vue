@@ -160,12 +160,14 @@ watch(activeTab, newTab => {
   grid-template-columns: 292px minmax(0, 1fr);
   width: 100%;
   height: 100%;
+  min-height: 0;
   gap: 20px;
   overflow: hidden;
 }
 
 .layout-content {
   min-width: 0;
+  min-height: 0;
   height: 100%;
   overflow: auto;
   display: block;

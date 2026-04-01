@@ -100,6 +100,7 @@ interface CollectionTreeCollectionNode extends Omit<ApiCollection, 'children'> {
 interface CollectionTreeRequestNode extends ApiRequest {
   type: 'request'
   key: string
+  displayCollectionId: number
 }
 
 type CollectionTreeNode = CollectionTreeCollectionNode | CollectionTreeRequestNode
@@ -156,6 +157,31 @@ const buildTreeData = (collections: ApiCollection[], requests: ApiRequest[]) => 
     return acc
   }, new Map<number, ApiRequest[]>())
 
+  const collectVisibleRequests = (node: ApiCollection, rootCollectionId: number): CollectionTreeRequestNode[] => {
+    const directRequests = [...(requestMap.get(node.id) || [])].map(request => ({
+      ...request,
+      type: 'request' as const,
+      key: `request-${request.id}`,
+      displayCollectionId: rootCollectionId,
+    }))
+
+    const childRequests = [...(node.children || [])]
+      .sort((left, right) => {
+        if ((left.order || 0) !== (right.order || 0)) {
+          return (left.order || 0) - (right.order || 0)
+        }
+        return localeCompareZh(left.name || '', right.name || '')
+      })
+      .flatMap(child => collectVisibleRequests(child, rootCollectionId))
+
+    return [...directRequests, ...childRequests].sort((left, right) => {
+      if ((left.order || 0) !== (right.order || 0)) {
+        return (left.order || 0) - (right.order || 0)
+      }
+      return localeCompareZh(left.name || '', right.name || '')
+    })
+  }
+
   const createCollectionNodes = (nodes: ApiCollection[]): CollectionTreeCollectionNode[] =>
     [...nodes]
       .sort((left, right) => {
@@ -165,29 +191,14 @@ const buildTreeData = (collections: ApiCollection[], requests: ApiRequest[]) => 
         return localeCompareZh(left.name || '', right.name || '')
       })
       .map(node => {
-        const childCollections = createCollectionNodes(node.children || [])
-        const requestNodes: CollectionTreeRequestNode[] = [...(requestMap.get(node.id) || [])]
-          .sort((left, right) => {
-            if ((left.order || 0) !== (right.order || 0)) {
-              return (left.order || 0) - (right.order || 0)
-            }
-            return localeCompareZh(left.name || '', right.name || '')
-          })
-          .map(request => ({
-            ...request,
-            type: 'request',
-            key: `request-${request.id}`,
-          }))
-
-        const requestCount =
-          requestNodes.length + childCollections.reduce((sum, child) => sum + (child.requestCount || 0), 0)
+        const requestNodes = collectVisibleRequests(node, node.id)
 
         return {
           ...node,
           type: 'collection',
           key: `collection-${node.id}`,
-          requestCount,
-          children: [...childCollections, ...requestNodes],
+          requestCount: requestNodes.length,
+          children: requestNodes,
         }
       })
 
@@ -248,7 +259,7 @@ const emitSelection = (node: CollectionTreeNode | null) => {
   if (node.type === 'request') {
     emit('select', {
       type: 'request',
-      collection: collectionMap.value.get(node.collection) || null,
+      collection: collectionMap.value.get(node.displayCollectionId) || null,
       request: node,
     })
     return
@@ -468,6 +479,7 @@ defineExpose({
 .collection-panel-wrapper {
   width: 100%;
   min-width: 0;
+  min-height: 0;
   max-width: 100%;
   height: 100%;
   display: flex;
@@ -476,20 +488,26 @@ defineExpose({
 }
 
 .collection-panel {
+  min-height: 0;
   height: 100%;
   border-radius: 24px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
 }
 
 .collection-panel :deep(.arco-card-body) {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   padding: 22px;
 }
 
 .collection-panel-content {
   display: flex;
+  min-height: 0;
   height: 100%;
   flex-direction: column;
   gap: 20px;
@@ -550,8 +568,10 @@ defineExpose({
 
 .tree-container {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 4px 2px 0 0;
+  overscroll-behavior: contain;
 }
 
 .tree-container :deep(.arco-tree-node) {
