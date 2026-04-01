@@ -3,6 +3,7 @@ import os
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import httpx
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase
@@ -20,8 +21,8 @@ from .ai_parser import (
     safe_llm_invoke,
 )
 from .ai_case_generator import AITestCaseGenerationResult, GeneratedCaseDraft
-from .document_import import ParsedRequestData
-from .models import ApiCollection, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
+from .document_import import ParsedRequestData, extract_requests_from_curl, parse_openapi_document, parse_postman_collection
+from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
 from .services import build_request_url
 
 
@@ -108,6 +109,211 @@ class ApiAutomationAIParserTests(SimpleTestCase):
         self.assertIn("请求超时", note)
         self.assertIn("缩小文档分片", note)
         self.assertIn("回退", note)
+
+
+class ApiAutomationImporterParsingTests(SimpleTestCase):
+    def test_postman_collection_preserves_query_auth_and_multipart_files(self):
+        collection = {
+            "info": {"name": "Demo"},
+            "item": [
+                {
+                    "name": "Upload avatar",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "https://example.com/api/users/upload?tenant=cms",
+                            "query": [{"key": "tenant", "value": "cms"}],
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [{"key": "token", "value": "{{token}}"}],
+                        },
+                        "header": [{"key": "X-Trace-Id", "value": "{{trace_id}}"}],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {"key": "scene", "value": "avatar", "type": "text"},
+                                {"key": "file", "type": "file", "src": "/tmp/avatar.png"},
+                            ],
+                        },
+                    },
+                }
+            ],
+        }
+
+        requests = parse_postman_collection(collection)
+
+        self.assertEqual(len(requests), 1)
+        parsed = requests[0]
+        self.assertEqual(parsed.params["tenant"], "cms")
+        self.assertEqual(parsed.body_type, "form")
+        self.assertEqual(parsed.request_spec["body_mode"], "multipart")
+        self.assertEqual(parsed.request_spec["auth"]["auth_type"], "bearer")
+        self.assertEqual(parsed.request_spec["files"][0]["field_name"], "file")
+        self.assertEqual(parsed.request_spec["multipart_parts"][0]["name"], "scene")
+
+    def test_postman_collection_inherits_collection_and_folder_auth(self):
+        collection = {
+            "info": {"name": "Demo"},
+            "auth": {
+                "type": "bearer",
+                "bearer": [{"key": "token", "value": "{{collection_token}}"}],
+            },
+            "item": [
+                {
+                    "name": "用户模块",
+                    "auth": {
+                        "type": "basic",
+                        "basic": [
+                            {"key": "username", "value": "demo"},
+                            {"key": "password", "value": "secret"},
+                        ],
+                    },
+                    "item": [
+                        {
+                            "name": "登录接口",
+                            "request": {
+                                "method": "POST",
+                                "url": "https://example.com/api/login",
+                            },
+                        },
+                        {
+                            "name": "公开信息",
+                            "request": {
+                                "method": "GET",
+                                "url": {
+                                    "raw": "https://example.com/api/public?tenant=cms",
+                                    "query": [
+                                        {"key": "tenant", "value": "cms"},
+                                        {"key": "debug", "value": "1", "disabled": True},
+                                    ],
+                                },
+                                "auth": {"type": "noauth"},
+                                "header": [
+                                    {"key": "X-Debug", "value": "1", "disabled": True},
+                                    {"key": "X-Scene", "value": "public"},
+                                ],
+                            },
+                        },
+                    ],
+                },
+                {
+                    "name": "资料接口",
+                    "request": {
+                        "method": "GET",
+                        "url": "https://example.com/api/profile",
+                    },
+                },
+            ],
+        }
+
+        requests = parse_postman_collection(collection)
+
+        login_request = next(item for item in requests if item.name == "登录接口")
+        public_request = next(item for item in requests if item.name == "公开信息")
+        profile_request = next(item for item in requests if item.name == "资料接口")
+
+        self.assertEqual(login_request.request_spec["auth"]["auth_type"], "basic")
+        self.assertEqual(login_request.request_spec["auth"]["username"], "demo")
+        self.assertEqual(public_request.request_spec["auth"]["auth_type"], "none")
+        self.assertEqual(public_request.request_spec["query"][0]["name"], "tenant")
+        self.assertEqual(public_request.request_spec["headers"][0]["name"], "X-Scene")
+        self.assertEqual(profile_request.request_spec["auth"]["auth_type"], "bearer")
+        self.assertEqual(profile_request.request_spec["auth"]["token_value"], "{{collection_token}}")
+
+    def test_openapi_document_supports_vendor_json_graphql_and_multipart(self):
+        spec = {
+            "openapi": "3.0.1",
+            "paths": {
+                "/graphql": {
+                    "post": {
+                        "summary": "Run GraphQL",
+                        "requestBody": {
+                            "content": {
+                                "application/graphql": {
+                                    "example": {
+                                        "query": "query GetUser { user { id } }",
+                                        "variables": {"tenant": "cms"},
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {"200": {"description": "ok"}},
+                    }
+                },
+                "/vendor-json": {
+                    "post": {
+                        "summary": "Vendor JSON",
+                        "requestBody": {
+                            "content": {
+                                "application/vnd.api+json": {
+                                    "example": {"title": "hello"}
+                                }
+                            }
+                        },
+                        "responses": {"201": {"description": "created"}},
+                    }
+                },
+                "/upload": {
+                    "post": {
+                        "summary": "Upload file",
+                        "requestBody": {
+                            "content": {
+                                "multipart/form-data": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "scene": {"type": "string", "default": "avatar"},
+                                            "file": {"type": "string", "format": "binary"},
+                                        },
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {"200": {"description": "ok"}},
+                    }
+                },
+            },
+        }
+
+        requests = parse_openapi_document(spec)
+
+        graphql_request = next(item for item in requests if item.name == "Run GraphQL")
+        vendor_request = next(item for item in requests if item.name == "Vendor JSON")
+        upload_request = next(item for item in requests if item.name == "Upload file")
+
+        self.assertEqual(graphql_request.request_spec["body_mode"], "graphql")
+        self.assertEqual(graphql_request.request_spec["graphql_variables"]["tenant"], "cms")
+        self.assertEqual(vendor_request.request_spec["body_mode"], "json")
+        self.assertEqual(vendor_request.body_type, "json")
+        self.assertEqual(upload_request.request_spec["body_mode"], "multipart")
+        self.assertEqual(upload_request.request_spec["files"][0]["field_name"], "file")
+        self.assertEqual(upload_request.request_spec["multipart_parts"][0]["name"], "scene")
+
+    def test_curl_import_supports_cookie_basic_auth_and_transport_flags(self):
+        markdown = """
+        ## Download report
+        ```bash
+        curl -X POST https://example.com/api/report/export?tenant=cms \\
+          -u demo:secret \\
+          -b sessionid=abc123;theme=light \\
+          -k \\
+          --proxy http://127.0.0.1:7890 \\
+          -F scene=full \\
+          -F file=@/tmp/report.csv
+        ```
+        """
+
+        requests = extract_requests_from_curl(markdown)
+
+        self.assertEqual(len(requests), 1)
+        parsed = requests[0]
+        self.assertEqual(parsed.request_spec["auth"]["auth_type"], "basic")
+        self.assertFalse(parsed.request_spec["transport"]["verify_ssl"])
+        self.assertEqual(parsed.request_spec["transport"]["proxy_url"], "http://127.0.0.1:7890")
+        self.assertEqual(parsed.request_spec["cookies"][0]["name"], "sessionid")
+        self.assertEqual(parsed.request_spec["body_mode"], "multipart")
+        self.assertEqual(parsed.request_spec["files"][0]["field_name"], "file")
 
 
 class ApiAutomationImportDocumentTests(TestCase):
@@ -290,7 +496,7 @@ class ApiAutomationImportDocumentTests(TestCase):
         self.assertEqual(payload["ai_model_name"], "gpt-4.1")
         self.assertEqual(payload["items"][0]["name"], "AI Login")
         self.assertEqual(payload["test_cases"][0]["request_name"], "AI Login")
-        self.assertEqual(payload["generated_scripts"][0]["script"]["assertions"][1]["type"], "json_path")
+        self.assertEqual(payload["generated_scripts"][0]["script"]["assertions"][1]["assertion_type"], "json_path")
 
     @patch("api_automation.import_service._build_environment_drafts", return_value=[])
     @patch("api_automation.import_service.import_requests_from_document")
@@ -514,16 +720,58 @@ class ApiAutomationImportDocumentTests(TestCase):
                     description="验证下单成功",
                     status="ready",
                     tags=["ai-generated", "positive"],
-                    assertions=[{"type": "status_code", "expected": 200}],
-                    request_overrides={"headers": {}, "params": {}, "body_type": "json", "body": {"sku": "A100"}, "timeout_ms": 30000},
+                    assertions=[{"assertion_type": "status_code", "expected_number": 200}],
+                    extractors=[],
+                    request_overrides={
+                        "method": "",
+                        "url": "",
+                        "headers": [],
+                        "query": [],
+                        "cookies": [],
+                        "form_fields": [],
+                        "multipart_parts": [],
+                        "files": [],
+                        "body_mode": "json",
+                        "body_json": {"sku": "A100"},
+                        "raw_text": "",
+                        "xml_text": "",
+                        "binary_base64": "",
+                        "graphql_query": "",
+                        "graphql_operation_name": "",
+                        "graphql_variables": {},
+                        "timeout_ms": 30000,
+                        "auth": {},
+                        "transport": {},
+                    },
                 ),
                 GeneratedCaseDraft(
                     name="Create order - 关键字段校验",
                     description="验证关键响应字段",
                     status="ready",
                     tags=["ai-generated", "regression"],
-                    assertions=[{"type": "status_code", "expected": 200}],
-                    request_overrides={"headers": {}, "params": {}, "body_type": "json", "body": {"sku": "A100"}, "timeout_ms": 30000},
+                    assertions=[{"assertion_type": "status_code", "expected_number": 200}],
+                    extractors=[],
+                    request_overrides={
+                        "method": "",
+                        "url": "",
+                        "headers": [{"name": "X-Scenario", "value": "field-check", "enabled": True, "order": 0}],
+                        "query": [],
+                        "cookies": [],
+                        "form_fields": [],
+                        "multipart_parts": [],
+                        "files": [],
+                        "body_mode": "json",
+                        "body_json": {"sku": "A100"},
+                        "raw_text": "",
+                        "xml_text": "",
+                        "binary_base64": "",
+                        "graphql_query": "",
+                        "graphql_operation_name": "",
+                        "graphql_variables": {},
+                        "timeout_ms": 30000,
+                        "auth": {},
+                        "transport": {},
+                    },
                 ),
             ],
         )
@@ -667,7 +915,7 @@ class ApiAutomationExecutionTests(TestCase):
             "https://cms-test.9635.com.cn/api/live/getLiveToken",
         )
 
-    @patch("api_automation.views.httpx.request")
+    @patch("api_automation.execution.httpx.Client.request")
     def test_execute_request_bootstraps_token_from_auth_request(self, mock_request):
         environment = self.project.api_environments.create(
             name="Execution Env",
@@ -704,6 +952,7 @@ class ApiAutomationExecutionTests(TestCase):
                 self.status_code = status_code
                 self._payload = payload
                 self.headers = {}
+                self.cookies = {}
                 self.text = json.dumps(payload, ensure_ascii=False)
                 self.is_success = 200 <= status_code < 300
 
@@ -734,6 +983,135 @@ class ApiAutomationExecutionTests(TestCase):
         self.assertEqual(payload["request_snapshot"]["missing_variables"], [])
         environment.refresh_from_db()
         self.assertEqual(environment.variables["token"], "AUTO_TOKEN_123")
+
+    def test_environment_api_persists_structured_specs(self):
+        response = self.client.post(
+            "/api/api-automation/environments/",
+            {
+                "project": self.project.id,
+                "name": "结构化环境",
+                "base_url": "https://example.com",
+                "timeout_ms": 15000,
+                "is_default": True,
+                "environment_specs": {
+                    "headers": [
+                        {"name": "Authorization", "value": "Bearer {{token}}", "enabled": True, "order": 0},
+                    ],
+                    "variables": [
+                        {"name": "token", "value": "TOKEN_123", "enabled": True, "is_secret": True, "order": 0},
+                    ],
+                    "cookies": [
+                        {
+                            "name": "sessionid",
+                            "value": "cookie-1",
+                            "domain": "example.com",
+                            "path": "/",
+                            "enabled": True,
+                            "order": 0,
+                        },
+                    ],
+                },
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        payload = self._payload(response)
+        self.assertEqual(payload["environment_specs"]["headers"][0]["name"], "Authorization")
+        self.assertEqual(payload["environment_specs"]["variables"][0]["name"], "token")
+        self.assertEqual(payload["environment_specs"]["cookies"][0]["name"], "sessionid")
+
+        environment = ApiEnvironment.objects.get(pk=payload["id"])
+        self.assertEqual(environment.common_headers["Authorization"], "Bearer {{token}}")
+        self.assertEqual(environment.variables["token"], "TOKEN_123")
+        self.assertEqual(environment.cookie_specs.count(), 1)
+        self.assertTrue(environment.variable_specs.filter(name="token", is_secret=True).exists())
+
+    @patch("api_automation.execution.httpx.Client")
+    def test_execute_batch_reuses_run_level_cookie_jar(self, mock_client_cls):
+        login_request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="登录接口",
+            method="POST",
+            url="/api/login",
+            assertions=[{"type": "status_code", "expected": 200}],
+            order=1,
+            created_by=self.user,
+        )
+        profile_request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="获取资料",
+            method="GET",
+            url="/api/profile",
+            assertions=[{"type": "status_code", "expected": 200}],
+            order=2,
+            created_by=self.user,
+        )
+        environment = self.project.api_environments.create(
+            name="Cookie Env",
+            base_url="https://example.com",
+            creator=self.user,
+            is_default=True,
+        )
+
+        class MockResponse:
+            def __init__(self, status_code, payload, cookies=None):
+                self.status_code = status_code
+                self._payload = payload
+                self.headers = {}
+                self.cookies = httpx.Cookies()
+                for key, value in (cookies or {}).items():
+                    self.cookies.set(key, value)
+                self.text = json.dumps(payload, ensure_ascii=False)
+                self.is_success = 200 <= status_code < 300
+
+            def json(self):
+                return self._payload
+
+        class FakeClient:
+            def __init__(self, **kwargs):
+                seed_cookies = kwargs.get("cookies") or httpx.Cookies()
+                self.cookies = httpx.Cookies()
+                self.session_cookies: dict[str, str] = {}
+                for cookie in seed_cookies.jar:
+                    self.cookies.set(cookie.name, cookie.value, domain=cookie.domain, path=cookie.path)
+                    self.session_cookies[cookie.name] = cookie.value
+
+            def request(self, **kwargs):
+                visible_cookies = dict(self.session_cookies)
+                visible_cookies.update(kwargs.get("cookies") or {})
+                if kwargs["url"].endswith("/api/login"):
+                    self.cookies.set("sessionid", "cookie-123")
+                    self.session_cookies["sessionid"] = "cookie-123"
+                    return MockResponse(200, {"code": 200, "message": "ok"}, {"sessionid": "cookie-123"})
+                if kwargs["url"].endswith("/api/profile"):
+                    if visible_cookies.get("sessionid") != "cookie-123":
+                        return MockResponse(401, {"message": "missing session"})
+                    return MockResponse(200, {"code": 200, "data": {"user": "demo"}})
+                raise AssertionError(f"Unexpected url: {kwargs['url']}")
+
+            def close(self):
+                return None
+
+        mock_client_cls.side_effect = lambda **kwargs: FakeClient(**kwargs)
+
+        response = self.client.post(
+            "/api/api-automation/requests/execute-batch/",
+            {
+                "scope": "selected",
+                "ids": [login_request.id, profile_request.id],
+                "environment_id": environment.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = self._payload(response)
+        self.assertEqual(payload["total_count"], 2)
+        self.assertEqual(mock_client_cls.call_count, 1, payload)
+        self.assertEqual(payload["success_count"], 2, payload)
+        self.assertEqual(payload["error_count"], 0)
+        self.assertEqual(payload["items"][1]["status"], "success")
 
     def test_execution_report_endpoint_returns_summary(self):
         request = ApiRequest.objects.create(
@@ -776,7 +1154,7 @@ class ApiAutomationExecutionTests(TestCase):
         self.assertEqual(len(payload["run_groups"]), 1)
         self.assertEqual(payload["run_groups"][0]["interface_count"], 1)
 
-    @patch("api_automation.views.httpx.request")
+    @patch("api_automation.execution.httpx.Client.request")
     def test_execute_test_case_persists_test_case_and_run_metadata(self, mock_request):
         api_request = ApiRequest.objects.create(
             collection=self.collection,
@@ -799,6 +1177,7 @@ class ApiAutomationExecutionTests(TestCase):
         class MockResponse:
             status_code = 200
             headers = {}
+            cookies = {}
             text = '{"code":200}'
             is_success = True
 

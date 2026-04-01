@@ -24,6 +24,7 @@ from projects.models import Project
 from flytest_django.viewsets import BaseModelViewSet
 
 from .ai_case_generator import create_test_cases_from_drafts, generate_test_case_drafts_with_ai
+from .execution import ExecutionRunContext, execute_api_request
 from .import_service import process_document_import
 from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
 from .serializers import (
@@ -34,15 +35,12 @@ from .serializers import (
     ApiRequestSerializer,
     ApiTestCaseSerializer,
 )
-from .generation import build_request_script
 from .services import (
-    VariableResolver,
-    build_request_url,
-    evaluate_assertions,
     find_missing_variables,
     collect_placeholders,
     extract_json_path,
 )
+from .specs import backfill_request_specs_from_legacy, backfill_test_case_specs_from_legacy
 
 
 TOKEN_VARIABLE_NAMES = {"token", "access_token", "refresh_token", "refreshToken", "authorization"}
@@ -660,206 +658,55 @@ def _execute_api_request(
     runtime_context: dict | None = None,
     allow_auth_bootstrap: bool = True,
 ):
-    project = api_request.collection.project
-    override_payload = override_payload or {}
-    runtime_context = runtime_context or {}
+    shared_runtime_context = runtime_context is not None
+    runtime_context = runtime_context if runtime_context is not None else {}
+    created_local_context = False
+    run_execution_context = runtime_context.get("_execution_run_context")
 
-    variables = {}
-    base_url = ""
-    common_headers = {}
-    timeout_ms = api_request.timeout_ms
+    if not getattr(api_request, "request_spec", None):
+        backfill_request_specs_from_legacy(api_request)
+    if test_case and not getattr(test_case, "override_spec", None):
+        backfill_test_case_specs_from_legacy(test_case)
 
-    if environment:
-        variables.update(environment.variables or {})
-        base_url = environment.base_url or ""
-        common_headers = environment.common_headers or {}
-        timeout_ms = environment.timeout_ms or timeout_ms
-    variables.update(runtime_context.get("variables", {}))
-
-    method = str(override_payload.get("method") or api_request.method).upper()
-    raw_url = str(override_payload.get("url") or api_request.url)
-
-    merged_headers = dict(api_request.headers or {})
-    if isinstance(override_payload.get("headers"), dict):
-        merged_headers.update(override_payload["headers"])
-
-    merged_params = dict(api_request.params or {})
-    if isinstance(override_payload.get("params"), dict):
-        merged_params.update(override_payload["params"])
-
-    body_type = override_payload.get("body_type") or api_request.body_type
-    body = override_payload.get("body", api_request.body)
-    timeout_ms = override_payload.get("timeout_ms") or timeout_ms
-    assertions = assertions_override if assertions_override is not None else (api_request.assertions or [])
-
-    missing_variables = find_missing_variables(variables, raw_url, common_headers, merged_headers, merged_params, body)
-
-    bootstrap_error = None
-    if "token" in missing_variables and allow_auth_bootstrap and environment:
-        auth_request = _get_auth_request(project, variables)
-        if auth_request:
-            bootstrap_missing = _missing_variables_for_bootstrap(variables, auth_request)
-            if bootstrap_missing:
-                bootstrap_error = f"自动获取 token 失败，登录接口缺少环境变量: {', '.join(bootstrap_missing)}"
-            else:
-                auth_record = _execute_api_request(
-                    api_request=auth_request,
-                    executor=executor,
-                    environment=environment,
-                    run_id=run_id,
-                    run_name=run_name,
-                    request_name=f"[Auth Bootstrap] {auth_request.name}",
-                    runtime_context=runtime_context,
-                    allow_auth_bootstrap=False,
-                )
-                auth_payload = (auth_record.response_snapshot or {}).get("body")
-                auth_variables = _extract_auth_variables(auth_payload, variables)
-                if auth_variables.get("token"):
-                    runtime_context.setdefault("variables", {}).update(auth_variables)
-                    variables.update(auth_variables)
-                    if environment:
-                        updated_variables = dict(environment.variables or {})
-                        updated_variables.update(auth_variables)
-                        environment.variables = updated_variables
-                        ApiEnvironment.objects.filter(pk=environment.pk).update(
-                            variables=updated_variables,
-                            updated_at=timezone.now(),
-                        )
-                    missing_variables = find_missing_variables(
-                        variables,
-                        raw_url,
-                        common_headers,
-                        merged_headers,
-                        merged_params,
-                        body,
-                    )
-                else:
-                    bootstrap_error = auth_record.error_message or "自动获取 token 失败，登录接口响应中未识别到 token 字段"
-        else:
-            bootstrap_error = "未找到可用于自动获取 token 的登录接口，请在环境变量中配置 auth_request_id 或 auth_request_name"
-
-    resolver = VariableResolver(variables)
-    resolved_url = build_request_url(base_url, str(resolver.resolve(raw_url)))
-    resolved_headers = {
-        **resolver.resolve(common_headers or {}),
-        **resolver.resolve(merged_headers or {}),
-    }
-    resolved_params = resolver.resolve(merged_params or {})
-    resolved_body = resolver.resolve(body)
-
-    request_kwargs = {
-        "method": method,
-        "url": resolved_url,
-        "headers": resolved_headers,
-        "params": resolved_params,
-        "timeout": max(timeout_ms / 1000, 1),
-        "follow_redirects": True,
-    }
-
-    if body_type == "json":
-        request_kwargs["json"] = resolved_body or {}
-    elif body_type == "form":
-        request_kwargs["data"] = resolved_body or {}
-    elif body_type == "raw":
-        request_kwargs["content"] = resolved_body if isinstance(resolved_body, str) else str(resolved_body)
-
-    request_snapshot = {
-        "request_id": api_request.id,
-        "interface_name": api_request.name,
-        "collection_id": api_request.collection_id,
-        "collection_name": api_request.collection.name,
-        "method": method,
-        "url": resolved_url,
-        "headers": resolved_headers,
-        "params": resolved_params,
-        "body_type": body_type,
-        "body": resolved_body,
-        "generated_script": build_request_script(
-            method=method,
-            url=raw_url,
-            headers=merged_headers,
-            params=merged_params,
-            body_type=body_type,
-            body=body,
-            timeout_ms=timeout_ms,
-            assertions=assertions,
-        ),
-        "missing_variables": missing_variables,
-    }
-    if snapshot_extra:
-        request_snapshot.update(snapshot_extra)
-
-    response_snapshot = {}
-    status_code = None
-    response_time = None
-    assertions_results = []
-    passed = False
-    execute_status = "error"
-    error_message = ""
+    if not run_execution_context:
+        run_execution_context = ExecutionRunContext(
+            run_id=run_id or uuid4().hex,
+            run_name=run_name or "",
+            environment=environment,
+        )
+        run_execution_context.variables.update(runtime_context.get("variables", {}))
+        runtime_context["_execution_run_context"] = run_execution_context
+        created_local_context = True
+    else:
+        if run_id:
+            run_execution_context.run_id = run_id
+        if run_name:
+            run_execution_context.run_name = run_name
+        if environment and run_execution_context.environment is None:
+            run_execution_context.environment = environment
+        run_execution_context.variables.update(runtime_context.get("variables", {}))
 
     try:
-        if missing_variables:
-            message = bootstrap_error if bootstrap_error and "token" in missing_variables else None
-            raise ValueError(
-                message or ("缺少执行所需环境变量: " + ", ".join(missing_variables))
-            )
-
-        started_at = time.perf_counter()
-        response = httpx.request(**request_kwargs)
-        response_time = round((time.perf_counter() - started_at) * 1000, 2)
-        status_code = response.status_code
-        try:
-            response_payload = response.json()
-        except ValueError:
-            response_payload = response.text
-
-        response_snapshot = {
-            "headers": dict(response.headers),
-            "body": response_payload,
-        }
-
-        assertions_results, passed = evaluate_assertions(
-            assertions,
-            response.status_code,
-            response.text,
-            response_payload if isinstance(response_payload, (dict, list)) else None,
+        record = execute_api_request(
+            api_request=api_request,
+            executor=executor,
+            environment=environment,
+            test_case=test_case,
+            run_context=run_execution_context,
+            request_name=request_name,
+            allow_bootstrap=allow_auth_bootstrap,
         )
-        if not assertions_results:
-            passed = response.is_success
-
-        execute_status = "success" if passed else "failed"
-        if not passed and not error_message and isinstance(response_payload, dict):
-            for key in ("message", "detail", "error", "msg"):
-                value = response_payload.get(key)
-                if value not in (None, ""):
-                    error_message = str(value)
-                    break
-    except Exception as exc:  # noqa: BLE001
-        error_message = str(exc)
-        response_snapshot = {"body": None, "error": error_message}
-        passed = False
-        execute_status = "error"
-
-    return ApiExecutionRecord.objects.create(
-        project=project,
-        request=api_request,
-        test_case=test_case,
-        environment=environment,
-        run_id=run_id or uuid4().hex,
-        run_name=run_name or "",
-        request_name=request_name or api_request.name,
-        method=method,
-        url=resolved_url,
-        status=execute_status,
-        passed=passed,
-        status_code=status_code,
-        response_time=response_time,
-        request_snapshot=request_snapshot,
-        response_snapshot=response_snapshot,
-        assertions_results=assertions_results,
-        error_message=error_message,
-        executor=executor,
-    )
+        if snapshot_extra:
+            request_snapshot = dict(record.request_snapshot or {})
+            request_snapshot.update(snapshot_extra)
+            record.request_snapshot = request_snapshot
+            record.save(update_fields=["request_snapshot"])
+        runtime_context["variables"] = dict(run_execution_context.variables)
+        return record
+    finally:
+        if created_local_context and not shared_runtime_context:
+            run_execution_context.close()
+            runtime_context.pop("_execution_run_context", None)
 
 
 def _build_test_case_execution_payload(test_case: ApiTestCase):
@@ -1173,18 +1020,24 @@ class ApiRequestViewSet(BaseModelViewSet):
         runtime_context = {}
         run_id = uuid4().hex
         run_name = _build_run_name("request", scope)
-        for api_request in api_requests:
-            environment = _resolve_execution_environment(api_request.collection.project, environment_id)
-            records.append(
-                _execute_api_request(
-                    api_request=api_request,
-                    executor=request.user,
-                    environment=environment,
-                    run_id=run_id,
-                    run_name=run_name,
-                    runtime_context=runtime_context,
+        try:
+            for api_request in api_requests:
+                environment = _resolve_execution_environment(api_request.collection.project, environment_id)
+                records.append(
+                    _execute_api_request(
+                        api_request=api_request,
+                        executor=request.user,
+                        environment=environment,
+                        run_id=run_id,
+                        run_name=run_name,
+                        runtime_context=runtime_context,
+                    )
                 )
-            )
+        finally:
+            run_execution_context = runtime_context.get("_execution_run_context")
+            if run_execution_context:
+                run_execution_context.close()
+                runtime_context.pop("_execution_run_context", None)
         return Response(_serialize_execution_batch(records))
 
     @action(detail=False, methods=["post"], url_path="generate-test-cases")
@@ -1480,22 +1333,28 @@ class ApiTestCaseViewSet(BaseModelViewSet):
         runtime_context = {}
         run_id = uuid4().hex
         run_name = _build_run_name("test_case", scope)
-        for test_case in test_cases:
-            environment = _resolve_execution_environment(test_case.project, environment_id)
-            overrides, assertions, snapshot_extra = _build_test_case_execution_payload(test_case)
-            records.append(
-                _execute_api_request(
-                    api_request=test_case.request,
-                    executor=request.user,
-                    environment=environment,
-                    test_case=test_case,
-                    run_id=run_id,
-                    run_name=run_name,
-                    request_name=test_case.name,
-                    override_payload=overrides,
-                    snapshot_extra=snapshot_extra,
-                    assertions_override=assertions,
-                    runtime_context=runtime_context,
+        try:
+            for test_case in test_cases:
+                environment = _resolve_execution_environment(test_case.project, environment_id)
+                overrides, assertions, snapshot_extra = _build_test_case_execution_payload(test_case)
+                records.append(
+                    _execute_api_request(
+                        api_request=test_case.request,
+                        executor=request.user,
+                        environment=environment,
+                        test_case=test_case,
+                        run_id=run_id,
+                        run_name=run_name,
+                        request_name=test_case.name,
+                        override_payload=overrides,
+                        snapshot_extra=snapshot_extra,
+                        assertions_override=assertions,
+                        runtime_context=runtime_context,
+                    )
                 )
-            )
+        finally:
+            run_execution_context = runtime_context.get("_execution_run_context")
+            if run_execution_context:
+                run_execution_context.close()
+                runtime_context.pop("_execution_run_context", None)
         return Response(_serialize_execution_batch(records))

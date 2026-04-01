@@ -105,12 +105,30 @@ const buildRequestDrafts = (requests: ApiRequest[], collectionId: number, baseUr
 }
 
 const buildFallbackEnvironmentDraft = (requests: ApiRequest[], projectId: number, baseUrl: string): ApiEnvironmentForm => {
+  const commonHeaders = getCommonHeaders(requests)
+  const variables = buildVariables(requests)
   return {
     project: projectId,
     name: '文档解析环境草稿',
     base_url: baseUrl,
-    common_headers: getCommonHeaders(requests),
-    variables: buildVariables(requests),
+    common_headers: commonHeaders,
+    variables,
+    environment_specs: {
+      headers: Object.entries(commonHeaders).map(([name, value], index) => ({
+        name,
+        value,
+        enabled: true,
+        order: index,
+      })),
+      variables: Object.entries(variables).map(([name, value], index) => ({
+        name,
+        value,
+        enabled: true,
+        is_secret: false,
+        order: index,
+      })),
+      cookies: [],
+    },
     timeout_ms: Math.max(...requests.map(item => item.timeout_ms || 30000), 30000),
     is_default: false,
   }
@@ -144,6 +162,7 @@ export const useApiImportDrafts = () => {
           base_url: backendEnvironmentDraft.base_url || '',
           common_headers: backendEnvironmentDraft.common_headers || {},
           variables: backendEnvironmentDraft.variables || {},
+          environment_specs: backendEnvironmentDraft.environment_specs || undefined,
           timeout_ms: backendEnvironmentDraft.timeout_ms || 30000,
           is_default: backendEnvironmentDraft.is_default || false,
         }

@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import parse_qsl, urljoin
 
 import yaml
 from bs4 import BeautifulSoup
@@ -45,6 +45,10 @@ CODE_BLOCK_PATTERN = re.compile(r"```(?P<lang>[a-zA-Z0-9_-]*)\n(?P<content>.*?)`
 URL_IN_TEXT_PATTERN = re.compile(r"((?:https?://|/)[^\s`\"'<>]+)")
 STATUS_CODE_TEXT_PATTERN = re.compile(r"(?:status(?:\s*code)?|状态码|响应码)\s*[:：]?\s*(\d{3})", re.I)
 JSON_PATH_TEXT_PATTERN = re.compile(r"((?:data|result|response)(?:\.[A-Za-z0-9_-]+)+)")
+DEFAULT_REQUEST_TIMEOUT_MS = 30000
+JSON_CONTENT_TYPES = {"application/json"}
+XML_CONTENT_TYPES = {"application/xml", "text/xml"}
+TEXT_CONTENT_TYPES = {"text/plain"}
 
 
 @dataclass
@@ -58,6 +62,9 @@ class ParsedRequestData:
     body_type: str = "none"
     body: Any = field(default_factory=dict)
     assertions: list[dict[str, Any]] = field(default_factory=list)
+    request_spec: dict[str, Any] | None = None
+    assertion_specs: list[dict[str, Any]] = field(default_factory=list)
+    extractor_specs: list[dict[str, Any]] = field(default_factory=list)
     collection_name: str | None = None
 
 
@@ -67,6 +74,195 @@ class DocumentImportResult:
     requests: list[ParsedRequestData]
     marker_used: bool = False
     note: str = ""
+
+
+def default_auth_spec() -> dict[str, Any]:
+    return {
+        "auth_type": "none",
+        "username": "",
+        "password": "",
+        "token_value": "",
+        "token_variable": "token",
+        "header_name": "Authorization",
+        "bearer_prefix": "Bearer",
+        "api_key_name": "",
+        "api_key_in": "header",
+        "api_key_value": "",
+        "cookie_name": "",
+        "bootstrap_request_id": None,
+        "bootstrap_request_name": "",
+        "bootstrap_token_path": "",
+    }
+
+
+def default_transport_spec() -> dict[str, Any]:
+    return {
+        "verify_ssl": True,
+        "proxy_url": "",
+        "client_cert": "",
+        "client_key": "",
+        "follow_redirects": True,
+        "retry_count": 0,
+        "retry_interval_ms": 500,
+    }
+
+
+def named_items_from_mapping(mapping: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(mapping, dict):
+        return []
+    return [
+        {
+            "name": str(name),
+            "value": value,
+            "enabled": True,
+            "order": index,
+        }
+        for index, (name, value) in enumerate(mapping.items())
+    ]
+
+
+def build_request_spec(
+    *,
+    method: str,
+    url: str,
+    headers: dict[str, Any] | None = None,
+    query: dict[str, Any] | None = None,
+    cookies: dict[str, Any] | None = None,
+    body_mode: str = "none",
+    body_json: Any | None = None,
+    raw_text: str = "",
+    xml_text: str = "",
+    binary_base64: str = "",
+    graphql_query: str = "",
+    graphql_operation_name: str = "",
+    graphql_variables: dict[str, Any] | None = None,
+    form_fields: dict[str, Any] | None = None,
+    multipart_parts: dict[str, Any] | None = None,
+    files: list[dict[str, Any]] | None = None,
+    auth: dict[str, Any] | None = None,
+    transport: dict[str, Any] | None = None,
+    timeout_ms: int = DEFAULT_REQUEST_TIMEOUT_MS,
+) -> dict[str, Any]:
+    return {
+        "method": method,
+        "url": url,
+        "body_mode": body_mode,
+        "body_json": body_json if isinstance(body_json, (dict, list)) else {},
+        "raw_text": raw_text,
+        "xml_text": xml_text,
+        "binary_base64": binary_base64,
+        "graphql_query": graphql_query,
+        "graphql_operation_name": graphql_operation_name,
+        "graphql_variables": graphql_variables if isinstance(graphql_variables, dict) else {},
+        "timeout_ms": timeout_ms,
+        "headers": named_items_from_mapping(headers),
+        "query": named_items_from_mapping(query),
+        "cookies": named_items_from_mapping(cookies),
+        "form_fields": named_items_from_mapping(form_fields),
+        "multipart_parts": named_items_from_mapping(multipart_parts),
+        "files": files or [],
+        "auth": auth or default_auth_spec(),
+        "transport": transport or default_transport_spec(),
+    }
+
+
+def request_spec_to_legacy_body(spec: dict[str, Any]) -> tuple[str, Any]:
+    body_mode = str(spec.get("body_mode") or "none").lower()
+    def to_mapping(items: Any) -> dict[str, Any]:
+        if isinstance(items, dict):
+            return items
+        if isinstance(items, list):
+            return {
+                item["name"]: item.get("value", "")
+                for item in items
+                if isinstance(item, dict) and item.get("name")
+            }
+        return {}
+    if body_mode == "json":
+        return "json", spec.get("body_json") or {}
+    if body_mode in {"form", "urlencoded"}:
+        body = to_mapping(spec.get("form_fields"))
+        return "form", body
+    if body_mode == "multipart":
+        body = to_mapping(spec.get("multipart_parts"))
+        return "form", body
+    if body_mode == "graphql":
+        return "json", {
+            "query": spec.get("graphql_query") or "",
+            "operationName": spec.get("graphql_operation_name") or "",
+            "variables": spec.get("graphql_variables") or {},
+        }
+    if body_mode == "xml":
+        return "raw", spec.get("xml_text") or ""
+    if body_mode == "binary":
+        return "raw", spec.get("binary_base64") or ""
+    if body_mode == "raw":
+        return "raw", spec.get("raw_text") or ""
+    return "none", {}
+
+
+def is_json_content_type(content_type: str) -> bool:
+    lowered = content_type.lower()
+    return lowered in JSON_CONTENT_TYPES or lowered.endswith("+json")
+
+
+def is_xml_content_type(content_type: str) -> bool:
+    lowered = content_type.lower()
+    return lowered in XML_CONTENT_TYPES or lowered.endswith("+xml")
+
+
+def is_graphql_content_type(content_type: str) -> bool:
+    return "graphql" in content_type.lower()
+
+
+def split_multipart_example(example: Any, schema: dict[str, Any] | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    text_parts: dict[str, Any] = {}
+    files: list[dict[str, Any]] = []
+    properties = (schema or {}).get("properties") or {}
+    required_names = set((schema or {}).get("required") or [])
+
+    if isinstance(example, dict):
+        for key, value in example.items():
+            property_schema = properties.get(key) if isinstance(properties, dict) else {}
+            if isinstance(property_schema, dict) and (
+                property_schema.get("format") in {"binary", "base64"}
+                or property_schema.get("contentEncoding") == "base64"
+            ):
+                files.append(
+                    {
+                        "field_name": str(key),
+                        "source_type": "placeholder",
+                        "file_path": str(value or f"{{{{{key}}}}}") if value not in (None, "") else f"{{{{{key}}}}}",
+                        "file_name": str(key),
+                        "content_type": str(property_schema.get("contentMediaType") or "application/octet-stream"),
+                        "base64_content": "",
+                        "enabled": True,
+                        "order": len(files),
+                    }
+                )
+            else:
+                text_parts[str(key)] = value
+        return text_parts, files
+
+    for index, (name, property_schema) in enumerate((properties or {}).items()):
+        if not isinstance(property_schema, dict):
+            continue
+        if property_schema.get("format") in {"binary", "base64"} or property_schema.get("contentEncoding") == "base64":
+            files.append(
+                {
+                    "field_name": str(name),
+                    "source_type": "placeholder",
+                    "file_path": f"{{{{{name}}}}}",
+                    "file_name": str(name),
+                    "content_type": str(property_schema.get("contentMediaType") or "application/octet-stream"),
+                    "base64_content": "",
+                    "enabled": True,
+                    "order": len(files),
+                }
+            )
+        elif name in required_names or property_schema.get("default") not in (None, ""):
+            text_parts[str(name)] = property_schema.get("default", "")
+    return text_parts, files
 
 
 class VariableResolver:
@@ -316,9 +512,16 @@ def parse_openapi_document(spec: dict[str, Any]) -> list[ParsedRequestData]:
 
             body_type = "none"
             body: Any = {}
+            request_spec = build_request_spec(
+                method=upper_method,
+                url=normalize_request_url(base_url, path),
+                headers=headers,
+                query=params,
+            )
             request_body = operation.get("requestBody") or {}
             if isinstance(request_body, dict):
-                body_type, body = parse_request_body(request_body)
+                request_spec.update(parse_request_body_spec(request_body))
+                body_type, body = request_spec_to_legacy_body(request_spec)
 
             success_status = extract_success_status(operation.get("responses") or {})
             tags = operation.get("tags") or []
@@ -336,6 +539,8 @@ def parse_openapi_document(spec: dict[str, Any]) -> list[ParsedRequestData]:
                     body_type=body_type,
                     body=body,
                     assertions=[{"type": "status_code", "expected": success_status}],
+                    request_spec=request_spec,
+                    assertion_specs=[{"assertion_type": "status_code", "expected_number": success_status}],
                     collection_name=tags[0] if tags else guess_collection_name_from_path(path),
                 )
             )
@@ -346,12 +551,20 @@ def parse_openapi_document(spec: dict[str, Any]) -> list[ParsedRequestData]:
 def parse_postman_collection(collection: dict[str, Any]) -> list[ParsedRequestData]:
     requests: list[ParsedRequestData] = []
 
-    def walk_items(items: list[dict[str, Any]], folder_name: str | None = None):
+    def walk_items(
+        items: list[dict[str, Any]],
+        folder_name: str | None = None,
+        inherited_auth: dict[str, Any] | None = None,
+    ):
         for item in items:
             if not isinstance(item, dict):
                 continue
+            item_auth = _resolve_postman_auth_payload(
+                item.get("auth") if "auth" in item else None,
+                inherited_auth,
+            )
             if "item" in item and isinstance(item["item"], list):
-                walk_items(item["item"], item.get("name") or folder_name)
+                walk_items(item["item"], item.get("name") or folder_name, item_auth)
                 continue
 
             request_data = item.get("request") or {}
@@ -360,8 +573,22 @@ def parse_postman_collection(collection: dict[str, Any]) -> list[ParsedRequestDa
                 continue
 
             url = parse_postman_url(request_data.get("url"))
+            params = parse_postman_query(request_data.get("url"))
             headers = parse_postman_headers(request_data.get("header") or [])
-            body_type, body = parse_postman_body(request_data.get("body") or {})
+            request_spec = build_request_spec(
+                method=method,
+                url=url,
+                headers=headers,
+                query=params,
+            )
+            request_spec.update(
+                _resolve_postman_auth_payload(
+                    request_data.get("auth") if "auth" in request_data else None,
+                    item_auth,
+                )
+            )
+            request_spec.update(parse_postman_body_spec(request_data.get("body") or {}))
+            body_type, body = request_spec_to_legacy_body(request_spec)
             requests.append(
                 ParsedRequestData(
                     name=item.get("name") or f"{method} {url}",
@@ -369,16 +596,30 @@ def parse_postman_collection(collection: dict[str, Any]) -> list[ParsedRequestDa
                     url=url,
                     description=str(item.get("description") or ""),
                     headers=headers,
-                    params={},
+                    params=params,
                     body_type=body_type,
                     body=body,
                     assertions=[{"type": "status_code", "expected": 200}],
+                    request_spec=request_spec,
+                    assertion_specs=[{"assertion_type": "status_code", "expected_number": 200}],
                     collection_name=folder_name,
                 )
             )
 
-    walk_items(collection.get("item") or [])
+    walk_items(collection.get("item") or [], inherited_auth=parse_postman_auth(collection.get("auth") or {}))
     return requests
+
+
+def _resolve_postman_auth_payload(
+    auth_data: Any,
+    inherited_auth: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if auth_data is None:
+        return dict(inherited_auth or {})
+    parsed_auth = parse_postman_auth(auth_data)
+    if parsed_auth:
+        return parsed_auth
+    return dict(inherited_auth or {})
 
 
 def parse_postman_url(url_data: Any) -> str:
@@ -401,26 +642,129 @@ def parse_postman_url(url_data: Any) -> str:
 def parse_postman_headers(header_list: list[dict[str, Any]]) -> dict[str, Any]:
     headers: dict[str, Any] = {}
     for header in header_list:
-        if isinstance(header, dict) and header.get("key"):
+        if isinstance(header, dict) and header.get("key") and not header.get("disabled"):
             headers[str(header["key"])] = header.get("value", "")
     return headers
 
 
-def parse_postman_body(body_data: dict[str, Any]) -> tuple[str, Any]:
+def parse_postman_query(url_data: Any) -> dict[str, Any]:
+    if isinstance(url_data, dict):
+        query_items = url_data.get("query") or []
+        if isinstance(query_items, list):
+            return {
+                str(item.get("key")): item.get("value", "")
+                for item in query_items
+                if isinstance(item, dict) and item.get("key") and not item.get("disabled")
+            }
+        raw = str(url_data.get("raw") or "")
+        if raw:
+            return dict(parse_qsl(raw.split("?", 1)[1])) if "?" in raw else {}
+    if isinstance(url_data, str) and "?" in url_data:
+        return dict(parse_qsl(url_data.split("?", 1)[1]))
+    return {}
+
+
+def parse_postman_auth(auth_data: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(auth_data, dict):
+        return {}
+    auth_type = str(auth_data.get("type") or "").lower()
+    if auth_type in {"noauth", "none"}:
+        return {"auth": default_auth_spec()}
+    if auth_type == "bearer":
+        token = ""
+        for item in auth_data.get("bearer") or []:
+            if isinstance(item, dict) and item.get("key") == "token":
+                token = str(item.get("value") or "")
+                break
+        return {"auth": {**default_auth_spec(), "auth_type": "bearer", "token_value": token}}
+    if auth_type == "basic":
+        username = ""
+        password = ""
+        for item in auth_data.get("basic") or []:
+            if not isinstance(item, dict):
+                continue
+            if item.get("key") == "username":
+                username = str(item.get("value") or "")
+            if item.get("key") == "password":
+                password = str(item.get("value") or "")
+        return {"auth": {**default_auth_spec(), "auth_type": "basic", "username": username, "password": password}}
+    if auth_type == "apikey":
+        payload = {**default_auth_spec(), "auth_type": "api_key"}
+        for item in auth_data.get("apikey") or []:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("key") or "")
+            value = item.get("value")
+            if key == "key":
+                payload["api_key_name"] = str(value or "")
+            elif key == "value":
+                payload["api_key_value"] = str(value or "")
+            elif key == "in":
+                payload["api_key_in"] = str(value or "header")
+        return {"auth": payload}
+    return {}
+
+
+def parse_postman_body_spec(body_data: dict[str, Any]) -> dict[str, Any]:
     mode = body_data.get("mode")
     if mode == "raw":
         raw = body_data.get("raw", "")
+        language = str(((body_data.get("options") or {}).get("raw") or {}).get("language") or "").lower()
+        if language == "graphql":
+            parsed = try_parse_json(raw)
+            if isinstance(parsed, dict):
+                return {
+                    "body_mode": "graphql",
+                    "graphql_query": str(parsed.get("query") or ""),
+                    "graphql_operation_name": str(parsed.get("operationName") or ""),
+                    "graphql_variables": parsed.get("variables") if isinstance(parsed.get("variables"), dict) else {},
+                }
+            return {"body_mode": "graphql", "graphql_query": str(raw or "")}
+        if language == "xml":
+            return {"body_mode": "xml", "xml_text": str(raw or "")}
         try:
-            return "json", json.loads(raw)
+            return {"body_mode": "json", "body_json": json.loads(raw)}
         except Exception:  # noqa: BLE001
-            return "raw", raw
-    if mode in {"urlencoded", "formdata"}:
+            return {"body_mode": "raw", "raw_text": str(raw or "")}
+    if mode == "urlencoded":
         values = {}
-        for item in body_data.get(mode) or []:
+        for item in body_data.get("urlencoded") or []:
             if isinstance(item, dict) and item.get("key"):
                 values[str(item["key"])] = item.get("value", "")
-        return "form", values
-    return "none", {}
+        return {"body_mode": "urlencoded", "form_fields": named_items_from_mapping(values)}
+    if mode == "formdata":
+        text_parts: dict[str, Any] = {}
+        files: list[dict[str, Any]] = []
+        for item in body_data.get("formdata") or []:
+            if not isinstance(item, dict) or not item.get("key"):
+                continue
+            if str(item.get("type") or "text") == "file":
+                files.append(
+                    {
+                        "field_name": str(item["key"]),
+                        "source_type": "path",
+                        "file_path": str(item.get("src") or ""),
+                        "file_name": str(item.get("src") or item["key"]).split("/")[-1].split("\\")[-1],
+                        "content_type": str(item.get("contentType") or "application/octet-stream"),
+                        "base64_content": "",
+                        "enabled": not bool(item.get("disabled")),
+                        "order": len(files),
+                    }
+                )
+            else:
+                text_parts[str(item["key"])] = item.get("value", "")
+        return {
+            "body_mode": "multipart",
+            "multipart_parts": named_items_from_mapping(text_parts),
+            "files": files,
+        }
+    return {"body_mode": "none"}
+
+
+def parse_postman_body(body_data: dict[str, Any]) -> tuple[str, Any]:
+    request_spec = build_request_spec(method="POST", url="/")
+    request_spec.update(parse_postman_body_spec(body_data))
+    return request_spec_to_legacy_body(request_spec)
 
 
 def load_text_document(file_path: str) -> str:
@@ -1011,8 +1355,19 @@ def extract_requests_from_curl(markdown: str) -> list[ParsedRequestData]:
         method = "GET"
         url = ""
         headers: dict[str, Any] = {}
-        body_type = "none"
-        body: Any = {}
+        params: dict[str, Any] = {}
+        cookies: dict[str, Any] = {}
+        body_mode = "none"
+        body_json: Any = {}
+        raw_text = ""
+        xml_text = ""
+        graphql_query = ""
+        graphql_variables: dict[str, Any] = {}
+        form_fields: dict[str, Any] = {}
+        multipart_parts: dict[str, Any] = {}
+        files: list[dict[str, Any]] = []
+        auth = default_auth_spec()
+        transport = default_transport_spec()
         i = 1
         while i < len(args):
             token = args[i]
@@ -1027,15 +1382,88 @@ def extract_requests_from_curl(markdown: str) -> list[ParsedRequestData]:
                     headers[key.strip()] = value.strip()
                 i += 2
                 continue
+            if token in {"-b", "--cookie"} and i + 1 < len(args):
+                for cookie_entry in str(args[i + 1]).split(";"):
+                    if "=" not in cookie_entry:
+                        continue
+                    key, value = cookie_entry.split("=", 1)
+                    cookies[key.strip()] = value.strip()
+                i += 2
+                continue
+            if token in {"-u", "--user"} and i + 1 < len(args):
+                credentials = str(args[i + 1])
+                username, _, password = credentials.partition(":")
+                auth = {
+                    **default_auth_spec(),
+                    "auth_type": "basic",
+                    "username": username,
+                    "password": password,
+                }
+                i += 2
+                continue
+            if token in {"-k", "--insecure"}:
+                transport["verify_ssl"] = False
+                i += 1
+                continue
+            if token in {"-L", "--location"}:
+                transport["follow_redirects"] = True
+                i += 1
+                continue
+            if token in {"-x", "--proxy"} and i + 1 < len(args):
+                transport["proxy_url"] = str(args[i + 1])
+                i += 2
+                continue
+            if token == "--cert" and i + 1 < len(args):
+                transport["client_cert"] = str(args[i + 1])
+                i += 2
+                continue
+            if token == "--key" and i + 1 < len(args):
+                transport["client_key"] = str(args[i + 1])
+                i += 2
+                continue
             if token in {"-d", "--data", "--data-raw", "--data-binary"} and i + 1 < len(args):
                 raw_body = args[i + 1]
                 parsed = try_parse_json(raw_body)
-                if parsed is not None:
-                    body_type = "json"
-                    body = parsed
+                content_type_header = str(headers.get("Content-Type") or headers.get("content-type") or "")
+                if is_graphql_content_type(content_type_header):
+                    body_mode = "graphql"
+                    if isinstance(parsed, dict):
+                        graphql_query = str(parsed.get("query") or "")
+                        graphql_variables = parsed.get("variables") if isinstance(parsed.get("variables"), dict) else {}
+                    else:
+                        graphql_query = raw_body
+                elif is_xml_content_type(content_type_header):
+                    body_mode = "xml"
+                    xml_text = raw_body
+                elif parsed is not None:
+                    body_mode = "json"
+                    body_json = parsed
                 else:
-                    body_type = "raw"
-                    body = raw_body
+                    body_mode = "raw"
+                    raw_text = raw_body
+                i += 2
+                continue
+            if token in {"-F", "--form"} and i + 1 < len(args):
+                body_mode = "multipart"
+                form_value = str(args[i + 1])
+                if "=" in form_value:
+                    key, value = form_value.split("=", 1)
+                    if value.startswith("@"):
+                        file_path = value[1:]
+                        files.append(
+                            {
+                                "field_name": key,
+                                "source_type": "path",
+                                "file_path": file_path,
+                                "file_name": Path(file_path).name,
+                                "content_type": "application/octet-stream",
+                                "base64_content": "",
+                                "enabled": True,
+                                "order": len(files),
+                            }
+                        )
+                    else:
+                        multipart_parts[key] = value
                 i += 2
                 continue
             if token.startswith(("http://", "https://", "/")):
@@ -1044,6 +1472,30 @@ def extract_requests_from_curl(markdown: str) -> list[ParsedRequestData]:
 
         if not url:
             continue
+        if "?" in url:
+            base_url, query_string = url.split("?", 1)
+            url = base_url
+            params = dict(parse_qsl(query_string))
+
+        request_spec = build_request_spec(
+            method=method,
+            url=url,
+            headers=headers,
+            query=params,
+            cookies=cookies,
+            body_mode=body_mode,
+            body_json=body_json,
+            raw_text=raw_text,
+            xml_text=xml_text,
+            graphql_query=graphql_query,
+            graphql_variables=graphql_variables,
+            form_fields=form_fields,
+            multipart_parts=multipart_parts,
+            files=files,
+            auth=auth,
+            transport=transport,
+        )
+        body_type, body = request_spec_to_legacy_body(request_spec)
 
         heading = nearest_heading(block_match.start(), headings)
         requests.append(
@@ -1052,9 +1504,12 @@ def extract_requests_from_curl(markdown: str) -> list[ParsedRequestData]:
                 method=method,
                 url=url,
                 headers=headers,
+                params=params,
                 body_type=body_type,
                 body=body,
                 assertions=[{"type": "status_code", "expected": 200}],
+                request_spec=request_spec,
+                assertion_specs=[{"assertion_type": "status_code", "expected_number": 200}],
                 collection_name=heading,
             )
         )
@@ -1109,18 +1564,69 @@ def extract_parameter_example(parameter: dict[str, Any]) -> Any:
     return ""
 
 
-def parse_request_body(request_body: dict[str, Any]) -> tuple[str, Any]:
+def parse_request_body_spec(request_body: dict[str, Any]) -> dict[str, Any]:
     content = request_body.get("content") or {}
-    if "application/json" in content:
-        return "json", extract_content_example(content["application/json"])
-    if "application/x-www-form-urlencoded" in content:
-        return "form", extract_content_example(content["application/x-www-form-urlencoded"])
-    if "multipart/form-data" in content:
-        return "form", extract_content_example(content["multipart/form-data"])
-    if "text/plain" in content:
-        example = extract_content_example(content["text/plain"])
-        return "raw", example if isinstance(example, str) else json.dumps(example, ensure_ascii=False)
-    return "none", {}
+    for content_type, content_item in content.items():
+        lowered = str(content_type).lower()
+        if is_graphql_content_type(lowered):
+            example = extract_content_example(content_item)
+            if isinstance(example, dict):
+                return {
+                    "body_mode": "graphql",
+                    "graphql_query": str(example.get("query") or ""),
+                    "graphql_operation_name": str(example.get("operationName") or ""),
+                    "graphql_variables": example.get("variables") if isinstance(example.get("variables"), dict) else {},
+                }
+            return {
+                "body_mode": "graphql",
+                "graphql_query": str(example or ""),
+                "graphql_operation_name": "",
+                "graphql_variables": {},
+            }
+        if is_json_content_type(lowered):
+            return {
+                "body_mode": "json",
+                "body_json": extract_content_example(content_item),
+            }
+        if lowered == "application/x-www-form-urlencoded":
+            example = extract_content_example(content_item)
+            return {
+                "body_mode": "urlencoded",
+                "form_fields": named_items_from_mapping(example if isinstance(example, dict) else {}),
+            }
+        if lowered == "multipart/form-data":
+            schema = content_item.get("schema") if isinstance(content_item, dict) else {}
+            example = extract_content_example(content_item)
+            multipart_parts, files = split_multipart_example(example, schema if isinstance(schema, dict) else None)
+            return {
+                "body_mode": "multipart",
+                "multipart_parts": named_items_from_mapping(multipart_parts),
+                "files": files,
+            }
+        if is_xml_content_type(lowered):
+            example = extract_content_example(content_item)
+            return {
+                "body_mode": "xml",
+                "xml_text": example if isinstance(example, str) else json.dumps(example, ensure_ascii=False),
+            }
+        if lowered in TEXT_CONTENT_TYPES:
+            example = extract_content_example(content_item)
+            return {
+                "body_mode": "raw",
+                "raw_text": example if isinstance(example, str) else json.dumps(example, ensure_ascii=False),
+            }
+        if lowered == "application/octet-stream" or lowered.startswith("image/") or lowered.startswith("audio/"):
+            return {
+                "body_mode": "binary",
+                "binary_base64": "",
+            }
+    return {"body_mode": "none"}
+
+
+def parse_request_body(request_body: dict[str, Any]) -> tuple[str, Any]:
+    request_spec = build_request_spec(method="POST", url="/")
+    request_spec.update(parse_request_body_spec(request_body))
+    return request_spec_to_legacy_body(request_spec)
 
 
 def extract_content_example(content_item: dict[str, Any]) -> Any:

@@ -49,8 +49,9 @@
     <a-modal
       v-model:visible="editorVisible"
       :title="editingEnvironment ? '编辑环境' : '新增环境'"
-      width="760px"
+      width="1080px"
       :ok-loading="submitLoading"
+      :body-style="{ maxHeight: '72vh', overflow: 'auto' }"
       @before-ok="submitEnvironment"
       @cancel="resetEditor"
     >
@@ -58,7 +59,7 @@
         <div class="env-prefill-copy">
           <div class="env-prefill-title">已根据最近一次文档解析准备环境草稿</div>
           <div class="env-prefill-description">
-            {{ draftSummary || '基础地址、公共请求头和环境变量已经自动回填。' }}
+            {{ draftSummary || '基础地址、公共请求头、变量和 Cookie 已自动回填。' }}
           </div>
         </div>
         <div class="env-prefill-actions">
@@ -67,7 +68,7 @@
         </div>
       </div>
 
-      <a-form ref="formRef" :model="formState" layout="vertical">
+      <a-form :model="formState" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="name" label="环境名称" :rules="[{ required: true, message: '请输入环境名称' }]">
@@ -94,25 +95,14 @@
           </a-col>
         </a-row>
 
-        <a-form-item field="commonHeadersText" label="公共请求头(JSON)">
-          <a-textarea
-            v-model="formState.commonHeadersText"
-            :auto-size="{ minRows: 6, maxRows: 12 }"
-            placeholder='例如：{"Authorization":"Bearer {{token}}"}'
-          />
+        <a-form-item label="结构化环境配置">
+          <StructuredEnvironmentEditor v-model="formState.editor" />
         </a-form-item>
 
-        <a-form-item field="variablesText" label="环境变量(JSON)">
-          <a-textarea
-            v-model="formState.variablesText"
-            :auto-size="{ minRows: 6, maxRows: 12 }"
-            placeholder='例如：{"token":"xxx","tenant_id":"demo"}'
-          />
-        </a-form-item>
         <a-alert type="info">
           <template #title>自动获取 Token</template>
-          如果接口头里使用了 <code v-pre>{{token}}</code> 且当前环境没有填写 token，系统会尝试自动执行登录接口。
-          可在环境变量 JSON 中配置 <code>auth_request_name</code> 或 <code>auth_request_id</code> 指定登录接口；
+          如果接口里使用了 <code v-pre>{{token}}</code> 且当前环境没有填写 token，系统会尝试自动执行登录接口。
+          可在环境变量里配置 <code>auth_request_name</code> 或 <code>auth_request_id</code> 指定登录接口；
           如返回结构特殊，可再配置 <code>auth_token_path</code>，例如 <code>data.token</code>。
         </a-alert>
       </a-form>
@@ -125,8 +115,16 @@ import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
 import { environmentApi } from '../api'
+import StructuredEnvironmentEditor from '../components/StructuredEnvironmentEditor.vue'
+import {
+  createEmptyEnvironmentEditorModel,
+  environmentEditorModelToHeaderMap,
+  environmentEditorModelToPayload,
+  environmentEditorModelToVariableMap,
+  environmentToEditorModel,
+} from '../state/environmentEditor'
 import { useApiImportDrafts } from '../state/importDraft'
-import type { ApiEnvironment, ApiEnvironmentForm } from '../types'
+import type { ApiEnvironment, ApiEnvironmentEditorModel, ApiEnvironmentForm } from '../types'
 
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
@@ -139,31 +137,27 @@ const environments = ref<ApiEnvironment[]>([])
 const editorVisible = ref(false)
 const editingEnvironment = ref<ApiEnvironment | null>(null)
 
-const formState = ref({
+const createInitialFormState = () => ({
   name: '',
   base_url: '',
-  commonHeadersText: '{}',
-  variablesText: '{}',
   timeout_ms: 30000,
   is_default: false,
+  editor: createEmptyEnvironmentEditorModel(),
 })
+
+const formState = ref<{
+  name: string
+  base_url: string
+  timeout_ms: number
+  is_default: boolean
+  editor: ApiEnvironmentEditorModel
+}>(createInitialFormState())
 
 const filteredEnvironments = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
   if (!keyword) return environments.value
   return environments.value.filter(item => item.name.toLowerCase().includes(keyword))
 })
-
-const stringifyJson = (value: any, fallback = '{}') => {
-  if (value === null || value === undefined || value === '') return fallback
-  if (typeof value === 'string') return value
-  return JSON.stringify(value, null, 2)
-}
-
-const parseJsonText = (text: string, fallback: any) => {
-  if (!text.trim()) return fallback
-  return JSON.parse(text)
-}
 
 const formatDate = (value?: string) => {
   if (!value) return '-'
@@ -190,14 +184,7 @@ const loadEnvironments = async () => {
 
 const resetEditor = () => {
   editingEnvironment.value = null
-  formState.value = {
-    name: '',
-    base_url: '',
-    commonHeadersText: '{}',
-    variablesText: '{}',
-    timeout_ms: 30000,
-    is_default: false,
-  }
+  formState.value = createInitialFormState()
 }
 
 const fillEnvironmentFromDraft = () => {
@@ -206,10 +193,9 @@ const fillEnvironmentFromDraft = () => {
   formState.value = {
     name: draft.name || '文档解析环境草稿',
     base_url: draft.base_url || '',
-    commonHeadersText: stringifyJson(draft.common_headers || {}),
-    variablesText: stringifyJson(draft.variables || {}),
     timeout_ms: draft.timeout_ms || 30000,
     is_default: draft.is_default || false,
+    editor: environmentToEditorModel(draft),
   }
 }
 
@@ -224,10 +210,9 @@ const openEditModal = (record: ApiEnvironment) => {
   formState.value = {
     name: record.name,
     base_url: record.base_url,
-    commonHeadersText: stringifyJson(record.common_headers),
-    variablesText: stringifyJson(record.variables),
     timeout_ms: record.timeout_ms,
     is_default: record.is_default,
+    editor: environmentToEditorModel(record),
   }
   editorVisible.value = true
 }
@@ -238,15 +223,22 @@ const submitEnvironment = async (done: (closed: boolean) => void) => {
     done(false)
     return
   }
+  if (!formState.value.name.trim()) {
+    Message.warning('请输入环境名称')
+    done(false)
+    return
+  }
 
   submitLoading.value = true
   try {
+    const environmentSpecs = environmentEditorModelToPayload(formState.value.editor)
     const payload: ApiEnvironmentForm = {
       project: projectId.value,
       name: formState.value.name.trim(),
       base_url: formState.value.base_url.trim(),
-      common_headers: parseJsonText(formState.value.commonHeadersText, {}),
-      variables: parseJsonText(formState.value.variablesText, {}),
+      common_headers: environmentEditorModelToHeaderMap(formState.value.editor),
+      variables: environmentEditorModelToVariableMap(formState.value.editor),
+      environment_specs: environmentSpecs,
       timeout_ms: formState.value.timeout_ms,
       is_default: formState.value.is_default,
     }
@@ -265,7 +257,7 @@ const submitEnvironment = async (done: (closed: boolean) => void) => {
     loadEnvironments()
   } catch (error: any) {
     console.error('[EnvironmentList] 保存环境失败:', error)
-    Message.error(error?.error || '保存环境失败，请检查 JSON 格式是否正确')
+    Message.error(error?.error || '保存环境失败')
     done(false)
   } finally {
     submitLoading.value = false
@@ -402,7 +394,8 @@ defineExpose({
 }
 
 @media (max-width: 768px) {
-  .api-page-header {
+  .api-page-header,
+  .env-prefill-banner {
     align-items: stretch;
   }
 

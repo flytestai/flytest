@@ -188,21 +188,11 @@
           <a-textarea v-model="formState.description" :auto-size="{ minRows: 2, maxRows: 4 }" />
         </a-form-item>
 
-        <a-form-item field="scriptText" label="接口脚本(JSON)">
-          <a-textarea
-            v-model="formState.scriptText"
-            :auto-size="{ minRows: 8, maxRows: 18 }"
-            placeholder='例如：{"request_overrides":{"body_type":"json","body":{"username":"admin"}}}'
-          />
-        </a-form-item>
-
-        <a-form-item field="assertionsText" label="断言规则(JSON数组)">
-          <a-textarea
-            v-model="formState.assertionsText"
-            :auto-size="{ minRows: 8, maxRows: 18 }"
-            placeholder='例如：[{"type":"status_code","expected":200}]'
-          />
-        </a-form-item>
+        <StructuredHttpEditor
+          v-model="formState.editor"
+          :allow-empty-auth="true"
+          :allow-inherited-transport="true"
+        />
       </a-form>
     </a-modal>
 
@@ -239,11 +229,14 @@
           </a-descriptions-item>
         </a-descriptions>
 
-        <a-divider>接口脚本</a-divider>
-        <pre class="json-block">{{ stringifyBlock(currentTestCase.script) }}</pre>
+        <a-divider>请求覆盖</a-divider>
+        <pre class="json-block">{{ stringifyBlock(currentTestCase.request_override_spec || currentTestCase.script) }}</pre>
 
         <a-divider>断言规则</a-divider>
-        <pre class="json-block">{{ stringifyBlock(currentTestCase.assertions) }}</pre>
+        <pre class="json-block">{{ stringifyBlock(currentTestCase.assertion_specs || currentTestCase.assertions) }}</pre>
+
+        <a-divider>提取器</a-divider>
+        <pre class="json-block">{{ stringifyBlock(currentTestCase.extractor_specs || []) }}</pre>
       </div>
     </a-modal>
   </div>
@@ -253,10 +246,19 @@
 import { computed, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
+import StructuredHttpEditor from '../components/StructuredHttpEditor.vue'
 import { apiRequestApi, environmentApi, testCaseApi } from '../api'
+import {
+  createEmptyHttpEditorModel,
+  httpEditorModelToAssertionSpecs,
+  httpEditorModelToExtractorSpecs,
+  httpEditorModelToTestCaseOverrideSpec,
+  testCaseToHttpEditorModel,
+} from '../state/httpEditor'
 import type {
   ApiEnvironment,
   ApiExecutionBatchResult,
+  ApiHttpEditorModel,
   ApiTestCase,
   ApiTestCaseForm,
   ApiTestCaseGenerationResult,
@@ -279,8 +281,7 @@ interface TestCaseEditorForm {
   description: string
   status: ApiTestCase['status']
   tagsText: string
-  scriptText: string
-  assertionsText: string
+  editor: ApiHttpEditorModel
 }
 
 type CaseGenerationMode = 'generate' | 'append' | 'regenerate'
@@ -313,14 +314,15 @@ const editingTestCase = ref<ApiTestCase | null>(null)
 const environments = ref<ApiEnvironment[]>([])
 const selectedEnvironmentId = ref<number | undefined>(undefined)
 const selectedTestCaseIds = ref<number[]>([])
-const formState = ref<TestCaseEditorForm>({
+const createInitialFormState = (): TestCaseEditorForm => ({
   name: '',
   description: '',
   status: 'draft',
   tagsText: '',
-  scriptText: '{}',
-  assertionsText: '[]',
+  editor: createEmptyHttpEditorModel(),
 })
+
+const formState = ref<TestCaseEditorForm>(createInitialFormState())
 
 const methodColorMap: Record<string, string> = {
   GET: 'green',
@@ -415,21 +417,10 @@ const formatDate = (value?: string) => {
   return new Date(value).toLocaleString('zh-CN')
 }
 
-const stringifyJson = (value: any, fallback = '{}') => {
-  if (value === null || value === undefined) return fallback
-  if (typeof value === 'string') return value
-  return JSON.stringify(value, null, 2)
-}
-
 const stringifyBlock = (value: any) => {
   if (value === null || value === undefined) return '-'
   if (typeof value === 'string') return value
   return JSON.stringify(value, null, 2)
-}
-
-const parseJsonText = <T>(text: string, fallback: T): T => {
-  if (!text.trim()) return fallback
-  return JSON.parse(text) as T
 }
 
 const parseTagsText = (text: string) =>
@@ -470,14 +461,7 @@ const toggleGroupSelection = (group: TestCaseGroup) => {
 const resetEditor = () => {
   editorVisible.value = false
   editingTestCase.value = null
-  formState.value = {
-    name: '',
-    description: '',
-    status: 'draft',
-    tagsText: '',
-    scriptText: '{}',
-    assertionsText: '[]',
-  }
+  formState.value = createInitialFormState()
 }
 
 const loadEnvironments = async () => {
@@ -554,8 +538,7 @@ const openEditModal = (record: ApiTestCase) => {
     description: record.description || '',
     status: record.status,
     tagsText: (record.tags || []).join(', '),
-    scriptText: stringifyJson(record.script),
-    assertionsText: stringifyJson(record.assertions, '[]'),
+    editor: testCaseToHttpEditorModel(record),
   }
   editorVisible.value = true
 }
@@ -574,6 +557,7 @@ const submitTestCase = async (done: (closed: boolean) => void) => {
 
   editorSubmitting.value = true
   try {
+    const requestOverrideSpec = httpEditorModelToTestCaseOverrideSpec(formState.value.editor)
     const payload: Partial<ApiTestCaseForm> = {
       project: editingTestCase.value.project,
       request: editingTestCase.value.request,
@@ -581,8 +565,9 @@ const submitTestCase = async (done: (closed: boolean) => void) => {
       description: formState.value.description.trim() || '',
       status: formState.value.status,
       tags: parseTagsText(formState.value.tagsText),
-      script: parseJsonText(formState.value.scriptText, {}),
-      assertions: parseJsonText(formState.value.assertionsText, []),
+      request_override_spec: requestOverrideSpec,
+      assertion_specs: httpEditorModelToAssertionSpecs(formState.value.editor),
+      extractor_specs: httpEditorModelToExtractorSpecs(formState.value.editor),
     }
 
     const res = await testCaseApi.update(editingTestCase.value.id, payload)

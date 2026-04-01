@@ -211,80 +211,14 @@
               <a-input v-model="formState.name" placeholder="例如：获取用户信息" />
             </a-form-item>
           </a-col>
-          <a-col :span="6">
-            <a-form-item field="method" label="请求方法">
-              <a-select v-model="formState.method">
-                <a-option v-for="method in methods" :key="method" :value="method" :label="method" />
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="6">
-            <a-form-item field="timeout_ms" label="超时(ms)">
-              <a-input-number v-model="formState.timeout_ms" :min="1000" :step="1000" style="width: 100%" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-form-item field="url" label="请求地址" :rules="[{ required: true, message: '请输入请求地址' }]">
-          <a-input
-            v-model="formState.url"
-            placeholder="支持完整 URL 或相对路径，例如 /api/users 或 {{base_url}}/users"
-          />
-        </a-form-item>
-
-        <a-form-item field="description" label="描述">
-          <a-textarea v-model="formState.description" :auto-size="{ minRows: 2, maxRows: 4 }" />
-        </a-form-item>
-
-        <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item field="headersText" label="请求头(JSON)">
-              <a-textarea
-                v-model="formState.headersText"
-                :auto-size="{ minRows: 6, maxRows: 12 }"
-                placeholder='例如：{"Authorization":"Bearer {{token}}"}'
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item field="paramsText" label="查询参数(JSON)">
-              <a-textarea
-                v-model="formState.paramsText"
-                :auto-size="{ minRows: 6, maxRows: 12 }"
-                placeholder='例如：{"page":1,"size":20}'
-              />
+            <a-form-item field="description" label="描述">
+              <a-textarea v-model="formState.description" :auto-size="{ minRows: 2, maxRows: 4 }" />
             </a-form-item>
           </a-col>
         </a-row>
 
-        <a-row :gutter="16">
-          <a-col :span="8">
-            <a-form-item field="body_type" label="请求体类型">
-              <a-select v-model="formState.body_type">
-                <a-option value="none" label="none" />
-                <a-option value="json" label="json" />
-                <a-option value="form" label="form" />
-                <a-option value="raw" label="raw" />
-              </a-select>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-form-item v-if="formState.body_type !== 'none'" field="bodyText" label="请求体">
-          <a-textarea
-            v-model="formState.bodyText"
-            :auto-size="{ minRows: 6, maxRows: 12 }"
-            :placeholder="formState.body_type === 'raw' ? '请输入原始文本' : '请输入 JSON 对象'"
-          />
-        </a-form-item>
-
-        <a-form-item field="assertionsText" label="断言规则(JSON数组)">
-          <a-textarea
-            v-model="formState.assertionsText"
-            :auto-size="{ minRows: 6, maxRows: 12 }"
-            placeholder='例如：[{"type":"status_code","expected":200},{"type":"body_contains","expected":"success"}]'
-          />
-        </a-form-item>
+        <StructuredHttpEditor v-model="formState.editor" />
       </a-form>
 
       <div v-else-if="importProgressActive" class="document-import-panel import-progress-panel">
@@ -564,12 +498,26 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
+import StructuredHttpEditor from '../components/StructuredHttpEditor.vue'
 import { apiRequestApi, environmentApi, testCaseApi } from '../api'
 import { useApiImportDrafts } from '../state/importDraft'
+import {
+  bodyModeToLegacyBodyType,
+  createEmptyHttpEditorModel,
+  httpEditorModelToAssertionSpecs,
+  httpEditorModelToExtractorSpecs,
+  httpEditorModelToRequestSpec,
+  requestFormToHttpEditorModel,
+  requestSpecToLegacyBody,
+  requestSpecToLegacyHeaders,
+  requestSpecToLegacyParams,
+  requestToHttpEditorModel,
+} from '../state/httpEditor'
 import { useApiImportJobs } from '../state/importJobs'
 import type {
   ApiEnvironment,
   ApiExecutionBatchResult,
+  ApiHttpEditorModel,
   ApiExecutionRecord,
   ApiImportJob,
   ApiImportResult,
@@ -600,8 +548,6 @@ const {
   getRequestDraft,
   clearDrafts,
 } = useApiImportDrafts()
-
-const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 const methodColorMap: Record<string, string> = {
   GET: 'green',
   POST: 'arcoblue',
@@ -668,18 +614,19 @@ const importProgressSteps = [
 
 let importProgressTimer: ReturnType<typeof window.setInterval> | null = null
 
-const formState = ref({
+interface RequestEditorForm {
+  name: string
+  description: string
+  editor: ApiHttpEditorModel
+}
+
+const createInitialFormState = (): RequestEditorForm => ({
   name: '',
   description: '',
-  method: 'GET',
-  url: '',
-  headersText: '{}',
-  paramsText: '{}',
-  body_type: 'none' as 'none' | 'json' | 'form' | 'raw',
-  bodyText: '{}',
-  assertionsText: '[]',
-  timeout_ms: 30000,
+  editor: createEmptyHttpEditorModel(),
 })
+
+const formState = ref<RequestEditorForm>(createInitialFormState())
 
 const filteredRequests = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
@@ -846,21 +793,10 @@ const handleCancelImportJob = async (job: ApiImportJob) => {
   }
 }
 
-const stringifyJson = (value: any, fallback = '{}') => {
-  if (value === null || value === undefined || value === '') return fallback
-  if (typeof value === 'string') return value
-  return JSON.stringify(value, null, 2)
-}
-
 const stringifyBlock = (value: any) => {
   if (value === null || value === undefined) return '-'
   if (typeof value === 'string') return value
   return JSON.stringify(value, null, 2)
-}
-
-const parseJsonText = (text: string, fallback: any) => {
-  if (!text.trim()) return fallback
-  return JSON.parse(text)
 }
 
 const formatDate = (value?: string) => {
@@ -999,18 +935,7 @@ const resetEditor = () => {
   if (documentInputRef.value) {
     documentInputRef.value.value = ''
   }
-  formState.value = {
-    name: '',
-    description: '',
-    method: 'GET',
-    url: '',
-    headersText: '{}',
-    paramsText: '{}',
-    body_type: 'none',
-    bodyText: '{}',
-    assertionsText: '[]',
-    timeout_ms: 30000,
-  }
+  formState.value = createInitialFormState()
 }
 
 const fillFormFromRequestDraft = (draftIndex = selectedRequestDraftIndex.value) => {
@@ -1021,17 +946,7 @@ const fillFormFromRequestDraft = (draftIndex = selectedRequestDraftIndex.value) 
   formState.value = {
     name: draft.form.name,
     description: draft.form.description || '',
-    method: draft.form.method,
-    url: draft.form.url,
-    headersText: stringifyJson(draft.form.headers),
-    paramsText: stringifyJson(draft.form.params),
-    body_type: draft.form.body_type,
-    bodyText:
-      draft.form.body_type === 'raw'
-        ? stringifyJson(draft.form.body, '')
-        : stringifyJson(draft.form.body, '{}'),
-    assertionsText: stringifyJson(draft.form.assertions, '[]'),
-    timeout_ms: draft.form.timeout_ms || 30000,
+    editor: requestFormToHttpEditorModel(draft.form),
   }
 }
 
@@ -1049,14 +964,7 @@ const openEditModal = (record: ApiRequest) => {
   formState.value = {
     name: record.name,
     description: record.description || '',
-    method: record.method,
-    url: record.url,
-    headersText: stringifyJson(record.headers),
-    paramsText: stringifyJson(record.params),
-    body_type: record.body_type,
-    bodyText: record.body_type === 'raw' ? stringifyJson(record.body, '') : stringifyJson(record.body, '{}'),
-    assertionsText: stringifyJson(record.assertions, '[]'),
-    timeout_ms: record.timeout_ms,
+    editor: requestToHttpEditorModel(record),
   }
   editorVisible.value = true
 }
@@ -1102,6 +1010,7 @@ const handleDocumentDrop = (event: DragEvent) => {
 }
 
 const viewRequest = (record: ApiRequest) => {
+  const requestSpec = record.request_spec || httpEditorModelToRequestSpec(requestToHttpEditorModel(record))
   currentResult.value = {
     id: 0,
     project: record.project_id || projectId.value || 0,
@@ -1115,11 +1024,14 @@ const viewRequest = (record: ApiRequest) => {
     status_code: null,
     response_time: null,
     request_snapshot: {
-      headers: record.headers,
-      params: record.params,
-      body_type: record.body_type,
-      body: record.body,
-      assertions: record.assertions,
+      headers: requestSpecToLegacyHeaders(requestSpec),
+      params: requestSpecToLegacyParams(requestSpec),
+      body_type: bodyModeToLegacyBodyType(requestSpec.body_mode),
+      body: requestSpecToLegacyBody(requestSpec),
+      assertions: record.assertion_specs || record.assertions,
+      request_spec: requestSpec,
+      assertion_specs: record.assertion_specs || [],
+      extractor_specs: record.extractor_specs || [],
       generated_script: record.generated_script,
     },
     response_snapshot: {},
@@ -1131,23 +1043,22 @@ const viewRequest = (record: ApiRequest) => {
 }
 
 const submitManualRequest = async () => {
+  const requestSpec = httpEditorModelToRequestSpec(formState.value.editor)
   const payload: ApiRequestForm = {
     collection: props.selectedCollectionId!,
     name: formState.value.name.trim(),
     description: formState.value.description.trim(),
-    method: formState.value.method,
-    url: formState.value.url.trim(),
-    headers: parseJsonText(formState.value.headersText, {}),
-    params: parseJsonText(formState.value.paramsText, {}),
-    body_type: formState.value.body_type,
-    body:
-      formState.value.body_type === 'none'
-        ? {}
-        : formState.value.body_type === 'raw'
-          ? formState.value.bodyText
-          : parseJsonText(formState.value.bodyText, {}),
-    assertions: parseJsonText(formState.value.assertionsText, []),
-    timeout_ms: formState.value.timeout_ms,
+    method: requestSpec.method,
+    url: requestSpec.url.trim(),
+    headers: requestSpecToLegacyHeaders(requestSpec),
+    params: requestSpecToLegacyParams(requestSpec),
+    body_type: bodyModeToLegacyBodyType(requestSpec.body_mode),
+    body: requestSpecToLegacyBody(requestSpec),
+    assertions: [],
+    request_spec: requestSpec,
+    assertion_specs: httpEditorModelToAssertionSpecs(formState.value.editor),
+    extractor_specs: httpEditorModelToExtractorSpecs(formState.value.editor),
+    timeout_ms: requestSpec.timeout_ms,
   }
 
   if (editingRequest.value) {

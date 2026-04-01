@@ -26,6 +26,163 @@ export interface ApiCollectionForm {
   order?: number
 }
 
+export type ApiBodyMode = 'none' | 'json' | 'form' | 'urlencoded' | 'multipart' | 'raw' | 'xml' | 'graphql' | 'binary'
+
+export interface ApiNamedValueSpec {
+  id?: number
+  name: string
+  value: any
+  enabled?: boolean
+  order?: number
+}
+
+export interface ApiEnvironmentVariableSpec extends ApiNamedValueSpec {
+  is_secret?: boolean
+}
+
+export interface ApiEnvironmentCookieSpec extends ApiNamedValueSpec {
+  domain?: string
+  path?: string
+}
+
+export interface ApiEnvironmentSpecPayload {
+  variables: ApiEnvironmentVariableSpec[]
+  headers: ApiNamedValueSpec[]
+  cookies: ApiEnvironmentCookieSpec[]
+}
+
+export interface ApiEnvironmentEditorModel extends ApiEnvironmentSpecPayload {}
+
+export interface ApiFileSpec {
+  id?: number
+  field_name: string
+  source_type: 'path' | 'base64' | 'placeholder'
+  file_path: string
+  file_name: string
+  content_type: string
+  base64_content: string
+  enabled?: boolean
+  order?: number
+}
+
+export interface ApiAuthSpec {
+  auth_type: '' | 'none' | 'basic' | 'bearer' | 'api_key' | 'cookie' | 'bootstrap_request'
+  username: string
+  password: string
+  token_value: string
+  token_variable: string
+  header_name: string
+  bearer_prefix: string
+  api_key_name: string
+  api_key_in: '' | 'header' | 'query' | 'cookie'
+  api_key_value: string
+  cookie_name: string
+  bootstrap_request_id: number | null
+  bootstrap_request_name: string
+  bootstrap_token_path: string
+}
+
+export interface ApiTransportSpec {
+  verify_ssl: boolean | null
+  proxy_url: string
+  client_cert: string
+  client_key: string
+  follow_redirects: boolean | null
+  retry_count: number | null
+  retry_interval_ms: number | null
+}
+
+export interface ApiAssertionSpec {
+  id?: number
+  enabled?: boolean
+  order?: number
+  assertion_type:
+    | 'status_code'
+    | 'status_range'
+    | 'body_contains'
+    | 'body_not_contains'
+    | 'json_path'
+    | 'header'
+    | 'cookie'
+    | 'regex'
+    | 'exists'
+    | 'not_exists'
+    | 'array_length'
+    | 'response_time'
+    | 'json_schema'
+    | 'openapi_contract'
+  target?: string
+  selector?: string
+  operator?: string
+  expected_text?: string
+  expected_number?: number | null
+  expected_json?: Record<string, any> | any[]
+  expected_json_text?: string
+  min_value?: number | null
+  max_value?: number | null
+  schema_text?: string
+}
+
+export interface ApiExtractorSpec {
+  id?: number
+  enabled?: boolean
+  order?: number
+  source: 'json_path' | 'header' | 'cookie' | 'regex' | 'status_code' | 'response_time'
+  selector?: string
+  variable_name: string
+  default_value?: string
+  required?: boolean
+}
+
+export interface ApiRequestSpecPayload {
+  id?: number
+  method: string
+  url: string
+  body_mode: ApiBodyMode
+  body_json?: Record<string, any> | any[]
+  raw_text: string
+  xml_text: string
+  binary_base64: string
+  graphql_query: string
+  graphql_operation_name: string
+  graphql_variables?: Record<string, any>
+  timeout_ms: number
+  headers: ApiNamedValueSpec[]
+  query: ApiNamedValueSpec[]
+  cookies: ApiNamedValueSpec[]
+  form_fields: ApiNamedValueSpec[]
+  multipart_parts: ApiNamedValueSpec[]
+  files: ApiFileSpec[]
+  auth: ApiAuthSpec
+  transport: ApiTransportSpec
+}
+
+export type ApiTestCaseOverrideSpecPayload = ApiRequestSpecPayload
+
+export interface ApiHttpEditorModel {
+  method: string
+  url: string
+  body_mode: ApiBodyMode
+  timeout_ms: number
+  headers: ApiNamedValueSpec[]
+  query: ApiNamedValueSpec[]
+  cookies: ApiNamedValueSpec[]
+  form_fields: ApiNamedValueSpec[]
+  multipart_parts: ApiNamedValueSpec[]
+  files: ApiFileSpec[]
+  auth: ApiAuthSpec
+  transport: ApiTransportSpec
+  assertions: ApiAssertionSpec[]
+  extractors: ApiExtractorSpec[]
+  body_json_text: string
+  raw_text: string
+  xml_text: string
+  binary_base64: string
+  graphql_query: string
+  graphql_operation_name: string
+  graphql_variables_text: string
+}
+
 export interface ApiRequest {
   id: number
   collection: number
@@ -40,6 +197,9 @@ export interface ApiRequest {
   body_type: 'none' | 'json' | 'form' | 'raw'
   body: any
   assertions: Array<Record<string, any>>
+  request_spec?: ApiRequestSpecPayload
+  assertion_specs?: ApiAssertionSpec[]
+  extractor_specs?: ApiExtractorSpec[]
   generated_script?: Record<string, any>
   test_case_count?: number
   timeout_ms: number
@@ -61,6 +221,9 @@ export interface ApiRequestForm {
   body_type: 'none' | 'json' | 'form' | 'raw'
   body?: any
   assertions?: Array<Record<string, any>>
+  request_spec?: ApiRequestSpecPayload
+  assertion_specs?: ApiAssertionSpec[]
+  extractor_specs?: ApiExtractorSpec[]
   timeout_ms?: number
   order?: number
 }
@@ -78,6 +241,7 @@ export interface ApiEnvironment {
   base_url: string
   common_headers: Record<string, any>
   variables: Record<string, any>
+  environment_specs?: ApiEnvironmentSpecPayload
   timeout_ms: number
   is_default: boolean
   creator: number | null
@@ -92,6 +256,7 @@ export interface ApiEnvironmentForm {
   base_url: string
   common_headers?: Record<string, any>
   variables?: Record<string, any>
+  environment_specs?: ApiEnvironmentSpecPayload
   timeout_ms?: number
   is_default?: boolean
 }
@@ -277,6 +442,9 @@ export interface ApiTestCase {
   tags: string[]
   script: Record<string, any>
   assertions: Array<Record<string, any>>
+  request_override_spec?: ApiTestCaseOverrideSpecPayload
+  assertion_specs?: ApiAssertionSpec[]
+  extractor_specs?: ApiExtractorSpec[]
   creator: number | null
   creator_name?: string
   created_at: string
@@ -292,6 +460,9 @@ export interface ApiTestCaseForm {
   tags?: string[]
   script?: Record<string, any>
   assertions?: Array<Record<string, any>>
+  request_override_spec?: ApiTestCaseOverrideSpecPayload
+  assertion_specs?: ApiAssertionSpec[]
+  extractor_specs?: ApiExtractorSpec[]
 }
 
 export interface ApiTestCaseGenerationItem {

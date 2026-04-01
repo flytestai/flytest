@@ -15,10 +15,19 @@ from .document_import import (
     ParsedRequestData,
     import_requests_from_document,
     load_document_content_for_ai,
+    named_items_from_mapping,
 )
 from .generation import generate_script_and_test_case
 from .models import ApiCollection, ApiEnvironment, ApiRequest, ApiTestCase
 from .serializers import ApiRequestSerializer, ApiTestCaseSerializer
+from .specs import (
+    apply_environment_spec_payload,
+    apply_request_assertions_and_extractors,
+    apply_request_spec_payload,
+    backfill_request_specs_from_legacy,
+    backfill_test_case_specs_from_legacy,
+    serialize_environment_specs,
+)
 
 ProgressCallback = Callable[[int, str, str], None] | None
 CancelCallback = Callable[[], bool] | None
@@ -49,6 +58,16 @@ BASE_PATH_LABEL_PATTERN = re.compile(
     re.I,
 )
 PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}")
+SECRET_VARIABLE_KEYWORDS = (
+    "token",
+    "secret",
+    "password",
+    "authorization",
+    "api_key",
+    "access_key",
+    "private_key",
+    "refresh_token",
+)
 
 ENVIRONMENT_LABEL_MAP = {
     "production": "生产环境",
@@ -123,6 +142,13 @@ def _update_request_if_needed(request: ApiRequest, parsed: ParsedRequestData):
         changed = True
     if changed:
         request.save(update_fields=["description", "headers", "params", "body_type", "body", "assertions", "updated_at"])
+    if parsed.request_spec:
+        apply_request_spec_payload(request, parsed.request_spec)
+        apply_request_assertions_and_extractors(
+            request,
+            assertion_payload=parsed.assertion_specs or None,
+            extractor_payload=parsed.extractor_specs or None,
+        )
 
 
 def _create_imported_requests(
@@ -137,6 +163,8 @@ def _create_imported_requests(
         existing_request = _find_existing_request(root_collection.project_id, parsed)
         if existing_request:
             _update_request_if_needed(existing_request, parsed)
+            if not getattr(existing_request, "request_spec", None):
+                backfill_request_specs_from_legacy(existing_request)
             created_or_reused_requests.append(existing_request)
             continue
 
@@ -174,6 +202,15 @@ def _create_imported_requests(
                 created_by=user,
             )
         )
+        if parsed.request_spec:
+            apply_request_spec_payload(created_or_reused_requests[-1], parsed.request_spec)
+            apply_request_assertions_and_extractors(
+                created_or_reused_requests[-1],
+                assertion_payload=parsed.assertion_specs or None,
+                extractor_payload=parsed.extractor_specs or None,
+            )
+        else:
+            backfill_request_specs_from_legacy(created_or_reused_requests[-1])
 
     return created_or_reused_requests
 
@@ -205,6 +242,7 @@ def _create_generated_test_cases(
                 creator=user,
             )
         )
+        backfill_test_case_specs_from_legacy(generated_cases[-1])
     return generated_cases
 
 
@@ -368,10 +406,126 @@ def _collect_variables(document_content: str, parsed_requests: list[ParsedReques
     return variables
 
 
+def _collect_common_cookies(parsed_requests: list[ParsedRequestData]) -> list[dict]:
+    if not parsed_requests:
+        return []
+
+    first_cookies = ((parsed_requests[0].request_spec or {}).get("cookies")) or []
+    common_cookies: list[dict] = []
+
+    for index, cookie in enumerate(first_cookies):
+        if not isinstance(cookie, dict):
+            continue
+        name = str(cookie.get("name") or "").strip()
+        if not name:
+            continue
+        domain = str(cookie.get("domain") or "")
+        path = str(cookie.get("path") or "/")
+        value = cookie.get("value", "")
+        if all(
+            any(
+                isinstance(candidate, dict)
+                and str(candidate.get("name") or "").strip() == name
+                and str(candidate.get("domain") or "") == domain
+                and str(candidate.get("path") or "/") == path
+                and candidate.get("value", "") == value
+                for candidate in (((request.request_spec or {}).get("cookies")) or [])
+            )
+            for request in parsed_requests[1:]
+        ):
+            common_cookies.append(
+                {
+                    "name": name,
+                    "value": value,
+                    "domain": domain,
+                    "path": path,
+                    "enabled": bool(cookie.get("enabled", True)),
+                    "order": int(cookie.get("order", index)),
+                }
+            )
+
+    return common_cookies
+
+
+def _is_secret_variable_name(name: str) -> bool:
+    lowered = str(name or "").strip().lower()
+    return any(keyword in lowered for keyword in SECRET_VARIABLE_KEYWORDS)
+
+
+def _build_environment_spec_payload(
+    common_headers: dict[str, str],
+    variables: dict[str, str],
+    cookies: list[dict] | None = None,
+) -> dict[str, list[dict]]:
+    return {
+        "headers": named_items_from_mapping(common_headers),
+        "variables": [
+            {
+                "name": key,
+                "value": value,
+                "enabled": True,
+                "is_secret": _is_secret_variable_name(key),
+                "order": index,
+            }
+            for index, (key, value) in enumerate((variables or {}).items())
+        ],
+        "cookies": [
+            {
+                "name": str(item.get("name") or "").strip(),
+                "value": item.get("value", ""),
+                "domain": str(item.get("domain") or ""),
+                "path": str(item.get("path") or "/"),
+                "enabled": bool(item.get("enabled", True)),
+                "order": int(item.get("order", index)),
+            }
+            for index, item in enumerate(cookies or [])
+            if isinstance(item, dict) and str(item.get("name") or "").strip()
+        ],
+    }
+
+
+def _merge_environment_spec_items(
+    incoming_items: list[dict] | None,
+    existing_items: list[dict] | None,
+    *,
+    key_fields: tuple[str, ...],
+) -> list[dict]:
+    merged: dict[tuple[str, ...], dict] = {}
+    ordered_keys: list[tuple[str, ...]] = []
+
+    for source_items in (incoming_items or [], existing_items or []):
+        for item in source_items:
+            if not isinstance(item, dict):
+                continue
+            key = []
+            for field_name in key_fields:
+                default_value = "/" if field_name == "path" else ""
+                key.append(str(item.get(field_name) or default_value))
+            key_tuple = tuple(key)
+            if not key_tuple[0]:
+                continue
+            normalized = dict(item)
+            normalized["enabled"] = bool(item.get("enabled", True))
+            if "is_secret" in normalized:
+                normalized["is_secret"] = bool(item.get("is_secret", False))
+            if key_tuple not in merged:
+                ordered_keys.append(key_tuple)
+            merged[key_tuple] = normalized
+
+    results: list[dict] = []
+    for index, key in enumerate(ordered_keys):
+        item = dict(merged[key])
+        item["order"] = index
+        results.append(item)
+    return results
+
+
 def _build_environment_drafts(file_path: str, parsed_requests: list[ParsedRequestData]) -> list[dict]:
     document_content, _, _ = load_document_content_for_ai(file_path)
     common_headers = _collect_common_headers(parsed_requests)
     variables = _collect_variables(document_content, parsed_requests)
+    common_cookies = _collect_common_cookies(parsed_requests)
+    environment_specs = _build_environment_spec_payload(common_headers, variables, common_cookies)
 
     draft_candidates: list[dict] = []
     seen_urls: set[str] = set()
@@ -386,6 +540,7 @@ def _build_environment_drafts(file_path: str, parsed_requests: list[ParsedReques
                 "base_url": base_url,
                 "common_headers": common_headers,
                 "variables": dict(variables),
+                "environment_specs": environment_specs,
                 "timeout_ms": 30000,
                 "is_default": False,
             }
@@ -400,6 +555,7 @@ def _build_environment_drafts(file_path: str, parsed_requests: list[ParsedReques
                     "base_url": fallback_url,
                     "common_headers": common_headers,
                     "variables": variables,
+                    "environment_specs": environment_specs,
                     "timeout_ms": 30000,
                     "is_default": False,
                 }
@@ -416,33 +572,54 @@ def _create_or_reuse_environments(collection: ApiCollection, user, environment_d
         base_url = str(environment_draft.get("base_url") or "").strip()
         common_headers = environment_draft.get("common_headers") or {}
         variables = environment_draft.get("variables") or {}
+        environment_specs = environment_draft.get("environment_specs") or _build_environment_spec_payload(
+            common_headers,
+            variables,
+            [],
+        )
         timeout_ms = int(environment_draft.get("timeout_ms") or 30000)
         draft_name = str(environment_draft.get("name") or f"环境{index + 1}").strip()
 
-        if not base_url and not common_headers and not variables:
+        has_cookies = bool((environment_specs or {}).get("cookies"))
+
+        if not base_url and not common_headers and not variables and not has_cookies:
             continue
 
         if base_url:
             existing = ApiEnvironment.objects.filter(project=collection.project, base_url=base_url).first()
             if existing:
                 updated = False
-                merged_headers = dict(common_headers)
-                merged_headers.update(existing.common_headers or {})
-                merged_variables = dict(variables)
-                merged_variables.update(existing.variables or {})
-                if merged_headers != (existing.common_headers or {}):
-                    existing.common_headers = merged_headers
-                    updated = True
-                if merged_variables != (existing.variables or {}):
-                    existing.variables = merged_variables
+                current_specs = serialize_environment_specs(existing)
+                merged_specs = {
+                    "headers": _merge_environment_spec_items(
+                        (environment_specs or {}).get("headers"),
+                        current_specs.get("headers"),
+                        key_fields=("name",),
+                    ),
+                    "variables": _merge_environment_spec_items(
+                        (environment_specs or {}).get("variables"),
+                        current_specs.get("variables"),
+                        key_fields=("name",),
+                    ),
+                    "cookies": _merge_environment_spec_items(
+                        (environment_specs or {}).get("cookies"),
+                        current_specs.get("cookies"),
+                        key_fields=("name", "domain", "path"),
+                    ),
+                }
+                if merged_specs != current_specs:
+                    apply_environment_spec_payload(existing, merged_specs)
                     updated = True
                 desired_base_name = _build_environment_name(draft_name, collection)
                 desired_name = _build_unique_environment_name(collection.project, desired_base_name, exclude_id=existing.id)
                 if existing.name != desired_name and existing.name.startswith("自动解析环境-"):
                     existing.name = desired_name
                     updated = True
+                if existing.timeout_ms == 30000 and timeout_ms != existing.timeout_ms:
+                    existing.timeout_ms = timeout_ms
+                    updated = True
                 if updated:
-                    existing.save(update_fields=["name", "common_headers", "variables", "updated_at"])
+                    existing.save(update_fields=["name", "timeout_ms", "updated_at"])
                 saved_environments.append(existing)
                 continue
 
@@ -461,6 +638,7 @@ def _create_or_reuse_environments(collection: ApiCollection, user, environment_d
                 creator=user,
             )
         )
+        apply_environment_spec_payload(saved_environments[-1], environment_specs)
 
     return saved_environments
 

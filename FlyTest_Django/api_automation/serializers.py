@@ -2,6 +2,21 @@ from rest_framework import serializers
 
 from .generation import build_request_script
 from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
+from .specs import (
+    apply_environment_spec_payload,
+    apply_request_assertions_and_extractors,
+    apply_request_spec_payload,
+    apply_test_case_assertions_and_extractors,
+    apply_test_case_override_payload,
+    backfill_environment_specs_from_legacy,
+    backfill_request_specs_from_legacy,
+    backfill_test_case_specs_from_legacy,
+    serialize_assertion_specs,
+    serialize_environment_specs,
+    serialize_extractor_specs,
+    serialize_request_spec,
+    serialize_test_case_override,
+)
 
 
 class ApiCollectionSerializer(serializers.ModelSerializer):
@@ -23,6 +38,9 @@ class ApiCollectionSerializer(serializers.ModelSerializer):
 
 
 class ApiRequestSerializer(serializers.ModelSerializer):
+    request_spec = serializers.JSONField(write_only=True, required=False)
+    assertion_specs = serializers.JSONField(write_only=True, required=False)
+    extractor_specs = serializers.JSONField(write_only=True, required=False)
     collection_name = serializers.CharField(source="collection.name", read_only=True)
     project_id = serializers.IntegerField(source="collection.project_id", read_only=True)
     creator_name = serializers.CharField(source="created_by.username", read_only=True)
@@ -36,27 +54,84 @@ class ApiRequestSerializer(serializers.ModelSerializer):
 
     def get_generated_script(self, obj):
         return build_request_script(
-            method=obj.method,
-            url=obj.url,
-            headers=obj.headers,
-            params=obj.params,
-            body_type=obj.body_type,
-            body=obj.body,
-            timeout_ms=obj.timeout_ms,
-            assertions=obj.assertions,
+            api_request=obj,
         )
 
     def get_test_case_count(self, obj) -> int:
         return obj.test_cases.count()
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["request_spec"] = serialize_request_spec(instance)
+        data["assertion_specs"] = serialize_assertion_specs(instance)
+        data["extractor_specs"] = serialize_extractor_specs(instance)
+        return data
+
+    def create(self, validated_data):
+        request_spec = validated_data.pop("request_spec", None)
+        assertion_specs = validated_data.pop("assertion_specs", None)
+        extractor_specs = validated_data.pop("extractor_specs", None)
+        instance = super().create(validated_data)
+        if request_spec is None and assertion_specs is None and extractor_specs is None:
+            backfill_request_specs_from_legacy(instance)
+            return instance
+        apply_request_spec_payload(instance, request_spec)
+        apply_request_assertions_and_extractors(
+            instance,
+            assertion_payload=assertion_specs,
+            extractor_payload=extractor_specs,
+        )
+        return instance
+
+    def update(self, instance, validated_data):
+        request_spec = validated_data.pop("request_spec", None)
+        assertion_specs = validated_data.pop("assertion_specs", None)
+        extractor_specs = validated_data.pop("extractor_specs", None)
+        instance = super().update(instance, validated_data)
+        if request_spec is not None:
+            apply_request_spec_payload(instance, request_spec)
+        elif not getattr(instance, "request_spec", None):
+            backfill_request_specs_from_legacy(instance)
+        if assertion_specs is not None or extractor_specs is not None:
+            apply_request_assertions_and_extractors(
+                instance,
+                assertion_payload=assertion_specs,
+                extractor_payload=extractor_specs,
+            )
+        return instance
+
 
 class ApiEnvironmentSerializer(serializers.ModelSerializer):
+    environment_specs = serializers.JSONField(write_only=True, required=False)
     creator_name = serializers.CharField(source="creator.username", read_only=True)
 
     class Meta:
         model = ApiEnvironment
         fields = "__all__"
         read_only_fields = ("creator", "created_at", "updated_at")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["environment_specs"] = serialize_environment_specs(instance)
+        return data
+
+    def create(self, validated_data):
+        environment_specs = validated_data.pop("environment_specs", None)
+        instance = super().create(validated_data)
+        if environment_specs is None:
+            backfill_environment_specs_from_legacy(instance)
+            return instance
+        apply_environment_spec_payload(instance, environment_specs)
+        return instance
+
+    def update(self, instance, validated_data):
+        environment_specs = validated_data.pop("environment_specs", None)
+        instance = super().update(instance, validated_data)
+        if environment_specs is not None:
+            apply_environment_spec_payload(instance, environment_specs)
+        elif not instance.variable_specs.exists() and not instance.header_specs.exists():
+            backfill_environment_specs_from_legacy(instance)
+        return instance
 
 
 class ApiExecutionRecordSerializer(serializers.ModelSerializer):
@@ -113,6 +188,9 @@ class ApiImportJobSerializer(serializers.ModelSerializer):
 
 
 class ApiTestCaseSerializer(serializers.ModelSerializer):
+    request_override_spec = serializers.JSONField(write_only=True, required=False)
+    assertion_specs = serializers.JSONField(write_only=True, required=False)
+    extractor_specs = serializers.JSONField(write_only=True, required=False)
     creator_name = serializers.CharField(source="creator.username", read_only=True)
     request_name = serializers.CharField(source="request.name", read_only=True)
     request_method = serializers.CharField(source="request.method", read_only=True)
@@ -124,3 +202,43 @@ class ApiTestCaseSerializer(serializers.ModelSerializer):
         model = ApiTestCase
         fields = "__all__"
         read_only_fields = ("creator", "created_at", "updated_at")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["request_override_spec"] = serialize_test_case_override(instance)
+        data["assertion_specs"] = serialize_assertion_specs(instance)
+        data["extractor_specs"] = serialize_extractor_specs(instance)
+        return data
+
+    def create(self, validated_data):
+        request_override_spec = validated_data.pop("request_override_spec", None)
+        assertion_specs = validated_data.pop("assertion_specs", None)
+        extractor_specs = validated_data.pop("extractor_specs", None)
+        instance = super().create(validated_data)
+        if request_override_spec is None and assertion_specs is None and extractor_specs is None:
+            backfill_test_case_specs_from_legacy(instance)
+            return instance
+        apply_test_case_override_payload(instance, request_override_spec)
+        apply_test_case_assertions_and_extractors(
+            instance,
+            assertion_payload=assertion_specs,
+            extractor_payload=extractor_specs,
+        )
+        return instance
+
+    def update(self, instance, validated_data):
+        request_override_spec = validated_data.pop("request_override_spec", None)
+        assertion_specs = validated_data.pop("assertion_specs", None)
+        extractor_specs = validated_data.pop("extractor_specs", None)
+        instance = super().update(instance, validated_data)
+        if request_override_spec is not None:
+            apply_test_case_override_payload(instance, request_override_spec)
+        elif not getattr(instance, "override_spec", None):
+            backfill_test_case_specs_from_legacy(instance)
+        if assertion_specs is not None or extractor_specs is not None:
+            apply_test_case_assertions_and_extractors(
+                instance,
+                assertion_payload=assertion_specs,
+                extractor_payload=extractor_specs,
+            )
+        return instance
