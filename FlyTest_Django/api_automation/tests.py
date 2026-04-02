@@ -34,12 +34,21 @@ from .ai_case_generator import (
 from .ai_failure_analyzer import analyze_execution_failure
 from .document_import import ParsedRequestData, extract_requests_from_curl, parse_openapi_document, parse_postman_collection
 from .execution import build_effective_request_spec, evaluate_structured_assertions
-from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
+from .ai_report_summarizer import _get_report_summary_prompt
+from .import_service import _build_environment_suggestions
+from .models import ApiCaseGenerationJob, ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
 from .services import build_request_url
 from .specs import apply_request_spec_payload, serialize_assertion_specs, serialize_extractor_specs, serialize_test_case_override
+from .views import _apply_case_generation_job, _run_case_generation_job
 
 
 class ApiAutomationAIParserTests(SimpleTestCase):
+    def test_report_summary_prompt_uses_prompt_type_defaults(self):
+        prompt_content, prompt_source, prompt_name = _get_report_summary_prompt(user=None)
+        self.assertEqual(prompt_source, "builtin_default")
+        self.assertEqual(prompt_name, "API测试报告摘要")
+        self.assertIn("report_context_json", prompt_content)
+
     def test_safe_llm_invoke_retries_after_concurrent_rate_limit(self):
         llm = Mock()
         llm.invoke.side_effect = [
@@ -1235,6 +1244,46 @@ class ApiAutomationAICaseGeneratorTests(TestCase):
 
 
 class ApiAutomationImporterParsingTests(SimpleTestCase):
+    def test_environment_suggestions_include_auth_and_variable_recommendations(self):
+        parsed_requests = [
+            ParsedRequestData(
+                name="用户登录",
+                method="POST",
+                url="/api/login",
+                body_type="json",
+                body={"phone": "{{phone}}", "password": "{{password}}"},
+            ),
+            ParsedRequestData(
+                name="查询用户信息",
+                method="GET",
+                url="/api/user/profile",
+                headers={"Authorization": "Bearer {{token}}"},
+            ),
+        ]
+        created_requests = [
+            SimpleNamespace(id=11, name="用户登录", method="POST", url="/api/login", collection=SimpleNamespace(name="auth")),
+            SimpleNamespace(id=12, name="查询用户信息", method="GET", url="/api/user/profile", collection=SimpleNamespace(name="user")),
+        ]
+
+        suggestions = _build_environment_suggestions(
+            parsed_requests=parsed_requests,
+            created_requests=created_requests,
+            environment_drafts=[{"name": "测试环境", "base_url": "https://cms-test.example.com/api"}],
+            saved_environments=[],
+            primary_environment_draft={"base_url": "https://cms-test.example.com/api"},
+            primary_environment=None,
+        )
+
+        self.assertEqual(suggestions["base_url_candidates"][0]["base_url"], "https://cms-test.example.com/api")
+        self.assertEqual(suggestions["auth_suggestions"][0]["request_name"], "用户登录")
+        self.assertEqual(suggestions["auth_suggestions"][0]["token_path"], "data.token")
+        patch_variables = {item["name"]: item["value"] for item in suggestions["environment_patch"]["variables"]}
+        self.assertEqual(patch_variables["auth_request_name"], "用户登录")
+        self.assertEqual(patch_variables["auth_token_path"], "data.token")
+        self.assertIn("phone", patch_variables)
+        self.assertIn("password", patch_variables)
+        self.assertIn("token", patch_variables)
+
     def test_postman_collection_preserves_query_auth_and_multipart_files(self):
         collection = {
             "info": {"name": "Demo"},
@@ -2482,6 +2531,165 @@ class ApiAutomationImportDocumentTests(TestCase):
         self.assertEqual(ApiTestCase.objects.filter(request=api_request).count(), 1)
         self.assertEqual(ApiTestCase.objects.get(request=api_request).name, "Create order - regenerated")
 
+    @patch("api_automation.views._start_case_generation_job")
+    @patch("api_automation.views.generate_test_case_drafts_with_ai")
+    def test_case_generation_job_returns_preview_and_persists_drafts(self, mock_generate, _mock_start_job):
+        api_request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="Create order",
+            method="POST",
+            url="/api/orders",
+            created_by=self.user,
+        )
+        existing_case = ApiTestCase.objects.create(
+            project=self.project,
+            request=api_request,
+            name="Create order - existing",
+            status="ready",
+            script={"request": {"method": "POST", "url": "/api/orders"}},
+            assertions=[{"type": "status_code", "expected": 200}],
+            creator=self.user,
+        )
+        mock_generate.return_value = AITestCaseGenerationResult(
+            used_ai=True,
+            note="AI generated preview candidate",
+            prompt_name="API自动化用例生成",
+            prompt_source="builtin_fallback",
+            model_name="demo-model",
+            case_summaries=[
+                {
+                    "name": "Create order - regenerated",
+                    "status": "ready",
+                    "tags": ["ai-generated"],
+                    "assertion_count": 1,
+                    "extractor_count": 0,
+                    "assertion_types": ["status_code"],
+                    "extractor_variables": [],
+                    "override_sections": [],
+                    "body_mode": "none",
+                }
+            ],
+            cases=[
+                GeneratedCaseDraft(
+                    name="Create order - regenerated",
+                    description="Preview replacement",
+                    status="ready",
+                    tags=["ai-generated"],
+                    assertions=[{"assertion_type": "status_code", "expected_number": 200}],
+                    extractors=[],
+                    request_overrides={},
+                )
+            ],
+        )
+
+        response = self.client.post(
+            "/api/api-automation/case-generation-jobs/",
+            {
+                "scope": "selected",
+                "ids": [api_request.id],
+                "mode": "regenerate",
+                "count_per_request": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        job_id = self._payload(response)["id"]
+        _run_case_generation_job(job_id)
+
+        job = ApiCaseGenerationJob.objects.get(pk=job_id)
+        self.assertEqual(job.status, "preview_ready")
+        self.assertTrue(job.result_payload["preview_only"])
+        self.assertEqual(job.result_payload["preview_request_count"], 1)
+        self.assertEqual(job.draft_payload["items"][0]["drafts"][0]["name"], "Create order - regenerated")
+        self.assertTrue(ApiTestCase.objects.filter(id=existing_case.id).exists())
+
+    @patch("api_automation.views._start_case_generation_apply")
+    @patch("api_automation.views._start_case_generation_job")
+    @patch("api_automation.views.generate_test_case_drafts_with_ai")
+    def test_case_generation_job_apply_uses_saved_preview_without_second_ai_call(
+        self,
+        mock_generate,
+        _mock_start_job,
+        _mock_start_apply,
+    ):
+        api_request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="Create order",
+            method="POST",
+            url="/api/orders",
+            created_by=self.user,
+        )
+        existing_case = ApiTestCase.objects.create(
+            project=self.project,
+            request=api_request,
+            name="Create order - existing",
+            status="ready",
+            script={"request": {"method": "POST", "url": "/api/orders"}},
+            assertions=[{"type": "status_code", "expected": 200}],
+            creator=self.user,
+        )
+        mock_generate.return_value = AITestCaseGenerationResult(
+            used_ai=True,
+            note="AI generated preview candidate",
+            prompt_name="API自动化用例生成",
+            prompt_source="builtin_fallback",
+            model_name="demo-model",
+            case_summaries=[
+                {
+                    "name": "Create order - regenerated",
+                    "status": "ready",
+                    "tags": ["ai-generated"],
+                    "assertion_count": 1,
+                    "extractor_count": 0,
+                    "assertion_types": ["status_code"],
+                    "extractor_variables": [],
+                    "override_sections": [],
+                    "body_mode": "none",
+                }
+            ],
+            cases=[
+                GeneratedCaseDraft(
+                    name="Create order - regenerated",
+                    description="Preview replacement",
+                    status="ready",
+                    tags=["ai-generated"],
+                    assertions=[{"assertion_type": "status_code", "expected_number": 200}],
+                    extractors=[],
+                    request_overrides={},
+                )
+            ],
+        )
+
+        create_response = self.client.post(
+            "/api/api-automation/case-generation-jobs/",
+            {
+                "scope": "selected",
+                "ids": [api_request.id],
+                "mode": "regenerate",
+                "count_per_request": 1,
+            },
+            format="json",
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_202_ACCEPTED)
+        job_id = self._payload(create_response)["id"]
+        _run_case_generation_job(job_id)
+
+        apply_response = self.client.post(
+            f"/api/api-automation/case-generation-jobs/{job_id}/apply/",
+            {},
+            format="json",
+        )
+        self.assertEqual(apply_response.status_code, status.HTTP_202_ACCEPTED)
+        _apply_case_generation_job(job_id)
+
+        job = ApiCaseGenerationJob.objects.get(pk=job_id)
+        self.assertEqual(job.status, "success")
+        self.assertEqual(mock_generate.call_count, 1)
+        self.assertFalse(ApiTestCase.objects.filter(id=existing_case.id).exists())
+        self.assertEqual(ApiTestCase.objects.filter(request=api_request).count(), 1)
+        self.assertEqual(ApiTestCase.objects.get(request=api_request).name, "Create order - regenerated")
+
 
 class ApiAutomationExecutionTests(TestCase):
     def setUp(self):
@@ -2976,6 +3184,129 @@ class ApiAutomationExecutionTests(TestCase):
         self.assertEqual(len(payload["recent_records"]), 1)
         self.assertEqual(len(payload["run_groups"]), 1)
         self.assertEqual(payload["run_groups"][0]["interface_count"], 1)
+
+    @patch("api_automation.ai_report_summarizer.LLMConfig.objects.filter")
+    def test_execution_report_summary_endpoint_returns_rule_fallback_when_no_llm(self, mock_filter):
+        mock_filter.return_value.first.return_value = None
+        request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="Report summary request",
+            method="GET",
+            url="/api/reports/summary",
+            created_by=self.user,
+        )
+
+        ApiExecutionRecord.objects.create(
+            project=self.project,
+            request=request,
+            environment=None,
+            run_id="run-report-summary-1",
+            run_name="报告摘要批次",
+            request_name=request.name,
+            method=request.method,
+            url=request.url,
+            status="failed",
+            passed=False,
+            status_code=401,
+            response_time=188.2,
+            request_snapshot={},
+            response_snapshot={"body": {"message": "unauthorized"}},
+            assertions_results=[],
+            error_message="unauthorized",
+            executor=self.user,
+        )
+
+        response = self.client.post(
+            "/api/api-automation/execution-records/report-summary/",
+            {"project": self.project.id, "days": 7},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payload = self._payload(response)
+        self.assertFalse(payload["used_ai"])
+        self.assertTrue(payload["summary"])
+        self.assertTrue(payload["recommended_actions"])
+
+    @patch("api_automation.ai_report_summarizer.create_llm_instance")
+    @patch("api_automation.ai_report_summarizer.LLMConfig.objects.filter")
+    @patch("api_automation.ai_report_summarizer.safe_llm_invoke")
+    def test_execution_report_summary_endpoint_reuses_cached_ai_result(
+        self,
+        mock_safe_invoke,
+        mock_filter,
+        mock_create_llm,
+    ):
+        cache.clear()
+        request = ApiRequest.objects.create(
+            collection=self.collection,
+            name="Report summary cached request",
+            method="GET",
+            url="/api/reports/cache",
+            created_by=self.user,
+        )
+
+        ApiExecutionRecord.objects.create(
+            project=self.project,
+            request=request,
+            environment=None,
+            run_id="run-report-summary-cache",
+            run_name="报告摘要缓存批次",
+            request_name=request.name,
+            method=request.method,
+            url=request.url,
+            status="failed",
+            passed=False,
+            status_code=500,
+            response_time=320.4,
+            request_snapshot={},
+            response_snapshot={"body": {"message": "server error"}},
+            assertions_results=[],
+            error_message="server error",
+            executor=self.user,
+        )
+
+        mock_filter.return_value.first.return_value = SimpleNamespace(name="gpt-5.4")
+        mock_create_llm.return_value = SimpleNamespace()
+        mock_safe_invoke.return_value = SimpleNamespace(
+            content=json.dumps(
+                {
+                    "summary": "最近失败主要集中在接口稳定性和鉴权配置。",
+                    "top_risks": [
+                        {"title": "鉴权不稳定", "detail": "部分接口返回 401/500，建议检查登录引导配置。"}
+                    ],
+                    "recommended_actions": [
+                        {"title": "检查鉴权链路", "detail": "确认 token 提取路径和环境变量。", "priority": "high"}
+                    ],
+                    "evidence": [
+                        {"label": "失败状态码", "detail": "最近批次存在 500 错误。"}
+                    ],
+                },
+                ensure_ascii=False,
+            )
+        )
+
+        first_response = self.client.post(
+            "/api/api-automation/execution-records/report-summary/",
+            {"project": self.project.id, "days": 7},
+            format="json",
+        )
+        second_response = self.client.post(
+            "/api/api-automation/execution-records/report-summary/",
+            {"project": self.project.id, "days": 7},
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        first_payload = self._payload(first_response)
+        second_payload = self._payload(second_response)
+        self.assertTrue(first_payload["used_ai"])
+        self.assertFalse(first_payload["cache_hit"])
+        self.assertTrue(second_payload["used_ai"])
+        self.assertTrue(second_payload["cache_hit"])
+        self.assertEqual(mock_safe_invoke.call_count, 1)
+        cache.clear()
 
     @patch("api_automation.ai_failure_analyzer.create_llm_instance")
     @patch("api_automation.ai_failure_analyzer.LLMConfig.objects.filter")

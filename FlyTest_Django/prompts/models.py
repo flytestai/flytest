@@ -17,6 +17,7 @@ class PromptType(models.TextChoices):
     # 其他类型
     TEST_CASE_EXECUTION = 'test_case_execution', _('测试用例执行')
     API_AUTOMATION_PARSING = 'api_automation_parsing', _('API自动化解析')
+    API_AUTOMATION_REPORT_SUMMARY = 'api_automation_report_summary', _('API测试报告摘要')
     DIAGRAM_GENERATION = 'diagram_generation', _('图表生成')
 
 class UserPrompt(models.Model):
@@ -34,6 +35,7 @@ class UserPrompt(models.Model):
         PromptType.LOGIC_ANALYSIS,
         PromptType.TEST_CASE_EXECUTION,
         PromptType.API_AUTOMATION_PARSING,
+        PromptType.API_AUTOMATION_REPORT_SUMMARY,
         PromptType.DIAGRAM_GENERATION,
     ]
 
@@ -110,6 +112,7 @@ class UserPrompt(models.Model):
                     PromptType.LOGIC_ANALYSIS.value,
                     PromptType.TEST_CASE_EXECUTION.value,
                     PromptType.API_AUTOMATION_PARSING.value,
+                    PromptType.API_AUTOMATION_REPORT_SUMMARY.value,
                 ]),
                 name='unique_user_program_prompt_type'
             )

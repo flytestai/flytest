@@ -16,6 +16,24 @@
       </div>
     </div>
 
+    <div v-if="environmentSuggestions" class="env-suggestion-panel">
+      <div class="env-suggestion-panel__copy">
+        <div class="env-suggestion-panel__title">最近一次文档导入的环境建议</div>
+        <div class="env-suggestion-panel__meta">
+          <span v-if="primarySuggestedBaseUrl">推荐基础地址：{{ primarySuggestedBaseUrl.base_url }}</span>
+          <span v-if="primaryAuthSuggestion">
+            推荐登录接口：{{ primaryAuthSuggestion.request_name }} / Token 路径 {{ primaryAuthSuggestion.token_path }}
+          </span>
+          <span v-if="suggestedVariablePreview.length">
+            建议补齐变量：{{ suggestedVariablePreview.map(item => item.name).join('、') }}
+          </span>
+        </div>
+      </div>
+      <div class="env-suggestion-panel__actions">
+        <a-button type="primary" @click="openCreateModalWithSuggestions">应用建议并新建环境</a-button>
+      </div>
+    </div>
+
     <div class="content-section">
       <a-table :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id" size="large">
         <template #columns>
@@ -68,6 +86,29 @@
         </div>
       </div>
 
+      <div v-if="!editingEnvironment && environmentSuggestions" class="env-suggestion-banner">
+        <div class="env-suggestion-banner__copy">
+          <div class="env-suggestion-banner__title">推荐鉴权与变量配置</div>
+          <div class="env-suggestion-banner__desc">
+            <template v-if="primaryAuthSuggestion">
+              建议将“{{ primaryAuthSuggestion.request_name }}”作为自动获取 Token 的引导接口，推荐提取路径为
+              <code>{{ primaryAuthSuggestion.token_path }}</code>。
+            </template>
+            <template v-else>
+              已根据导入结果整理出可优先补齐的环境变量。
+            </template>
+          </div>
+          <div v-if="suggestedVariablePreview.length" class="env-suggestion-banner__chips">
+            <a-tag v-for="item in suggestedVariablePreview" :key="item.name" color="arcoblue">
+              {{ item.name }}
+            </a-tag>
+          </div>
+        </div>
+        <div class="env-suggestion-banner__actions">
+          <a-button @click="applyEnvironmentSuggestions">应用建议</a-button>
+        </div>
+      </div>
+
       <a-form :model="formState" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -103,7 +144,7 @@
           <template #title>自动获取 Token</template>
           如果接口里使用了 <code v-pre>{{token}}</code> 且当前环境没有填写 token，系统会尝试自动执行登录接口。
           可在环境变量里配置 <code>auth_request_name</code> 或 <code>auth_request_id</code> 指定登录接口；
-          如返回结构特殊，可再配置 <code>auth_token_path</code>，例如 <code>data.token</code>。
+          如果返回结构特殊，可再配置 <code>auth_token_path</code>，例如 <code>data.token</code>。
         </a-alert>
       </a-form>
     </a-modal>
@@ -117,6 +158,7 @@ import { useProjectStore } from '@/store/projectStore'
 import { environmentApi } from '../api'
 import StructuredEnvironmentEditor from '../components/StructuredEnvironmentEditor.vue'
 import {
+  createEnvironmentVariableSpec,
   createEmptyEnvironmentEditorModel,
   environmentEditorModelToHeaderMap,
   environmentEditorModelToPayload,
@@ -124,11 +166,25 @@ import {
   environmentToEditorModel,
 } from '../state/environmentEditor'
 import { useApiImportDrafts } from '../state/importDraft'
-import type { ApiEnvironment, ApiEnvironmentEditorModel, ApiEnvironmentForm } from '../types'
+import type {
+  ApiEnvironment,
+  ApiEnvironmentAuthSuggestion,
+  ApiEnvironmentEditorModel,
+  ApiEnvironmentForm,
+  ApiEnvironmentSuggestionBaseUrl,
+  ApiEnvironmentSuggestionVariable,
+} from '../types'
 
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
-const { environmentDraft, draftSummary, getEnvironmentDraft, clearDrafts } = useApiImportDrafts()
+const {
+  environmentDraft,
+  environmentSuggestions,
+  draftSummary,
+  getEnvironmentDraft,
+  getEnvironmentSuggestions,
+  clearDrafts,
+} = useApiImportDrafts()
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -157,6 +213,19 @@ const filteredEnvironments = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
   if (!keyword) return environments.value
   return environments.value.filter(item => item.name.toLowerCase().includes(keyword))
+})
+
+const primarySuggestedBaseUrl = computed<ApiEnvironmentSuggestionBaseUrl | null>(() => {
+  const items = environmentSuggestions.value?.base_url_candidates || []
+  return items.find(item => item.selected) || items[0] || null
+})
+
+const primaryAuthSuggestion = computed<ApiEnvironmentAuthSuggestion | null>(() => {
+  return environmentSuggestions.value?.auth_suggestions?.[0] || null
+})
+
+const suggestedVariablePreview = computed<ApiEnvironmentSuggestionVariable[]>(() => {
+  return (environmentSuggestions.value?.variable_suggestions || []).slice(0, 8)
 })
 
 const formatDate = (value?: string) => {
@@ -199,10 +268,54 @@ const fillEnvironmentFromDraft = () => {
   }
 }
 
+const applyEnvironmentSuggestions = () => {
+  const suggestions = getEnvironmentSuggestions()
+  if (!suggestions) return
+
+  if (suggestions.environment_patch?.base_url && !formState.value.base_url) {
+    formState.value.base_url = suggestions.environment_patch.base_url
+  }
+
+  const nextVariables = [...formState.value.editor.variables]
+  for (const item of suggestions.environment_patch?.variables || []) {
+    const name = String(item.name || '').trim()
+    if (!name) continue
+    const existing = nextVariables.find(variable => variable.name === name)
+    if (existing) {
+      if (existing.value === '' || existing.value === null || existing.value === undefined) {
+        existing.value = item.value || ''
+      }
+      if (item.is_secret !== undefined) {
+        existing.is_secret = item.is_secret
+      }
+      continue
+    }
+    nextVariables.push(
+      createEnvironmentVariableSpec({
+        name,
+        value: item.value || '',
+        enabled: true,
+        is_secret: item.is_secret ?? false,
+        order: nextVariables.length,
+      })
+    )
+  }
+  formState.value.editor.variables = nextVariables.map((item, index) => ({
+    ...item,
+    order: index,
+  }))
+  Message.success('已将推荐鉴权与变量建议应用到环境表单')
+}
+
 const openCreateModal = () => {
   resetEditor()
   fillEnvironmentFromDraft()
   editorVisible.value = true
+}
+
+const openCreateModalWithSuggestions = () => {
+  openCreateModal()
+  applyEnvironmentSuggestions()
 }
 
 const openEditModal = (record: ApiEnvironment) => {
@@ -355,47 +468,87 @@ defineExpose({
   padding-bottom: 15px;
 }
 
-.env-prefill-banner {
+.env-prefill-banner,
+.env-suggestion-panel,
+.env-suggestion-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
   padding: 18px 20px;
   border-radius: 22px;
+}
+
+.env-prefill-banner {
+  margin-bottom: 18px;
   border: 1px solid rgba(59, 130, 246, 0.14);
   background:
     linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(20, 184, 166, 0.08)),
     rgba(255, 255, 255, 0.92);
 }
 
-.env-prefill-copy {
+.env-suggestion-panel {
+  border: 1px solid rgba(14, 165, 233, 0.14);
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(16, 185, 129, 0.08)),
+    rgba(255, 255, 255, 0.92);
+}
+
+.env-suggestion-banner {
+  margin-bottom: 18px;
+  border: 1px solid rgba(16, 185, 129, 0.14);
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08)),
+    rgba(255, 255, 255, 0.92);
+}
+
+.env-prefill-copy,
+.env-suggestion-panel__copy,
+.env-suggestion-banner__copy {
   min-width: 0;
 }
 
-.env-prefill-title {
+.env-prefill-title,
+.env-suggestion-panel__title,
+.env-suggestion-banner__title {
   font-size: 15px;
   font-weight: 700;
   color: #0f172a;
 }
 
-.env-prefill-description {
-  margin-top: 4px;
+.env-prefill-description,
+.env-suggestion-panel__meta,
+.env-suggestion-banner__desc {
+  margin-top: 6px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
   font-size: 12px;
   line-height: 1.7;
   color: #64748b;
 }
 
-.env-prefill-actions {
+.env-prefill-actions,
+.env-suggestion-panel__actions,
+.env-suggestion-banner__actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
+.env-suggestion-banner__chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
 @media (max-width: 768px) {
   .api-page-header,
-  .env-prefill-banner {
+  .env-prefill-banner,
+  .env-suggestion-panel,
+  .env-suggestion-banner {
     align-items: stretch;
   }
 

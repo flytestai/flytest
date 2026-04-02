@@ -185,8 +185,9 @@ import { useProjectStore } from '@/store/projectStore'
 import StructuredHttpEditor from '../components/StructuredHttpEditor.vue'
 import WorkflowStepEditor from '../components/WorkflowStepEditor.vue'
 import { apiRequestApi, environmentApi, testCaseApi } from '../api'
+import { useApiCaseGenerationJobs } from '../state/caseGenerationJobs'
 import { createEmptyHttpEditorModel, httpEditorModelToAssertionSpecs, httpEditorModelToExtractorSpecs, httpEditorModelToTestCaseOverrideSpec, testCaseToHttpEditorModel, workflowEditorStepToPayload, workflowStepToEditorStep } from '../state/httpEditor'
-import type { ApiEnvironment, ApiExecutionBatchResult, ApiHttpEditorModel, ApiRequest, ApiTestCase, ApiTestCaseForm, ApiTestCaseGenerationResult, ApiTestCaseWorkflowEditorStep, ApiTestCaseWorkflowStep } from '../types'
+import type { ApiCaseGenerationJob, ApiEnvironment, ApiExecutionBatchResult, ApiHttpEditorModel, ApiRequest, ApiTestCase, ApiTestCaseForm, ApiTestCaseGenerationResult, ApiTestCaseWorkflowEditorStep, ApiTestCaseWorkflowStep } from '../types'
 
 interface TestCaseGroup { key: string; requestId: number | null; requestName: string; requestMethod: string; requestUrl: string; totalCount: number; readyCount: number; updatedAt?: string; cases: ApiTestCase[] }
 interface TestCaseEditorForm { name: string; description: string; status: ApiTestCase['status']; tagsText: string; editor: ApiHttpEditorModel; workflow_steps: ApiTestCaseWorkflowEditorStep[]; scriptExtras: Record<string, any> }
@@ -199,6 +200,12 @@ const emit = defineEmits<{ (e: 'executed'): void }>()
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
 const projectName = computed(() => projectStore.currentProject?.name || '未选择项目')
+const {
+  syncProject: syncCaseGenerationProject,
+  createCaseGenerationJob,
+  waitForCaseGenerationJob,
+  applyCaseGenerationJob,
+} = useApiCaseGenerationJobs()
 
 const loading = ref(false)
 const requestLoading = ref(false)
@@ -626,18 +633,39 @@ const confirmRegeneratePreview = (summary: ApiTestCaseGenerationResult) =>
     })
   })
 
+const ensureCaseGenerationSummary = (job: ApiCaseGenerationJob) => {
+  if (job.result_payload) return job.result_payload
+  throw new Error(job.error_message || 'AI 用例生成任务未返回结果')
+}
+
 const runCaseGeneration = async (payload: CaseGenerationPayload) => {
-  const res = await apiRequestApi.generateTestCases(payload)
-  const summary: ApiTestCaseGenerationResult = res.data.data
-  if (summary.preview_only && payload.mode === 'regenerate' && !payload.apply_changes) {
-    const confirmed = await confirmRegeneratePreview(summary)
+  const job = await createCaseGenerationJob({
+    scope: payload.scope,
+    ids: payload.ids,
+    collection_id: payload.collection_id,
+    project_id: payload.project_id,
+    mode: payload.mode,
+    count_per_request: payload.count_per_request,
+  })
+  let currentJob = await waitForCaseGenerationJob(job.id)
+  if (currentJob.status === 'preview_ready' && payload.mode === 'regenerate') {
+    const previewSummary = ensureCaseGenerationSummary(currentJob)
+    const confirmed = await confirmRegeneratePreview(previewSummary)
     if (!confirmed) {
       Message.info('已取消替换当前测试用例')
       return null
     }
-    return runCaseGeneration({ ...payload, apply_changes: true })
+    await applyCaseGenerationJob(currentJob.id)
+    currentJob = await waitForCaseGenerationJob(currentJob.id)
   }
-  return summary
+  if (currentJob.status === 'failed') {
+    throw new Error(currentJob.error_message || 'AI 用例生成失败')
+  }
+  if (currentJob.status === 'canceled') {
+    Message.info(currentJob.progress_message || 'AI 用例生成已取消')
+    return null
+  }
+  return ensureCaseGenerationSummary(currentJob)
 }
 
 const generateCases = async (mode: CaseGenerationMode) => {
@@ -660,7 +688,7 @@ const generateCases = async (mode: CaseGenerationMode) => {
   }
 }
 
-watch(() => projectId.value, () => { selectedTestCaseIds.value = []; loadEnvironments(); loadAvailableRequests(); loadTestCases() }, { immediate: true })
+watch(() => projectId.value, () => { syncCaseGenerationProject(projectId.value); selectedTestCaseIds.value = []; loadEnvironments(); loadAvailableRequests(); loadTestCases() }, { immediate: true })
 watch(() => [props.selectedCollectionId, props.selectedRequestId], () => { selectedTestCaseIds.value = []; loadTestCases() }, { immediate: true })
 
 defineExpose({ refresh: loadTestCases })

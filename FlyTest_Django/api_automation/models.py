@@ -530,6 +530,77 @@ class ApiImportJob(models.Model):
         return f"{self.source_name} - {self.status}"
 
 
+class ApiCaseGenerationJob(models.Model):
+    SCOPE_CHOICES = [
+        ("selected", "selected"),
+        ("collection", "collection"),
+        ("project", "project"),
+    ]
+
+    MODE_CHOICES = [
+        ("generate", "generate"),
+        ("append", "append"),
+        ("regenerate", "regenerate"),
+    ]
+
+    STATUS_CHOICES = [
+        ("pending", "pending"),
+        ("running", "running"),
+        ("preview_ready", "preview_ready"),
+        ("applying", "applying"),
+        ("success", "success"),
+        ("failed", "failed"),
+        ("canceled", "canceled"),
+    ]
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="api_case_generation_jobs",
+        verbose_name=_("所属项目"),
+    )
+    collection = models.ForeignKey(
+        ApiCollection,
+        on_delete=models.SET_NULL,
+        related_name="case_generation_jobs",
+        null=True,
+        blank=True,
+        verbose_name=_("目标集合"),
+    )
+    creator = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_api_case_generation_jobs",
+        verbose_name=_("创建人"),
+    )
+    scope = models.CharField(_("生成范围"), max_length=20, choices=SCOPE_CHOICES, default="selected")
+    mode = models.CharField(_("生成模式"), max_length=20, choices=MODE_CHOICES, default="generate")
+    status = models.CharField(_("任务状态"), max_length=20, choices=STATUS_CHOICES, default="pending")
+    count_per_request = models.PositiveIntegerField(_("每个接口生成数量"), default=3)
+    request_ids = models.JSONField(_("目标接口 ID 列表"), default=list, blank=True)
+    progress_percent = models.PositiveIntegerField(_("进度百分比"), default=0)
+    progress_stage = models.CharField(_("当前阶段"), max_length=50, blank=True, default="")
+    progress_message = models.TextField(_("阶段说明"), blank=True, default="")
+    cancel_requested = models.BooleanField(_("是否请求停止"), default=False)
+    result_payload = models.JSONField(_("结果载荷"), default=dict, blank=True)
+    draft_payload = models.JSONField(_("预览草稿"), default=dict, blank=True)
+    error_message = models.TextField(_("错误信息"), blank=True, default="")
+    completed_at = models.DateTimeField(_("完成时间"), null=True, blank=True)
+    created_at = models.DateTimeField(_("创建时间"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("更新时间"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("API 用例生成任务")
+        verbose_name_plural = _("API 用例生成任务")
+        ordering = ["-created_at"]
+        db_table = "api_automation_case_generation_job"
+
+    def __str__(self) -> str:
+        return f"{self.project.name} - {self.mode} - {self.status}"
+
+
 class ApiTestCase(models.Model):
     STATUS_CHOICES = [
         ("draft", "draft"),

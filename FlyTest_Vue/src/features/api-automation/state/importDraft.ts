@@ -1,5 +1,11 @@
 import { computed, ref } from 'vue'
-import type { ApiEnvironmentForm, ApiImportResult, ApiRequest, ApiRequestForm } from '../types'
+import type {
+  ApiEnvironmentForm,
+  ApiEnvironmentSuggestions,
+  ApiImportResult,
+  ApiRequest,
+  ApiRequestForm,
+} from '../types'
 
 export type ApiRequestDraft = {
   label: string
@@ -8,6 +14,7 @@ export type ApiRequestDraft = {
 
 const requestDrafts = ref<ApiRequestDraft[]>([])
 const environmentDraft = ref<ApiEnvironmentForm | null>(null)
+const environmentSuggestions = ref<ApiEnvironmentSuggestions | null>(null)
 const draftSummary = ref('')
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g
@@ -137,10 +144,12 @@ const buildFallbackEnvironmentDraft = (requests: ApiRequest[], projectId: number
 export const useApiImportDrafts = () => {
   const hasRequestDrafts = computed(() => requestDrafts.value.length > 0)
   const hasEnvironmentDraft = computed(() => !!environmentDraft.value)
+  const hasEnvironmentSuggestions = computed(() => !!environmentSuggestions.value)
 
   const clearDrafts = () => {
     requestDrafts.value = []
     environmentDraft.value = null
+    environmentSuggestions.value = null
     draftSummary.value = ''
   }
 
@@ -168,6 +177,7 @@ export const useApiImportDrafts = () => {
         }
       : buildFallbackEnvironmentDraft(requests, projectId, baseUrl)
 
+    environmentSuggestions.value = result.environment_suggestions || null
     draftSummary.value = `已从最近一次文档解析中生成 ${requests.length} 个接口草稿`
   }
 
@@ -180,15 +190,22 @@ export const useApiImportDrafts = () => {
     return environmentDraft.value ? clone(environmentDraft.value) : null
   }
 
+  const getEnvironmentSuggestions = () => {
+    return environmentSuggestions.value ? clone(environmentSuggestions.value) : null
+  }
+
   return {
     requestDrafts,
     environmentDraft,
+    environmentSuggestions,
     draftSummary,
     hasRequestDrafts,
     hasEnvironmentDraft,
+    hasEnvironmentSuggestions,
     saveDraftsFromImport,
     getRequestDraft,
     getEnvironmentDraft,
+    getEnvironmentSuggestions,
     clearDrafts,
   }
 }

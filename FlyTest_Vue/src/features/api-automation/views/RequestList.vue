@@ -509,6 +509,7 @@ import { useProjectStore } from '@/store/projectStore'
 import StructuredHttpEditor from '../components/StructuredHttpEditor.vue'
 import { apiRequestApi, environmentApi, testCaseApi } from '../api'
 import { useApiImportDrafts } from '../state/importDraft'
+import { useApiCaseGenerationJobs } from '../state/caseGenerationJobs'
 import {
   bodyModeToLegacyBodyType,
   createEmptyHttpEditorModel,
@@ -523,6 +524,7 @@ import {
 } from '../state/httpEditor'
 import { useApiImportJobs } from '../state/importJobs'
 import type {
+  ApiCaseGenerationJob,
   ApiEnvironment,
   ApiExecutionBatchResult,
   ApiHttpEditorModel,
@@ -610,7 +612,19 @@ const importProgressMessage = ref('')
 const importProgressError = ref('')
 const importProgressFileName = ref('')
 
-const { activeImportJobs, syncProject, trackImportJob, registerFinishedHandler, cancelImportJob } = useApiImportJobs()
+const {
+  activeImportJobs,
+  syncProject: syncImportProject,
+  trackImportJob,
+  registerFinishedHandler,
+  cancelImportJob,
+} = useApiImportJobs()
+const {
+  syncProject: syncCaseGenerationProject,
+  createCaseGenerationJob,
+  waitForCaseGenerationJob,
+  applyCaseGenerationJob,
+} = useApiCaseGenerationJobs()
 
 const importProgressSteps = [
   { title: '上传接口文档', description: '将 Word、PDF、Swagger 等接口文档上传到 FlyTest。' },
@@ -1313,22 +1327,50 @@ const confirmRegeneratePreview = (summary: ApiTestCaseGenerationResult) =>
     })
   })
 
+const ensureCaseGenerationSummary = (job: ApiCaseGenerationJob) => {
+  if (job.result_payload) return job.result_payload
+  throw new Error(job.error_message || 'AI 用例生成任务未返回结果')
+}
+
+const runCaseGenerationJob = async (payload: CaseGenerationPayload) => {
+  const job = await createCaseGenerationJob({
+    scope: payload.scope,
+    ids: payload.ids,
+    collection_id: payload.collection_id,
+    project_id: payload.project_id,
+    mode: payload.mode,
+    count_per_request: payload.count_per_request,
+  })
+
+  let currentJob = await waitForCaseGenerationJob(job.id)
+  if (currentJob.status === 'preview_ready' && payload.mode === 'regenerate') {
+    const previewSummary = ensureCaseGenerationSummary(currentJob)
+    const confirmed = await confirmRegeneratePreview(previewSummary)
+    if (!confirmed) {
+      Message.info('已取消替换当前测试用例')
+      return null
+    }
+    await applyCaseGenerationJob(currentJob.id)
+    currentJob = await waitForCaseGenerationJob(currentJob.id)
+  }
+
+  if (currentJob.status === 'failed') {
+    throw new Error(currentJob.error_message || 'AI 用例生成失败')
+  }
+  if (currentJob.status === 'canceled') {
+    Message.info(currentJob.progress_message || 'AI 用例生成已取消')
+    return null
+  }
+  return ensureCaseGenerationSummary(currentJob)
+}
+
 const generateCasesByScope = async (
   payload: CaseGenerationPayload,
   targetRequestIds: number[] = []
 ) => {
   try {
-    const res = await apiRequestApi.generateTestCases(payload)
-    const summary = res.data.data
-    if (summary.preview_only && payload.mode === 'regenerate' && !payload.apply_changes) {
-      const confirmed = await confirmRegeneratePreview(summary)
-      if (!confirmed) {
-        Message.info('已取消替换当前测试用例')
-        return
-      }
-      await generateCasesByScope({ ...payload, apply_changes: true }, targetRequestIds)
-      return
-    }
+    const summary = await runCaseGenerationJob(payload)
+    if (!summary) return
     showCaseGenerationMessage(summary, payload.mode)
     showCaseGenerationInsight(summary, payload.mode)
     await loadRequests()
@@ -1450,7 +1492,8 @@ const executeProjectRequests = async () => {
 watch(
   () => projectId.value,
   value => {
-    syncProject(value)
+    syncImportProject(value)
+    syncCaseGenerationProject(value)
     selectedRequestIds.value = []
     loadEnvironments()
     loadRequests()

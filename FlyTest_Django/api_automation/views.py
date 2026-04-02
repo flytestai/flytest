@@ -25,6 +25,7 @@ from flytest_django.viewsets import BaseModelViewSet
 
 from .ai_failure_analyzer import analyze_execution_failure
 from .ai_case_generator import (
+    GeneratedCaseDraft,
     _coerce_bool,
     _normalize_extractors,
     _normalize_request_overrides,
@@ -32,10 +33,20 @@ from .ai_case_generator import (
     generate_test_case_drafts_with_ai,
     summarize_persisted_test_cases,
 )
+from .ai_report_summarizer import summarize_execution_report
 from .execution import ExecutionRunContext, execute_api_request
 from .import_service import process_document_import
-from .models import ApiCollection, ApiEnvironment, ApiExecutionRecord, ApiImportJob, ApiRequest, ApiTestCase
+from .models import (
+    ApiCaseGenerationJob,
+    ApiCollection,
+    ApiEnvironment,
+    ApiExecutionRecord,
+    ApiImportJob,
+    ApiRequest,
+    ApiTestCase,
+)
 from .serializers import (
+    ApiCaseGenerationJobSerializer,
     ApiCollectionSerializer,
     ApiEnvironmentSerializer,
     ApiExecutionRecordSerializer,
@@ -94,6 +105,10 @@ class ImportJobCancelled(Exception):
     pass
 
 
+class CaseGenerationJobCancelled(Exception):
+    pass
+
+
 def get_accessible_projects(user):
     if user.is_superuser:
         return Project.objects.all()
@@ -122,6 +137,24 @@ def _save_job(job_id: int, *, force: bool = False, **fields):
 
 def _is_job_cancelled(job_id: int) -> bool:
     return ApiImportJob.objects.filter(pk=job_id).filter(Q(cancel_requested=True) | Q(status="canceled")).exists()
+
+
+def _save_case_generation_job(job_id: int, *, force: bool = False, **fields):
+    job = ApiCaseGenerationJob.objects.get(pk=job_id)
+    terminal_statuses = {"success", "failed", "canceled"}
+    if not force and job.status in terminal_statuses and fields.get("status") not in terminal_statuses:
+        return job
+    for key, value in fields.items():
+        setattr(job, key, value)
+    job.updated_at = timezone.now()
+    job.save()
+    return job
+
+
+def _is_case_generation_job_cancelled(job_id: int) -> bool:
+    return ApiCaseGenerationJob.objects.filter(pk=job_id).filter(
+        Q(cancel_requested=True) | Q(status="canceled")
+    ).exists()
 
 
 def _run_import_job(job_id: int, file_path: str):
@@ -205,6 +238,255 @@ def _run_import_job(job_id: int, file_path: str):
 
 def _start_import_job(job_id: int, file_path: str):
     worker = threading.Thread(target=_run_import_job, args=(job_id, file_path), daemon=True)
+    worker.start()
+
+
+def _load_requests_by_ids(request_ids: list[int]) -> list[ApiRequest]:
+    if not request_ids:
+        return []
+    request_map = {
+        item.id: item
+        for item in ApiRequest.objects.select_related("collection", "collection__project", "created_by").filter(
+            id__in=request_ids
+        )
+    }
+    return [request_map[item_id] for item_id in request_ids if item_id in request_map]
+
+
+def _run_case_generation_job(job_id: int):
+    try:
+        job = ApiCaseGenerationJob.objects.select_related("project", "collection", "creator").get(pk=job_id)
+        if job.cancel_requested or job.status == "canceled":
+            _save_case_generation_job(
+                job_id,
+                force=True,
+                status="canceled",
+                progress_stage="canceled",
+                progress_message="AI 用例生成任务已取消。",
+                completed_at=timezone.now(),
+            )
+            return
+
+        _save_case_generation_job(
+            job_id,
+            status="running",
+            progress_percent=8,
+            progress_stage="prepare",
+            progress_message="任务已开始，正在准备生成测试用例。",
+            error_message="",
+        )
+
+        request_ids = [int(item) for item in (job.request_ids or []) if str(item).strip().isdigit()]
+        api_requests = _load_requests_by_ids(request_ids)
+        if not api_requests:
+            raise ValueError("未找到可生成测试用例的接口。")
+
+        public_items: list[dict[str, object]] = []
+        draft_items: list[dict[str, object]] = []
+        total_requests = len(api_requests)
+
+        for index, api_request in enumerate(api_requests, start=1):
+            if _is_case_generation_job_cancelled(job_id):
+                raise CaseGenerationJobCancelled("AI 用例生成已手动停止")
+
+            percent = 10 + int((index - 1) / max(total_requests, 1) * 72)
+            _save_case_generation_job(
+                job_id,
+                status="running",
+                progress_percent=min(percent, 88),
+                progress_stage="generate",
+                progress_message=f"正在为接口“{api_request.name}”生成测试用例（{index}/{total_requests}）。",
+            )
+
+            prepared = _prepare_request_test_case_generation(
+                api_request=api_request,
+                user=job.creator,
+                mode=job.mode,
+                count_per_request=job.count_per_request,
+            )
+            public_items.append(dict(prepared["public_item"]))
+            draft_items.append(dict(prepared["draft_item"]))
+
+        summary = _build_case_generation_summary(scope=job.scope, mode=job.mode, items=public_items)
+        if job.mode == "regenerate":
+            _save_case_generation_job(
+                job_id,
+                status="preview_ready",
+                progress_percent=100,
+                progress_stage="preview",
+                progress_message="AI 重生成预览已准备完成，等待确认应用。",
+                result_payload=summary,
+                draft_payload={
+                    "scope": job.scope,
+                    "mode": job.mode,
+                    "count_per_request": job.count_per_request,
+                    "items": draft_items,
+                },
+                error_message="",
+                completed_at=timezone.now(),
+            )
+            return
+
+        _save_case_generation_job(
+            job_id,
+            status="success",
+            progress_percent=100,
+            progress_stage="completed",
+            progress_message="AI 用例生成完成。",
+            result_payload=summary,
+            draft_payload={
+                "scope": job.scope,
+                "mode": job.mode,
+                "count_per_request": job.count_per_request,
+                "items": draft_items,
+            },
+            error_message="",
+            completed_at=timezone.now(),
+        )
+    except CaseGenerationJobCancelled as exc:
+        _save_case_generation_job(
+            job_id,
+            force=True,
+            status="canceled",
+            progress_stage="canceled",
+            progress_message="AI 用例生成任务已取消。",
+            error_message=str(exc),
+            completed_at=timezone.now(),
+            cancel_requested=True,
+        )
+    except Exception as exc:  # noqa: BLE001
+        _save_case_generation_job(
+            job_id,
+            force=True,
+            status="failed",
+            progress_stage="failed",
+            progress_message="AI 用例生成失败。",
+            error_message=str(exc),
+            completed_at=timezone.now(),
+        )
+
+
+def _apply_case_generation_job(job_id: int):
+    try:
+        job = ApiCaseGenerationJob.objects.select_related("project", "collection", "creator").get(pk=job_id)
+        if job.cancel_requested or job.status == "canceled":
+            _save_case_generation_job(
+                job_id,
+                force=True,
+                status="canceled",
+                progress_stage="canceled",
+                progress_message="AI 用例生成任务已取消。",
+                completed_at=timezone.now(),
+            )
+            return
+
+        if job.status not in {"applying", "preview_ready"}:
+            raise ValueError("当前任务状态不支持应用预览结果。")
+
+        draft_items = [item for item in ((job.draft_payload or {}).get("items") or []) if isinstance(item, dict)]
+        if not draft_items:
+            raise ValueError("当前任务没有可应用的预览草稿。")
+
+        _save_case_generation_job(
+            job_id,
+            status="applying",
+            progress_percent=6,
+            progress_stage="apply",
+            progress_message="正在应用 AI 重生成预览结果。",
+            error_message="",
+            completed_at=None,
+        )
+
+        public_items: list[dict[str, object]] = []
+        total_items = len(draft_items)
+
+        for index, draft_item in enumerate(draft_items, start=1):
+            if _is_case_generation_job_cancelled(job_id):
+                raise CaseGenerationJobCancelled("AI 用例生成已手动停止")
+
+            if draft_item.get("skipped"):
+                public_items.append(
+                    {
+                        "request_id": draft_item.get("request_id"),
+                        "request_name": draft_item.get("request_name"),
+                        "request_method": draft_item.get("request_method"),
+                        "request_url": draft_item.get("request_url"),
+                        "mode": job.mode,
+                        "skipped": True,
+                        "created_count": 0,
+                        "ai_used": False,
+                        "ai_cache_hit": False,
+                        "items": [],
+                    }
+                )
+                continue
+
+            request_id = draft_item.get("request_id")
+            api_request = ApiRequest.objects.select_related("collection", "collection__project", "created_by").filter(
+                pk=request_id,
+                collection__project=job.project,
+            ).first()
+            if not api_request:
+                raise ValueError(f"接口已不存在，无法应用预览结果: request_id={request_id}")
+
+            percent = 10 + int((index - 1) / max(total_items, 1) * 76)
+            _save_case_generation_job(
+                job_id,
+                status="applying",
+                progress_percent=min(percent, 92),
+                progress_stage="apply",
+                progress_message=f"正在应用接口“{api_request.name}”的预览结果（{index}/{total_items}）。",
+            )
+            public_items.append(
+                _apply_request_test_case_generation_from_drafts(
+                    api_request=api_request,
+                    creator=job.creator,
+                    mode=job.mode,
+                    draft_item=draft_item,
+                )
+            )
+
+        summary = _build_case_generation_summary(scope=job.scope, mode=job.mode, items=public_items)
+        _save_case_generation_job(
+            job_id,
+            status="success",
+            progress_percent=100,
+            progress_stage="completed",
+            progress_message="AI 用例生成结果已应用。",
+            result_payload=summary,
+            error_message="",
+            completed_at=timezone.now(),
+        )
+    except CaseGenerationJobCancelled as exc:
+        _save_case_generation_job(
+            job_id,
+            force=True,
+            status="canceled",
+            progress_stage="canceled",
+            progress_message="AI 用例生成任务已取消。",
+            error_message=str(exc),
+            completed_at=timezone.now(),
+            cancel_requested=True,
+        )
+    except Exception as exc:  # noqa: BLE001
+        _save_case_generation_job(
+            job_id,
+            force=True,
+            status="failed",
+            progress_stage="failed",
+            progress_message="应用 AI 预览结果失败。",
+            error_message=str(exc),
+            completed_at=timezone.now(),
+        )
+
+
+def _start_case_generation_job(job_id: int):
+    worker = threading.Thread(target=_run_case_generation_job, args=(job_id,), daemon=True)
+    worker.start()
+
+
+def _start_case_generation_apply(job_id: int):
+    worker = threading.Thread(target=_apply_case_generation_job, args=(job_id,), daemon=True)
     worker.start()
 
 
@@ -620,6 +902,110 @@ def _build_report_run_groups(queryset, limit: int = 12):
         "failed_test_case_count": sum(item["failed_test_case_count"] for item in run_groups),
     }
     return run_groups, hierarchy_summary
+
+
+def _apply_report_days_filter(queryset, days_value_raw):
+    if not days_value_raw:
+        return queryset, None
+    try:
+        days_value = max(1, min(int(days_value_raw), 90))
+        since = timezone.now() - timedelta(days=days_value)
+        return queryset.filter(created_at__gte=since), None
+    except ValueError:
+        return queryset, {"error": "days 参数必须是 1-90 之间的整数"}
+
+
+def _build_execution_report_payload(queryset):
+    total_count = queryset.count()
+    aggregate = queryset.aggregate(
+        success_count=Count("id", filter=Q(status="success")),
+        failed_count=Count("id", filter=Q(status="failed")),
+        error_count=Count("id", filter=Q(status="error")),
+        passed_count=Count("id", filter=Q(passed=True)),
+        avg_response_time=Avg("response_time"),
+        latest_executed_at=Max("created_at"),
+    )
+
+    method_breakdown = list(
+        queryset.values("method")
+        .annotate(
+            total=Count("id"),
+            passed=Count("id", filter=Q(passed=True)),
+            failed=Count("id", filter=Q(status="failed")),
+            error=Count("id", filter=Q(status="error")),
+            avg_response_time=Avg("response_time"),
+        )
+        .order_by("method")
+    )
+
+    collection_breakdown = list(
+        queryset.values("request__collection__name")
+        .annotate(
+            total=Count("id"),
+            passed=Count("id", filter=Q(passed=True)),
+            failed=Count("id", filter=Q(status="failed")),
+            error=Count("id", filter=Q(status="error")),
+        )
+        .order_by("-total", "request__collection__name")
+    )
+
+    failing_requests = list(
+        queryset.filter(passed=False)
+        .values("request_id", "request__name", "request__collection__name")
+        .annotate(
+            total=Count("id"),
+            latest_executed_at=Max("created_at"),
+            latest_status_code=Max("status_code"),
+        )
+        .order_by("-total", "request__name")[:10]
+    )
+
+    trend = list(
+        queryset.annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(
+            total=Count("id"),
+            passed=Count("id", filter=Q(passed=True)),
+            failed=Count("id", filter=Q(status="failed")),
+            error=Count("id", filter=Q(status="error")),
+        )
+        .order_by("day")
+    )
+
+    recent_records = queryset.order_by("-created_at")[:10]
+    recent_records_payload = ApiExecutionRecordSerializer(recent_records, many=True).data
+    run_groups, hierarchy_summary = _build_report_run_groups(queryset)
+    pass_rate = round(((aggregate["passed_count"] or 0) / total_count) * 100, 2) if total_count else 0
+
+    return {
+        "summary": {
+            "total_count": total_count,
+            "success_count": aggregate["success_count"] or 0,
+            "failed_count": aggregate["failed_count"] or 0,
+            "error_count": aggregate["error_count"] or 0,
+            "passed_count": aggregate["passed_count"] or 0,
+            "pass_rate": pass_rate,
+            "avg_response_time": round(float(aggregate["avg_response_time"] or 0), 2) if aggregate["avg_response_time"] else None,
+            "latest_executed_at": aggregate["latest_executed_at"],
+        },
+        "method_breakdown": method_breakdown,
+        "collection_breakdown": collection_breakdown,
+        "failing_requests": [
+            {
+                "request_id": item["request_id"],
+                "request_name": item["request__name"] or "未命名接口",
+                "request__collection__name": item["request__collection__name"],
+                "total": item["total"],
+                "latest_executed_at": item["latest_executed_at"],
+                "latest_status_code": item["latest_status_code"],
+            }
+            for item in failing_requests
+        ],
+        "trend": trend,
+        "recent_records": recent_records_payload,
+        "run_groups": run_groups,
+        "hierarchy_summary": hierarchy_summary,
+    }
 
 
 def _collect_request_scope(user, scope: str, *, project_id=None, collection_id=None, ids=None):
@@ -1319,6 +1705,202 @@ def _build_case_replacement_summary(
     }
 
 
+def _serialize_generated_case_draft(draft: GeneratedCaseDraft) -> dict[str, object]:
+    return {
+        "name": draft.name,
+        "description": draft.description,
+        "status": draft.status,
+        "tags": list(draft.tags),
+        "assertions": list(draft.assertions),
+        "extractors": list(draft.extractors),
+        "request_overrides": dict(draft.request_overrides),
+    }
+
+
+def _deserialize_generated_case_draft(payload: dict) -> GeneratedCaseDraft:
+    return GeneratedCaseDraft(
+        name=str(payload.get("name") or "").strip(),
+        description=str(payload.get("description") or ""),
+        status=str(payload.get("status") or "draft"),
+        tags=[str(tag).strip() for tag in (payload.get("tags") or []) if str(tag).strip()],
+        assertions=list(payload.get("assertions") or []),
+        extractors=list(payload.get("extractors") or []),
+        request_overrides=dict(payload.get("request_overrides") or {}),
+    )
+
+
+def _build_case_generation_summary(*, scope: str, mode: str, items: list[dict]) -> dict[str, object]:
+    skipped_count = sum(1 for item in items if item.get("skipped"))
+    created_total = sum(int(item.get("created_count") or 0) for item in items)
+    ai_used_count = sum(1 for item in items if item.get("ai_used"))
+    ai_cache_hit_count = sum(1 for item in items if item.get("ai_cache_hit"))
+    preview_only_count = sum(1 for item in items if item.get("preview_only"))
+    notes = [str(item.get("note") or "").strip() for item in items if str(item.get("note") or "").strip()]
+    return {
+        "scope": scope,
+        "mode": mode,
+        "total_requests": len(items),
+        "processed_requests": len(items) - skipped_count,
+        "skipped_requests": skipped_count,
+        "created_testcase_count": created_total,
+        "ai_used_count": ai_used_count,
+        "ai_cache_hit_count": ai_cache_hit_count,
+        "preview_only": bool(preview_only_count),
+        "requires_confirmation": bool(preview_only_count),
+        "preview_request_count": preview_only_count,
+        "note": " ".join(notes[:5]),
+        "items": items,
+    }
+
+
+def _prepare_request_test_case_generation(
+    *,
+    api_request: ApiRequest,
+    user,
+    mode: str,
+    count_per_request: int,
+) -> dict[str, object]:
+    existing_cases = list(api_request.test_cases.order_by("created_at"))
+    if mode == "generate" and existing_cases:
+        public_item = {
+            "request_id": api_request.id,
+            "request_name": api_request.name,
+            "request_method": api_request.method,
+            "request_url": api_request.url,
+            "mode": mode,
+            "skipped": True,
+            "skipped_reason": "当前接口已存在测试用例，请使用重新生成或追加生成。",
+            "created_count": 0,
+            "ai_used": False,
+            "ai_cache_hit": False,
+            "ai_cache_key": None,
+            "ai_duration_ms": None,
+            "ai_lock_wait_ms": None,
+            "note": "已跳过已有测试用例的接口。",
+            "case_summaries": [],
+            "items": [],
+        }
+        return {
+            "public_item": public_item,
+            "draft_item": {
+                "request_id": api_request.id,
+                "skipped": True,
+                "mode": mode,
+                "drafts": [],
+            },
+        }
+
+    generation_result = generate_test_case_drafts_with_ai(
+        api_request=api_request,
+        user=user,
+        existing_cases=existing_cases,
+        mode=mode,
+        count=count_per_request,
+    )
+    existing_case_summaries = summarize_persisted_test_cases(api_request, existing_cases)
+    proposed_case_summaries = generation_result.case_summaries
+    replacement_summary = _build_case_replacement_summary(existing_case_summaries, proposed_case_summaries)
+    preview_only = mode == "regenerate"
+    public_item = {
+        "request_id": api_request.id,
+        "request_name": api_request.name,
+        "request_method": api_request.method,
+        "request_url": api_request.url,
+        "mode": mode,
+        "skipped": False,
+        "preview_only": preview_only,
+        "requires_confirmation": preview_only,
+        "created_count": 0,
+        "ai_used": generation_result.used_ai,
+        "ai_cache_hit": generation_result.cache_hit,
+        "ai_cache_key": generation_result.cache_key,
+        "ai_duration_ms": generation_result.duration_ms,
+        "ai_lock_wait_ms": generation_result.lock_wait_ms,
+        "note": generation_result.note,
+        "prompt_name": generation_result.prompt_name,
+        "prompt_source": generation_result.prompt_source,
+        "model_name": generation_result.model_name,
+        "case_summaries": proposed_case_summaries,
+        "existing_case_summaries": existing_case_summaries if preview_only else [],
+        "proposed_case_summaries": proposed_case_summaries,
+        "replacement_summary": replacement_summary if mode == "regenerate" else None,
+        "items": [],
+    }
+    draft_item = {
+        "request_id": api_request.id,
+        "request_name": api_request.name,
+        "request_method": api_request.method,
+        "request_url": api_request.url,
+        "mode": mode,
+        "skipped": False,
+        "preview_only": preview_only,
+        "ai_used": generation_result.used_ai,
+        "ai_cache_hit": generation_result.cache_hit,
+        "ai_cache_key": generation_result.cache_key,
+        "ai_duration_ms": generation_result.duration_ms,
+        "ai_lock_wait_ms": generation_result.lock_wait_ms,
+        "note": generation_result.note,
+        "prompt_name": generation_result.prompt_name,
+        "prompt_source": generation_result.prompt_source,
+        "model_name": generation_result.model_name,
+        "case_summaries": proposed_case_summaries,
+        "existing_case_summaries": existing_case_summaries,
+        "proposed_case_summaries": proposed_case_summaries,
+        "replacement_summary": replacement_summary if mode == "regenerate" else None,
+        "drafts": [_serialize_generated_case_draft(draft) for draft in generation_result.cases],
+    }
+    return {
+        "public_item": public_item,
+        "draft_item": draft_item,
+    }
+
+
+def _apply_request_test_case_generation_from_drafts(
+    *,
+    api_request: ApiRequest,
+    creator,
+    mode: str,
+    draft_item: dict,
+) -> dict[str, object]:
+    existing_cases = list(api_request.test_cases.order_by("created_at"))
+    serialized_drafts = [item for item in (draft_item.get("drafts") or []) if isinstance(item, dict)]
+    drafts = [_deserialize_generated_case_draft(item) for item in serialized_drafts]
+    if mode == "regenerate" and existing_cases:
+        ApiTestCase.objects.filter(id__in=[item.id for item in existing_cases]).delete()
+        existing_cases = []
+
+    created_cases = create_test_cases_from_drafts(
+        api_request=api_request,
+        drafts=drafts,
+        creator=creator,
+    )
+    return {
+        "request_id": api_request.id,
+        "request_name": api_request.name,
+        "request_method": api_request.method,
+        "request_url": api_request.url,
+        "mode": mode,
+        "skipped": False,
+        "preview_only": False,
+        "requires_confirmation": False,
+        "created_count": len(created_cases),
+        "ai_used": bool(draft_item.get("ai_used")),
+        "ai_cache_hit": bool(draft_item.get("ai_cache_hit")),
+        "ai_cache_key": draft_item.get("ai_cache_key"),
+        "ai_duration_ms": draft_item.get("ai_duration_ms"),
+        "ai_lock_wait_ms": draft_item.get("ai_lock_wait_ms"),
+        "note": draft_item.get("note"),
+        "prompt_name": draft_item.get("prompt_name"),
+        "prompt_source": draft_item.get("prompt_source"),
+        "model_name": draft_item.get("model_name"),
+        "case_summaries": list(draft_item.get("proposed_case_summaries") or draft_item.get("case_summaries") or []),
+        "existing_case_summaries": list(draft_item.get("existing_case_summaries") or []) if mode == "regenerate" else [],
+        "proposed_case_summaries": list(draft_item.get("proposed_case_summaries") or draft_item.get("case_summaries") or []),
+        "replacement_summary": draft_item.get("replacement_summary") if mode == "regenerate" else None,
+        "items": _serialize_generation_case_items(created_cases),
+    }
+
+
 def _generate_request_test_cases(
     *,
     api_request: ApiRequest,
@@ -1500,6 +2082,123 @@ class ApiImportJobViewSet(BaseModelViewSet):
         _save_job(job.id, force=True, **update_fields)
         serializer = self.get_serializer(ApiImportJob.objects.get(pk=job.id))
         return Response(serializer.data)
+
+
+class ApiCaseGenerationJobViewSet(BaseModelViewSet):
+    queryset = ApiCaseGenerationJob.objects.select_related("project", "collection", "creator")
+    serializer_class = ApiCaseGenerationJobSerializer
+    http_method_names = ["get", "post", "head", "options"]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["progress_message", "error_message"]
+    ordering_fields = ["created_at", "updated_at", "completed_at", "progress_percent"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset().filter(project__in=get_accessible_projects(self.request.user))
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(creator=self.request.user)
+
+        project_id = self.request.query_params.get("project")
+        status_value = self.request.query_params.get("status")
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        if status_value:
+            queryset = queryset.filter(status=status_value)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        scope = str(request.data.get("scope") or "selected").strip().lower()
+        ids = request.data.get("ids") or []
+        project_id = request.data.get("project_id")
+        collection_id = request.data.get("collection_id")
+        mode = str(request.data.get("mode") or "generate").strip().lower()
+        count_per_request = max(1, min(int(request.data.get("count_per_request") or 3), 10))
+
+        if mode not in {"generate", "append", "regenerate"}:
+            return Response({"error": "mode 仅支持 generate、append、regenerate"}, status=status.HTTP_400_BAD_REQUEST)
+
+        api_requests = _collect_request_scope(
+            request.user,
+            scope,
+            project_id=project_id,
+            collection_id=collection_id,
+            ids=ids,
+        )
+        if not api_requests:
+            return Response({"error": "未找到可生成测试用例的接口"}, status=status.HTTP_400_BAD_REQUEST)
+
+        project_ids = {item.collection.project_id for item in api_requests}
+        if len(project_ids) != 1:
+            return Response({"error": "一次仅支持在同一个项目内生成测试用例"}, status=status.HTTP_400_BAD_REQUEST)
+
+        selected_collection = None
+        if collection_id:
+            selected_collection = ApiCollection.objects.filter(
+                pk=collection_id,
+                project__in=get_accessible_projects(request.user),
+            ).first()
+
+        job = ApiCaseGenerationJob.objects.create(
+            project=api_requests[0].collection.project,
+            collection=selected_collection,
+            creator=request.user,
+            scope=scope,
+            mode=mode,
+            status="pending",
+            count_per_request=count_per_request,
+            request_ids=[item.id for item in api_requests],
+            progress_percent=3,
+            progress_stage="queued",
+            progress_message="任务已提交，正在进入 AI 用例生成队列。",
+        )
+        _start_case_generation_job(job.id)
+        serializer = self.get_serializer(job)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        job = self.get_object()
+        if job.status in {"success", "failed", "canceled"}:
+            serializer = self.get_serializer(job)
+            return Response(serializer.data)
+
+        update_fields = {
+            "cancel_requested": True,
+            "progress_message": "已收到停止请求，正在终止 AI 用例生成任务。",
+        }
+        if job.status in {"pending", "preview_ready"}:
+            update_fields.update(
+                {
+                    "status": "canceled",
+                    "progress_stage": "canceled",
+                    "progress_percent": min(job.progress_percent or 0, 100),
+                    "completed_at": timezone.now(),
+                }
+            )
+        _save_case_generation_job(job.id, force=True, **update_fields)
+        serializer = self.get_serializer(ApiCaseGenerationJob.objects.get(pk=job.id))
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"])
+    def apply(self, request, pk=None):
+        job = self.get_object()
+        if job.status != "preview_ready":
+            return Response({"error": "当前任务没有可应用的预览结果"}, status=status.HTTP_400_BAD_REQUEST)
+
+        _save_case_generation_job(
+            job.id,
+            force=True,
+            status="applying",
+            progress_percent=2,
+            progress_stage="apply",
+            progress_message="正在应用 AI 重生成预览结果。",
+            error_message="",
+            cancel_requested=False,
+            completed_at=None,
+        )
+        _start_case_generation_apply(job.id)
+        serializer = self.get_serializer(ApiCaseGenerationJob.objects.get(pk=job.id))
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
 class ApiRequestViewSet(BaseModelViewSet):
@@ -1899,6 +2598,50 @@ class ApiExecutionRecordViewSet(BaseModelViewSet):
                 "recent_records": recent_records_payload,
                 "run_groups": run_groups,
                 "hierarchy_summary": hierarchy_summary,
+            }
+        )
+
+    @action(detail=False, methods=["post"], url_path="report-summary")
+    def report_summary(self, request):
+        queryset = self.get_queryset()
+        project_id = request.data.get("project")
+        request_id = request.data.get("request")
+        collection_id = request.data.get("collection")
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        if request_id:
+            queryset = queryset.filter(request_id=request_id)
+        if collection_id:
+            root_collection = ApiCollection.objects.filter(
+                pk=collection_id,
+                project__in=get_accessible_projects(request.user),
+            ).first()
+            if root_collection:
+                queryset = queryset.filter(request__collection_id__in=collect_collection_ids(root_collection))
+            else:
+                queryset = queryset.none()
+
+        queryset, error_payload = _apply_report_days_filter(queryset, request.data.get("days"))
+        if error_payload:
+            return Response(error_payload, status=status.HTTP_400_BAD_REQUEST)
+
+        report_payload = _build_execution_report_payload(queryset)
+        result = summarize_execution_report(report_payload=report_payload, user=request.user)
+        return Response(
+            {
+                "used_ai": result.used_ai,
+                "note": result.note,
+                "summary": result.summary,
+                "top_risks": result.top_risks,
+                "recommended_actions": result.recommended_actions,
+                "evidence": result.evidence,
+                "prompt_name": result.prompt_name,
+                "prompt_source": result.prompt_source,
+                "model_name": result.model_name,
+                "cache_hit": result.cache_hit,
+                "cache_key": result.cache_key,
+                "duration_ms": result.duration_ms,
+                "lock_wait_ms": result.lock_wait_ms,
             }
         )
 

@@ -537,6 +537,49 @@ $steps
 现在开始解析，直接返回 JSON。'''
         },
         {
+            'name': 'API测试报告摘要',
+            'description': '基于 API 自动化测试报告聚合结果生成结构化摘要、风险与建议动作',
+            'prompt_type': PromptType.API_AUTOMATION_REPORT_SUMMARY,
+            'is_default': False,
+            'content': '''你是 FlyTest 的 API 自动化测试报告分析助手。
+
+请基于给定的测试报告聚合结果，输出结构化的摘要结论。
+
+要求：
+1. 只基于输入的报告数据分析，不要编造不存在的接口、环境或根因。
+2. 优先指出最影响回归效率的问题，例如鉴权变量缺失、断言不稳定、接口稳定性差、目录级失败集中。
+3. 推荐动作必须尽量是平台内可落地的动作，例如补环境变量、检查登录引导接口、优化断言、优先回归某些接口。
+4. 输出必须是 JSON，不要输出 Markdown，不要输出解释文字。
+
+输出 JSON 结构：
+{
+  "summary": "一句话总结整体风险与现状",
+  "top_risks": [
+    {
+      "title": "风险标题",
+      "detail": "风险说明"
+    }
+  ],
+  "recommended_actions": [
+    {
+      "title": "动作标题",
+      "detail": "动作说明",
+      "priority": "high"
+    }
+  ],
+  "evidence": [
+    {
+      "label": "证据标签",
+      "detail": "证据内容"
+    }
+  ]
+}
+
+报告上下文：
+${report_context_json}
+'''
+        },
+        {
             'name': '智能用例生成',
             'description': '基于测试设计方法论，智能生成高质量、可追溯的测试用例',
             'prompt_type': PromptType.GENERAL,
@@ -868,6 +911,7 @@ def initialize_user_prompts(user, force_update: bool = False) -> dict:
             PromptType.LOGIC_ANALYSIS,
             PromptType.TEST_CASE_EXECUTION,
             PromptType.API_AUTOMATION_PARSING,
+            PromptType.API_AUTOMATION_REPORT_SUMMARY,
             PromptType.DIAGRAM_GENERATION,
         ]:
             existing_prompt = UserPrompt.objects.filter(

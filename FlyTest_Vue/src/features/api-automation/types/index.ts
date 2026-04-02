@@ -398,6 +398,38 @@ export interface ApiExecutionFailureAnalysis {
   lock_wait_ms?: number | null
 }
 
+export interface ApiExecutionReportSummaryRisk {
+  title: string
+  detail: string
+}
+
+export interface ApiExecutionReportSummaryAction {
+  title: string
+  detail: string
+  priority: 'high' | 'medium' | 'low'
+}
+
+export interface ApiExecutionReportSummaryEvidence {
+  label: string
+  detail: string
+}
+
+export interface ApiExecutionReportAISummary {
+  used_ai: boolean
+  note: string
+  summary: string
+  top_risks: ApiExecutionReportSummaryRisk[]
+  recommended_actions: ApiExecutionReportSummaryAction[]
+  evidence: ApiExecutionReportSummaryEvidence[]
+  prompt_name?: string | null
+  prompt_source?: string | null
+  model_name?: string | null
+  cache_hit?: boolean
+  cache_key?: string | null
+  duration_ms?: number | null
+  lock_wait_ms?: number | null
+}
+
 export interface ApiExecutionReportSummary {
   total_count: number
   success_count: number
@@ -677,9 +709,60 @@ export interface ApiImportResult {
   environment_auto_saved_count?: number
   environment_id?: number | null
   environment_name?: string | null
+  environment_suggestions?: ApiEnvironmentSuggestions | null
   items: ApiRequest[]
   generated_scripts: ApiGeneratedScript[]
   test_cases: ApiTestCase[]
+}
+
+export interface ApiEnvironmentSuggestionBaseUrl {
+  name: string
+  base_url: string
+  environment_id?: number | null
+  selected?: boolean
+}
+
+export interface ApiEnvironmentSuggestionVariable {
+  name: string
+  request_count?: number
+  category: 'auth' | 'business'
+  is_secret?: boolean
+  example_requests?: string[]
+  suggested_value?: string
+}
+
+export interface ApiEnvironmentAuthSuggestion {
+  request_id: number
+  request_name: string
+  collection_name?: string
+  method: string
+  url: string
+  token_variable: string
+  token_path: string
+  token_path_candidates: string[]
+  confidence: 'high' | 'medium'
+  reason: string
+}
+
+export interface ApiEnvironmentSuggestionPatchVariable {
+  name: string
+  value: string
+  is_secret?: boolean
+  reason?: string
+}
+
+export interface ApiEnvironmentSuggestionPatch {
+  base_url?: string
+  variables: ApiEnvironmentSuggestionPatchVariable[]
+}
+
+export interface ApiEnvironmentSuggestions {
+  recommended_environment_id?: number | null
+  recommended_environment_name?: string | null
+  base_url_candidates: ApiEnvironmentSuggestionBaseUrl[]
+  variable_suggestions: ApiEnvironmentSuggestionVariable[]
+  auth_suggestions: ApiEnvironmentAuthSuggestion[]
+  environment_patch: ApiEnvironmentSuggestionPatch
 }
 
 export interface ApiImportJob {
@@ -698,6 +781,30 @@ export interface ApiImportJob {
   generate_test_cases: boolean
   enable_ai_parse: boolean
   result_payload?: ApiImportResult | null
+  error_message?: string | null
+  completed_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ApiCaseGenerationJob {
+  id: number
+  project: number
+  collection: number | null
+  collection_name?: string
+  creator: number | null
+  creator_name?: string
+  scope: 'selected' | 'collection' | 'project'
+  mode: 'generate' | 'append' | 'regenerate'
+  status: 'pending' | 'running' | 'preview_ready' | 'applying' | 'success' | 'failed' | 'canceled'
+  count_per_request: number
+  request_ids: number[]
+  progress_percent: number
+  progress_stage?: string
+  progress_message?: string
+  cancel_requested?: boolean
+  result_payload?: ApiTestCaseGenerationResult | null
+  draft_payload?: Record<string, any> | null
   error_message?: string | null
   completed_at?: string | null
   created_at: string

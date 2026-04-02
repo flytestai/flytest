@@ -10,6 +10,7 @@ export type PromptType =
   | 'clarity_analysis'
   | 'logic_analysis'
   | 'test_case_execution'
+  | 'api_automation_report_summary'
   | 'brain_orchestrator'
   | 'diagram_generation';
 
@@ -25,6 +26,7 @@ export const PROMPT_TYPE_CHOICES = [
   { key: 'clarity_analysis', name: '清晰度分析', isProgramCall: true },
   { key: 'logic_analysis', name: '逻辑分析', isProgramCall: true },
   { key: 'test_case_execution', name: '测试用例执行', isProgramCall: true },
+  { key: 'api_automation_report_summary', name: 'API测试报告摘要', isProgramCall: true },
   { key: 'brain_orchestrator', name: '智能规划', isProgramCall: false },
   { key: 'diagram_generation', name: '图表生成', isProgramCall: true },
 ] as const;

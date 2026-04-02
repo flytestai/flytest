@@ -15,6 +15,9 @@
           <a-radio :value="30">30天</a-radio>
           <a-radio :value="90">90天</a-radio>
         </a-radio-group>
+        <a-button :loading="aiSummaryLoading" :disabled="!report?.summary.total_count" @click="loadAiSummary">
+          {{ aiSummary ? '重新获取AI摘要' : '生成AI摘要' }}
+        </a-button>
         <a-button @click="loadReport">刷新</a-button>
       </div>
     </div>
@@ -51,11 +54,75 @@
         <div class="summary-card summary-card-danger">
           <div class="summary-label">失败用例</div>
           <div class="summary-value">{{ report.hierarchy_summary?.failed_test_case_count || 0 }}</div>
-          <div class="summary-meta">
-            失败接口 {{ report.hierarchy_summary?.failed_interface_count || 0 }} 个
-          </div>
+          <div class="summary-meta">失败接口 {{ report.hierarchy_summary?.failed_interface_count || 0 }} 个</div>
         </div>
       </div>
+
+      <a-card class="report-card ai-summary-report-card" :bordered="false" title="AI报告摘要">
+        <div class="ai-summary-report-toolbar">
+          <a-button type="primary" size="small" :loading="aiSummaryLoading" @click="loadAiSummary">
+            {{ aiSummary ? '重新生成摘要' : '生成摘要' }}
+          </a-button>
+          <span v-if="aiSummary" class="ai-summary-report-toolbar__meta">
+            {{ aiSummary.used_ai ? 'AI摘要' : '规则摘要' }}
+            <template v-if="aiSummary.cache_hit"> / 命中缓存</template>
+            <template v-if="aiSummary.duration_ms"> / {{ Math.round(aiSummary.duration_ms) }} ms</template>
+          </span>
+        </div>
+
+        <a-alert v-if="aiSummaryError" type="error" :show-icon="true">{{ aiSummaryError }}</a-alert>
+        <a-empty v-else-if="!aiSummary" description="点击上方按钮生成当前筛选范围内的测试报告摘要。" />
+
+        <template v-else>
+          <div class="ai-report-summary-card">
+            <div class="ai-report-summary-card__label">摘要结论</div>
+            <div class="ai-report-summary-card__value">{{ aiSummary.summary || '暂无摘要结论' }}</div>
+            <div class="ai-report-summary-card__meta">{{ aiSummary.note }}</div>
+          </div>
+
+          <div class="ai-report-grid">
+            <div class="ai-report-block">
+              <div class="ai-report-block__title">主要风险</div>
+              <div v-if="aiSummary.top_risks.length" class="ai-report-list">
+                <article v-for="(item, index) in aiSummary.top_risks" :key="`${item.title}-${index}`" class="ai-report-list-item">
+                  <div class="ai-report-list-item__title">{{ item.title }}</div>
+                  <div class="ai-report-list-item__detail">{{ item.detail }}</div>
+                </article>
+              </div>
+              <a-empty v-else description="暂无主要风险摘要" />
+            </div>
+
+            <div class="ai-report-block">
+              <div class="ai-report-block__title">建议动作</div>
+              <div v-if="aiSummary.recommended_actions.length" class="ai-report-list">
+                <article
+                  v-for="(item, index) in aiSummary.recommended_actions"
+                  :key="`${item.title}-${index}`"
+                  class="ai-report-list-item"
+                >
+                  <div class="ai-report-list-item__title">
+                    {{ item.title }}
+                    <a-tag size="small" :color="getPriorityColor(item.priority)">{{ item.priority }}</a-tag>
+                  </div>
+                  <div class="ai-report-list-item__detail">{{ item.detail }}</div>
+                </article>
+              </div>
+              <a-empty v-else description="暂无建议动作" />
+            </div>
+          </div>
+
+          <div class="ai-report-block">
+            <div class="ai-report-block__title">关键证据</div>
+            <div v-if="aiSummary.evidence.length" class="ai-report-list">
+              <article v-for="(item, index) in aiSummary.evidence" :key="`${item.label}-${index}`" class="ai-report-list-item">
+                <div class="ai-report-list-item__title">{{ item.label }}</div>
+                <div class="ai-report-list-item__detail">{{ item.detail }}</div>
+              </article>
+            </div>
+            <a-empty v-else description="暂无关键证据" />
+          </div>
+        </template>
+      </a-card>
 
       <a-card class="report-card" :bordered="false" title="执行汇总">
         <div class="run-report-list">
@@ -79,7 +146,11 @@
             </div>
 
             <div class="interface-report-list">
-              <section v-for="interfaceItem in run.interfaces" :key="`${run.run_id}-${interfaceItem.request_id || interfaceItem.interface_name}`" class="interface-report-card">
+              <section
+                v-for="interfaceItem in run.interfaces"
+                :key="`${run.run_id}-${interfaceItem.request_id || interfaceItem.interface_name}`"
+                class="interface-report-card"
+              >
                 <div class="interface-report-card__header">
                   <div class="interface-report-card__copy">
                     <div class="interface-report-card__title">
@@ -101,13 +172,14 @@
                   </div>
                 </div>
 
-                <a-empty
-                  v-if="!interfaceItem.failed_test_cases.length"
-                  description="本接口在该批次下全部通过。"
-                />
+                <a-empty v-if="!interfaceItem.failed_test_cases.length" description="本接口在该批次下全部通过。" />
 
                 <div v-else class="failed-case-list">
-                  <article v-for="caseItem in interfaceItem.failed_test_cases" :key="`${run.run_id}-${caseItem.test_case_id || caseItem.test_case_name}`" class="failed-case-card">
+                  <article
+                    v-for="caseItem in interfaceItem.failed_test_cases"
+                    :key="`${run.run_id}-${caseItem.test_case_id || caseItem.test_case_name}`"
+                    class="failed-case-card"
+                  >
                     <div class="failed-case-card__head">
                       <div>
                         <div class="failed-case-card__title">{{ caseItem.test_case_name }}</div>
@@ -265,6 +337,7 @@ import ExecutionRecordDetailPanel from '../components/ExecutionRecordDetailPanel
 import type {
   ApiExecutionRecord,
   ApiExecutionReport,
+  ApiExecutionReportAISummary,
   ApiExecutionReportCaseGroup,
 } from '../types'
 
@@ -277,8 +350,11 @@ const props = defineProps<{
 const projectStore = useProjectStore()
 
 const loading = ref(false)
+const aiSummaryLoading = ref(false)
 const days = ref(30)
 const report = ref<ApiExecutionReport | null>(null)
+const aiSummary = ref<ApiExecutionReportAISummary | null>(null)
+const aiSummaryError = ref('')
 const detailVisible = ref(false)
 const currentRecord = ref<ApiExecutionRecord | null>(null)
 
@@ -319,6 +395,12 @@ const getRecordStatusTag = (record?: ApiExecutionRecord | null) => {
   return { color: 'orange', label: '失败' }
 }
 
+const getPriorityColor = (priority: string) => {
+  if (priority === 'high') return 'red'
+  if (priority === 'low') return 'gray'
+  return 'orange'
+}
+
 const pickFailedRecord = (caseItem: ApiExecutionReportCaseGroup) => {
   return caseItem.failed_records?.[0] || caseItem.records?.[0] || null
 }
@@ -326,7 +408,11 @@ const pickFailedRecord = (caseItem: ApiExecutionReportCaseGroup) => {
 const getWorkflowSummaryText = (record?: ApiExecutionRecord | null) => {
   if (!record) return ''
   const workflowSummary = record.workflow_summary
-  const stepCount = workflowSummary?.executed_step_count || workflowSummary?.configured_step_count || record.workflow_steps?.length || 0
+  const stepCount =
+    workflowSummary?.executed_step_count ||
+    workflowSummary?.configured_step_count ||
+    record.workflow_steps?.length ||
+    0
   if (!workflowSummary?.enabled && !stepCount) return ''
   if (record.main_request_blocked) return `工作流 ${stepCount} 步，主请求未执行`
   if (workflowSummary?.has_failure) return `工作流 ${stepCount} 步，存在失败步骤`
@@ -367,6 +453,8 @@ const trendData = computed(() => {
 const loadReport = async () => {
   if (!props.projectId) {
     report.value = null
+    aiSummary.value = null
+    aiSummaryError.value = ''
     return
   }
 
@@ -378,12 +466,36 @@ const loadReport = async () => {
       days: days.value,
     })
     report.value = res.data?.data || null
+    aiSummary.value = null
+    aiSummaryError.value = ''
   } catch (error) {
     console.error('[TestReportView] 获取测试报告失败:', error)
     Message.error('获取测试报告失败')
     report.value = null
+    aiSummary.value = null
+    aiSummaryError.value = ''
   } finally {
     loading.value = false
+  }
+}
+
+const loadAiSummary = async () => {
+  if (!props.projectId) return
+  aiSummaryLoading.value = true
+  aiSummaryError.value = ''
+  try {
+    const res = await executionRecordApi.reportSummary({
+      project: props.projectId,
+      collection: props.selectedCollectionId,
+      days: days.value,
+    })
+    aiSummary.value = res.data?.data || null
+  } catch (error: any) {
+    console.error('[TestReportView] 获取AI报告摘要失败:', error)
+    aiSummaryError.value = error?.error || '获取AI报告摘要失败'
+    Message.error(aiSummaryError.value)
+  } finally {
+    aiSummaryLoading.value = false
   }
 }
 
@@ -442,27 +554,23 @@ defineExpose({
 .report-title {
   font-size: 28px;
   font-weight: 800;
-  line-height: 1.1;
   color: #0f172a;
 }
 
 .report-subtitle {
   font-size: 13px;
-  line-height: 1.7;
   color: #64748b;
 }
 
-.report-loading-card,
-.empty-tip-card {
+.empty-tip-card,
+.report-loading-card {
+  min-height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 240px;
-  padding: 32px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
 }
 
 .report-grid {
@@ -478,67 +586,166 @@ defineExpose({
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.summary-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 22px;
+.summary-card,
+.report-card {
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
 }
 
+.summary-card {
+  padding: 22px;
+}
+
 .summary-card-primary {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(59, 130, 246, 0.08));
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(14, 165, 233, 0.08));
 }
 
 .summary-card-danger {
-  background: linear-gradient(135deg, rgba(248, 113, 113, 0.12), rgba(249, 115, 22, 0.08));
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(249, 115, 22, 0.08));
 }
 
 .summary-label {
   font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
   color: #64748b;
-  text-transform: uppercase;
 }
 
 .summary-value {
-  font-size: 32px;
+  margin-top: 10px;
+  font-size: 34px;
   font-weight: 800;
   color: #0f172a;
 }
 
 .summary-meta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ai-summary-report-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ai-summary-report-toolbar__meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ai-report-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 118, 110, 0.08));
+  border: 1px solid rgba(14, 165, 233, 0.14);
+}
+
+.ai-report-summary-card__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.ai-report-summary-card__value {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.ai-report-summary-card__meta {
   font-size: 12px;
   line-height: 1.7;
   color: #64748b;
 }
 
-.report-card {
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+.ai-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 
-.report-card :deep(.arco-card-header) {
-  padding-bottom: 0;
+.ai-report-block {
+  margin-top: 16px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-.run-report-list {
+.ai-report-block__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ai-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ai-report-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-report-list-item__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ai-report-list-item__detail {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.run-report-list,
+.interface-report-list,
+.failed-case-list,
+.trend-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.run-report-card {
-  padding: 18px;
+.run-report-card,
+.interface-report-card,
+.failed-case-card {
   border-radius: 20px;
-  background: rgba(248, 250, 252, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.run-report-card {
+  padding: 20px;
+}
+
+.interface-report-card {
+  padding: 18px;
+}
+
+.failed-case-card {
+  padding: 16px;
+  background: rgba(248, 250, 252, 0.92);
 }
 
 .run-report-card__header,
@@ -547,16 +754,16 @@ defineExpose({
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .run-report-card__copy,
 .interface-report-card__copy {
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .run-report-card__eyebrow {
@@ -567,120 +774,56 @@ defineExpose({
   color: #0f766e;
 }
 
-.run-report-card__title {
-  font-size: 20px;
+.run-report-card__title,
+.interface-report-card__title,
+.failed-case-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 17px;
   font-weight: 700;
   color: #0f172a;
-  word-break: break-word;
 }
 
 .run-report-card__meta,
 .interface-report-card__meta,
-.failed-case-card__meta {
+.failed-case-card__meta,
+.trend-meta {
   display: flex;
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 10px 14px;
   font-size: 12px;
-  line-height: 1.7;
   color: #64748b;
 }
 
-.run-report-card__stats,
-.interface-report-card__summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.interface-report-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.interface-report-card {
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.interface-report-card__title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.interface-report-card__title span {
-  min-width: 0;
-  word-break: break-word;
-}
-
-.failed-case-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.failed-case-card {
-  padding: 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(248, 113, 113, 0.16);
-}
-
-.failed-case-card__title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-  word-break: break-word;
-}
-
 .failed-case-card__error {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(254, 242, 242, 0.9);
-  color: #b91c1c;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 13px;
   line-height: 1.7;
-  word-break: break-word;
+  color: #b91c1c;
 }
 
 .failed-case-card__footer {
-  display: flex;
-  justify-content: flex-end;
   margin-top: 10px;
-}
-
-.trend-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .trend-item {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) 210px;
-  gap: 16px;
+  grid-template-columns: 110px minmax(0, 1fr) 260px;
+  gap: 14px;
   align-items: center;
 }
 
 .trend-day {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: #0f172a;
 }
 
 .trend-bars {
   position: relative;
-  height: 14px;
+  height: 12px;
   border-radius: 999px;
   background: rgba(226, 232, 240, 0.8);
   overflow: hidden;
@@ -688,79 +831,50 @@ defineExpose({
 
 .trend-bar {
   position: absolute;
-  top: 0;
   left: 0;
-  height: 100%;
+  top: 0;
+  bottom: 0;
   border-radius: 999px;
 }
 
 .trend-bar-total {
-  background: rgba(59, 130, 246, 0.24);
+  background: rgba(59, 130, 246, 0.22);
 }
 
 .trend-bar-pass {
-  background: linear-gradient(90deg, #0f766e, #14b8a6);
+  background: linear-gradient(90deg, #14b8a6, #0f766e);
 }
 
-.trend-meta {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.detail-drawer {
+.report-card :deep(.arco-card-body) {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.json-block {
-  margin: 0;
-  padding: 16px;
+.report-card :deep(.arco-table-container) {
+  overflow: hidden;
   border-radius: 18px;
-  background: rgba(15, 23, 42, 0.95);
-  color: #e2e8f0;
-  font-size: 12px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.detail-modal :deep(.arco-modal) {
-  max-width: min(1120px, calc(100vw - 32px));
-}
-
-.detail-modal :deep(.arco-modal-body) {
-  padding: 20px 24px 24px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 @media (max-width: 1200px) {
   .summary-grid,
-  .two-column-grid {
+  .two-column-grid,
+  .ai-report-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 900px) {
-  .api-page-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
+  .api-page-header,
+  .run-report-card__header,
+  .interface-report-card__header,
+  .failed-case-card__head {
+    align-items: stretch;
   }
 
   .trend-item {
     grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .trend-meta {
-    justify-content: flex-start;
-    flex-wrap: wrap;
   }
 }
 </style>

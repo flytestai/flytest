@@ -390,6 +390,229 @@ def _collect_common_headers(parsed_requests: list[ParsedRequestData]) -> dict[st
     return common_headers
 
 
+def _collect_placeholders_from_value(value: Any, found: set[str]):
+    if isinstance(value, str):
+        for match in PLACEHOLDER_PATTERN.finditer(value):
+            found.add(match.group(1))
+        return
+    if isinstance(value, list):
+        for item in value:
+            _collect_placeholders_from_value(item, found)
+        return
+    if isinstance(value, dict):
+        for item in value.values():
+            _collect_placeholders_from_value(item, found)
+
+
+def _classify_variable_category(name: str) -> str:
+    lowered = name.lower()
+    if any(keyword in lowered for keyword in SECRET_VARIABLE_KEYWORDS) or any(
+        keyword in lowered for keyword in ("auth", "login", "phone", "username", "account", "session", "cookie")
+    ):
+        return "auth"
+    return "business"
+
+
+def _build_variable_suggestions(parsed_requests: list[ParsedRequestData]) -> list[dict]:
+    usage: dict[str, dict] = {}
+    for request in parsed_requests:
+        placeholders: set[str] = set()
+        for value in (
+            request.url,
+            request.headers,
+            request.params,
+            request.body,
+            request.request_spec or {},
+            request.assertion_specs or [],
+            request.extractor_specs or [],
+        ):
+            _collect_placeholders_from_value(value, placeholders)
+
+        for name in sorted(placeholders):
+            if name == "base_url":
+                continue
+            entry = usage.setdefault(
+                name,
+                {
+                    "name": name,
+                    "request_count": 0,
+                    "category": _classify_variable_category(name),
+                    "is_secret": any(keyword in name.lower() for keyword in SECRET_VARIABLE_KEYWORDS),
+                    "example_requests": [],
+                    "suggested_value": "",
+                },
+            )
+            entry["request_count"] += 1
+            if len(entry["example_requests"]) < 3 and request.name not in entry["example_requests"]:
+                entry["example_requests"].append(request.name)
+
+    return sorted(
+        usage.values(),
+        key=lambda item: (
+            0 if item["category"] == "auth" else 1,
+            -int(item["request_count"]),
+            item["name"],
+        ),
+    )
+
+
+def _score_auth_candidate(parsed_request: ParsedRequestData) -> tuple[int, str]:
+    combined = f"{parsed_request.name} {parsed_request.url}".lower()
+    score = 0
+    reasons: list[str] = []
+    if parsed_request.method.upper() == "POST":
+        score += 20
+        reasons.append("POST 请求")
+    if any(keyword in combined for keyword in ("login", "signin", "auth", "token", "session", "oauth")):
+        score += 35
+        reasons.append("名称或路径包含鉴权关键词")
+    if any(keyword in parsed_request.name for keyword in ("登录", "鉴权", "认证", "令牌")):
+        score += 35
+        reasons.append("接口名称疑似登录/鉴权接口")
+    return score, "，".join(reasons)
+
+
+def _resolve_token_variable_name(variable_suggestions: list[dict]) -> str:
+    priorities = ["token", "access_token", "authorization", "refresh_token", "refreshToken"]
+    existing_names = {str(item.get("name") or "") for item in variable_suggestions}
+    for name in priorities:
+        if name in existing_names:
+            return name
+    return "token"
+
+
+def _build_auth_suggestions(
+    parsed_requests: list[ParsedRequestData],
+    created_requests: list[ApiRequest],
+    variable_suggestions: list[dict],
+) -> list[dict]:
+    token_variable = _resolve_token_variable_name(variable_suggestions)
+    suggestions: list[dict] = []
+    for parsed_request, created_request in zip(parsed_requests, created_requests, strict=False):
+        score, reason = _score_auth_candidate(parsed_request)
+        if score < 35:
+            continue
+        confidence = "high" if score >= 70 else "medium"
+        suggestions.append(
+            {
+                "request_id": created_request.id,
+                "request_name": created_request.name,
+                "collection_name": created_request.collection.name,
+                "method": created_request.method,
+                "url": created_request.url,
+                "token_variable": token_variable,
+                "token_path": "data.token",
+                "token_path_candidates": [
+                    "data.token",
+                    "data.accessToken",
+                    "data.access_token",
+                    "token",
+                    "accessToken",
+                    "authorization",
+                ],
+                "confidence": confidence,
+                "reason": reason or "接口特征与常见登录/鉴权接口相符",
+            }
+        )
+    suggestions.sort(
+        key=lambda item: (
+            0 if item["confidence"] == "high" else 1,
+            item["request_name"],
+        )
+    )
+    return suggestions[:3]
+
+
+def _build_environment_patch(
+    variable_suggestions: list[dict],
+    auth_suggestions: list[dict],
+    primary_environment_draft: dict | None,
+) -> dict:
+    suggested_variables: list[dict] = []
+    seen_names: set[str] = set()
+
+    def add_variable(name: str, value: str, *, is_secret: bool = False, reason: str = ""):
+        if not name or name in seen_names:
+            return
+        seen_names.add(name)
+        suggested_variables.append(
+            {
+                "name": name,
+                "value": value,
+                "is_secret": is_secret,
+                "reason": reason,
+            }
+        )
+
+    if auth_suggestions:
+        primary_auth = auth_suggestions[0]
+        add_variable(
+            "auth_request_id",
+            str(primary_auth.get("request_id") or ""),
+            reason="推荐作为自动获取 token 的登录接口 ID",
+        )
+        add_variable(
+            "auth_request_name",
+            str(primary_auth.get("request_name") or ""),
+            reason="推荐作为自动获取 token 的登录接口名称",
+        )
+        add_variable(
+            "auth_token_path",
+            str(primary_auth.get("token_path") or "data.token"),
+            reason="推荐的 token 提取路径",
+        )
+
+    for item in variable_suggestions:
+        add_variable(
+            str(item.get("name") or ""),
+            str(item.get("suggested_value") or ""),
+            is_secret=bool(item.get("is_secret")),
+            reason=f"在 {item.get('request_count') or 0} 个接口中被引用",
+        )
+
+    return {
+        "base_url": str((primary_environment_draft or {}).get("base_url") or ""),
+        "variables": suggested_variables,
+    }
+
+
+def _build_environment_suggestions(
+    *,
+    parsed_requests: list[ParsedRequestData],
+    created_requests: list[ApiRequest],
+    environment_drafts: list[dict],
+    saved_environments: list[ApiEnvironment],
+    primary_environment_draft: dict | None,
+    primary_environment: ApiEnvironment | None,
+) -> dict:
+    variable_suggestions = _build_variable_suggestions(parsed_requests)
+    auth_suggestions = _build_auth_suggestions(parsed_requests, created_requests, variable_suggestions)
+
+    base_url_candidates: list[dict] = []
+    for index, environment_draft in enumerate(environment_drafts):
+        saved_environment = saved_environments[index] if index < len(saved_environments) else None
+        base_url = str(environment_draft.get("base_url") or "").strip()
+        if not base_url:
+            continue
+        base_url_candidates.append(
+            {
+                "name": str(environment_draft.get("name") or f"环境{index + 1}"),
+                "base_url": base_url,
+                "environment_id": saved_environment.id if saved_environment else None,
+                "selected": bool(primary_environment and saved_environment and saved_environment.id == primary_environment.id),
+            }
+        )
+
+    return {
+        "recommended_environment_id": primary_environment.id if primary_environment else None,
+        "recommended_environment_name": primary_environment.name if primary_environment else None,
+        "base_url_candidates": base_url_candidates,
+        "variable_suggestions": variable_suggestions,
+        "auth_suggestions": auth_suggestions,
+        "environment_patch": _build_environment_patch(variable_suggestions, auth_suggestions, primary_environment_draft),
+    }
+
+
 def _collect_variables(document_content: str, parsed_requests: list[ParsedRequestData]) -> dict[str, str]:
     variables: dict[str, str] = {}
     for item in parsed_requests:
@@ -749,6 +972,14 @@ def process_document_import(
     saved_environments = _create_or_reuse_environments(collection, user, environment_drafts)
     primary_environment_draft = environment_drafts[0] if environment_drafts else None
     primary_environment = saved_environments[0] if saved_environments else None
+    environment_suggestions = _build_environment_suggestions(
+        parsed_requests=parsed_requests,
+        created_requests=created_requests,
+        environment_drafts=environment_drafts,
+        saved_environments=saved_environments,
+        primary_environment_draft=primary_environment_draft,
+        primary_environment=primary_environment,
+    )
 
     serializer = ApiRequestSerializer(created_requests, many=True)
     serialized_requests = serializer.data
@@ -794,6 +1025,7 @@ def process_document_import(
         "environment_auto_saved_count": len(saved_environments),
         "environment_id": primary_environment.id if primary_environment else None,
         "environment_name": primary_environment.name if primary_environment else None,
+        "environment_suggestions": environment_suggestions,
         "items": serialized_requests,
         "generated_scripts": generated_scripts,
         "test_cases": testcase_serializer.data,

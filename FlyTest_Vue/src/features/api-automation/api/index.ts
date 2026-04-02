@@ -2,6 +2,7 @@ import type { AxiosProgressEvent } from 'axios'
 import request from '@/utils/request'
 import type {
   ApiCollection,
+  ApiCaseGenerationJob,
   ApiCollectionForm,
   ApiEnvironment,
   ApiEnvironmentForm,
@@ -9,6 +10,7 @@ import type {
   ApiExecutionFailureAnalysis,
   ApiExecutionRecord,
   ApiExecutionReport,
+  ApiExecutionReportAISummary,
   ApiImportResult,
   ApiImportJob,
   ApiRequest,
@@ -108,6 +110,26 @@ export const importJobApi = {
   cancel: (id: number) => request.post<ApiResponse<ApiImportJob>>(`${BASE_URL}/import-jobs/${id}/cancel/`),
 }
 
+export const caseGenerationJobApi = {
+  list: (params?: { project?: number; status?: string }) =>
+    request.get<ApiResponse<ApiCaseGenerationJob[]>>(`${BASE_URL}/case-generation-jobs/`, { params }),
+
+  get: (id: number) => request.get<ApiResponse<ApiCaseGenerationJob>>(`${BASE_URL}/case-generation-jobs/${id}/`),
+
+  create: (data: {
+    scope: 'selected' | 'collection' | 'project'
+    ids?: number[]
+    collection_id?: number
+    project_id?: number
+    mode: 'generate' | 'append' | 'regenerate'
+    count_per_request?: number
+  }) => request.post<ApiResponse<ApiCaseGenerationJob>>(`${BASE_URL}/case-generation-jobs/`, data),
+
+  cancel: (id: number) => request.post<ApiResponse<ApiCaseGenerationJob>>(`${BASE_URL}/case-generation-jobs/${id}/cancel/`),
+
+  apply: (id: number) => request.post<ApiResponse<ApiCaseGenerationJob>>(`${BASE_URL}/case-generation-jobs/${id}/apply/`),
+}
+
 export const environmentApi = {
   list: (params?: { project?: number }) =>
     request.get<ApiResponse<ApiEnvironment[]>>(`${BASE_URL}/environments/`, { params }),
@@ -131,6 +153,9 @@ export const executionRecordApi = {
 
   report: (params?: { project?: number; collection?: number; days?: number }) =>
     request.get<ApiResponse<ApiExecutionReport>>(`${BASE_URL}/execution-records/report/`, { params }),
+
+  reportSummary: (data: { project?: number; request?: number; collection?: number; days?: number }) =>
+    request.post<ApiResponse<ApiExecutionReportAISummary>>(`${BASE_URL}/execution-records/report-summary/`, data),
 
   delete: (id: number) => request.delete<ApiResponse<null>>(`${BASE_URL}/execution-records/${id}/`),
 }
