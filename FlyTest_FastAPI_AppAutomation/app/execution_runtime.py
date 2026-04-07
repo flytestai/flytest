@@ -265,7 +265,10 @@ class AppFlowExecutor:
         }
 
     def capture_failure_artifact(self, step_name: str) -> str | None:
-        path = self._save_screenshot(f"failed-{step_name}")
+        try:
+            path = self._save_screenshot(f"failed-{step_name}")
+        except Exception:
+            return None
         return str(path) if path else None
 
     def _execute_tree(

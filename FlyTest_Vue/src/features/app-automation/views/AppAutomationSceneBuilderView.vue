@@ -9,13 +9,82 @@
           <h3>场景编排</h3>
           <p>支持基础步骤、自定义组件和流程控制分支的可视化编排。</p>
         </div>
-        <a-space>
+        <a-space class="header-actions" wrap>
+          <a-button type="outline" :loading="aiGenerating" @click="openAiPlanDialog">AI 生成场景</a-button>
           <a-button :loading="loading" @click="loadData">刷新</a-button>
+          <a-button type="outline" @click="openTestCaseWorkspace">测试用例</a-button>
+          <a-button type="outline" @click="openExecutionWorkspace()">执行记录</a-button>
           <a-button @click="createDraft">新建草稿</a-button>
           <a-button :disabled="!steps.length" @click="openCreateCustomComponent">另存为自定义组件</a-button>
           <a-button type="primary" :loading="saving" @click="saveDraft">保存用例</a-button>
+          <a-button type="primary" status="success" :loading="saving || executing" @click="openExecuteDialog">
+            保存并执行
+          </a-button>
         </a-space>
       </div>
+
+      <a-card class="form-card ai-status-card">
+        <div class="ai-status-header">
+          <div class="ai-status-copy">
+            <span class="ai-status-kicker">AI 智能模式</span>
+            <strong>{{ aiStatusTitle }}</strong>
+            <p>{{ aiStatusDescription }}</p>
+          </div>
+          <a-space wrap class="ai-status-actions">
+            <a-tag :color="aiStatusColor">{{ aiStatusLabel }}</a-tag>
+            <a-tag v-if="aiStatus.has_config" :color="aiStatus.supports_vision ? 'arcoblue' : 'purple'">
+              {{ aiStatus.supports_vision ? '视觉 + 文本' : '文本模式' }}
+            </a-tag>
+            <a-button size="mini" :loading="aiStatusLoading" @click="refreshAiRuntimeStatus(true)">刷新 AI 状态</a-button>
+            <a-button size="mini" type="outline" @click="openLlmConfigManagement">模型配置</a-button>
+          </a-space>
+        </div>
+
+        <div class="ai-status-grid">
+          <div class="ai-status-item">
+            <span>当前能力</span>
+            <strong>{{ aiCapabilityLabel }}</strong>
+            <small>{{ aiStatus.checked_at ? `最近检测：${formatDateTime(aiStatus.checked_at)}` : '尚未检测' }}</small>
+          </div>
+          <div class="ai-status-item">
+            <span>激活配置</span>
+            <strong>{{ aiConfigDisplayName }}</strong>
+            <small>{{ aiProviderDisplayName }}</small>
+          </div>
+          <div class="ai-status-item">
+            <span>模型名称</span>
+            <strong>{{ aiModelDisplayName }}</strong>
+            <small>{{ aiEndpointDisplay }}</small>
+          </div>
+        </div>
+
+        <div v-if="lastAiActivity" class="ai-activity-panel">
+          <div class="ai-activity-header">
+            <div class="ai-activity-copy">
+              <span class="ai-activity-kicker">最近一次 AI 结果</span>
+              <strong>{{ getAiActionLabel(lastAiActivity.action) }}</strong>
+            </div>
+            <a-tag :color="getAiActivityColor(lastAiActivity)">{{ getAiActivityStatusLabel(lastAiActivity) }}</a-tag>
+          </div>
+
+          <div class="ai-activity-meta">
+            <span>时间：{{ formatDateTime(lastAiActivity.executed_at) }}</span>
+            <span v-if="lastAiActivity.target_name">对象：{{ lastAiActivity.target_name }}</span>
+            <span v-if="lastAiActivity.model">模型：{{ lastAiActivity.model }}</span>
+            <span v-if="lastAiActivity.provider">提供方：{{ formatProviderLabel(lastAiActivity.provider) }}</span>
+          </div>
+
+          <div class="ai-activity-summary">{{ lastAiActivity.summary }}</div>
+          <div v-if="lastAiActivity.prompt" class="ai-activity-prompt">提示词：{{ lastAiActivity.prompt }}</div>
+
+          <div v-if="lastAiActivity.warnings.length" class="ai-warning-list">
+            <div v-for="(warning, index) in lastAiActivity.warnings" :key="`${lastAiActivity.executed_at}-${index}`" class="ai-warning-item">
+              {{ warning }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="ai-activity-empty">还没有触发 AI 场景生成或步骤补全，执行后会在这里保留结果摘要与回退原因。</div>
+      </a-card>
 
       <a-card class="form-card">
         <a-form :model="draft" layout="vertical">
@@ -105,6 +174,12 @@
       <div class="builder-grid">
         <a-card class="panel-card library-panel">
           <template #title>步骤组件库</template>
+          <template #extra>
+            <a-space size="small">
+              <a-button size="mini" @click="openComponentPackageDialog">导入组件包</a-button>
+              <a-button size="mini" type="outline" @click="openComponentPackageExportDialog">导出组件包</a-button>
+            </a-space>
+          </template>
           <a-input-search
             v-model="componentSearch"
             class="component-search"
@@ -325,6 +400,17 @@
               <a-form-item label="步骤类型">
                 <a-input :model-value="resolveStepMeta(selectedSceneStep)" disabled />
               </a-form-item>
+              <div class="config-toolbar">
+                <a-button
+                  type="outline"
+                  size="small"
+                  :disabled="!selectedSceneStep || !!selectedCustomParentSummary"
+                  :loading="aiStepSuggesting"
+                  @click="openAiStepDialog"
+                >
+                  AI 补全当前步骤
+                </a-button>
+              </div>
 
               <a-alert
                 v-if="
@@ -1348,6 +1434,231 @@
         </a-card>
       </div>
 
+      <a-modal v-model:visible="componentPackageVisible" width="760px">
+        <template #title>导入组件包</template>
+
+        <a-form layout="vertical">
+          <a-alert class="custom-dialog-alert">
+            支持导入 `.json`、`.yaml`、`.yml` 组件包。导入时可以选择覆盖已有组件，也会同步安装组件包里的自定义组件。
+          </a-alert>
+
+          <a-form-item label="覆盖已有组件">
+            <a-switch v-model="componentPackageOverwrite" />
+          </a-form-item>
+
+          <a-form-item label="选择文件">
+            <a-upload
+              :file-list="componentPackageFileList"
+              :auto-upload="false"
+              :limit="1"
+              accept=".json,.yaml,.yml"
+              @change="handleComponentPackageFileChange"
+            />
+          </a-form-item>
+
+          <a-form-item label="已导入组件包">
+            <div class="component-package-list">
+              <div
+                v-for="item in componentPackageRecords"
+                :key="item.id"
+                class="component-package-item"
+              >
+                <div class="component-package-copy">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ item.description || '暂无描述' }}</span>
+                </div>
+                <div class="component-package-meta">
+                  <span>{{ item.version || '-' }}</span>
+                  <a-button type="text" size="mini" status="danger" @click="deleteComponentPackageRecord(item)">
+                    删除
+                  </a-button>
+                </div>
+              </div>
+              <a-empty v-if="!componentPackageLoading && !componentPackageRecords.length" description="暂无组件包记录" />
+              <a-spin v-if="componentPackageLoading" style="width: 100%" />
+            </div>
+          </a-form-item>
+        </a-form>
+
+        <template #footer>
+          <a-space>
+            <a-button @click="componentPackageVisible = false">关闭</a-button>
+            <a-button type="primary" :loading="componentPackageUploading" @click="submitComponentPackageImport">
+              导入组件包
+            </a-button>
+          </a-space>
+        </template>
+      </a-modal>
+
+      <a-modal v-model:visible="componentPackageExportVisible" width="560px">
+        <template #title>导出组件包</template>
+
+        <a-form :model="componentPackageExportForm" layout="vertical">
+          <a-form-item label="组件包名称">
+            <a-input v-model="componentPackageExportForm.name" placeholder="例如：app-component-pack" />
+          </a-form-item>
+          <a-row :gutter="12">
+            <a-col :span="12">
+              <a-form-item label="版本">
+                <a-input v-model="componentPackageExportForm.version" placeholder="例如：2026.04.07" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="作者">
+                <a-input v-model="componentPackageExportForm.author" placeholder="可选" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-form-item label="描述">
+            <a-textarea
+              v-model="componentPackageExportForm.description"
+              :auto-size="{ minRows: 3, maxRows: 5 }"
+              placeholder="可选"
+            />
+          </a-form-item>
+          <a-form-item label="导出禁用组件">
+            <a-switch v-model="componentPackageIncludeDisabled" />
+          </a-form-item>
+        </a-form>
+
+        <template #footer>
+          <a-space>
+            <a-button @click="componentPackageExportVisible = false">取消</a-button>
+            <a-button type="outline" :loading="componentPackageExporting" @click="downloadComponentPackage('json')">
+              导出 JSON
+            </a-button>
+            <a-button type="primary" :loading="componentPackageExporting" @click="downloadComponentPackage('yaml')">
+              导出 YAML
+            </a-button>
+          </a-space>
+        </template>
+      </a-modal>
+
+      <a-modal v-model:visible="aiPlanVisible" width="720px">
+        <template #title>AI 生成 APP 场景</template>
+
+        <a-form :model="aiPlanForm" layout="vertical">
+          <a-alert class="custom-dialog-alert">
+            优先使用当前激活的 LLM 配置生成步骤；如果模型不可用或网络失败，会自动回退到规则规划，保证场景草稿仍然可编辑可保存。
+          </a-alert>
+
+          <div class="ai-dialog-meta">
+            <div class="ai-dialog-item">
+              <span>当前引擎</span>
+              <strong>{{ aiDialogEngineName }}</strong>
+            </div>
+            <div class="ai-dialog-item">
+              <span>执行模式</span>
+              <strong>{{ aiDialogModeText }}</strong>
+            </div>
+            <div class="ai-dialog-item">
+              <span>最近检测</span>
+              <strong>{{ formatDateTime(aiStatus.checked_at) }}</strong>
+            </div>
+          </div>
+
+          <a-form-item field="prompt" label="场景描述">
+            <a-textarea
+              v-model="aiPlanForm.prompt"
+              :auto-size="{ minRows: 6, maxRows: 10 }"
+              placeholder="例如：启动企业微信，输入账号密码登录，进入工作台后校验消息入口存在并截图。"
+            />
+          </a-form-item>
+
+          <a-form-item field="applyMode" label="应用方式">
+            <a-radio-group v-model="aiPlanForm.applyMode" type="button">
+              <a-radio value="replace">替换当前草稿</a-radio>
+              <a-radio value="append">追加到当前步骤</a-radio>
+            </a-radio-group>
+          </a-form-item>
+        </a-form>
+
+        <template #footer>
+          <a-space>
+            <a-button @click="aiPlanVisible = false">取消</a-button>
+            <a-button type="primary" :loading="aiGenerating" @click="generateAiPlan">
+              生成并应用
+            </a-button>
+          </a-space>
+        </template>
+      </a-modal>
+
+      <a-modal v-model:visible="aiStepVisible" width="640px">
+        <template #title>AI 补全当前步骤</template>
+
+        <a-form :model="aiStepForm" layout="vertical">
+          <a-alert class="custom-dialog-alert">
+            这会基于当前已选步骤、场景上下文和激活的 LLM 配置补全当前步骤；如果模型不可用，会自动回退到规则补全。
+          </a-alert>
+
+          <div class="ai-dialog-meta">
+            <div class="ai-dialog-item">
+              <span>当前引擎</span>
+              <strong>{{ aiDialogEngineName }}</strong>
+            </div>
+            <div class="ai-dialog-item">
+              <span>执行模式</span>
+              <strong>{{ aiDialogModeText }}</strong>
+            </div>
+            <div class="ai-dialog-item">
+              <span>最近检测</span>
+              <strong>{{ formatDateTime(aiStatus.checked_at) }}</strong>
+            </div>
+          </div>
+
+          <a-form-item field="prompt" label="补全说明">
+            <a-textarea
+              v-model="aiStepForm.prompt"
+              :auto-size="{ minRows: 5, maxRows: 8 }"
+              placeholder="例如：补全为输入登录账号，优先复用已有元素，缺少值时自动生成变量。"
+            />
+          </a-form-item>
+        </a-form>
+
+        <template #footer>
+          <a-space>
+            <a-button @click="aiStepVisible = false">取消</a-button>
+            <a-button type="primary" :loading="aiStepSuggesting" @click="generateAiStepSuggestion">
+              补全并应用
+            </a-button>
+          </a-space>
+        </template>
+      </a-modal>
+
+      <a-modal v-model:visible="executeVisible" width="560px">
+        <template #title>保存并执行当前用例</template>
+
+        <a-form :model="executeForm" layout="vertical">
+          <a-alert class="custom-dialog-alert">
+            会先保存当前场景草稿，再立即创建执行任务，并跳转到执行记录页跟踪执行进度。
+          </a-alert>
+
+          <a-form-item label="当前用例">
+            <a-input :model-value="executionCaseName" readonly />
+          </a-form-item>
+
+          <a-form-item label="执行设备">
+            <a-select v-model="executeForm.device_id" placeholder="请选择执行设备">
+              <a-option v-for="device in availableDevices" :key="device.id" :value="device.id">
+                {{ device.name || device.device_id }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+
+          <div class="execute-device-meta">
+            <span>可用设备 {{ availableDevices.length }} 台</span>
+            <a-button type="text" size="mini" @click="reloadDevices">刷新设备</a-button>
+          </div>
+        </a-form>
+
+        <template #footer>
+          <a-space>
+            <a-button @click="executeVisible = false">取消</a-button>
+            <a-button type="primary" :loading="saving || executing" @click="executeCurrentDraft">开始执行</a-button>
+          </a-space>
+        </template>
+      </a-modal>
+
       <a-modal v-model:visible="customComponentVisible" width="760px">
         <template #title>
           {{ customComponentMode === 'create' ? '保存为自定义组件' : '编辑自定义组件' }}
@@ -1409,13 +1720,29 @@
 import { computed, reactive, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { Message, Modal } from '@arco-design/web-vue'
+import type { FileItem } from '@arco-design/web-vue/es/upload/interfaces'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
+import { getActiveLlmConfig, getLlmConfigDetails } from '@/features/langgraph/services/llmConfigService'
 import { AppAutomationService } from '../services/appAutomationService'
-import type { AppComponent, AppCustomComponent, AppPackage, AppSceneStep, AppTestCase } from '../types'
+import type {
+  AppComponent,
+  AppComponentPackage,
+  AppCustomComponent,
+  AppDevice,
+  AppExecution,
+  AppLlmConfigSnapshot,
+  AppPackage,
+  AppScenePlanResponse,
+  AppSceneStep,
+  AppStepSuggestionResponse,
+  AppTestCase,
+} from '../types'
 
 type PaletteTab = 'base' | 'custom'
 type CustomComponentDialogMode = 'create' | 'edit'
+type AiApplyMode = 'replace' | 'append'
 type StepChildGroupKey = 'steps' | 'else_steps' | 'catch_steps' | 'finally_steps'
 
 interface SceneVariableDraft {
@@ -1434,6 +1761,31 @@ interface StepChildGroup {
 interface QuickOption {
   label: string
   value: string
+}
+
+interface AiRuntimeStatus {
+  has_config: boolean
+  ready: boolean
+  config_name: string
+  provider: string
+  model: string
+  api_url: string
+  supports_vision: boolean
+  checked_at: string
+  error: string
+}
+
+interface AiActivityRecord {
+  action: 'scene' | 'step'
+  status: 'success' | 'error'
+  mode: 'llm' | 'fallback'
+  summary: string
+  prompt: string
+  target_name: string
+  warnings: string[]
+  provider: string
+  model: string
+  executed_at: string
 }
 
 const FLOW_CONTAINER_TYPES = new Set(['sequence', 'if', 'loop', 'try'])
@@ -1537,12 +1889,20 @@ const RESPONSE_TYPE_OPTIONS: QuickOption[] = [
   { label: '二进制', value: 'binary' },
 ]
 
+const authStore = useAuthStore()
 const projectStore = useProjectStore()
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
 const saving = ref(false)
+const executing = ref(false)
+const aiGenerating = ref(false)
+const aiStepSuggesting = ref(false)
+const aiStatusLoading = ref(false)
+const componentPackageLoading = ref(false)
+const componentPackageUploading = ref(false)
+const componentPackageExporting = ref(false)
 const customComponentSaving = ref(false)
 const selectedCaseId = ref<number | undefined>()
 const selectedStepIndex = ref<number | null>(null)
@@ -1551,16 +1911,29 @@ const selectedSubStepGroupKey = ref<StepChildGroupKey | null>(null)
 const componentSearch = ref('')
 const stepConfigText = ref('{}')
 const paletteTab = ref<PaletteTab>('base')
+const componentPackageVisible = ref(false)
+const componentPackageExportVisible = ref(false)
+const aiPlanVisible = ref(false)
+const aiStepVisible = ref(false)
+const executeVisible = ref(false)
 const customComponentVisible = ref(false)
 const customComponentMode = ref<CustomComponentDialogMode>('create')
 const editingCustomComponentId = ref<number | null>(null)
 
 const components = ref<AppComponent[]>([])
 const customComponents = ref<AppCustomComponent[]>([])
+const componentPackageRecords = ref<AppComponentPackage[]>([])
+const devices = ref<AppDevice[]>([])
 const packages = ref<AppPackage[]>([])
 const testCases = ref<AppTestCase[]>([])
 const steps = ref<AppSceneStep[]>([])
 const variableItems = ref<SceneVariableDraft[]>([])
+const activeLlmSnapshot = ref<AppLlmConfigSnapshot | null>(null)
+const lastAiActivity = ref<AiActivityRecord | null>(null)
+const componentPackageFileList = ref<FileItem[]>([])
+const componentPackageFile = ref<File | null>(null)
+const componentPackageOverwrite = ref(true)
+const componentPackageIncludeDisabled = ref(false)
 
 const subStepSelections = reactive<Record<string, string | undefined>>({})
 
@@ -1579,9 +1952,90 @@ const customComponentForm = reactive({
   stepsText: '[]',
 })
 
+const aiPlanForm = reactive({
+  prompt: '',
+  applyMode: 'replace' as AiApplyMode,
+})
+
+const aiStepForm = reactive({
+  prompt: '',
+})
+
+const executeForm = reactive({
+  device_id: undefined as number | undefined,
+})
+
+const createAiStatusState = (): AiRuntimeStatus => ({
+  has_config: false,
+  ready: false,
+  config_name: '',
+  provider: '',
+  model: '',
+  api_url: '',
+  supports_vision: false,
+  checked_at: '',
+  error: '',
+})
+
+const aiStatus = reactive<AiRuntimeStatus>(createAiStatusState())
+
+const componentPackageExportForm = reactive({
+  name: 'app-component-pack',
+  version: '',
+  author: '',
+  description: 'FlyTest APP 自动化组件包',
+})
+
 let stepSeed = 0
 
 const clone = <T>(value: T): T => (value === undefined ? value : JSON.parse(JSON.stringify(value)))
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
+}
+
+const formatProviderLabel = (value?: string | null) => {
+  const normalized = String(value || '').trim()
+  if (!normalized) return '-'
+
+  const providerMap: Record<string, string> = {
+    openai: 'OpenAI',
+    openai_compatible: 'OpenAI Compatible',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    gemini: 'Google Gemini',
+    deepseek: 'DeepSeek',
+    siliconflow: '硅基流动',
+    qwen: '通义千问',
+    alibaba: '阿里云百炼',
+  }
+
+  return (
+    providerMap[normalized.toLowerCase()] ||
+    normalized
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, segment => segment.toUpperCase())
+  )
+}
+
+const formatEndpointDisplay = (value?: string | null) => {
+  const text = String(value || '').trim()
+  if (!text) return '未配置接口地址'
+
+  try {
+    const parsed = new URL(text)
+    return `${parsed.origin}${parsed.pathname.replace(/\/$/, '') || '/'}`
+  } catch {
+    return text
+  }
+}
+
+const normalizeErrorMessage = (error: any, fallback: string) => error?.message || error?.error || fallback
+
+const resetAiStatus = () => {
+  Object.assign(aiStatus, createAiStatusState())
+}
 
 const readRouteCaseId = () => {
   const rawValue = Array.isArray(route.query.caseId) ? route.query.caseId[0] : route.query.caseId
@@ -1683,6 +2137,67 @@ const componentNameMap = computed(() => {
   ]
   return new Map(entries)
 })
+
+const aiStatusColor = computed(() => {
+  if (aiStatus.ready) return 'green'
+  if (aiStatus.has_config) return 'orange'
+  return 'gray'
+})
+
+const aiStatusLabel = computed(() => {
+  if (aiStatus.ready) return 'AI 已就绪'
+  if (aiStatus.has_config) return '规则回退待排查'
+  return '未配置模型'
+})
+
+const aiCapabilityLabel = computed(() => {
+  if (!aiStatus.has_config) return '规则规划兜底'
+  return aiStatus.supports_vision ? '视觉 + 文本智能规划' : '文本智能规划'
+})
+
+const aiConfigDisplayName = computed(() => aiStatus.config_name || '未激活 LLM 配置')
+const aiProviderDisplayName = computed(() => formatProviderLabel(aiStatus.provider))
+const aiModelDisplayName = computed(() => aiStatus.model || '未配置模型名称')
+const aiEndpointDisplay = computed(() => formatEndpointDisplay(aiStatus.api_url))
+
+const aiStatusTitle = computed(() => {
+  if (aiStatus.ready) {
+    return `${aiConfigDisplayName.value} 已接入 APP 智能编排`
+  }
+  if (aiStatus.has_config) {
+    return '已检测到模型配置，但当前会优先回退到规则规划'
+  }
+  return '当前未启用 LLM，系统会自动使用规则规划'
+})
+
+const aiStatusDescription = computed(() => {
+  if (aiStatus.ready) {
+    return 'AI 场景生成和步骤补全会优先走激活模型，失败时再自动回退到规则规划，保证编排不中断。'
+  }
+  if (aiStatus.error) {
+    return aiStatus.error
+  }
+  if (aiStatus.has_config) {
+    return '已存在激活配置，但模型名称或接口地址不完整，当前生成链路仍可继续使用规则规划。'
+  }
+  return '建议先配置并激活一个 LLM 模型，这样场景规划、步骤补全和变量生成会更稳定高效。'
+})
+
+const aiDialogEngineName = computed(() => {
+  if (!aiStatus.has_config) return '未配置 LLM，将回退到规则规划'
+  return `${aiModelDisplayName.value} · ${aiProviderDisplayName.value}`
+})
+
+const aiDialogModeText = computed(() => {
+  if (!aiStatus.has_config) return '规则规划兜底'
+  return aiStatus.supports_vision ? '视觉 + 文本联合规划' : '文本规划'
+})
+
+const availableDevices = computed(() =>
+  devices.value.filter(device => device.status === 'available' || device.status === 'online'),
+)
+
+const executionCaseName = computed(() => draft.name.trim() || '未命名测试用例')
 
 const isFlowContainerType = (value?: string | null) => FLOW_CONTAINER_TYPES.has(String(value || '').trim().toLowerCase())
 
@@ -1951,6 +2466,291 @@ const buildVariablePayload = () => {
         description: item.description,
       }
     })
+}
+
+const mergeVariableDrafts = (currentItems: SceneVariableDraft[], incomingItems: SceneVariableDraft[]) => {
+  const merged = new Map<string, SceneVariableDraft>()
+
+  currentItems.forEach(item => {
+    const key = item.name.trim().toLowerCase() || `current-${merged.size}`
+    merged.set(key, item)
+  })
+
+  incomingItems.forEach(item => {
+    const key = item.name.trim().toLowerCase() || `incoming-${merged.size}`
+    merged.set(key, item)
+  })
+
+  return Array.from(merged.values())
+}
+
+const applyGeneratedScenePlan = (plan: AppScenePlanResponse, applyMode: AiApplyMode) => {
+  const normalizedPlanSteps = normalizeSteps(plan.steps)
+  const normalizedPlanVariables = normalizeVariables(plan.variables)
+
+  if (applyMode === 'replace') {
+    steps.value = normalizedPlanSteps
+    variableItems.value = normalizedPlanVariables
+    draft.name = plan.name || draft.name
+    draft.description = plan.description || draft.description
+    draft.package_id = plan.package_id ?? undefined
+    selectedStepIndex.value = steps.value.length ? 0 : null
+  } else {
+    const startIndex = steps.value.length
+    steps.value = [...steps.value, ...normalizedPlanSteps]
+    variableItems.value = mergeVariableDrafts(variableItems.value, normalizedPlanVariables)
+
+    if (!draft.name.trim() && plan.name) {
+      draft.name = plan.name
+    }
+    if (!draft.description.trim() && plan.description) {
+      draft.description = plan.description
+    }
+    if (draft.package_id === undefined && plan.package_id !== null) {
+      draft.package_id = plan.package_id
+    }
+
+    selectedStepIndex.value = steps.value.length ? startIndex : null
+  }
+
+  selectedSubStepIndex.value = null
+  selectedSubStepGroupKey.value = null
+  syncStepEditor()
+}
+
+const replaceSelectedSceneStep = (nextStep: AppSceneStep) => {
+  const currentStep = selectedSceneStep.value
+  if (!currentStep) {
+    return
+  }
+
+  const preservedId = currentStep.id ?? generateStepId()
+  const preservedExpanded = Boolean(currentStep._expanded)
+  const normalized = normalizeStep({
+    ...nextStep,
+    id: preservedId,
+    _expanded: preservedExpanded || Boolean(nextStep._expanded),
+  })
+
+  const currentRecord = currentStep as Record<string, unknown>
+  Object.keys(currentRecord).forEach(key => {
+    delete currentRecord[key]
+  })
+  Object.assign(currentRecord, normalized)
+}
+
+const applyStepSuggestion = (suggestion: AppStepSuggestionResponse) => {
+  const normalizedStep = normalizeStep(suggestion.step)
+  replaceSelectedSceneStep(normalizedStep)
+  variableItems.value = mergeVariableDrafts(variableItems.value, normalizeVariables(suggestion.variables))
+  syncStepEditor()
+}
+
+const rememberAiActivity = (payload: Omit<AiActivityRecord, 'executed_at'>) => {
+  lastAiActivity.value = {
+    ...payload,
+    warnings: [...payload.warnings],
+    executed_at: new Date().toISOString(),
+  }
+}
+
+const getAiActionLabel = (action: AiActivityRecord['action']) => (action === 'scene' ? '场景规划' : '步骤补全')
+
+const getAiActivityColor = (record: AiActivityRecord) => {
+  if (record.status === 'error') return 'red'
+  if (record.mode === 'fallback') return 'orange'
+  return 'green'
+}
+
+const getAiActivityStatusLabel = (record: AiActivityRecord) => {
+  if (record.status === 'error') return '执行失败'
+  if (record.mode === 'fallback') return '规则回退'
+  return 'LLM 已生效'
+}
+
+const refreshAiRuntimeStatus = async (showMessage = false): Promise<AppLlmConfigSnapshot | null> => {
+  aiStatusLoading.value = true
+  try {
+    const activeResponse = await getActiveLlmConfig()
+    const activeConfig = activeResponse.data
+    if (!activeConfig?.id) {
+      activeLlmSnapshot.value = null
+      resetAiStatus()
+      aiStatus.checked_at = new Date().toISOString()
+      if (showMessage) {
+        Message.info('当前没有激活的 LLM 配置，APP AI 会回退到规则规划')
+      }
+      return null
+    }
+
+    const detailResponse = await getLlmConfigDetails(activeConfig.id)
+    const detail = detailResponse.data || activeConfig
+    const snapshot: AppLlmConfigSnapshot | null =
+      detail?.name && detail?.api_url
+        ? {
+            config_name: detail.config_name,
+            provider: detail.provider,
+            name: detail.name,
+            api_url: detail.api_url,
+            api_key: detail.api_key,
+            system_prompt: detail.system_prompt,
+            supports_vision: detail.supports_vision,
+          }
+        : null
+
+    Object.assign(aiStatus, {
+      has_config: true,
+      ready: Boolean(snapshot),
+      config_name: detail?.config_name || '',
+      provider: detail?.provider || '',
+      model: detail?.name || '',
+      api_url: detail?.api_url || '',
+      supports_vision: Boolean(detail?.supports_vision),
+      checked_at: new Date().toISOString(),
+      error: snapshot ? '' : '激活的 LLM 配置缺少模型名称或接口地址，当前会回退到规则规划。',
+    })
+
+    activeLlmSnapshot.value = snapshot
+
+    if (!snapshot) {
+      if (showMessage) {
+        Message.warning(aiStatus.error || 'AI 状态已刷新')
+      }
+      return null
+    }
+
+    if (showMessage) {
+      Message.success('AI 模型状态已刷新')
+    }
+
+    return snapshot
+  } catch (error: any) {
+    activeLlmSnapshot.value = null
+    resetAiStatus()
+    aiStatus.checked_at = new Date().toISOString()
+    aiStatus.error = normalizeErrorMessage(error, '加载激活 LLM 配置失败，当前会回退到规则规划。')
+    if (showMessage) {
+      Message.error(aiStatus.error)
+    }
+    return null
+  } finally {
+    aiStatusLoading.value = false
+  }
+}
+
+const buildLlmConfigSnapshot = async (): Promise<AppLlmConfigSnapshot | null> => {
+  if (activeLlmSnapshot.value?.name && activeLlmSnapshot.value?.api_url) {
+    return activeLlmSnapshot.value
+  }
+  return refreshAiRuntimeStatus()
+}
+
+const openLlmConfigManagement = async () => {
+  await router.push({ name: 'LlmConfigManagement' })
+}
+
+const loadComponentPackageRecords = async () => {
+  componentPackageLoading.value = true
+  try {
+    componentPackageRecords.value = await AppAutomationService.getComponentPackages()
+  } catch (error: any) {
+    Message.error(error.message || '加载组件包记录失败')
+    componentPackageRecords.value = []
+  } finally {
+    componentPackageLoading.value = false
+  }
+}
+
+const handleComponentPackageFileChange = (fileListParam: FileItem[], fileItem: FileItem) => {
+  componentPackageFileList.value = fileListParam.slice(-1)
+  if (fileItem?.file) {
+    componentPackageFile.value = fileItem.file as File
+    return
+  }
+
+  if (!componentPackageFileList.value.length) {
+    componentPackageFile.value = null
+  }
+}
+
+const openComponentPackageDialog = async () => {
+  componentPackageVisible.value = true
+  await loadComponentPackageRecords()
+}
+
+const openComponentPackageExportDialog = () => {
+  componentPackageExportVisible.value = true
+}
+
+const submitComponentPackageImport = async () => {
+  if (!componentPackageFile.value) {
+    Message.warning('请选择组件包文件')
+    return
+  }
+
+  componentPackageUploading.value = true
+  try {
+    const result = await AppAutomationService.importComponentPackage(componentPackageFile.value, componentPackageOverwrite.value)
+    componentPackageFile.value = null
+    componentPackageFileList.value = []
+    await Promise.all([loadData(), loadComponentPackageRecords()])
+
+    const counts = result.counts
+    Message.success(
+      `组件包已导入：基础组件新增 ${counts.base_created} 个，更新 ${counts.base_updated} 个；自定义组件新增 ${counts.custom_created} 个，更新 ${counts.custom_updated} 个。`,
+    )
+  } catch (error: any) {
+    Message.error(error.message || '导入组件包失败')
+  } finally {
+    componentPackageUploading.value = false
+  }
+}
+
+const deleteComponentPackageRecord = (item: AppComponentPackage) => {
+  Modal.confirm({
+    title: '删除组件包记录',
+    content: `确认删除组件包记录“${item.name}”吗？此操作不会删除已经安装的组件，仅删除导入记录。`,
+    onOk: async () => {
+      await AppAutomationService.deleteComponentPackage(item.id)
+      Message.success('组件包记录已删除')
+      await loadComponentPackageRecords()
+    },
+  })
+}
+
+const downloadTextFile = (content: string, filename: string, contentType: string) => {
+  const blob = new Blob([content], { type: contentType || 'application/octet-stream' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+const downloadComponentPackage = async (format: 'json' | 'yaml') => {
+  componentPackageExporting.value = true
+  try {
+    const payload = await AppAutomationService.exportComponentPackage({
+      export_format: format,
+      include_disabled: componentPackageIncludeDisabled.value,
+      name: componentPackageExportForm.name.trim() || 'app-component-pack',
+      version: componentPackageExportForm.version.trim(),
+      author: componentPackageExportForm.author.trim(),
+      description: componentPackageExportForm.description.trim(),
+    })
+    downloadTextFile(payload.content, payload.filename, payload.content_type)
+    Message.success(
+      `组件包已导出：基础组件 ${payload.component_count} 个，自定义组件 ${payload.custom_component_count} 个。`,
+    )
+    componentPackageExportVisible.value = false
+  } catch (error: any) {
+    Message.error(error.message || '导出组件包失败')
+  } finally {
+    componentPackageExporting.value = false
+  }
 }
 
 const filteredComponents = computed(() => {
@@ -2278,6 +3078,8 @@ const resetDraft = () => {
   selectedStepIndex.value = null
   selectedSubStepIndex.value = null
   selectedSubStepGroupKey.value = null
+  executeVisible.value = false
+  executeForm.device_id = undefined
   steps.value = []
   variableItems.value = []
   draft.name = ''
@@ -2315,10 +3117,21 @@ const applyCase = (record?: AppTestCase) => {
   syncStepEditor()
 }
 
+const reloadDevices = async () => {
+  try {
+    devices.value = await AppAutomationService.getDevices()
+    return true
+  } catch (error: any) {
+    Message.error(error.message || '加载设备列表失败')
+    return false
+  }
+}
+
 const loadData = async () => {
   if (!projectStore.currentProjectId) {
     components.value = []
     customComponents.value = []
+    devices.value = []
     packages.value = []
     testCases.value = []
     resetDraft()
@@ -2327,15 +3140,18 @@ const loadData = async () => {
 
   loading.value = true
   try {
-    const [baseComponents, userComponents, packageList, caseList] = await Promise.all([
+    const [baseComponents, userComponents, deviceList, packageList, caseList] = await Promise.all([
       AppAutomationService.getComponents(),
       AppAutomationService.getCustomComponents(),
+      AppAutomationService.getDevices(),
       AppAutomationService.getPackages(projectStore.currentProjectId),
       AppAutomationService.getTestCases(projectStore.currentProjectId),
+      refreshAiRuntimeStatus(),
     ])
 
     components.value = baseComponents
     customComponents.value = userComponents
+    devices.value = deviceList
     packages.value = packageList
     testCases.value = caseList
 
@@ -2356,10 +3172,157 @@ const loadData = async () => {
   }
 }
 
+const validateDraftBeforeSave = () => {
+  if (!projectStore.currentProjectId) {
+    Message.warning('请先选择项目')
+    return false
+  }
+
+  if (!draft.name.trim()) {
+    Message.warning('请输入用例名称')
+    return false
+  }
+
+  if (!steps.value.length) {
+    Message.warning('请至少添加一个步骤')
+    return false
+  }
+
+  return true
+}
+
+const buildTestCasePayload = () => ({
+  project_id: projectStore.currentProjectId as number,
+  name: draft.name.trim(),
+  description: draft.description.trim(),
+  package_id: draft.package_id ?? null,
+  ui_flow: {
+    steps: steps.value.map(item => sanitizeStep(item)),
+  },
+  variables: buildVariablePayload(),
+  tags: [],
+  timeout: draft.timeout,
+  retry_count: draft.retry_count,
+})
+
+const persistDraft = async (options: { showMessage?: boolean } = {}) => {
+  if (!validateDraftBeforeSave()) {
+    return undefined
+  }
+
+  const { showMessage = true } = options
+  saving.value = true
+  try {
+    const payload = buildTestCasePayload()
+
+    if (selectedCaseId.value) {
+      const updated = await AppAutomationService.updateTestCase(selectedCaseId.value, payload)
+      selectedCaseId.value = updated.id
+      syncRouteCaseId(updated.id)
+      if (showMessage) {
+        Message.success('测试用例已更新')
+      }
+    } else {
+      const created = await AppAutomationService.createTestCase(payload)
+      selectedCaseId.value = created.id
+      syncRouteCaseId(created.id)
+      if (showMessage) {
+        Message.success('测试用例已创建')
+      }
+    }
+
+    await loadData()
+    return selectedCaseId.value
+  } catch (error: any) {
+    Message.error(error.message || '保存测试用例失败')
+    return undefined
+  } finally {
+    saving.value = false
+  }
+}
+
 const handleCaseChange = (value?: number) => {
   const record = testCases.value.find(item => item.id === value)
   applyCase(record)
   syncRouteCaseId(record?.id)
+}
+
+const openTestCaseWorkspace = async () => {
+  await router.push({
+    path: '/app-automation',
+    query: {
+      tab: 'test-cases',
+    },
+  })
+}
+
+const openExecutionWorkspace = async (executionId?: number) => {
+  const query: Record<string, string> = {
+    tab: 'executions',
+  }
+
+  if (executionId) {
+    query.executionId = String(executionId)
+  }
+
+  await router.push({
+    path: '/app-automation',
+    query,
+  })
+}
+
+const openExecuteDialog = async () => {
+  if (!validateDraftBeforeSave()) {
+    return
+  }
+
+  if (!availableDevices.value.length) {
+    const loaded = await reloadDevices()
+    if (!loaded) {
+      return
+    }
+  }
+
+  if (!availableDevices.value.length) {
+    Message.warning('暂无可用设备，请先在设备管理中连接并解锁设备')
+    return
+  }
+
+  if (!executeForm.device_id || !availableDevices.value.some(device => device.id === executeForm.device_id)) {
+    executeForm.device_id = availableDevices.value[0]?.id
+  }
+
+  executeVisible.value = true
+}
+
+const executeCurrentDraft = async (): Promise<AppExecution | undefined> => {
+  if (!executeForm.device_id) {
+    Message.warning('请选择执行设备')
+    return undefined
+  }
+
+  const caseId = await persistDraft({ showMessage: false })
+  if (!caseId) {
+    return undefined
+  }
+
+  executing.value = true
+  try {
+    const execution = await AppAutomationService.executeTestCase(caseId, {
+      device_id: executeForm.device_id,
+      trigger_mode: 'manual',
+      triggered_by: authStore.currentUser?.username || 'FlyTest',
+    })
+    executeVisible.value = false
+    Message.success('执行任务已启动，正在跳转到执行记录')
+    await openExecutionWorkspace(execution.id)
+    return execution
+  } catch (error: any) {
+    Message.error(error.message || '启动执行任务失败')
+    return undefined
+  } finally {
+    executing.value = false
+  }
 }
 
 const appendBaseComponent = (component: AppComponent) => {
@@ -2546,6 +3509,178 @@ const resetSelectedStepConfig = () => {
   Message.success('已恢复默认配置')
 }
 
+const openAiStepDialog = () => {
+  const step = selectedSceneStep.value
+  if (!step || selectedCustomParentSummary.value) {
+    Message.warning('请先选择一个可编辑的步骤')
+    return
+  }
+
+  const promptParts = [step.name?.trim(), resolveStepMeta(step), draft.description.trim()].filter(Boolean)
+  aiStepForm.prompt = aiStepForm.prompt.trim() || promptParts.join('，')
+  aiStepVisible.value = true
+}
+
+const generateAiStepSuggestion = async () => {
+  if (!projectStore.currentProjectId) {
+    Message.warning('请先选择项目')
+    return
+  }
+
+  const step = selectedSceneStep.value
+  if (!step || selectedCustomParentSummary.value) {
+    Message.warning('请先选择一个可编辑的步骤')
+    return
+  }
+
+  if (!aiStepForm.prompt.trim()) {
+    Message.warning('请输入步骤补全说明')
+    return
+  }
+
+  aiStepSuggesting.value = true
+  try {
+    const promptText = aiStepForm.prompt.trim()
+    let currentVariables: Array<Record<string, unknown>> = []
+    try {
+      currentVariables = buildVariablePayload()
+    } catch {
+      currentVariables = []
+    }
+
+    const llmConfig = await buildLlmConfigSnapshot()
+    const suggestion = await AppAutomationService.suggestStep({
+      project_id: projectStore.currentProjectId,
+      prompt: promptText,
+      package_id: draft.package_id ?? null,
+      current_case_name: draft.name.trim(),
+      current_description: draft.description.trim(),
+      current_step: sanitizeStep(step),
+      current_steps: steps.value.map(item => sanitizeStep(item)),
+      current_variables: currentVariables,
+      llm_config: llmConfig,
+    })
+
+    applyStepSuggestion(suggestion)
+    aiStepVisible.value = false
+    rememberAiActivity({
+      action: 'step',
+      status: 'success',
+      mode: suggestion.mode,
+      summary: suggestion.summary || '当前步骤已补全',
+      prompt: promptText,
+      target_name: step.name || resolveStepTitle(step),
+      warnings: suggestion.warnings || [],
+      provider: suggestion.provider || llmConfig?.provider || '',
+      model: suggestion.model || llmConfig?.name || '',
+    })
+
+    if (suggestion.mode === 'fallback') {
+      Message.warning(suggestion.warnings?.[0] || 'AI 模型不可用，已回退到规则补全。')
+    } else {
+      Message.success(suggestion.summary || '当前步骤已补全')
+      if (suggestion.warnings?.length) {
+        Message.warning(suggestion.warnings[0])
+      }
+    }
+  } catch (error: any) {
+    rememberAiActivity({
+      action: 'step',
+      status: 'error',
+      mode: 'fallback',
+      summary: normalizeErrorMessage(error, 'AI 步骤补全失败'),
+      prompt: aiStepForm.prompt.trim(),
+      target_name: step.name || resolveStepTitle(step),
+      warnings: [],
+      provider: activeLlmSnapshot.value?.provider || '',
+      model: activeLlmSnapshot.value?.name || '',
+    })
+    Message.error(error.message || 'AI 步骤补全失败')
+  } finally {
+    aiStepSuggesting.value = false
+  }
+}
+
+const openAiPlanDialog = () => {
+  const promptParts = [draft.name.trim(), draft.description.trim()].filter(Boolean)
+  aiPlanForm.prompt = aiPlanForm.prompt.trim() || promptParts.join('，')
+  aiPlanForm.applyMode = steps.value.length ? 'append' : 'replace'
+  aiPlanVisible.value = true
+}
+
+const generateAiPlan = async () => {
+  if (!projectStore.currentProjectId) {
+    Message.warning('请先选择项目')
+    return
+  }
+
+  if (!aiPlanForm.prompt.trim()) {
+    Message.warning('请输入场景描述')
+    return
+  }
+
+  aiGenerating.value = true
+  try {
+    const promptText = aiPlanForm.prompt.trim()
+    let currentVariables: Array<Record<string, unknown>> = []
+    try {
+      currentVariables = buildVariablePayload()
+    } catch {
+      currentVariables = []
+    }
+
+    const llmConfig = await buildLlmConfigSnapshot()
+    const plan = await AppAutomationService.generateScenePlan({
+      project_id: projectStore.currentProjectId,
+      prompt: promptText,
+      package_id: draft.package_id ?? null,
+      current_case_name: draft.name.trim(),
+      current_description: draft.description.trim(),
+      current_steps: steps.value.map(item => sanitizeStep(item)),
+      current_variables: currentVariables,
+      llm_config: llmConfig,
+    })
+
+    applyGeneratedScenePlan(plan, aiPlanForm.applyMode)
+    aiPlanVisible.value = false
+    rememberAiActivity({
+      action: 'scene',
+      status: 'success',
+      mode: plan.mode,
+      summary: plan.summary || 'AI 场景已生成',
+      prompt: promptText,
+      target_name: draft.name.trim() || plan.name || '当前场景草稿',
+      warnings: plan.warnings || [],
+      provider: plan.provider || llmConfig?.provider || '',
+      model: plan.model || llmConfig?.name || '',
+    })
+
+    if (plan.mode === 'fallback') {
+      Message.warning(plan.warnings?.[0] || 'AI 模型不可用，已回退到规则规划。')
+    } else {
+      Message.success(plan.summary || 'AI 场景已生成')
+      if (plan.warnings?.length) {
+        Message.warning(plan.warnings[0])
+      }
+    }
+  } catch (error: any) {
+    rememberAiActivity({
+      action: 'scene',
+      status: 'error',
+      mode: 'fallback',
+      summary: normalizeErrorMessage(error, 'AI 场景生成失败'),
+      prompt: aiPlanForm.prompt.trim(),
+      target_name: draft.name.trim() || '当前场景草稿',
+      warnings: [],
+      provider: activeLlmSnapshot.value?.provider || '',
+      model: activeLlmSnapshot.value?.name || '',
+    })
+    Message.error(error.message || 'AI 场景生成失败')
+  } finally {
+    aiGenerating.value = false
+  }
+}
+
 const openCreateCustomComponent = () => {
   if (!steps.value.length) {
     Message.warning('请先添加场景步骤')
@@ -2660,52 +3795,7 @@ const deleteCustomComponent = (component: AppCustomComponent) => {
 }
 
 const saveDraft = async () => {
-  if (!projectStore.currentProjectId) {
-    return
-  }
-
-  if (!draft.name.trim()) {
-    Message.warning('请输入用例名称')
-    return
-  }
-
-  if (!steps.value.length) {
-    Message.warning('请至少添加一个步骤')
-    return
-  }
-
-  saving.value = true
-  try {
-    const payload = {
-      project_id: projectStore.currentProjectId,
-      name: draft.name.trim(),
-      description: draft.description.trim(),
-      package_id: draft.package_id ?? null,
-      ui_flow: {
-        steps: steps.value.map(item => sanitizeStep(item)),
-      },
-      variables: buildVariablePayload(),
-      tags: [],
-      timeout: draft.timeout,
-      retry_count: draft.retry_count,
-    }
-
-    if (selectedCaseId.value) {
-      await AppAutomationService.updateTestCase(selectedCaseId.value, payload)
-      Message.success('测试用例已更新')
-    } else {
-      const created = await AppAutomationService.createTestCase(payload)
-      selectedCaseId.value = created.id
-      syncRouteCaseId(created.id)
-      Message.success('测试用例已创建')
-    }
-
-    await loadData()
-  } catch (error: any) {
-    Message.error(error.message || '保存测试用例失败')
-  } finally {
-    saving.value = false
-  }
+  await persistDraft()
 }
 
 watch(
@@ -2777,6 +3867,10 @@ watch([selectedStepIndex, selectedSubStepIndex, selectedSubStepGroupKey], () => 
   gap: 16px;
 }
 
+.header-actions {
+  justify-content: flex-end;
+}
+
 .page-header h3 {
   margin: 0;
   color: var(--theme-text);
@@ -2784,6 +3878,140 @@ watch([selectedStepIndex, selectedSubStepIndex, selectedSubStepGroupKey], () => 
 
 .page-header p {
   margin: 6px 0 0;
+  color: var(--theme-text-secondary);
+}
+
+.ai-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-status-header,
+.ai-activity-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-status-copy,
+.ai-activity-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-status-kicker,
+.ai-activity-kicker {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+}
+
+.ai-status-copy strong,
+.ai-activity-copy strong {
+  color: var(--theme-text);
+  font-size: 18px;
+}
+
+.ai-status-copy p {
+  margin: 0;
+  color: var(--theme-text-secondary);
+  line-height: 1.7;
+}
+
+.ai-status-grid,
+.ai-dialog-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ai-status-item,
+.ai-dialog-item,
+.ai-activity-panel {
+  border-radius: 14px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  background: rgba(var(--theme-accent-rgb), 0.05);
+}
+
+.ai-status-item,
+.ai-dialog-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.ai-status-item span,
+.ai-dialog-item span {
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+}
+
+.ai-status-item strong,
+.ai-dialog-item strong {
+  color: var(--theme-text);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.ai-status-item small {
+  color: var(--theme-text-secondary);
+  line-height: 1.6;
+}
+
+.ai-activity-panel {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
+.ai-activity-summary {
+  color: var(--theme-text);
+  line-height: 1.7;
+  font-weight: 500;
+}
+
+.ai-activity-prompt {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(var(--theme-surface-rgb), 0.72);
+  color: var(--theme-text-secondary);
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.ai-warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-warning-item,
+.ai-activity-empty {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--warning-6), 0.24);
+  background: rgba(var(--warning-6), 0.08);
+  color: rgb(var(--warning-6));
+  line-height: 1.7;
+}
+
+.ai-activity-empty {
+  border-color: rgba(var(--theme-accent-rgb), 0.16);
+  background: rgba(var(--theme-accent-rgb), 0.05);
   color: var(--theme-text-secondary);
 }
 
@@ -2834,6 +4062,47 @@ watch([selectedStepIndex, selectedSubStepIndex, selectedSubStepGroupKey], () => 
 
 .component-search {
   margin-bottom: 14px;
+}
+
+.component-package-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.component-package-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
+  background: rgba(var(--theme-accent-rgb), 0.05);
+}
+
+.component-package-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.component-package-copy strong {
+  color: var(--theme-text);
+}
+
+.component-package-copy span,
+.component-package-meta {
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
+.component-package-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .component-grid {
@@ -3035,6 +4304,12 @@ watch([selectedStepIndex, selectedSubStepIndex, selectedSubStepGroupKey], () => 
   gap: 14px;
 }
 
+.config-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
 .config-flow-alert {
   margin-bottom: 4px;
 }
@@ -3078,8 +4353,26 @@ watch([selectedStepIndex, selectedSubStepIndex, selectedSubStepGroupKey], () => 
   margin-bottom: 14px;
 }
 
+.ai-dialog-meta {
+  margin-bottom: 14px;
+}
+
+.execute-device-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
 @media (max-width: 1480px) {
   .builder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-status-grid,
+  .ai-dialog-meta {
     grid-template-columns: 1fr;
   }
 
@@ -3092,6 +4385,11 @@ watch([selectedStepIndex, selectedSubStepIndex, selectedSubStepGroupKey], () => 
   .page-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .ai-status-header,
+  .ai-activity-header {
+    flex-direction: column;
   }
 
   .variable-row {

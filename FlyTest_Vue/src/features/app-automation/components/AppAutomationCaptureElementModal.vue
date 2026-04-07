@@ -84,6 +84,14 @@
               <div class="inline-input-action">
                 <a-input v-model="newCategoryName" placeholder="例如：button、login、popup" />
                 <a-button :loading="creatingCategory" @click="createCategory">创建</a-button>
+                <a-button
+                  v-if="form.image_category && form.image_category !== 'common'"
+                  status="danger"
+                  :disabled="creatingCategory"
+                  @click="deleteCurrentCategory"
+                >
+                  删除当前分类
+                </a-button>
               </div>
             </a-form-item>
 
@@ -419,6 +427,24 @@ const createCategory = async () => {
     await loadCategories()
   } catch (error: any) {
     Message.error(error.message || '创建图片分类失败')
+  } finally {
+    creatingCategory.value = false
+  }
+}
+
+const deleteCurrentCategory = async () => {
+  if (!form.image_category || form.image_category === 'common') {
+    Message.warning('默认分类不可删除')
+    return
+  }
+  creatingCategory.value = true
+  try {
+    await AppAutomationService.deleteElementImageCategory(form.image_category)
+    Message.success('图片分类已删除')
+    form.image_category = 'common'
+    await loadCategories()
+  } catch (error: any) {
+    Message.error(error.message || '删除图片分类失败')
   } finally {
     creatingCategory.value = false
   }

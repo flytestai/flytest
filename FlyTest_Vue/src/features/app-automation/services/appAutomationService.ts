@@ -4,6 +4,8 @@ import type {
   AppAdbDiagnostics,
   AppAutomationSettings,
   AppComponent,
+  AppComponentPackageExportPayload,
+  AppComponentPackageImportResult,
   AppComponentPackage,
   AppCustomComponent,
   AppDashboardStatistics,
@@ -15,7 +17,13 @@ import type {
   AppNotificationLog,
   AppPackage,
   AppRuntimeCapabilities,
+  AppServiceHealth,
+  AppScenePlanRequest,
+  AppScenePlanResponse,
+  AppStepSuggestionRequest,
+  AppStepSuggestionResponse,
   AppScheduledTask,
+  AppScheduledTaskRunResult,
   AppTestCase,
   AppTestSuite,
 } from '../types'
@@ -45,6 +53,13 @@ async function unwrap<T>(config: Record<string, unknown>): Promise<T> {
 }
 
 export const AppAutomationService = {
+  getHealthStatus() {
+    return unwrap<AppServiceHealth>({
+      url: `${APP_BASE}/health`,
+      method: 'GET',
+    })
+  },
+
   getDashboardStatistics(projectId?: number) {
     return unwrap<AppDashboardStatistics>({
       url: `${APP_BASE}/dashboard/statistics/`,
@@ -105,6 +120,22 @@ export const AppAutomationService = {
     })
   },
 
+  updateDevice(
+    id: number,
+    payload: {
+      name?: string
+      description?: string
+      location?: string
+      status?: string
+    },
+  ) {
+    return unwrap<AppDevice>({
+      url: `${APP_BASE}/devices/${id}/`,
+      method: 'PATCH',
+      data: payload,
+    })
+  },
+
   deleteDevice(id: number) {
     return unwrap<void>({
       url: `${APP_BASE}/devices/${id}/`,
@@ -120,7 +151,7 @@ export const AppAutomationService = {
     })
   },
 
-  createPackage(payload: Omit<AppPackage, 'id' | 'updated_at'>) {
+  createPackage(payload: Omit<AppPackage, 'id' | 'created_at' | 'updated_at'>) {
     return unwrap<AppPackage>({
       url: `${APP_BASE}/packages/`,
       method: 'POST',
@@ -128,7 +159,7 @@ export const AppAutomationService = {
     })
   },
 
-  updatePackage(id: number, payload: Omit<AppPackage, 'id' | 'updated_at'>) {
+  updatePackage(id: number, payload: Omit<AppPackage, 'id' | 'created_at' | 'updated_at'>) {
     return unwrap<AppPackage>({
       url: `${APP_BASE}/packages/${id}/`,
       method: 'PUT',
@@ -248,6 +279,22 @@ export const AppAutomationService = {
     })
   },
 
+  generateScenePlan(payload: AppScenePlanRequest) {
+    return unwrap<AppScenePlanResponse>({
+      url: `${APP_BASE}/ai/scene-plan/`,
+      method: 'POST',
+      data: payload,
+    })
+  },
+
+  suggestStep(payload: AppStepSuggestionRequest) {
+    return unwrap<AppStepSuggestionResponse>({
+      url: `${APP_BASE}/ai/step-suggestion/`,
+      method: 'POST',
+      data: payload,
+    })
+  },
+
   createTestCase(payload: Omit<AppTestCase, 'id' | 'last_result' | 'last_run_at' | 'updated_at'>) {
     return unwrap<AppTestCase>({
       url: `${APP_BASE}/test-cases/`,
@@ -296,6 +343,15 @@ export const AppAutomationService = {
 
   getExecutionReportUrl(id: number) {
     return `${APP_API_ROOT}${APP_BASE}/executions/${id}/report/`
+  },
+
+  getExecutionReportAssetUrl(id: number, filePath: string) {
+    const normalized = String(filePath || '')
+      .replace(/^\/+/, '')
+      .split('/')
+      .map(segment => encodeURIComponent(segment))
+      .join('/')
+    return `${APP_API_ROOT}${APP_BASE}/executions/${id}/report/${normalized}`
   },
 
   stopExecution(id: number) {
@@ -369,6 +425,40 @@ export const AppAutomationService = {
       url: `${APP_BASE}/component-packages/`,
       method: 'POST',
       data: payload,
+    })
+  },
+
+  importComponentPackage(file: File, overwrite = true) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('overwrite', overwrite ? '1' : '0')
+
+    return unwrap<AppComponentPackageImportResult>({
+      url: `${APP_BASE}/component-packages/import/`,
+      method: 'POST',
+      data: formData,
+    })
+  },
+
+  exportComponentPackage(params?: {
+    export_format?: 'json' | 'yaml'
+    include_disabled?: boolean
+    name?: string
+    version?: string
+    author?: string
+    description?: string
+  }) {
+    return unwrap<AppComponentPackageExportPayload>({
+      url: `${APP_BASE}/component-packages/export/`,
+      method: 'GET',
+      params: {
+        export_format: params?.export_format || 'yaml',
+        include_disabled: params?.include_disabled ? 1 : 0,
+        name: params?.name,
+        version: params?.version,
+        author: params?.author,
+        description: params?.description,
+      },
     })
   },
 
@@ -485,14 +575,21 @@ export const AppAutomationService = {
   },
 
   runScheduledTaskNow(id: number, triggeredBy: string) {
-    return unwrap<AppScheduledTask>({
+    return unwrap<AppScheduledTaskRunResult>({
       url: `${APP_BASE}/scheduled-tasks/${id}/run_now/`,
       method: 'POST',
       params: { triggered_by: triggeredBy },
     })
   },
 
-  getNotificationLogs(params?: { search?: string; status?: string; notification_type?: string }) {
+  getNotificationLogs(params?: {
+    search?: string
+    status?: string
+    notification_type?: string
+    task_id?: number
+    start_date?: string
+    end_date?: string
+  }) {
     return unwrap<AppNotificationLog[]>({
       url: `${APP_BASE}/notification-logs/`,
       method: 'GET',

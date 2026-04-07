@@ -1,13 +1,13 @@
 <template>
   <div class="page-shell">
     <div v-if="!projectStore.currentProjectId" class="empty-shell">
-      <a-empty description="请先选择项目后再配置 APP 定时任务" />
+      <a-empty description="请选择项目后再配置 APP 定时任务" />
     </div>
     <template v-else>
       <div class="page-header">
         <div>
           <h3>定时任务</h3>
-          <p>对齐上游 APP 自动化调度能力，支持筛选、统计、分页以及更完整的任务配置。</p>
+          <p>统一管理 APP 自动化调度任务，支持触发、排查、通知回看和最近执行追踪。</p>
         </div>
         <a-space>
           <a-button @click="loadData" :loading="loading">刷新</a-button>
@@ -54,28 +54,26 @@
         <a-card class="stat-card">
           <span class="stat-label">激活任务</span>
           <strong>{{ statistics.active }}</strong>
-          <span class="stat-desc">处于可调度执行状态的任务</span>
+          <span class="stat-desc">仍在自动调度中的任务</span>
         </a-card>
         <a-card class="stat-card">
           <span class="stat-label">暂停任务</span>
           <strong>{{ statistics.paused }}</strong>
-          <span class="stat-desc">已创建但暂时停止调度的任务</span>
+          <span class="stat-desc">已保留配置但暂停调度的任务</span>
         </a-card>
         <a-card class="stat-card">
-          <span class="stat-label">执行成功率</span>
+          <span class="stat-label">触发成功率</span>
           <strong>{{ statistics.successRate }}%</strong>
-          <span class="stat-desc">
-            成功 {{ statistics.successfulRuns }} / 总执行 {{ statistics.totalRuns }}
-          </span>
+          <span class="stat-desc">成功 {{ statistics.successfulRuns }} / 总触发 {{ statistics.totalRuns }}</span>
         </a-card>
       </div>
 
       <a-card class="table-card">
         <a-table :data="pagedTasks" :loading="loading" :pagination="false" row-key="id">
           <template #columns>
-            <a-table-column title="任务" :width="280">
+            <a-table-column title="任务" :width="260">
               <template #cell="{ record }">
-                <div class="name-cell">
+                <div class="stack">
                   <strong>{{ record.name }}</strong>
                   <span>{{ record.description || '暂无任务描述' }}</span>
                 </div>
@@ -84,7 +82,7 @@
 
             <a-table-column title="类型 / 目标" :width="240">
               <template #cell="{ record }">
-                <div class="meta-stack">
+                <div class="stack">
                   <a-tag :color="record.task_type === 'TEST_SUITE' ? 'green' : 'arcoblue'">
                     {{ getTaskTypeLabel(record.task_type) }}
                   </a-tag>
@@ -96,7 +94,7 @@
 
             <a-table-column title="调度配置" :width="220">
               <template #cell="{ record }">
-                <div class="meta-stack">
+                <div class="stack">
                   <a-tag color="purple">{{ getTriggerTypeLabel(record.trigger_type) }}</a-tag>
                   <span>{{ getTriggerSummary(record) }}</span>
                   <small>下次执行：{{ formatDateTime(record.next_run_time) }}</small>
@@ -104,48 +102,51 @@
               </template>
             </a-table-column>
 
-            <a-table-column title="通知" :width="220">
+            <a-table-column title="执行概况" :width="220">
               <template #cell="{ record }">
-                <div class="meta-stack">
-                  <a-tag v-if="record.notification_type" :color="getNotificationColor(record.notification_type)">
-                    {{ getNotificationLabel(record.notification_type) }}
-                  </a-tag>
-                  <span v-else>未开启通知</span>
+                <div class="stack">
+                  <div class="inline-meta">
+                    <a-tag :color="getLastResultMeta(record).color">{{ getLastResultMeta(record).label }}</a-tag>
+                    <span class="plain-text">成功率 {{ getTaskSuccessRate(record) }}%</span>
+                  </div>
+                  <small>{{ getLastResultSummary(record) }}</small>
+                  <small>最近触发：{{ formatDateTime(record.last_run_time) }}</small>
+                </div>
+              </template>
+            </a-table-column>
+
+            <a-table-column title="通知 / 状态" :width="220">
+              <template #cell="{ record }">
+                <div class="stack">
+                  <div class="inline-meta">
+                    <a-tag :color="getStatusColor(record.status)">{{ record.status }}</a-tag>
+                    <a-tag v-if="record.notification_type" :color="getNotificationColor(record.notification_type)">
+                      {{ getNotificationLabel(record.notification_type) }}
+                    </a-tag>
+                  </div>
+                  <span>{{ record.device_name || '未指定设备' }}</span>
                   <small>{{ getNotificationSummary(record) }}</small>
                 </div>
               </template>
             </a-table-column>
 
-            <a-table-column title="设备 / 状态" :width="180">
-              <template #cell="{ record }">
-                <div class="meta-stack">
-                  <span>{{ record.device_name || '-' }}</span>
-                  <a-tag :color="getStatusColor(record.status)">{{ record.status }}</a-tag>
-                  <small>最近执行：{{ formatDateTime(record.last_run_time) }}</small>
-                </div>
-              </template>
-            </a-table-column>
-
-            <a-table-column title="执行统计" :width="190">
-              <template #cell="{ record }">
-                <div class="stats-cell">
-                  <span>总 {{ record.total_runs }}</span>
-                  <span class="success-text">成功 {{ record.successful_runs }}</span>
-                  <span class="danger-text">失败 {{ record.failed_runs }}</span>
-                  <small>{{ getLastResultSummary(record) }}</small>
-                </div>
-              </template>
-            </a-table-column>
-
-            <a-table-column title="操作" :width="300" fixed="right">
+            <a-table-column title="操作" :width="360" fixed="right">
               <template #cell="{ record }">
                 <a-space wrap>
+                  <a-button type="text" @click="openDetail(record)">详情</a-button>
                   <a-button
                     type="text"
                     :loading="isActionLoading('run', record.id)"
                     @click="runNow(record.id)"
                   >
                     立即执行
+                  </a-button>
+                  <a-button
+                    v-if="hasExecutionResult(record)"
+                    type="text"
+                    @click="openLatestExecution(record)"
+                  >
+                    最新执行
                   </a-button>
                   <a-button type="text" @click="openEdit(record)">编辑</a-button>
                   <a-button
@@ -191,6 +192,105 @@
         </div>
       </a-card>
 
+      <a-modal v-model:visible="detailVisible" title="任务详情" width="980px" :footer="false">
+        <div v-if="detailLoading" class="modal-state">正在加载任务详情...</div>
+        <div v-else-if="currentTask" class="detail-shell">
+          <div class="detail-grid">
+            <div class="detail-card">
+              <span class="detail-label">任务状态</span>
+              <strong>{{ currentTask.status }}</strong>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">最近结果</span>
+              <strong>{{ getLastResultMeta(currentTask).label }}</strong>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">下次执行</span>
+              <strong>{{ formatDateTime(currentTask.next_run_time) }}</strong>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">触发成功率</span>
+              <strong>{{ getTaskSuccessRate(currentTask) }}%</strong>
+            </div>
+          </div>
+
+          <a-card class="detail-panel" title="任务配置">
+            <div class="summary-text">{{ currentTask.description || '暂无任务描述。' }}</div>
+            <div class="meta-row">
+              <span>任务类型：{{ getTaskTypeLabel(currentTask.task_type) }}</span>
+              <span>任务目标：{{ getTaskTarget(currentTask) }}</span>
+              <span>执行设备：{{ currentTask.device_name || '-' }}</span>
+              <span>应用包：{{ currentTask.app_package_name || '-' }}</span>
+              <span>触发方式：{{ getTriggerSummary(currentTask) }}</span>
+              <span>创建人：{{ currentTask.created_by || '-' }}</span>
+            </div>
+            <div class="meta-row">
+              <span>通知渠道：{{ getNotificationLabel(currentTask.notification_type) }}</span>
+              <span>通知对象：{{ getNotificationSummary(currentTask) }}</span>
+              <span>创建时间：{{ formatDateTime(currentTask.created_at) }}</span>
+              <span>更新时间：{{ formatDateTime(currentTask.updated_at) }}</span>
+            </div>
+          </a-card>
+
+          <a-card class="detail-panel" title="最近触发结果">
+            <div class="summary-text">{{ getLastResultSummary(currentTask) }}</div>
+            <div class="meta-row">
+              <span>最近触发时间：{{ formatDateTime(currentTask.last_run_time) }}</span>
+              <span>累计触发：{{ currentTask.total_runs || 0 }}</span>
+              <span>成功次数：{{ currentTask.successful_runs || 0 }}</span>
+              <span>失败次数：{{ currentTask.failed_runs || 0 }}</span>
+            </div>
+            <a-alert v-if="currentTask.error_message" type="error" class="detail-alert">
+              {{ currentTask.error_message }}
+            </a-alert>
+            <a-space wrap>
+              <a-button v-if="hasExecutionResult(currentTask)" type="primary" @click="openLatestExecution(currentTask)">
+                查看执行记录
+              </a-button>
+              <a-button v-if="hasLatestReport(currentTask)" @click="openLatestReport(currentTask)">
+                打开最近报告
+              </a-button>
+              <a-button @click="openTaskNotifications(currentTask)">查看通知日志</a-button>
+            </a-space>
+          </a-card>
+
+          <a-card class="detail-panel" title="最近通知">
+            <div v-if="taskNotificationsLoading" class="modal-state small">正在加载通知日志...</div>
+            <div v-else-if="recentTaskNotifications.length" class="notification-list">
+              <div
+                v-for="item in recentTaskNotifications"
+                :key="item.id"
+                class="notification-item"
+              >
+                <div class="notification-head">
+                  <div class="inline-meta">
+                    <a-tag :color="getNotificationStatusColor(item.status)">{{ item.status }}</a-tag>
+                    <a-tag :color="getNotificationColor(item.actual_notification_type || item.notification_type)">
+                      {{ getNotificationLabel(item.actual_notification_type || item.notification_type) }}
+                    </a-tag>
+                  </div>
+                  <span>{{ formatDateTime(item.created_at) }}</span>
+                </div>
+                <div class="notification-body">
+                  {{ item.error_message || getNotificationDetail(item) }}
+                </div>
+                <div class="notification-actions">
+                  <a-button type="text" @click="openTaskNotifications(currentTask)">查看日志</a-button>
+                  <a-button
+                    v-if="getPrimaryExecutionIdFromLog(item)"
+                    type="text"
+                    @click="openNotificationExecution(item)"
+                  >
+                    关联执行
+                  </a-button>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-note">当前任务还没有通知日志。</div>
+          </a-card>
+        </div>
+      </a-modal>
+
       <a-modal
         v-model:visible="visible"
         :title="form.id ? '编辑定时任务' : '新建定时任务'"
@@ -218,7 +318,7 @@
             <a-textarea
               v-model="form.description"
               :auto-size="{ minRows: 3, maxRows: 5 }"
-              placeholder="描述任务执行目的、条件或业务说明"
+              placeholder="描述任务执行目标、前置条件或业务说明"
             />
           </a-form-item>
 
@@ -305,10 +405,10 @@
                   常用示例：`0 0 * * *` 每天零点执行，`0 */2 * * *` 每两小时执行一次。
                 </span>
                 <span v-else-if="form.trigger_type === 'INTERVAL'">
-                  间隔任务会以“秒”为单位重复执行，建议不要低于 60 秒。
+                  间隔任务会以秒为单位重复执行，建议不要低于 60 秒。
                 </span>
                 <span v-else>
-                  一次性任务执行完成后会自动转为 `COMPLETED`，不再继续调度。
+                  一次性任务执行完成后会自动进入 `COMPLETED`，不再继续调度。
                 </span>
               </div>
             </a-col>
@@ -359,23 +459,39 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../services/appAutomationService'
-import type { AppDevice, AppPackage, AppScheduledTask, AppTestCase, AppTestSuite } from '../types'
+import type {
+  AppDevice,
+  AppNotificationLog,
+  AppPackage,
+  AppScheduledTask,
+  AppScheduledTaskRunResult,
+  AppTestCase,
+  AppTestSuite,
+} from '../types'
 
 const authStore = useAuthStore()
 const projectStore = useProjectStore()
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const visible = ref(false)
 const saving = ref(false)
+const detailVisible = ref(false)
+const detailLoading = ref(false)
+const taskNotificationsLoading = ref(false)
 const notifyEmailsText = ref('')
 const tasks = ref<AppScheduledTask[]>([])
 const suites = ref<AppTestSuite[]>([])
 const testCases = ref<AppTestCase[]>([])
 const devices = ref<AppDevice[]>([])
 const packages = ref<AppPackage[]>([])
+const currentTask = ref<AppScheduledTask | null>(null)
+const taskNotifications = ref<AppNotificationLog[]>([])
 
 const actionLoading = reactive<Record<string, boolean>>({})
 
@@ -412,6 +528,7 @@ const form = reactive({
 
 const notificationsEnabled = computed(() => form.notify_on_success || form.notify_on_failure)
 const needsEmailRecipients = computed(() => notificationsEnabled.value && ['email', 'both'].includes(form.notification_type))
+const recentTaskNotifications = computed(() => taskNotifications.value.slice(0, 6))
 
 const filteredTasks = computed(() => {
   const keyword = filters.search.trim().toLowerCase()
@@ -444,7 +561,6 @@ const pagedTasks = computed(() => {
 const statistics = computed(() => {
   const totalRuns = filteredTasks.value.reduce((sum, task) => sum + Number(task.total_runs || 0), 0)
   const successfulRuns = filteredTasks.value.reduce((sum, task) => sum + Number(task.successful_runs || 0), 0)
-  const failedRuns = filteredTasks.value.reduce((sum, task) => sum + Number(task.failed_runs || 0), 0)
   const active = filteredTasks.value.filter(task => task.status === 'ACTIVE').length
   const paused = filteredTasks.value.filter(task => task.status === 'PAUSED').length
   const successRate = totalRuns ? Math.round((successfulRuns / totalRuns) * 1000) / 10 : 0
@@ -455,7 +571,6 @@ const statistics = computed(() => {
     paused,
     totalRuns,
     successfulRuns,
-    failedRuns,
     successRate,
   }
 })
@@ -468,7 +583,7 @@ const setActionLoading = (action: string, id: number, value: boolean) => {
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return '-'
-  return new Date(value).toLocaleString('zh-CN')
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
 const formatInterval = (seconds?: number | null) => {
@@ -481,10 +596,25 @@ const formatInterval = (seconds?: number | null) => {
 }
 
 const getTaskTypeLabel = (value: string) => (value === 'TEST_SUITE' ? '测试套件' : '测试用例')
-const getTriggerTypeLabel = (value: string) => (value === 'CRON' ? 'Cron' : value === 'INTERVAL' ? '固定间隔' : value === 'ONCE' ? '单次执行' : value || '-')
-const getNotificationLabel = (value: string) => (value === 'email' ? '邮件' : value === 'webhook' ? 'Webhook' : value === 'both' ? '邮件 + Webhook' : value || '-')
-const getNotificationColor = (value: string) => (value === 'email' ? 'arcoblue' : value === 'webhook' ? 'green' : value === 'both' ? 'orange' : 'gray')
-const getStatusColor = (value: string) => (value === 'ACTIVE' ? 'green' : value === 'PAUSED' ? 'orange' : value === 'FAILED' ? 'red' : value === 'COMPLETED' ? 'arcoblue' : 'gray')
+const getTriggerTypeLabel = (value: string) =>
+  value === 'CRON' ? 'Cron' : value === 'INTERVAL' ? '固定间隔' : value === 'ONCE' ? '单次执行' : value || '-'
+
+const getNotificationLabel = (value: string) => {
+  if (value === 'email') return '邮件'
+  if (value === 'webhook') return 'Webhook'
+  if (value === 'both') return '邮件 + Webhook'
+  return value || '未开启'
+}
+
+const getNotificationColor = (value: string) =>
+  value === 'email' ? 'arcoblue' : value === 'webhook' ? 'green' : value === 'both' ? 'orange' : 'gray'
+
+const getStatusColor = (value: string) =>
+  value === 'ACTIVE' ? 'green' : value === 'PAUSED' ? 'orange' : value === 'FAILED' ? 'red' : value === 'COMPLETED' ? 'arcoblue' : 'gray'
+
+const getNotificationStatusColor = (value: string) =>
+  value === 'success' ? 'green' : value === 'failed' ? 'red' : value === 'pending' ? 'orange' : 'gray'
+
 const getTaskTarget = (task: AppScheduledTask) => task.test_suite_name || task.test_case_name || '-'
 const getPackageLabel = (task: AppScheduledTask) => `应用包：${task.app_package_name || '未指定'}`
 
@@ -495,18 +625,54 @@ const getTriggerSummary = (task: AppScheduledTask) => {
 }
 
 const getNotificationSummary = (task: AppScheduledTask) => {
-  if (!task.notification_type) return '当前任务未配置通知渠道'
-  if (!task.notify_emails.length) return '未填写收件人信息'
+  if (!task.notification_type) return '未开启通知'
+  if (!task.notify_emails.length) return '未填写接收人'
   return task.notify_emails.join(', ')
+}
+
+const getExecutionIds = (task: AppScheduledTask) => {
+  const ids = task.last_result.execution_ids || []
+  return ids.filter((item): item is number => Number.isFinite(Number(item)))
+}
+
+const getPrimaryExecutionId = (task: AppScheduledTask) =>
+  task.last_result.execution_id || getExecutionIds(task)[0] || undefined
+
+const hasExecutionResult = (task: AppScheduledTask) => Boolean(getPrimaryExecutionId(task) || (task.task_type === 'TEST_SUITE' && task.test_suite_id))
+const hasLatestReport = (task: AppScheduledTask) => Boolean(getPrimaryExecutionId(task))
+
+const getTaskSuccessRate = (task: AppScheduledTask) => {
+  const totalRuns = Number(task.total_runs || 0)
+  return totalRuns ? Math.round((Number(task.successful_runs || 0) / totalRuns) * 1000) / 10 : 0
+}
+
+const getLastResultMeta = (task: AppScheduledTask) => {
+  if (task.error_message) return { label: '触发失败', color: 'red' }
+  if (task.last_result.status === 'triggered') return { label: '已触发', color: 'arcoblue' }
+  if (task.total_runs > 0) return { label: '已执行', color: 'green' }
+  return { label: '暂无记录', color: 'gray' }
 }
 
 const getLastResultSummary = (task: AppScheduledTask) => {
   if (task.error_message) return task.error_message
-  const lastResult = task.last_result || {}
-  if (lastResult.status) return `最近结果：${String(lastResult.status)}`
-  if (lastResult.execution_id) return `最近执行 ID：${String(lastResult.execution_id)}`
+  if (task.last_result.execution_id) return `最近已触发执行 #${task.last_result.execution_id}`
+  if (getExecutionIds(task).length) return `最近一次触发了 ${getExecutionIds(task).length} 条套件执行记录`
+  if (task.total_runs) return `累计触发 ${task.total_runs} 次，成功 ${task.successful_runs} 次`
   return '暂无最近结果'
 }
+
+const getNotificationDetail = (item: AppNotificationLog) => {
+  if (typeof item.response_info.detail === 'string' && item.response_info.detail) {
+    return item.response_info.detail
+  }
+  if (item.notification_content) {
+    return item.notification_content.slice(0, 120)
+  }
+  return '暂无详细通知内容'
+}
+
+const getPrimaryExecutionIdFromLog = (item: AppNotificationLog) =>
+  item.response_info.execution_id || item.response_info.execution_ids?.[0] || undefined
 
 const resetForm = () => {
   form.id = 0
@@ -548,9 +714,18 @@ const parseNotifyEmails = () =>
     .map(item => item.trim())
     .filter(Boolean)
 
+const syncTaskFromList = (taskId: number) => {
+  const matched = tasks.value.find(item => item.id === taskId)
+  if (matched) {
+    currentTask.value = matched
+  }
+}
+
 const loadData = async () => {
   if (!projectStore.currentProjectId) {
     tasks.value = []
+    currentTask.value = null
+    taskNotifications.value = []
     return
   }
 
@@ -574,6 +749,10 @@ const loadData = async () => {
     testCases.value = caseList
     devices.value = deviceList
     packages.value = packageList
+
+    if (currentTask.value?.id) {
+      syncTaskFromList(currentTask.value.id)
+    }
   } catch (error: any) {
     Message.error(error.message || '加载定时任务失败')
   } finally {
@@ -581,9 +760,52 @@ const loadData = async () => {
   }
 }
 
+const updateRouteQuery = (queryPatch: Record<string, string | undefined>) =>
+  router.replace({
+    path: '/app-automation',
+    query: {
+      ...route.query,
+      ...queryPatch,
+    },
+  })
+
+const loadTaskDetail = async (taskId: number, options: { syncRoute?: boolean } = {}) => {
+  detailLoading.value = true
+  taskNotificationsLoading.value = true
+
+  try {
+    const [task, notifications] = await Promise.all([
+      AppAutomationService.getScheduledTask(taskId),
+      AppAutomationService.getNotificationLogs({ task_id: taskId }),
+    ])
+    currentTask.value = task
+    taskNotifications.value = notifications
+    detailVisible.value = true
+
+    if (options.syncRoute !== false) {
+      await updateRouteQuery({ tab: 'scheduled-tasks', taskId: String(taskId) })
+    }
+  } catch (error: any) {
+    Message.error(error.message || '加载任务详情失败')
+  } finally {
+    detailLoading.value = false
+    taskNotificationsLoading.value = false
+  }
+}
+
+const refreshCurrentTaskIfNeeded = async (taskId: number) => {
+  if (detailVisible.value && currentTask.value?.id === taskId) {
+    await loadTaskDetail(taskId, { syncRoute: false })
+  }
+}
+
 const openCreate = () => {
   resetForm()
   visible.value = true
+}
+
+const openDetail = (record: AppScheduledTask) => {
+  void loadTaskDetail(record.id)
 }
 
 const openEdit = (record: AppScheduledTask) => {
@@ -637,7 +859,7 @@ const validateForm = () => {
     return false
   }
   if (notificationsEnabled.value && !form.notification_type) {
-    Message.warning('请先选择通知类型')
+    Message.warning('请选择通知类型')
     return false
   }
   if (needsEmailRecipients.value && !parseNotifyEmails().length) {
@@ -684,6 +906,9 @@ const saveTask = async () => {
       Message.success('定时任务已创建')
     }
     await loadData()
+    if (form.id) {
+      await refreshCurrentTaskIfNeeded(form.id)
+    }
     return true
   } catch (error: any) {
     Message.error(error.message || '保存定时任务失败')
@@ -700,12 +925,75 @@ const handleBeforeOk = (done: (closed: boolean) => void) => {
   })()
 }
 
+const goToExecutionContext = async (executionId?: number, suiteId?: number | null) => {
+  await router.replace({
+    path: '/app-automation',
+    query: {
+      ...route.query,
+      tab: 'executions',
+      taskId: undefined,
+      executionId: executionId ? String(executionId) : undefined,
+      suiteId: suiteId ? String(suiteId) : undefined,
+    },
+  })
+}
+
+const openLatestExecution = (task: AppScheduledTask) => {
+  const executionId = getPrimaryExecutionId(task)
+  if (executionId) {
+    void goToExecutionContext(executionId, task.last_result.test_suite_id || task.test_suite_id)
+    return
+  }
+  if (task.task_type === 'TEST_SUITE' && task.test_suite_id) {
+    void goToExecutionContext(undefined, task.test_suite_id)
+    return
+  }
+  Message.warning('当前任务还没有可查看的执行记录')
+}
+
+const openLatestReport = (task: AppScheduledTask) => {
+  const executionId = getPrimaryExecutionId(task)
+  if (!executionId) {
+    Message.warning('当前任务还没有可打开的报告')
+    return
+  }
+  window.open(AppAutomationService.getExecutionReportUrl(executionId), '_blank', 'noopener')
+}
+
+const openTaskNotifications = async (task: AppScheduledTask) => {
+  await router.replace({
+    path: '/app-automation',
+    query: {
+      ...route.query,
+      tab: 'notifications',
+      taskId: String(task.id),
+      executionId: undefined,
+      suiteId: undefined,
+    },
+  })
+}
+
+const openNotificationExecution = (item: AppNotificationLog) => {
+  const executionId = getPrimaryExecutionIdFromLog(item)
+  if (!executionId) {
+    Message.warning('该通知暂时没有关联执行记录')
+    return
+  }
+  void goToExecutionContext(executionId, item.response_info.test_suite_id)
+}
+
 const runNow = async (id: number) => {
   setActionLoading('run', id, true)
   try {
-    await AppAutomationService.runScheduledTaskNow(id, authStore.currentUser?.username || 'FlyTest')
-    Message.success('定时任务已触发执行')
+    const result = (await AppAutomationService.runScheduledTaskNow(
+      id,
+      authStore.currentUser?.username || 'FlyTest',
+    )) as AppScheduledTaskRunResult
+
+    const createdCount = result.trigger_payload?.execution_ids?.length || (result.trigger_payload?.execution_id ? 1 : 0)
+    Message.success(createdCount > 1 ? `任务已触发，已创建 ${createdCount} 条执行记录` : '定时任务已触发执行')
     await loadData()
+    await refreshCurrentTaskIfNeeded(id)
   } catch (error: any) {
     Message.error(error.message || '执行定时任务失败')
   } finally {
@@ -719,6 +1007,7 @@ const pause = async (id: number) => {
     await AppAutomationService.pauseScheduledTask(id)
     Message.success('任务已暂停')
     await loadData()
+    await refreshCurrentTaskIfNeeded(id)
   } catch (error: any) {
     Message.error(error.message || '暂停任务失败')
   } finally {
@@ -732,6 +1021,7 @@ const resume = async (id: number) => {
     await AppAutomationService.resumeScheduledTask(id)
     Message.success('任务已恢复')
     await loadData()
+    await refreshCurrentTaskIfNeeded(id)
   } catch (error: any) {
     Message.error(error.message || '恢复任务失败')
   } finally {
@@ -748,12 +1038,30 @@ const remove = (id: number) => {
       try {
         await AppAutomationService.deleteScheduledTask(id)
         Message.success('定时任务已删除')
+        if (currentTask.value?.id === id) {
+          detailVisible.value = false
+          currentTask.value = null
+          taskNotifications.value = []
+        }
         await loadData()
+      } catch (error: any) {
+        Message.error(error.message || '删除定时任务失败')
       } finally {
         setActionLoading('delete', id, false)
       }
     },
   })
+}
+
+const syncFromRoute = async () => {
+  if (route.query.tab !== 'scheduled-tasks' || !projectStore.currentProjectId) {
+    return
+  }
+  const taskId = Number(route.query.taskId || 0)
+  if (!taskId || currentTask.value?.id === taskId) {
+    return
+  }
+  await loadTaskDetail(taskId, { syncRoute: false })
 }
 
 watch(
@@ -762,6 +1070,15 @@ watch(
     const maxPage = Math.max(1, Math.ceil(total / pagination.pageSize))
     if (pagination.current > maxPage) {
       pagination.current = maxPage
+    }
+  },
+)
+
+watch(
+  () => detailVisible.value,
+  value => {
+    if (!value && route.query.tab === 'scheduled-tasks' && route.query.taskId) {
+      void updateRouteQuery({ taskId: undefined })
     }
   },
 )
@@ -802,9 +1119,20 @@ watch(notificationsEnabled, enabled => {
 })
 
 watch(
+  () => [route.query.tab, route.query.taskId, projectStore.currentProjectId],
+  () => {
+    void syncFromRoute()
+  },
+  { immediate: true },
+)
+
+watch(
   () => projectStore.currentProjectId,
   () => {
     pagination.current = 1
+    detailVisible.value = false
+    currentTask.value = null
+    taskNotifications.value = []
     void loadData()
   },
   { immediate: true },
@@ -818,14 +1146,21 @@ watch(
   gap: 16px;
 }
 
-.empty-shell {
-  min-height: 420px;
+.empty-shell,
+.modal-state,
+.empty-note {
+  min-height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   border-radius: 16px;
+  color: var(--theme-text-secondary);
+}
+
+.modal-state.small {
+  min-height: 120px;
 }
 
 .page-header {
@@ -847,7 +1182,8 @@ watch(
 
 .filter-card,
 .table-card,
-.stat-card {
+.stat-card,
+.detail-panel {
   border-radius: 16px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
@@ -861,9 +1197,15 @@ watch(
   align-items: center;
 }
 
-.filter-actions {
+.filter-actions,
+.pagination-row,
+.notification-actions {
   display: flex;
   gap: 10px;
+}
+
+.filter-actions,
+.pagination-row {
   justify-content: flex-end;
 }
 
@@ -871,12 +1213,6 @@ watch(
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .stat-card :deep(.arco-card-body) {
@@ -891,8 +1227,8 @@ watch(
 }
 
 .stat-card strong {
-  font-size: 30px;
   color: var(--theme-text);
+  font-size: 30px;
   line-height: 1;
 }
 
@@ -901,52 +1237,107 @@ watch(
   font-size: 12px;
 }
 
-.name-cell,
-.meta-stack,
-.stats-cell {
+.stack {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.name-cell strong,
-.meta-stack span,
-.stats-cell span {
+.stack strong,
+.stack span,
+.detail-card strong,
+.plain-text {
   color: var(--theme-text);
 }
 
-.name-cell span,
-.meta-stack small,
-.stats-cell small {
+.stack span,
+.stack small {
   color: var(--theme-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
 
-.success-text {
-  color: #4caf50 !important;
-}
-
-.danger-text {
-  color: #f44336 !important;
-}
-
-.pagination-row {
+.inline-meta {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-shell,
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-card,
+.notification-item {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--theme-card-border);
+  background: rgba(var(--theme-accent-rgb), 0.04);
+}
+
+.detail-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+}
+
+.summary-text {
+  color: var(--theme-text);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-bottom: 14px;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+}
+
+.detail-alert {
+  margin-bottom: 14px;
+}
+
+.notification-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
+.notification-body {
+  color: var(--theme-text);
+  line-height: 1.7;
+  margin-bottom: 10px;
+  word-break: break-word;
 }
 
 .helper-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 108px;
   padding: 16px;
   border-radius: 14px;
   background: rgba(var(--theme-accent-rgb), 0.06);
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   color: var(--theme-text-secondary);
-  min-height: 108px;
 }
 
 .helper-card strong {
@@ -955,7 +1346,8 @@ watch(
 
 @media (max-width: 1360px) {
   .filter-grid,
-  .stats-grid {
+  .stats-grid,
+  .detail-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -967,13 +1359,19 @@ watch(
   }
 
   .filter-grid,
-  .stats-grid {
+  .stats-grid,
+  .detail-grid {
     grid-template-columns: 1fr;
   }
 
   .filter-actions,
   .pagination-row {
     justify-content: flex-start;
+  }
+
+  .notification-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

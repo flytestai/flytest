@@ -7,11 +7,11 @@
       <div class="page-header">
         <div>
           <h3>执行记录</h3>
-          <p>聚合查看 APP 自动化的执行状态、运行进度、步骤通过率与完整日志，运行中的任务会自动刷新。</p>
+          <p>集中查看 APP 自动化执行状态、进度、步骤结果和诊断日志，执行中的任务会自动刷新。</p>
         </div>
         <a-space>
           <span class="header-tip">最近刷新：{{ lastUpdatedText }}</span>
-          <a-button @click="handleSearch" :loading="loading">刷新</a-button>
+          <a-button :loading="loading" @click="loadData">刷新</a-button>
         </a-space>
       </div>
 
@@ -20,11 +20,10 @@
           <a-input-search
             v-model="filters.search"
             allow-clear
-            placeholder="搜索用例、设备、触发人或摘要"
+            placeholder="搜索用例、设备、触发人或执行摘要"
             @search="handleSearch"
           />
-          <a-select v-model="filters.status" placeholder="执行状态">
-            <a-option value="">全部状态</a-option>
+          <a-select v-model="filters.status" placeholder="执行状态" allow-clear>
             <a-option value="pending">等待执行</a-option>
             <a-option value="running">执行中</a-option>
             <a-option value="passed">执行通过</a-option>
@@ -52,19 +51,19 @@
           <span class="stat-desc">当前筛选范围内的执行记录数量</span>
         </a-card>
         <a-card class="stat-card">
-          <span class="stat-label">运行中 / 等待</span>
+          <span class="stat-label">运行中 / 等待中</span>
           <strong>{{ statistics.running }}</strong>
-          <span class="stat-desc">检测到运行中任务时页面会自动轮询更新</span>
+          <span class="stat-desc">页面会自动轮询这些任务的最新状态</span>
         </a-card>
         <a-card class="stat-card">
           <span class="stat-label">通过记录</span>
           <strong>{{ statistics.passed }}</strong>
-          <span class="stat-desc">已完成并通过的执行条目</span>
+          <span class="stat-desc">已完成且通过的执行结果</span>
         </a-card>
         <a-card class="stat-card">
           <span class="stat-label">平均通过率</span>
           <strong>{{ statistics.averagePassRate }}%</strong>
-          <span class="stat-desc">按当前结果集的步骤通过率计算</span>
+          <span class="stat-desc">按当前结果集统计步骤通过率</span>
         </a-card>
       </div>
 
@@ -114,7 +113,7 @@
               </template>
             </a-table-column>
 
-            <a-table-column title="步骤统计" :width="180">
+            <a-table-column title="步骤统计" :width="200">
               <template #cell="{ record }">
                 <div class="stats-cell">
                   <span class="success-text">通过 {{ record.passed_steps || 0 }}</span>
@@ -134,7 +133,7 @@
               </template>
             </a-table-column>
 
-            <a-table-column title="操作" :width="240" fixed="right">
+            <a-table-column title="操作" :width="260" fixed="right">
               <template #cell="{ record }">
                 <a-space wrap>
                   <a-button type="text" @click="viewDetail(record.id)">详情</a-button>
@@ -226,6 +225,21 @@
             </a-alert>
           </a-card>
 
+          <a-card class="detail-panel" title="执行证据">
+            <div v-if="executionArtifacts.length" class="artifact-list">
+              <div v-for="item in executionArtifacts" :key="item.key" class="artifact-item">
+                <div class="artifact-meta">
+                  <a-tag :color="item.level === 'error' ? 'red' : item.level === 'warning' ? 'orange' : 'arcoblue'">
+                    {{ item.level }}
+                  </a-tag>
+                  <span>{{ item.message }}</span>
+                </div>
+                <a-button type="text" @click="openExecutionArtifact(currentExecution, item.relativePath)">查看文件</a-button>
+              </div>
+            </div>
+            <div v-else class="empty-note compact">当前执行暂无可查看的证据文件</div>
+          </a-card>
+
           <a-card class="detail-panel" title="执行日志">
             <div v-if="currentExecution.logs?.length" class="log-list">
               <div v-for="(log, index) in currentExecution.logs" :key="`${log.timestamp}-${index}`" class="log-item">
@@ -236,7 +250,7 @@
                 <div class="log-message">{{ log.message || '-' }}</div>
               </div>
             </div>
-            <div v-else class="modal-state">暂无执行日志</div>
+            <div v-else class="modal-state compact">暂无执行日志</div>
           </a-card>
         </div>
       </a-modal>
@@ -247,11 +261,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
+import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../services/appAutomationService'
-import type { AppExecution, AppExecutionLog, AppTestSuite } from '../types'
+import type { AppExecution, AppTestSuite } from '../types'
 
 const projectStore = useProjectStore()
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const detailLoading = ref(false)
@@ -290,6 +307,51 @@ const suiteNameMap = computed<Record<number, string>>(() =>
   }, {}),
 )
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
+}
+
+const formatDuration = (value?: number | null) => {
+  const seconds = Number(value || 0)
+  if (!seconds) return '-'
+  if (seconds < 60) return `${Math.round(seconds)} 秒`
+
+  const minutes = Math.floor(seconds / 60)
+  const remainSeconds = Math.round(seconds % 60)
+  if (minutes < 60) return `${minutes} 分 ${remainSeconds} 秒`
+
+  const hours = Math.floor(minutes / 60)
+  const remainMinutes = minutes % 60
+  return `${hours} 小时 ${remainMinutes} 分`
+}
+
+const formatRate = (value?: number | null) => Math.round(Number(value || 0) * 10) / 10
+
+const formatProgress = (value?: number | null) => {
+  const progress = Number(value || 0)
+  return Math.max(0, Math.min(100, Math.round(progress)))
+}
+
+const resolveArtifactRelativePath = (artifact?: string | null) => {
+  const value = String(artifact || '').trim()
+  if (!value) return ''
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) {
+    return value
+  }
+
+  const normalized = value.replace(/\\/g, '/')
+  const marker = '/artifacts/'
+  const index = normalized.lastIndexOf(marker)
+  if (index >= 0) {
+    return normalized.slice(index + 1)
+  }
+  if (normalized.startsWith('artifacts/')) {
+    return normalized
+  }
+  return normalized
+}
+
 const getExecutionState = (record: AppExecution) => {
   if (record.result === 'passed') return 'passed'
   if (record.result === 'failed' || record.status === 'failed') return 'failed'
@@ -313,33 +375,6 @@ const canOpenReport = (record: AppExecution) =>
   Boolean(record.report_path) ||
   ['completed', 'failed', 'stopped'].includes(record.status) ||
   ['passed', 'failed', 'stopped'].includes(record.result)
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '-'
-  return new Date(value).toLocaleString('zh-CN', { hour12: false })
-}
-
-const formatDuration = (value?: number | null) => {
-  const seconds = Number(value || 0)
-  if (!seconds) return '-'
-  if (seconds < 60) return `${Math.round(seconds)} 秒`
-  const minutes = Math.floor(seconds / 60)
-  const remainSeconds = Math.round(seconds % 60)
-  if (minutes < 60) return `${minutes} 分 ${remainSeconds} 秒`
-  const hours = Math.floor(minutes / 60)
-  const remainMinutes = minutes % 60
-  return `${hours} 小时 ${remainMinutes} 分`
-}
-
-const formatRate = (value?: number | null) => {
-  const rate = Number(value || 0)
-  return Math.round(rate * 10) / 10
-}
-
-const formatProgress = (value?: number | null) => {
-  const progress = Number(value || 0)
-  return Math.max(0, Math.min(100, Math.round(progress)))
-}
 
 const getLogLevelColor = (value?: string) => {
   if (value === 'error') return 'red'
@@ -394,11 +429,9 @@ const pagedExecutions = computed(() => {
 const statistics = computed(() => {
   const running = filteredExecutions.value.filter(item => isExecutionRunning(item)).length
   const passed = filteredExecutions.value.filter(item => getExecutionState(item) === 'passed').length
-  const failed = filteredExecutions.value.filter(item => getExecutionState(item) === 'failed').length
   const averagePassRate = filteredExecutions.value.length
     ? Math.round(
-        (filteredExecutions.value.reduce((total, item) => total + Number(item.pass_rate || 0), 0) / filteredExecutions.value.length) *
-          10,
+        (filteredExecutions.value.reduce((total, item) => total + Number(item.pass_rate || 0), 0) / filteredExecutions.value.length) * 10,
       ) / 10
     : 0
 
@@ -406,7 +439,6 @@ const statistics = computed(() => {
     total: filteredExecutions.value.length,
     running,
     passed,
-    failed,
     averagePassRate,
   }
 })
@@ -414,13 +446,68 @@ const statistics = computed(() => {
 const lastUpdatedText = computed(() => (lastUpdatedAt.value ? formatDateTime(lastUpdatedAt.value) : '-'))
 const hasRunningExecutions = computed(() => executions.value.some(item => isExecutionRunning(item)))
 
-const loadSuites = async () => {
-  if (!projectStore.currentProjectId) {
-    suites.value = []
+const executionArtifacts = computed(() => {
+  if (!currentExecution.value?.logs?.length) return []
+
+  const seen = new Set<string>()
+  return currentExecution.value.logs
+    .map((item, index) => {
+      const relativePath = resolveArtifactRelativePath(item.artifact)
+      if (!relativePath || seen.has(relativePath)) return null
+
+      seen.add(relativePath)
+      return {
+        key: `${relativePath}-${index}`,
+        relativePath,
+        message: item.message || '执行证据',
+        level: item.level || 'info',
+      }
+    })
+    .filter(Boolean) as Array<{ key: string; relativePath: string; message: string; level: string }>
+})
+
+const replaceRouteQuery = async (patch: Record<string, string | undefined>) => {
+  const nextQuery: LocationQueryRaw = { ...route.query }
+
+  Object.entries(patch).forEach(([key, value]) => {
+    if (value === undefined || value === '') {
+      delete nextQuery[key]
+    } else {
+      nextQuery[key] = value
+    }
+  })
+
+  const keys = new Set([...Object.keys(route.query), ...Object.keys(nextQuery)])
+  const changed = [...keys].some(key => {
+    const currentValue = route.query[key]
+    const nextValue = nextQuery[key]
+    const currentText = Array.isArray(currentValue) ? String(currentValue[0] ?? '') : String(currentValue ?? '')
+    const nextText = Array.isArray(nextValue) ? String(nextValue[0] ?? '') : String(nextValue ?? '')
+    return currentText !== nextText
+  })
+
+  if (!changed) return
+
+  await router.replace({
+    path: '/app-automation',
+    query: nextQuery,
+  })
+}
+
+const syncRouteContext = async () => {
+  if (route.query.tab !== 'executions' || !projectStore.currentProjectId) {
     return
   }
 
-  suites.value = await AppAutomationService.getTestSuites(projectStore.currentProjectId)
+  const suiteId = Number(route.query.suiteId || 0)
+  if (suiteId > 0) {
+    filters.suite = String(suiteId)
+  }
+
+  const executionId = Number(route.query.executionId || 0)
+  if (executionId > 0 && (!detailVisible.value || currentExecution.value?.id !== executionId)) {
+    await loadExecutionDetail(executionId, { open: true, syncRoute: false })
+  }
 }
 
 const loadExecutions = async (options: { silent?: boolean } = {}) => {
@@ -445,7 +532,10 @@ const loadExecutions = async (options: { silent?: boolean } = {}) => {
   }
 }
 
-const loadExecutionDetail = async (id: number, options: { silent?: boolean; open?: boolean } = {}) => {
+const loadExecutionDetail = async (
+  id: number,
+  options: { silent?: boolean; open?: boolean; syncRoute?: boolean } = {},
+) => {
   if (!options.silent) {
     detailLoading.value = true
   }
@@ -454,6 +544,13 @@ const loadExecutionDetail = async (id: number, options: { silent?: boolean; open
     currentExecution.value = await AppAutomationService.getExecutionDetail(id)
     if (options.open) {
       detailVisible.value = true
+    }
+
+    if (options.syncRoute !== false) {
+      await replaceRouteQuery({
+        tab: 'executions',
+        executionId: String(id),
+      })
     }
   } catch (error: any) {
     if (!options.silent) {
@@ -480,9 +577,12 @@ const loadData = async () => {
       AppAutomationService.getTestSuites(projectStore.currentProjectId),
       AppAutomationService.getExecutions(projectStore.currentProjectId),
     ])
+
     suites.value = suiteList
     executions.value = executionList
     lastUpdatedAt.value = new Date().toISOString()
+
+    await syncRouteContext()
   } catch (error: any) {
     Message.error(error.message || '加载执行记录失败')
   } finally {
@@ -492,7 +592,6 @@ const loadData = async () => {
 
 const handleSearch = () => {
   pagination.current = 1
-  void loadExecutions()
 }
 
 const resetFilters = () => {
@@ -500,7 +599,6 @@ const resetFilters = () => {
   filters.status = ''
   filters.suite = 'all'
   pagination.current = 1
-  void loadExecutions()
 }
 
 const viewDetail = async (id: number) => {
@@ -509,6 +607,17 @@ const viewDetail = async (id: number) => {
 
 const openReport = (record: AppExecution) => {
   window.open(AppAutomationService.getExecutionReportUrl(record.id), '_blank', 'noopener')
+}
+
+const openExecutionArtifact = (record: AppExecution, relativePath: string) => {
+  if (!relativePath) return
+
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://') || relativePath.startsWith('data:')) {
+    window.open(relativePath, '_blank', 'noopener')
+    return
+  }
+
+  window.open(AppAutomationService.getExecutionReportAssetUrl(record.id, relativePath), '_blank', 'noopener')
 }
 
 const stopExecution = (record: AppExecution) => {
@@ -522,7 +631,7 @@ const stopExecution = (record: AppExecution) => {
         Message.success('执行已停止')
         await loadExecutions()
         if (currentExecution.value?.id === record.id) {
-          await loadExecutionDetail(record.id, { open: true })
+          await loadExecutionDetail(record.id, { open: true, syncRoute: false })
         }
       } catch (error: any) {
         Message.error(error.message || '停止执行失败')
@@ -545,7 +654,7 @@ const pollRunningExecutions = async () => {
   try {
     await loadExecutions({ silent: true })
     if (detailVisible.value && currentExecution.value?.id) {
-      await loadExecutionDetail(currentExecution.value.id, { silent: true })
+      await loadExecutionDetail(currentExecution.value.id, { silent: true, syncRoute: false })
     }
   } finally {
     polling = false
@@ -570,12 +679,32 @@ watch(
 )
 
 watch(
+  () => detailVisible.value,
+  value => {
+    if (!value && route.query.tab === 'executions' && route.query.executionId) {
+      void replaceRouteQuery({ executionId: undefined })
+    }
+  },
+)
+
+watch(
   () => projectStore.currentProjectId,
   () => {
     pagination.current = 1
     detailVisible.value = false
     currentExecution.value = null
+    filters.search = ''
+    filters.status = ''
+    filters.suite = 'all'
     void loadData()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [route.query.tab, route.query.executionId, route.query.suiteId, projectStore.currentProjectId],
+  () => {
+    void syncRouteContext()
   },
   { immediate: true },
 )
@@ -601,8 +730,9 @@ onUnmounted(() => {
 }
 
 .empty-shell,
-.modal-state {
-  min-height: 420px;
+.modal-state,
+.empty-note {
+  min-height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -612,8 +742,9 @@ onUnmounted(() => {
   color: var(--theme-text-secondary);
 }
 
-.modal-state {
-  min-height: 200px;
+.modal-state.compact,
+.empty-note.compact {
+  min-height: 120px;
 }
 
 .page-header {
@@ -691,21 +822,32 @@ onUnmounted(() => {
 
 .name-cell,
 .meta-stack,
-.stats-cell {
+.stats-cell,
+.detail-shell,
+.log-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
+.detail-shell {
+  gap: 16px;
+}
+
 .name-cell strong,
 .meta-stack span,
-.stats-cell span {
+.stats-cell span,
+.detail-card strong,
+.log-message {
   color: var(--theme-text);
 }
 
 .name-cell span,
 .meta-stack small,
-.stats-cell small {
+.stats-cell small,
+.detail-label,
+.meta-row,
+.log-meta {
   color: var(--theme-text-secondary);
   font-size: 12px;
   line-height: 1.6;
@@ -757,12 +899,6 @@ onUnmounted(() => {
   margin-top: 16px;
 }
 
-.detail-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -779,13 +915,6 @@ onUnmounted(() => {
 .detail-label {
   display: block;
   margin-bottom: 8px;
-  color: var(--theme-text-secondary);
-  font-size: 13px;
-}
-
-.detail-card strong {
-  color: var(--theme-text);
-  font-size: 18px;
 }
 
 .summary-text {
@@ -799,8 +928,6 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 12px 20px;
   margin-bottom: 14px;
-  color: var(--theme-text-secondary);
-  font-size: 13px;
 }
 
 .metric-row {
@@ -835,10 +962,29 @@ onUnmounted(() => {
   margin-top: 14px;
 }
 
-.log-list {
+.artifact-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.artifact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
+  background: rgba(var(--theme-accent-rgb), 0.04);
+}
+
+.artifact-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--theme-text);
 }
 
 .log-item {
@@ -853,12 +999,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
-  color: var(--theme-text-secondary);
-  font-size: 12px;
 }
 
 .log-message {
-  color: var(--theme-text);
   line-height: 1.7;
   word-break: break-word;
 }
@@ -884,8 +1027,14 @@ onUnmounted(() => {
   }
 
   .filter-actions,
-  .pagination-row {
+  .pagination-row,
+  .artifact-item {
     justify-content: flex-start;
+  }
+
+  .artifact-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

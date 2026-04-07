@@ -136,3 +136,36 @@ class ScheduledTaskPayload(BaseModel):
     notify_emails: list[str] = Field(default_factory=list)
     status: str = Field(default="ACTIVE", max_length=20)
     created_by: str = Field(default="FlyTest", max_length=64)
+
+
+class LlmConfigSnapshotPayload(BaseModel):
+    config_name: str = Field(default="", max_length=120)
+    provider: str = Field(default="openai_compatible", max_length=64)
+    name: str = Field(default="", max_length=120)
+    api_url: str = Field(default="", max_length=500)
+    api_key: str = Field(default="", max_length=500)
+    system_prompt: str = Field(default="", max_length=8000)
+    supports_vision: bool = False
+
+
+class ScenePlanPayload(BaseModel):
+    project_id: int
+    prompt: str = Field(..., min_length=1, max_length=12000)
+    package_id: int | None = None
+    current_case_name: str = Field(default="", max_length=200)
+    current_description: str = Field(default="", max_length=4000)
+    current_steps: list[dict[str, Any]] = Field(default_factory=list)
+    current_variables: list[dict[str, Any]] = Field(default_factory=list)
+    llm_config: LlmConfigSnapshotPayload | None = None
+
+
+class StepSuggestionPayload(BaseModel):
+    project_id: int
+    prompt: str = Field(..., min_length=1, max_length=8000)
+    package_id: int | None = None
+    current_case_name: str = Field(default="", max_length=200)
+    current_description: str = Field(default="", max_length=4000)
+    current_step: dict[str, Any] = Field(default_factory=dict)
+    current_steps: list[dict[str, Any]] = Field(default_factory=list)
+    current_variables: list[dict[str, Any]] = Field(default_factory=list)
+    llm_config: LlmConfigSnapshotPayload | None = None

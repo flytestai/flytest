@@ -3,19 +3,29 @@
     <div class="page-header">
       <div>
         <h3>通知日志</h3>
-        <p>补齐 APP 自动化通知日志能力，支持筛选、统计、分页、详情查看和失败重试。</p>
+        <p>查看 APP 自动化任务的通知投递结果、重试状态和关联执行上下文。</p>
       </div>
       <a-space>
         <a-button @click="loadData" :loading="loading">刷新</a-button>
       </a-space>
     </div>
 
+    <a-alert v-if="taskContext" type="info" class="context-alert">
+      当前仅查看任务“{{ taskContext.name }}”的通知日志。
+      <template #action>
+        <a-space>
+          <a-button size="mini" type="text" @click="openTaskDetail(taskContext.id)">查看任务</a-button>
+          <a-button size="mini" type="text" @click="clearTaskContext">清除筛选</a-button>
+        </a-space>
+      </template>
+    </a-alert>
+
     <a-card class="filter-card">
       <div class="filter-grid">
         <a-input-search
           v-model="filters.search"
           allow-clear
-          placeholder="搜索任务名称或通知内容"
+          placeholder="搜索任务名称、通知内容或错误信息"
           @search="handleSearch"
         />
         <a-select v-model="filters.status" allow-clear placeholder="发送状态">
@@ -28,6 +38,18 @@
           <a-option value="webhook">webhook</a-option>
           <a-option value="both">both</a-option>
         </a-select>
+        <a-date-picker
+          v-model="filters.start_date"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          placeholder="开始日期"
+        />
+        <a-date-picker
+          v-model="filters.end_date"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          placeholder="结束日期"
+        />
         <div class="filter-actions">
           <a-button @click="resetFilters">重置</a-button>
           <a-button type="primary" @click="handleSearch">查询</a-button>
@@ -39,17 +61,17 @@
       <a-card class="stat-card">
         <span class="stat-label">日志总数</span>
         <strong>{{ statistics.total }}</strong>
-        <span class="stat-desc">当前筛选条件下的通知日志数量</span>
+        <span class="stat-desc">当前筛选范围内的通知记录数量</span>
       </a-card>
       <a-card class="stat-card">
         <span class="stat-label">发送成功</span>
         <strong>{{ statistics.success }}</strong>
-        <span class="stat-desc">成功投递到邮箱或 Webhook 的记录</span>
+        <span class="stat-desc">成功送达邮箱或 Webhook 的记录</span>
       </a-card>
       <a-card class="stat-card">
         <span class="stat-label">发送失败</span>
         <strong>{{ statistics.failed }}</strong>
-        <span class="stat-desc">失败日志可进入详情查看错误并重试</span>
+        <span class="stat-desc">失败记录可进入详情查看并重试</span>
       </a-card>
       <a-card class="stat-card">
         <span class="stat-label">已重试</span>
@@ -78,7 +100,7 @@
             </template>
           </a-table-column>
 
-          <a-table-column title="收件对象" :width="240">
+          <a-table-column title="接收对象" :width="240">
             <template #cell="{ record }">
               <div class="meta-stack">
                 <span>{{ recipientSummary(record) }}</span>
@@ -87,11 +109,11 @@
             </template>
           </a-table-column>
 
-          <a-table-column title="状态" :width="140">
+          <a-table-column title="状态 / 结果" :width="200">
             <template #cell="{ record }">
               <div class="meta-stack">
                 <a-tag :color="getStatusColor(record.status)">{{ record.status }}</a-tag>
-                <small>重试 {{ record.retry_count || 0 }} 次</small>
+                <small>{{ getDeliverySummary(record) }}</small>
               </div>
             </template>
           </a-table-column>
@@ -105,10 +127,18 @@
             </template>
           </a-table-column>
 
-          <a-table-column title="操作" :width="220" fixed="right">
+          <a-table-column title="操作" :width="280" fixed="right">
             <template #cell="{ record }">
-              <a-space>
+              <a-space wrap>
                 <a-button type="text" @click="viewDetail(record)">详情</a-button>
+                <a-button v-if="record.task_id" type="text" @click="openTaskDetail(record.task_id)">任务</a-button>
+                <a-button
+                  v-if="getPrimaryExecutionId(record)"
+                  type="text"
+                  @click="openExecution(record)"
+                >
+                  执行
+                </a-button>
                 <a-button
                   v-if="record.status !== 'success'"
                   type="text"
@@ -136,7 +166,7 @@
       </div>
     </a-card>
 
-    <a-modal v-model:visible="detailVisible" title="通知详情" width="860px" :footer="false">
+    <a-modal v-model:visible="detailVisible" title="通知详情" width="900px" :footer="false">
       <div v-if="currentLog" class="detail-shell">
         <div class="detail-grid">
           <div class="detail-card">
@@ -158,19 +188,27 @@
         </div>
 
         <a-card class="detail-panel" title="投递信息">
-          <div class="meta-block">
-            <div class="meta-row">
-              <span>发送者：{{ currentLog.sender_name || '-' }}</span>
-              <span>邮箱：{{ currentLog.sender_email || '-' }}</span>
-              <span>创建时间：{{ formatDateTime(currentLog.created_at) }}</span>
-              <span>发送时间：{{ formatDateTime(currentLog.sent_at) }}</span>
-            </div>
-            <div class="meta-row">
-              <span>接收方：{{ recipientSummary(currentLog) }}</span>
-              <span>重试次数：{{ currentLog.retry_count || 0 }}</span>
-              <span>已重试：{{ currentLog.is_retried ? '是' : '否' }}</span>
-            </div>
+          <div class="meta-row">
+            <span>发送者：{{ currentLog.sender_name || '-' }}</span>
+            <span>发送邮箱：{{ currentLog.sender_email || '-' }}</span>
+            <span>接收对象：{{ recipientSummary(currentLog) }}</span>
+            <span>创建时间：{{ formatDateTime(currentLog.created_at) }}</span>
+            <span>发送时间：{{ formatDateTime(currentLog.sent_at) }}</span>
+            <span>重试次数：{{ currentLog.retry_count || 0 }}</span>
           </div>
+          <a-space wrap>
+            <a-button v-if="currentLog.task_id" @click="openTaskDetail(currentLog.task_id)">查看任务</a-button>
+            <a-button v-if="getPrimaryExecutionId(currentLog)" type="primary" @click="openExecution(currentLog)">
+              查看执行
+            </a-button>
+            <a-button
+              v-if="currentLog.status !== 'success'"
+              :loading="retryingId === currentLog.id"
+              @click="retry(currentLog.id)"
+            >
+              立即重试
+            </a-button>
+          </a-space>
         </a-card>
 
         <a-card class="detail-panel" title="通知内容">
@@ -189,7 +227,9 @@
         </a-card>
 
         <a-card class="detail-panel" title="响应 / 错误信息">
-          <a-alert v-if="currentLog.error_message" type="error">{{ currentLog.error_message }}</a-alert>
+          <a-alert v-if="currentLog.error_message" type="error" class="detail-alert">
+            {{ currentLog.error_message }}
+          </a-alert>
           <a-textarea
             :model-value="JSON.stringify(currentLog.response_info || {}, null, 2)"
             readonly
@@ -204,24 +244,36 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { useRoute, useRouter } from 'vue-router'
 import { AppAutomationService } from '../services/appAutomationService'
-import type { AppNotificationLog } from '../types'
+import type { AppNotificationLog, AppScheduledTask } from '../types'
+
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const retryingId = ref<number | null>(null)
 const detailVisible = ref(false)
 const currentLog = ref<AppNotificationLog | null>(null)
 const logs = ref<AppNotificationLog[]>([])
+const taskContext = ref<AppScheduledTask | null>(null)
 
 const filters = reactive({
   search: '',
   status: '',
   notification_type: '',
+  start_date: '',
+  end_date: '',
 })
 
 const pagination = reactive({
   current: 1,
   pageSize: 10,
+})
+
+const currentTaskId = computed(() => {
+  const value = Number(route.query.taskId || 0)
+  return value > 0 ? value : null
 })
 
 const filteredLogs = computed(() => {
@@ -241,6 +293,7 @@ const filteredLogs = computed(() => {
       notificationType,
       recipientSummary(log),
       log.error_message,
+      JSON.stringify(log.response_info || {}),
     ]
       .join(' ')
       .toLowerCase()
@@ -307,7 +360,7 @@ const recipientSummary = (record: AppNotificationLog) =>
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return '-'
-  return new Date(value).toLocaleString('zh-CN')
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
 const getTaskTypeLabel = (value: string) => {
@@ -337,6 +390,29 @@ const getStatusColor = (value: string) => {
   return 'gray'
 }
 
+const getPrimaryExecutionId = (record: AppNotificationLog) =>
+  record.response_info.execution_id || record.response_info.execution_ids?.[0] || undefined
+
+const getDeliverySummary = (record: AppNotificationLog) => {
+  if (record.error_message) return record.error_message
+  if (record.response_info.retry_status) return `重试状态：${String(record.response_info.retry_status)}`
+  if (record.response_info.detail) return String(record.response_info.detail)
+  return `重试 ${record.retry_count || 0} 次`
+}
+
+const loadTaskContext = async () => {
+  if (!currentTaskId.value) {
+    taskContext.value = null
+    return
+  }
+
+  try {
+    taskContext.value = await AppAutomationService.getScheduledTask(currentTaskId.value)
+  } catch {
+    taskContext.value = null
+  }
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -344,6 +420,9 @@ const loadData = async () => {
       search: filters.search || undefined,
       status: filters.status || undefined,
       notification_type: filters.notification_type || undefined,
+      task_id: currentTaskId.value || undefined,
+      start_date: filters.start_date || undefined,
+      end_date: filters.end_date || undefined,
     })
   } catch (error: any) {
     Message.error(error.message || '加载通知日志失败')
@@ -361,15 +440,63 @@ const resetFilters = () => {
   filters.search = ''
   filters.status = ''
   filters.notification_type = ''
+  filters.start_date = ''
+  filters.end_date = ''
   pagination.current = 1
   void loadData()
+}
+
+const openTaskDetail = async (taskId: number) => {
+  await router.replace({
+    path: '/app-automation',
+    query: {
+      ...route.query,
+      tab: 'scheduled-tasks',
+      taskId: String(taskId),
+      executionId: undefined,
+      suiteId: undefined,
+    },
+  })
+}
+
+const clearTaskContext = async () => {
+  await router.replace({
+    path: '/app-automation',
+    query: {
+      ...route.query,
+      taskId: undefined,
+    },
+  })
+}
+
+const openExecution = (record: AppNotificationLog) => {
+  const executionId = getPrimaryExecutionId(record)
+  if (!executionId) {
+    Message.warning('该通知没有关联执行记录')
+    return
+  }
+
+  void router.replace({
+    path: '/app-automation',
+    query: {
+      ...route.query,
+      tab: 'executions',
+      taskId: undefined,
+      executionId: String(executionId),
+      suiteId: record.response_info.test_suite_id ? String(record.response_info.test_suite_id) : undefined,
+    },
+  })
 }
 
 const retry = async (id: number) => {
   retryingId.value = id
   try {
-    await AppAutomationService.retryNotification(id)
+    const updated = await AppAutomationService.retryNotification(id)
     Message.success('通知已重试')
+    logs.value = logs.value.map(item => (item.id === updated.id ? updated : item))
+    if (currentLog.value?.id === updated.id) {
+      currentLog.value = updated
+    }
     await loadData()
   } catch (error: any) {
     Message.error(error.message || '重试通知失败')
@@ -393,7 +520,14 @@ watch(
   },
 )
 
-void loadData()
+watch(
+  () => route.query.taskId,
+  () => {
+    pagination.current = 1
+    void Promise.all([loadTaskContext(), loadData()])
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
@@ -420,6 +554,7 @@ void loadData()
   color: var(--theme-text-secondary);
 }
 
+.context-alert,
 .filter-card,
 .table-card,
 .stat-card,
@@ -432,12 +567,13 @@ void loadData()
 
 .filter-grid {
   display: grid;
-  grid-template-columns: 1.4fr 180px 180px auto;
+  grid-template-columns: minmax(240px, 1.4fr) 180px 180px 180px 180px auto;
   gap: 12px;
   align-items: center;
 }
 
-.filter-actions {
+.filter-actions,
+.pagination-row {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
@@ -471,31 +607,27 @@ void loadData()
   font-size: 12px;
 }
 
-.meta-stack {
+.meta-stack,
+.detail-shell {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .meta-stack strong,
-.meta-stack span {
+.meta-stack span,
+.detail-card strong {
   color: var(--theme-text);
 }
 
-.meta-stack small {
+.meta-stack small,
+.detail-label,
+.meta-row {
   color: var(--theme-text-secondary);
   font-size: 12px;
 }
 
-.pagination-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
 .detail-shell {
-  display: flex;
-  flex-direction: column;
   gap: 16px;
 }
 
@@ -515,26 +647,17 @@ void loadData()
 .detail-label {
   display: block;
   margin-bottom: 8px;
-  color: var(--theme-text-secondary);
-  font-size: 13px;
-}
-
-.detail-card strong {
-  color: var(--theme-text);
-}
-
-.meta-block {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 20px;
-  color: var(--theme-text-secondary);
-  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.detail-alert {
+  margin-bottom: 14px;
 }
 
 .parsed-content {

@@ -56,7 +56,22 @@ def _status_label(execution: dict[str, Any]) -> str:
     return result or status or "unknown"
 
 
-def _render_logs(logs: list[dict[str, Any]]) -> str:
+def _artifact_href(artifact: str, report_dir: Path) -> str:
+    value = str(artifact or "").strip()
+    if not value:
+        return ""
+    if value.startswith(("http://", "https://", "data:")):
+        return value
+
+    try:
+        artifact_path = Path(value).resolve()
+        relative = artifact_path.relative_to(report_dir.resolve())
+        return relative.as_posix()
+    except Exception:
+        return value.replace("\\", "/")
+
+
+def _render_logs(logs: list[dict[str, Any]], report_dir: Path) -> str:
     if not logs:
         return "<tr><td colspan='3' class='empty'>No logs yet.</td></tr>"
 
@@ -65,7 +80,7 @@ def _render_logs(logs: list[dict[str, Any]]) -> str:
         artifact_html = ""
         artifact = str(item.get("artifact") or "").strip()
         if artifact:
-            safe_artifact = escape(artifact, quote=True)
+            safe_artifact = escape(_artifact_href(artifact, report_dir), quote=True)
             artifact_html = (
                 "<div style='margin-top: 6px;'>"
                 f"<a href='{safe_artifact}' target='_blank' rel='noreferrer'>View artifact</a>"
@@ -81,7 +96,7 @@ def _render_logs(logs: list[dict[str, Any]]) -> str:
     return "".join(rows)
 
 
-def _render_html(execution: dict[str, Any]) -> str:
+def _render_html(execution: dict[str, Any], report_dir: Path) -> str:
     total_steps = int(execution.get("total_steps") or 0)
     passed_steps = int(execution.get("passed_steps") or 0)
     failed_steps = int(execution.get("failed_steps") or 0)
@@ -301,7 +316,7 @@ def _render_html(execution: dict[str, Any]) -> str:
               <th>Message</th>
             </tr>
           </thead>
-          <tbody>{_render_logs(logs if isinstance(logs, list) else [])}</tbody>
+          <tbody>{_render_logs(logs if isinstance(logs, list) else [], report_dir)}</tbody>
         </table>
       </div>
     </section>
@@ -333,7 +348,7 @@ def write_execution_report(conn, execution_id: int) -> str:
     report_dir.mkdir(parents=True, exist_ok=True)
 
     index_path = report_dir / "index.html"
-    index_path.write_text(_render_html(execution), encoding="utf-8")
+    index_path.write_text(_render_html(execution, report_dir), encoding="utf-8")
 
     report_path = str(report_dir)
     if execution.get("report_path") != report_path:

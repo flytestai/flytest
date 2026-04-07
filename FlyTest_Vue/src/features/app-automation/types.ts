@@ -25,6 +25,9 @@ export interface AppDevice {
   locked_at: string | null
   description: string
   location: string
+  device_specs?: Record<string, unknown>
+  created_at?: string
+  last_seen_at?: string | null
   updated_at: string
   is_locked: boolean
 }
@@ -44,6 +47,7 @@ export interface AppPackage {
   activity_name: string
   platform: string
   description: string
+  created_at?: string
   updated_at: string
 }
 
@@ -59,6 +63,7 @@ export interface AppElement {
   config: Record<string, unknown>
   image_path: string
   is_active: boolean
+  created_at?: string
   updated_at: string
 }
 
@@ -96,6 +101,62 @@ export interface AppSceneVariable {
   description?: string
 }
 
+export interface AppLlmConfigSnapshot {
+  config_name?: string
+  provider?: string
+  name: string
+  api_url: string
+  api_key?: string
+  system_prompt?: string
+  supports_vision?: boolean
+}
+
+export interface AppScenePlanRequest {
+  project_id: number
+  prompt: string
+  package_id?: number | null
+  current_case_name?: string
+  current_description?: string
+  current_steps?: AppSceneStep[]
+  current_variables?: Array<Record<string, unknown>>
+  llm_config?: AppLlmConfigSnapshot | null
+}
+
+export interface AppScenePlanResponse {
+  name: string
+  description: string
+  package_id: number | null
+  variables: Array<Record<string, unknown>>
+  steps: AppSceneStep[]
+  summary: string
+  warnings: string[]
+  mode: 'llm' | 'fallback'
+  provider: string
+  model: string
+}
+
+export interface AppStepSuggestionRequest {
+  project_id: number
+  prompt: string
+  package_id?: number | null
+  current_case_name?: string
+  current_description?: string
+  current_step?: AppSceneStep | null
+  current_steps?: AppSceneStep[]
+  current_variables?: Array<Record<string, unknown>>
+  llm_config?: AppLlmConfigSnapshot | null
+}
+
+export interface AppStepSuggestionResponse {
+  step: AppSceneStep
+  variables: Array<Record<string, unknown>>
+  summary: string
+  warnings: string[]
+  mode: 'llm' | 'fallback'
+  provider: string
+  model: string
+}
+
 export interface AppTestCase {
   id: number
   project_id: number
@@ -121,6 +182,7 @@ export interface AppExecutionLog {
   timestamp: string
   level: string
   message: string
+  artifact?: string
 }
 
 export interface AppExecution {
@@ -199,6 +261,20 @@ export interface AppRuntimeCapabilities {
   capabilities: AppRuntimeCapability[]
 }
 
+export interface AppSchedulerHealth {
+  running: boolean
+  running_tasks: number
+  poll_interval_seconds: number
+}
+
+export interface AppServiceHealth {
+  service: string
+  status: string
+  version: string
+  checked_at: string
+  scheduler: AppSchedulerHealth
+}
+
 export interface AppDashboardStatistics {
   devices: {
     total: number
@@ -261,6 +337,27 @@ export interface AppComponentPackage {
   updated_at: string
 }
 
+export interface AppComponentPackageImportResult {
+  package: AppComponentPackage
+  counts: {
+    base_created: number
+    base_updated: number
+    base_skipped: number
+    custom_created: number
+    custom_updated: number
+    custom_skipped: number
+  }
+}
+
+export interface AppComponentPackageExportPayload {
+  filename: string
+  content: string
+  content_type: string
+  export_format: 'json' | 'yaml'
+  component_count: number
+  custom_component_count: number
+}
+
 export interface AppSuiteCase {
   id: number
   test_case_id: number
@@ -283,12 +380,33 @@ export interface AppTestSuite {
   execution_result: string
   passed_count: number
   failed_count: number
+  stopped_count?: number
   last_run_at: string | null
   created_by: string
   created_at: string
   updated_at: string
   test_case_count: number
   suite_cases: AppSuiteCase[]
+}
+
+export interface AppTaskLastResult {
+  task_id?: number
+  task_type?: string
+  status?: string
+  execution_id?: number
+  execution_ids?: number[]
+  test_case_count?: number
+  triggered_by?: string
+  triggered_at?: string
+  test_suite_id?: number | null
+  test_case_id?: number | null
+}
+
+export interface AppScheduledTaskTriggerPayload {
+  task_id: number
+  execution_id?: number
+  execution_ids?: number[]
+  test_case_count?: number
 }
 
 export interface AppScheduledTask {
@@ -319,16 +437,38 @@ export interface AppScheduledTask {
   total_runs: number
   successful_runs: number
   failed_runs: number
-  last_result: Record<string, unknown>
+  last_result: AppTaskLastResult
   error_message: string
   created_by: string
   created_at: string
   updated_at: string
 }
 
+export interface AppScheduledTaskRunResult extends AppScheduledTask {
+  trigger_payload?: AppScheduledTaskTriggerPayload
+}
+
 export interface AppNotificationRecipient {
   email?: string
   name?: string
+}
+
+export interface AppNotificationResponseInfo {
+  delivery_status?: string
+  detail?: string
+  task_id?: number | null
+  task_type?: string
+  execution_id?: number
+  execution_ids?: number[]
+  test_case_count?: number
+  test_suite_id?: number | null
+  test_case_id?: number | null
+  triggered_by?: string
+  triggered_at?: string
+  retry_status?: string
+  retry_count?: number
+  retried_at?: string
+  [key: string]: unknown
 }
 
 export interface AppNotificationLog {
@@ -345,7 +485,7 @@ export interface AppNotificationLog {
   notification_content: string
   status: string
   error_message: string
-  response_info: Record<string, unknown>
+  response_info: AppNotificationResponseInfo
   created_at: string
   sent_at: string | null
   retry_count: number

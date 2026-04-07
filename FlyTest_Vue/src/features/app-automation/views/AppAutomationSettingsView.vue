@@ -1,5 +1,60 @@
 <template>
   <div class="settings-shell">
+    <a-card class="settings-card diagnostics-card">
+      <template #title>服务运行状态</template>
+
+      <div class="diagnostics-header">
+        <div class="diagnostics-status">
+          <a-tag :color="overallStatusColor">{{ overallStatusLabel }}</a-tag>
+          <a-tag :color="serviceHealth.scheduler.running ? 'green' : 'red'">
+            {{ serviceHealth.scheduler.running ? '调度器运行中' : '调度器未运行' }}
+          </a-tag>
+          <span v-if="serviceHealth.checked_at" class="checked-at">最近检测：{{ formatTime(serviceHealth.checked_at) }}</span>
+        </div>
+        <p class="diagnostics-hint">集中展示 APP 自动化服务、定时调度器、ADB 连通性和运行能力是否就绪，方便快速排查后台链路。</p>
+      </div>
+
+      <div class="actions">
+        <a-space wrap>
+          <a-button :loading="serviceHealthLoading" @click="loadServiceHealth(true)">刷新服务状态</a-button>
+          <a-button :loading="diagnosticsLoading || runtimeLoading" @click="reloadAll">刷新全部诊断</a-button>
+        </a-space>
+      </div>
+
+      <div class="diagnostics-grid service-grid">
+        <div class="diagnostic-item">
+          <span>服务名称</span>
+          <strong>{{ serviceHealth.service || 'app-automation' }}</strong>
+          <small class="diagnostic-subtext">版本 {{ serviceHealth.version || '-' }}</small>
+        </div>
+        <div class="diagnostic-item">
+          <span>调度器状态</span>
+          <strong>{{ serviceHealth.scheduler.running ? '运行中' : '未运行' }}</strong>
+          <small class="diagnostic-subtext">轮询间隔 {{ serviceHealth.scheduler.poll_interval_seconds || 0 }} 秒</small>
+        </div>
+        <div class="diagnostic-item">
+          <span>正在触发任务</span>
+          <strong>{{ serviceHealth.scheduler.running_tasks }}</strong>
+          <small class="diagnostic-subtext">当前后台在途调度任务数</small>
+        </div>
+        <div class="diagnostic-item">
+          <span>ADB 连通性</span>
+          <strong>{{ diagnostics.executable_found ? '可用' : '未就绪' }}</strong>
+          <small class="diagnostic-subtext">已发现 {{ diagnostics.device_count }} 台设备</small>
+        </div>
+        <div class="diagnostic-item">
+          <span>运行能力</span>
+          <strong>{{ runtimeReady ? '已就绪' : '待补齐' }}</strong>
+          <small class="diagnostic-subtext">能力 {{ readyCapabilityCount }}/{{ runtimeCapabilities.capabilities.length }}</small>
+        </div>
+        <div class="diagnostic-item">
+          <span>当前工作目录</span>
+          <strong>{{ form.workspace_root || '使用默认目录' }}</strong>
+          <small class="diagnostic-subtext">默认超时 {{ form.default_timeout }} 秒</small>
+        </div>
+      </div>
+    </a-card>
+
     <a-card class="settings-card">
       <template #title>APP 自动化环境设置</template>
       <a-form :model="form" layout="vertical">
@@ -149,12 +204,13 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { AppAutomationService } from '../services/appAutomationService'
-import type { AppAdbDiagnostics, AppRuntimeCapabilities } from '../types'
+import type { AppAdbDiagnostics, AppRuntimeCapabilities, AppServiceHealth } from '../types'
 
 const saving = ref(false)
 const detecting = ref(false)
 const diagnosticsLoading = ref(false)
 const runtimeLoading = ref(false)
+const serviceHealthLoading = ref(false)
 
 const form = reactive({
   adb_path: 'adb',
@@ -183,6 +239,18 @@ const runtimeCapabilities = reactive<AppRuntimeCapabilities>({
   capabilities: [],
 })
 
+const serviceHealth = reactive<AppServiceHealth>({
+  service: '',
+  status: '',
+  version: '',
+  checked_at: '',
+  scheduler: {
+    running: false,
+    running_tasks: 0,
+    poll_interval_seconds: 0,
+  },
+})
+
 const statusLabel = computed(() => {
   if (diagnostics.executable_found && !diagnostics.error) {
     return 'ADB 可用'
@@ -204,10 +272,34 @@ const statusColor = computed(() => {
 })
 
 const installedDependencyCount = computed(() => runtimeCapabilities.dependencies.filter(item => item.installed).length)
+const readyCapabilityCount = computed(() => runtimeCapabilities.capabilities.filter(item => item.ready).length)
 
 const runtimeReady = computed(
   () => runtimeCapabilities.capabilities.length > 0 && runtimeCapabilities.capabilities.every(item => item.ready),
 )
+
+const overallStatusColor = computed(() => {
+  if (serviceHealth.status !== 'ok' || !serviceHealth.scheduler.running) {
+    return 'red'
+  }
+  if (diagnostics.executable_found && runtimeReady.value) {
+    return 'green'
+  }
+  return 'orange'
+})
+
+const overallStatusLabel = computed(() => {
+  if (serviceHealth.status !== 'ok') {
+    return '服务异常'
+  }
+  if (!serviceHealth.scheduler.running) {
+    return '调度器未运行'
+  }
+  if (diagnostics.executable_found && runtimeReady.value) {
+    return '服务运行正常'
+  }
+  return '服务可用但依赖未就绪'
+})
 
 const formatTime = (value: string) => {
   if (!value) {
@@ -256,6 +348,20 @@ const loadRuntimeCapabilities = async (showMessage = false) => {
   }
 }
 
+const loadServiceHealth = async (showMessage = false) => {
+  serviceHealthLoading.value = true
+  try {
+    Object.assign(serviceHealth, await AppAutomationService.getHealthStatus())
+    if (showMessage) {
+      Message.success('服务状态已刷新')
+    }
+  } catch (error: any) {
+    Message.error(getErrorMessage(error, '获取服务状态失败'))
+  } finally {
+    serviceHealthLoading.value = false
+  }
+}
+
 const detectAdb = async () => {
   detecting.value = true
   try {
@@ -275,7 +381,7 @@ const detectAdb = async () => {
 }
 
 const reloadAll = async () => {
-  await Promise.all([loadSettings(), loadDiagnostics(), loadRuntimeCapabilities()])
+  await Promise.all([loadSettings(), loadDiagnostics(), loadRuntimeCapabilities(), loadServiceHealth()])
 }
 
 const save = async () => {
@@ -283,7 +389,7 @@ const save = async () => {
   try {
     await AppAutomationService.saveSettings(form)
     Message.success('环境设置已保存')
-    await loadDiagnostics()
+    await Promise.all([loadDiagnostics(), loadServiceHealth()])
   } catch (error: any) {
     Message.error(getErrorMessage(error, '保存环境设置失败'))
   } finally {
@@ -370,6 +476,11 @@ onMounted(() => {
   line-break: anywhere;
 }
 
+.diagnostic-subtext {
+  color: var(--color-text-2);
+  line-height: 1.6;
+}
+
 .device-section {
   margin-top: 16px;
 }
@@ -380,6 +491,10 @@ onMounted(() => {
 }
 
 .runtime-grid {
+  margin-top: 16px;
+}
+
+.service-grid {
   margin-top: 16px;
 }
 

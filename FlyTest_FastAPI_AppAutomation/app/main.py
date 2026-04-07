@@ -25,6 +25,7 @@ from .adb import (
     discover_devices,
     inspect_adb_environment,
 )
+from .ai_planner import build_scene_plan, build_step_suggestion
 from .database import (
     ELEMENT_UPLOADS_DIR,
     connection,
@@ -46,7 +47,9 @@ from .schemas import (
     ExecuteTestCasePayload,
     ImageCategoryPayload,
     PackagePayload,
+    ScenePlanPayload,
     SettingsPayload,
+    StepSuggestionPayload,
     TestCasePayload,
 )
 
@@ -550,7 +553,7 @@ def run_execution(execution_id: int) -> None:
             _refresh_suite_stats_for_execution(conn, execution_id)
     except Exception as exc:
         with connection() as conn:
-            execution = fetch_one(conn, "SELECT device_id, logs FROM executions WHERE id = ?", (execution_id,))
+            execution = fetch_one(conn, "SELECT device_id, test_case_id, logs FROM executions WHERE id = ?", (execution_id,))
             logs = append_log(json_loads(execution.get("logs") if execution else "[]", []), f"执行异常: {exc}", "error")
             now = utc_now()
             conn.execute(
@@ -581,6 +584,19 @@ def _refresh_suite_stats_for_execution(conn, execution_id: int) -> None:
         from .extended_routes import refresh_suite_stats
 
         refresh_suite_stats(conn, suite_id)
+
+
+def _update_test_case_last_run(conn, test_case_id: int | None, result: str, finished_at: str) -> None:
+    if not test_case_id:
+        return
+    conn.execute(
+        """
+        UPDATE test_cases
+        SET last_result = ?, last_run_at = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (result, finished_at, finished_at, test_case_id),
+    )
 
 
 def run_execution(execution_id: int) -> None:
@@ -626,7 +642,9 @@ def run_execution(execution_id: int) -> None:
                     """,
                     ("设备离线，无法执行", json_dumps(logs), now, now, execution_id),
                 )
+                _update_test_case_last_run(conn, test_case["id"], "failed", now)
                 write_execution_report(conn, execution_id)
+                _refresh_suite_stats_for_execution(conn, execution_id)
                 return
 
             if not steps:
@@ -640,7 +658,9 @@ def run_execution(execution_id: int) -> None:
                     """,
                     ("未检测到可执行步骤", json_dumps(logs), now, now, execution_id),
                 )
+                _update_test_case_last_run(conn, test_case["id"], "failed", now)
                 write_execution_report(conn, execution_id)
+                _refresh_suite_stats_for_execution(conn, execution_id)
                 return
 
             started_at = utc_now()
@@ -730,9 +750,10 @@ def run_execution(execution_id: int) -> None:
                 (finished_at, finished_at, current["test_case_id"]),
             )
             finish_device_lock(conn, current["device_id"])
+            _refresh_suite_stats_for_execution(conn, execution_id)
     except StopRequested:
         with connection() as conn:
-            execution = fetch_one(conn, "SELECT device_id, logs FROM executions WHERE id = ?", (execution_id,))
+            execution = fetch_one(conn, "SELECT device_id, test_case_id, logs FROM executions WHERE id = ?", (execution_id,))
             logs = append_log(json_loads(execution.get("logs") if execution else "[]", []), "执行已停止", "warning")
             now = utc_now()
             conn.execute(
@@ -743,13 +764,14 @@ def run_execution(execution_id: int) -> None:
                 """,
                 (now, now, json_dumps(logs), execution_id),
             )
+            _update_test_case_last_run(conn, execution.get("test_case_id") if execution else None, "stopped", now)
             write_execution_report(conn, execution_id)
             if execution and execution.get("device_id"):
                 finish_device_lock(conn, execution["device_id"])
             _refresh_suite_stats_for_execution(conn, execution_id)
     except StepExecutionError as exc:
         with connection() as conn:
-            execution = fetch_one(conn, "SELECT device_id, logs FROM executions WHERE id = ?", (execution_id,))
+            execution = fetch_one(conn, "SELECT device_id, test_case_id, logs FROM executions WHERE id = ?", (execution_id,))
             logs = append_log(
                 json_loads(execution.get("logs") if execution else "[]", []),
                 f"步骤失败 {exc.index}: {exc.step_name} - {exc.cause}",
@@ -773,13 +795,14 @@ def run_execution(execution_id: int) -> None:
                     execution_id,
                 ),
             )
+            _update_test_case_last_run(conn, execution.get("test_case_id") if execution else None, "failed", now)
             write_execution_report(conn, execution_id)
             if execution and execution.get("device_id"):
                 finish_device_lock(conn, execution["device_id"])
             _refresh_suite_stats_for_execution(conn, execution_id)
     except Exception as exc:
         with connection() as conn:
-            execution = fetch_one(conn, "SELECT device_id, logs FROM executions WHERE id = ?", (execution_id,))
+            execution = fetch_one(conn, "SELECT device_id, test_case_id, logs FROM executions WHERE id = ?", (execution_id,))
             logs = append_log(json_loads(execution.get("logs") if execution else "[]", []), f"执行异常: {exc}", "error")
             now = utc_now()
             conn.execute(
@@ -791,9 +814,11 @@ def run_execution(execution_id: int) -> None:
                 """,
                 (str(exc), str(exc), now, now, json_dumps(logs), execution_id),
             )
+            _update_test_case_last_run(conn, execution.get("test_case_id") if execution else None, "failed", now)
             write_execution_report(conn, execution_id)
             if execution and execution.get("device_id"):
                 finish_device_lock(conn, execution["device_id"])
+            _refresh_suite_stats_for_execution(conn, execution_id)
 
 
 def start_execution_thread(execution_id: int) -> None:
@@ -802,7 +827,15 @@ def start_execution_thread(execution_id: int) -> None:
 
 @app.get("/health")
 def health_check() -> dict[str, Any]:
-    return success({"service": "app-automation", "status": "ok", "scheduler": app_scheduler.status()})
+    return success(
+        {
+            "service": "app-automation",
+            "status": "ok",
+            "version": app.version,
+            "checked_at": utc_now(),
+            "scheduler": app_scheduler.status(),
+        }
+    )
 
 
 @app.get("/dashboard/statistics/")
@@ -1376,6 +1409,20 @@ def delete_test_case(test_case_id: int) -> dict[str, Any]:
         _ = get_test_case_or_404(conn, test_case_id)
         conn.execute("DELETE FROM test_cases WHERE id = ?", (test_case_id,))
         return success(None, "测试用例已删除")
+
+
+@app.post("/ai/scene-plan/")
+def generate_scene_plan(payload: ScenePlanPayload) -> dict[str, Any]:
+    with connection() as conn:
+        plan = build_scene_plan(conn, payload.model_dump())
+    return success(plan, "APP AI 场景规划已生成")
+
+
+@app.post("/ai/step-suggestion/")
+def generate_step_suggestion(payload: StepSuggestionPayload) -> dict[str, Any]:
+    with connection() as conn:
+        suggestion = build_step_suggestion(conn, payload.model_dump())
+    return success(suggestion, "APP AI 步骤补全已生成")
 
 
 @app.post("/test-cases/{test_case_id}/execute/")
