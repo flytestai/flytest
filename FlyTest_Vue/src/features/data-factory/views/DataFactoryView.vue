@@ -155,61 +155,23 @@
       </div>
     </section>
 
-    <section v-if="isCategoryMenuView" id="data-factory-tools" ref="toolWorkspaceSection" class="panel workspace-panel">
-      <div class="section-head workspace-head">
-        <div v-if="workspaceTitle || workspaceDescription">
-          <div v-if="workspaceTitle" class="section-title">{{ workspaceTitle }}</div>
-          <div v-if="workspaceDescription" class="section-desc">{{ workspaceDescription }}</div>
-        </div>
-        <div class="workspace-actions">
-          <button type="button" class="pill" :class="{ active: focusedCategory === 'all' }" @click="clearCategoryFocus">{{ isCategoryMenuView ? '返回全部工具' : '全部分类' }}</button>
-          <span class="pill active">{{ workspaceToolTotal }} 个工具</span>
-        </div>
-      </div>
-
-      <div class="workspace-summary">
-        <span v-if="!isCategoryMenuView" class="pill active">场景：{{ activeScenarioLabel }}</span>
-        <span v-else class="pill active">分类：{{ activeCategoryLabel }}</span>
-        <span class="pill">{{ toolKeyword ? `关键词：${toolKeyword}` : '未设置关键词过滤' }}</span>
-      </div>
-
-      <div class="category-list">
-        <article
-          v-for="category in workspaceCategories"
-          :key="category.category"
-          class="panel category-panel"
-          :class="{ active: focusedCategory === category.category }"
-        >
-          <div class="category-panel__head">
-            <div class="category-panel__title">
-              <div class="category-panel__icon"><component :is="categoryIcon(category.category)" /></div>
-              <div>
-                <div class="section-title">{{ category.name }}</div>
-                <div class="section-desc">{{ category.description }}</div>
-              </div>
+    <section v-if="isCategoryMenuView" id="data-factory-tools" ref="toolWorkspaceSection" class="workspace-panel workspace-panel--category-only">
+      <div v-if="categoryMenuTools.length" class="tool-grid">
+        <button v-for="tool in categoryMenuTools" :key="tool.name" type="button" class="tool-card" @click="openToolDialog(tool)">
+          <div class="tool-card__icon"><component :is="categoryIcon(tool.category)" /></div>
+          <div class="tool-card__body">
+            <div class="tool-card__title">{{ tool.display_name }}</div>
+            <div class="tool-card__desc">{{ tool.description }}</div>
+            <div class="tool-card__footer">
+              <span class="pill">{{ scenarioLabel(tool.scenario) }}</span>
+              <icon-arrow-right />
             </div>
-            <span class="pill active">{{ category.visibleTools.length }} 个工具</span>
           </div>
-
-          <div class="tool-grid">
-            <button v-for="tool in category.visibleTools" :key="tool.name" type="button" class="tool-card" @click="openToolDialog(tool)">
-              <div class="tool-card__icon"><component :is="categoryIcon(tool.category)" /></div>
-              <div class="tool-card__body">
-                <div class="tool-card__title">{{ tool.display_name }}</div>
-                <div class="tool-card__desc">{{ tool.description }}</div>
-                <div class="tool-card__footer">
-                  <span class="pill">{{ scenarioLabel(tool.scenario) }}</span>
-                  <icon-arrow-right />
-                </div>
-              </div>
-            </button>
-          </div>
-        </article>
-
-        <section v-if="!workspaceCategories.length" class="panel">
-          <div class="empty">当前筛选条件下暂无可显示的工具</div>
-        </section>
+        </button>
       </div>
+      <section v-else class="panel">
+        <div class="empty">当前筛选条件下暂无可显示的工具</div>
+      </section>
     </section>
 
     <a-modal :visible="toolDialogVisible" :title="currentTool?.display_name || '工具执行'" width="1160px" :footer="false" @cancel="toolDialogVisible = false">
@@ -1253,9 +1215,9 @@ const visibleCategories = computed<VisibleCategory[]>(() => {
 })
 
 const workspaceCategories = computed<VisibleCategory[]>(() => focusedCategory.value === 'all' ? visibleCategories.value : visibleCategories.value.filter(category => category.category === focusedCategory.value))
+const categoryMenuTools = computed(() => focusedCategory.value === 'all' ? [] : visibleCategories.value.find(category => category.category === focusedCategory.value)?.visibleTools || [])
 const workspaceToolTotal = computed(() => workspaceCategories.value.reduce((total, category) => total + category.visibleTools.length, 0))
 const activeScenarioLabel = computed(() => selectedScenario.value === 'all' ? '全部场景' : scenarioLabel(selectedScenario.value))
-const activeCategoryLabel = computed(() => focusedCategory.value === 'all' ? '全部分类' : categoryName(focusedCategory.value as DataFactoryCategoryKey))
 const heroToolCount = computed(() => isCategoryMenuView.value ? workspaceToolTotal.value : catalog.value.tools.length)
 const pageTitle = computed(() => isCategoryMenuView.value ? categoryName(routeCategory.value as DataFactoryCategoryKey) : '数据工厂')
 const pageDescription = computed(() => {
@@ -1263,11 +1225,6 @@ const pageDescription = computed(() => {
     return `当前为“${categoryName(routeCategory.value as DataFactoryCategoryKey)}”分类视图，仅展示该分类下的工具内容。`
   }
   return '参考 testhub_platform 的数据工厂交互，保留 7 大类工具总览、场景筛选、工具执行、记录和标签管理能力。'
-})
-const workspaceTitle = computed(() => focusedCategory.value === 'all' ? '工具面板' : '')
-const workspaceDescription = computed(() => {
-  if (focusedCategory.value !== 'all') return ''
-  return '默认展示全部分类工具。点击工具卡片会立即打开执行面板。'
 })
 const referencePickerTitle = computed(() => referencePickerMode.value === 'api' ? '浏览 API 数据工厂引用' : '浏览 UI 数据工厂引用')
 const topReferenceTags = computed(() => statistics.value.tag_stats.slice(0, 6).map(item => {
