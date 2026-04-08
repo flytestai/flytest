@@ -1,355 +1,299 @@
-# FlyTest - AI驱动的智能测试用例生成平台
+﻿# FlyTest - AI椹卞姩鐨勬櫤鑳芥祴璇曠敤渚嬬敓鎴愬钩鍙?
+## 椤圭洰绠€浠?
+FlyTest 鏄竴涓熀浜?Django REST Framework 鏋勫缓鐨凙I椹卞姩娴嬭瘯鑷姩鍖栧钩鍙帮紝鏍稿績鍔熻兘鏄€氳繃AI鏅鸿兘鐢熸垚娴嬭瘯鐢ㄤ緥銆傚钩鍙伴泦鎴愪簡 LangChain銆丮CP锛圡odel Context Protocol锛夊伐鍏疯皟鐢ㄣ€侀」鐩鐞嗐€佹祴璇曠敤渚嬬鐞嗕互鍙婂厛杩涚殑鐭ヨ瘑搴撶鐞嗗拰鏂囨。鐞嗚В鍔熻兘銆傚埄鐢ㄥぇ璇█妯″瀷鍜屽绉嶅祵鍏ユ湇鍔★紙OpenAI銆丄zure OpenAI銆丱llama绛夛級鐨勮兘鍔涳紝鑷姩鍖栫敓鎴愰珮璐ㄩ噺鐨勬祴璇曠敤渚嬶紝骞剁粨鍚堢煡璇嗗簱鎻愪緵鏇寸簿鍑嗙殑娴嬭瘯杈呭姪锛屼负娴嬭瘯鍥㈤槦鎻愪緵涓€涓畬鏁寸殑鏅鸿兘娴嬭瘯绠＄悊瑙ｅ喅鏂规銆?
+## 鏍稿績鐗规€?
+### 馃 AI鏅鸿兘娴嬭瘯鐢ㄤ緥鐢熸垚
+- 鍩轰簬澶ц瑷€妯″瀷鐨勬櫤鑳芥祴璇曠敤渚嬭嚜鍔ㄧ敓鎴? - 鏀寔 OpenAI 鍏煎鐨?LLM 渚涘簲鍟嗭紙濡?OpenAI銆侀儴鍒嗚嚜寤轰唬鐞嗙瓑锛夛紝鍙伒娲婚厤缃?- 閫氳繃 MCP 宸ュ叿璋冪敤锛屽疄鐜版祴璇曠敤渚嬬殑鏅鸿兘鍒嗘瀽鍜岀敓鎴愶紝鏀寔鑷畾涔夊伐鍏烽泦
+- 鑷劧璇█鎻忚堪杞崲涓虹粨鏋勫寲娴嬭瘯鐢ㄤ緥锛岀粨鍚堢煡璇嗗簱鎻愬崌鍑嗙‘鎬?- 鏀寔娴嬭瘯姝ラ銆侀鏈熺粨鏋滅殑鑷姩鐢熸垚锛屽苟鍙繘琛孉I杈呭姪浼樺寲
+- 鏀寔澶氱宓屽叆鏈嶅姟锛圤penAI銆丄zure OpenAI銆丱llama绛夛級锛屽寮鸿涔夌悊瑙?
+### 馃挰 鏅鸿兘瀵硅瘽绯荤粺
+- 鍩轰簬 LangChain 鍜?LangGraph 鐨?AI 瀵硅瘽鍔熻兘
+- 鏀寔娴佸紡鍝嶅簲鍜岃亰澶╁巻鍙茬鐞?- 涓庢祴璇曠敤渚嬬敓鎴愭繁搴﹂泦鎴?
+### 馃搵 椤圭洰绠＄悊
+- 澶氶」鐩敮鎸侊紝瀹炵幇鏁版嵁闅旂
+- 鍩轰簬瑙掕壊鐨勬潈闄愭帶鍒讹紙Owner銆丄dmin銆丮ember锛?- 椤圭洰鎴愬憳绠＄悊鍜屾潈闄愬垎閰?- 椤圭洰绾у埆鐨勮祫婧愯闂帶鍒?
+### 馃И 鏅鸿兘娴嬭瘯鐢ㄤ緥绠＄悊
+- AI鐢熸垚鐨勬祴璇曠敤渚嬭嚜鍔ㄤ繚瀛樺拰绠＄悊
+- 瀹屾暣鐨勬祴璇曠敤渚?CRUD 鎿嶄綔
+- 鏀寔鐢ㄤ緥妯″潡鍒嗙被绠＄悊
+- 宓屽寮忕敤渚嬫楠ょ鐞?- 鐢ㄤ緥瀵煎嚭鍔熻兘锛圗xcel 鏍煎紡锛?- 鍩轰簬椤圭洰鐨勭敤渚嬮殧绂?- 娴嬭瘯鐢ㄤ緥璐ㄩ噺璇勪及鍜屼紭鍖栧缓璁?- 涓庣煡璇嗗簱鑱斿姩锛岀敓鎴愭洿璐村悎涓氬姟鍦烘櫙鐨勬祴璇曠敤渚?
+### 馃敡 MCP 宸ュ叿闆嗘垚
+- 鏀寔澶氱 MCP 浼犺緭鏂瑰紡锛坰tdio銆丠TTP銆丼SE锛?- 杩滅▼ MCP 鏈嶅姟鍣ㄨ繛鎺?- 宸ュ叿璋冪敤鏃ュ織鍜岀洃鎺?- 涓?AI 娴嬭瘯鐢ㄤ緥鐢熸垚绯荤粺娣卞害闆嗘垚
+- 鎻愪緵娴嬭瘯鐢ㄤ緥鐢熸垚涓撶敤宸ュ叿闆?
+### 馃 鐭ヨ瘑搴撶鐞?- 鏀寔鍒涘缓鍜岀鐞嗗涓煡璇嗗簱锛屽熀浜庨」鐩殧绂?- 鏂囨。瀵煎叆涓庤嚜鍔ㄥ垎鐗囥€佸悜閲忓寲澶勭悊锛堟敮鎸丳DF, DOCX, TXT绛夊绉嶆牸寮忥級
+- 澶氱宓屽叆鏈嶅姟鏀寔锛歄penAI銆丄zure OpenAI銆丱llama
+- 鍩轰簬璇箟鐨勯珮鏁堟绱㈠拰鐩镐技搴﹀尮閰?- 涓嶢I瀵硅瘽鍜屾祴璇曠敤渚嬬敓鎴愭繁搴﹂泦鎴愶紝鎻愪緵涓婁笅鏂囨劅鐭ヨ兘鍔?- 鐭ヨ瘑搴撳唴瀹圭鐞嗕笌鏇存柊
 
-## 项目简介
+### 馃敡 MCP 宸ュ叿闆嗘垚
+- 鏀寔澶氱 MCP 浼犺緭鏂瑰紡锛坰tdio銆丠TTP銆丼SE锛?- 杩滅▼ MCP 鏈嶅姟鍣ㄨ繛鎺?- 宸ュ叿璋冪敤鏃ュ織鍜岀洃鎺?- 涓?AI 娴嬭瘯鐢ㄤ緥鐢熸垚绯荤粺娣卞害闆嗘垚
+- 鎻愪緵娴嬭瘯鐢ㄤ緥鐢熸垚涓撶敤宸ュ叿闆?
+### 锟?瀹夊叏璁よ瘉
+- JWT 浠ょ墝璁よ瘉
+- API Key 璁よ瘉鏀寔
+- 缁嗙矑搴︽潈闄愭帶鍒?- 鐢ㄦ埛鍜岀粍绠＄悊
 
-FlyTest 是一个基于 Django REST Framework 构建的AI驱动测试自动化平台，核心功能是通过AI智能生成测试用例。平台集成了 LangChain、MCP（Model Context Protocol）工具调用、项目管理、测试用例管理以及先进的知识库管理和文档理解功能。利用大语言模型和多种嵌入服务（OpenAI、Azure OpenAI、Ollama等）的能力，自动化生成高质量的测试用例，并结合知识库提供更精准的测试辅助，为测试团队提供一个完整的智能测试管理解决方案。
+## 鎶€鏈灦鏋?
+### 鍚庣鎶€鏈爤
+- **妗嗘灦**: Django 5.2.1 + Django REST Framework
+- **鏁版嵁搴?*: SQLite锛堝紑鍙戯級/ PostgreSQL锛堢敓浜э級
+- **璁よ瘉**: JWT + API Key 鍙岄噸璁よ瘉
+- **AI寮曟搸**: LangChain + LangGraph锛堟祴璇曠敤渚嬬敓鎴愭牳蹇冿級
+- **鐭ヨ瘑搴撳紩鎿?*: LangChain + Qdrant + 澶氱宓屽叆鏈嶅姟锛圤penAI/Azure/Ollama绛夛級
+- **MCP闆嗘垚**: FastMCP + langchain-mcp-adapters锛堝伐鍏疯皟鐢級
+- **API鏂囨。**: drf-spectacular (OpenAPI 3.0)
+- **鐜鍙橀噺绠＄悊**: python-dotenv
 
-## 核心特性
-
-### 🤖 AI智能测试用例生成
-- 基于大语言模型的智能测试用例自动生成
- - 支持 OpenAI 兼容的 LLM 供应商（如 OpenAI、部分自建代理等），可灵活配置
-- 通过 MCP 工具调用，实现测试用例的智能分析和生成，支持自定义工具集
-- 自然语言描述转换为结构化测试用例，结合知识库提升准确性
-- 支持测试步骤、预期结果的自动生成，并可进行AI辅助优化
-- 支持多种嵌入服务（OpenAI、Azure OpenAI、Ollama等），增强语义理解
-
-### 💬 智能对话系统
-- 基于 LangChain 和 LangGraph 的 AI 对话功能
-- 支持流式响应和聊天历史管理
-- 与测试用例生成深度集成
-
-### 📋 项目管理
-- 多项目支持，实现数据隔离
-- 基于角色的权限控制（Owner、Admin、Member）
-- 项目成员管理和权限分配
-- 项目级别的资源访问控制
-
-### 🧪 智能测试用例管理
-- AI生成的测试用例自动保存和管理
-- 完整的测试用例 CRUD 操作
-- 支持用例模块分类管理
-- 嵌套式用例步骤管理
-- 用例导出功能（Excel 格式）
-- 基于项目的用例隔离
-- 测试用例质量评估和优化建议
-- 与知识库联动，生成更贴合业务场景的测试用例
-
-### 🔧 MCP 工具集成
-- 支持多种 MCP 传输方式（stdio、HTTP、SSE）
-- 远程 MCP 服务器连接
-- 工具调用日志和监控
-- 与 AI 测试用例生成系统深度集成
-- 提供测试用例生成专用工具集
-
-### 🧠 知识库管理
-- 支持创建和管理多个知识库，基于项目隔离
-- 文档导入与自动分片、向量化处理（支持PDF, DOCX, TXT等多种格式）
-- 多种嵌入服务支持：OpenAI、Azure OpenAI、Ollama
-- 基于语义的高效检索和相似度匹配
-- 与AI对话和测试用例生成深度集成，提供上下文感知能力
-- 知识库内容管理与更新
-
-### 🔧 MCP 工具集成
-- 支持多种 MCP 传输方式（stdio、HTTP、SSE）
-- 远程 MCP 服务器连接
-- 工具调用日志和监控
-- 与 AI 测试用例生成系统深度集成
-- 提供测试用例生成专用工具集
-
-### � 安全认证
-- JWT 令牌认证
-- API Key 认证支持
-- 细粒度权限控制
-- 用户和组管理
-
-## 技术架构
-
-### 后端技术栈
-- **框架**: Django 5.2.1 + Django REST Framework
-- **数据库**: SQLite（开发）/ PostgreSQL（生产）
-- **认证**: JWT + API Key 双重认证
-- **AI引擎**: LangChain + LangGraph（测试用例生成核心）
-- **知识库引擎**: LangChain + Qdrant + 多种嵌入服务（OpenAI/Azure/Ollama等）
-- **MCP集成**: FastMCP + langchain-mcp-adapters（工具调用）
-- **API文档**: drf-spectacular (OpenAPI 3.0)
-- **环境变量管理**: python-dotenv
-
-### 核心依赖
+### 鏍稿績渚濊禆
 ```
-# 核心框架与Web服务
+# 鏍稿績妗嗘灦涓嶹eb鏈嶅姟
 django==5.2.1
 djangorestframework
 djangorestframework-simplejwt
 drf-spectacular
 django-cors-headers
 python-dotenv
-gunicorn # 生产环境WSGI服务器
-
-# AI与LangChain相关
+gunicorn # 鐢熶骇鐜WSGI鏈嶅姟鍣?
+# AI涓嶭angChain鐩稿叧
 langchain-core
 langchain-openai
-langchain-community # 包含多种LLM集成和工具
-langgraph
-langgraph-checkpoint-sqlite # LangGraph状态持久化
+langchain-community # 鍖呭惈澶氱LLM闆嗘垚鍜屽伐鍏?langgraph
+langgraph-checkpoint-sqlite # LangGraph鐘舵€佹寔涔呭寲
 fastmcp>=2.3.0
 langchain-mcp-adapters
 
-# 知识库相关
-langchain-text-splitters
-langchain-qdrant # Qdrant向量数据库集成
-fastembed # BM25稀疏向量（混合检索）
-# 注意：现使用CustomAPIEmbeddings通过API调用嵌入模型，无需以下本地模型依赖
-# langchain-huggingface # HuggingFace嵌入模型支持 (已弃用)
-# sentence-transformers # HuggingFace句子转换模型 (已弃用，约1GB+)
-# torch # PyTorch (已弃用，约800MB+)
-# transformers # HuggingFace Transformers库 (已弃用)
-# huggingface-hub # HuggingFace模型下载 (已弃用)
+# 鐭ヨ瘑搴撶浉鍏?langchain-text-splitters
+langchain-qdrant # Qdrant鍚戦噺鏁版嵁搴撻泦鎴?fastembed # BM25绋€鐤忓悜閲忥紙娣峰悎妫€绱級
+# 娉ㄦ剰锛氱幇浣跨敤CustomAPIEmbeddings閫氳繃API璋冪敤宓屽叆妯″瀷锛屾棤闇€浠ヤ笅鏈湴妯″瀷渚濊禆
+# langchain-huggingface # HuggingFace宓屽叆妯″瀷鏀寔 (宸插純鐢?
+# sentence-transformers # HuggingFace鍙ュ瓙杞崲妯″瀷 (宸插純鐢紝绾?GB+)
+# torch # PyTorch (宸插純鐢紝绾?00MB+)
+# transformers # HuggingFace Transformers搴?(宸插純鐢?
+# huggingface-hub # HuggingFace妯″瀷涓嬭浇 (宸插純鐢?
 
-# 文档处理
+# 鏂囨。澶勭悊
 pypdf
 python-docx
 python-pptx
 docx2txt
 unstructured
-beautifulsoup4 # HTML解析
+beautifulsoup4 # HTML瑙ｆ瀽
 
-# 数据库与工具
-django-filter # DRF列表过滤
-drf-nested-routers # DRF嵌套路由
-openpyxl # Excel导出
-httpx # HTTP客户端 (例如调用外部API)
-openai # OpenAI官方SDK
-# psycopg2-binary # PostgreSQL驱动 (生产环境可选)
+# 鏁版嵁搴撲笌宸ュ叿
+django-filter # DRF鍒楄〃杩囨护
+drf-nested-routers # DRF宓屽璺敱
+openpyxl # Excel瀵煎嚭
+httpx # HTTP瀹㈡埛绔?(渚嬪璋冪敤澶栭儴API)
+openai # OpenAI瀹樻柟SDK
+# psycopg2-binary # PostgreSQL椹卞姩 (鐢熶骇鐜鍙€?
 ```
 
-## 应用模块
+## 搴旂敤妯″潡
 
-### 1. accounts - 用户管理
-- 用户注册、登录、权限管理
-- 用户组和权限分配
-- JWT 令牌管理
+### 1. accounts - 鐢ㄦ埛绠＄悊
+- 鐢ㄦ埛娉ㄥ唽銆佺櫥褰曘€佹潈闄愮鐞?- 鐢ㄦ埛缁勫拰鏉冮檺鍒嗛厤
+- JWT 浠ょ墝绠＄悊
 
-### 2. projects - 项目管理
-- 项目 CRUD 操作
-- 项目成员管理
-- 基于项目的权限控制
+### 2. projects - 椤圭洰绠＄悊
+- 椤圭洰 CRUD 鎿嶄綔
+- 椤圭洰鎴愬憳绠＄悊
+- 鍩轰簬椤圭洰鐨勬潈闄愭帶鍒?
+### 3. testcases - 娴嬭瘯鐢ㄤ緥绠＄悊
+- 娴嬭瘯鐢ㄤ緥鍜岀敤渚嬫楠ょ鐞?- 鐢ㄤ緥妯″潡鍒嗙被
+- 鐢ㄤ緥瀵煎嚭鍔熻兘
 
-### 3. testcases - 测试用例管理
-- 测试用例和用例步骤管理
-- 用例模块分类
-- 用例导出功能
+- 鐢ㄤ緥瀵煎嚭鍔熻兘
 
-- 用例导出功能
+### 4. knowledge - 鐭ヨ瘑搴撶鐞?(鏂板)
+- 鐭ヨ瘑搴?CRUD 鎿嶄綔
+- 鏂囨。涓婁紶銆佸悜閲忓寲澶勭悊涓庣储寮曟瀯寤?- 鐭ヨ瘑搴撳唴瀹规绱笌绠＄悊
+- 涓嶢I瀵硅瘽銆佹祴璇曠敤渚嬬敓鎴愭ā鍧楄仈鍔?
+### 5. langgraph_integration - AI娴嬭瘯鐢ㄤ緥鐢熸垚寮曟搸
+- LLM 閰嶇疆绠＄悊
+- AI 鏅鸿兘娴嬭瘯鐢ㄤ緥鐢熸垚
+- 鑷劧璇█鍒版祴璇曠敤渚嬬殑杞崲
+- AI 瀵硅瘽鎺ュ彛
+- 鑱婂ぉ鍘嗗彶绠＄悊
+- 娴佸紡鍝嶅簲鏀寔
 
-### 4. knowledge - 知识库管理 (新增)
-- 知识库 CRUD 操作
-- 文档上传、向量化处理与索引构建
-- 知识库内容检索与管理
-- 与AI对话、测试用例生成模块联动
+- 娴佸紡鍝嶅簲鏀寔
 
-### 5. langgraph_integration - AI测试用例生成引擎
-- LLM 配置管理
-- AI 智能测试用例生成
-- 自然语言到测试用例的转换
-- AI 对话接口
-- 聊天历史管理
-- 流式响应支持
+### 6. mcp_tools - MCP 宸ュ叿绠＄悊
+- MCP 鏈嶅姟鍣ㄩ厤缃?- 宸ュ叿璋冪敤绠＄悊
+- 杩滅▼ MCP 杩炴帴
 
-- 流式响应支持
+- 杩滅▼ MCP 杩炴帴
 
-### 6. mcp_tools - MCP 工具管理
-- MCP 服务器配置
-- 工具调用管理
-- 远程 MCP 连接
+### 7. api_keys - API 瀵嗛挜绠＄悊
+- LLM 渚涘簲鍟?API 瀵嗛挜绠＄悊
+- API Key 璁よ瘉鏀寔
 
-- 远程 MCP 连接
+## API 鎺ュ彛
 
-### 7. api_keys - API 密钥管理
-- LLM 供应商 API 密钥管理
-- API Key 认证支持
+### 璁よ瘉鎺ュ彛
+- `POST /api/token/` - 鑾峰彇 JWT 浠ょ墝
+- `POST /api/token/refresh/` - 鍒锋柊 JWT 浠ょ墝
 
-## API 接口
+### 鐢ㄦ埛绠＄悊
+- `GET /api/accounts/users/` - 鐢ㄦ埛鍒楄〃
+- `POST /api/accounts/register/` - 鐢ㄦ埛娉ㄥ唽
+- `GET /api/accounts/me/` - 褰撳墠鐢ㄦ埛淇℃伅
 
-### 认证接口
-- `POST /api/token/` - 获取 JWT 令牌
-- `POST /api/token/refresh/` - 刷新 JWT 令牌
+### 椤圭洰绠＄悊
+- `GET /api/projects/` - 椤圭洰鍒楄〃
+- `POST /api/projects/` - 鍒涘缓椤圭洰
+- `GET /api/projects/{id}/` - 椤圭洰璇︽儏
+- `POST /api/projects/{id}/add_member/` - 娣诲姞鎴愬憳
 
-### 用户管理
-- `GET /api/accounts/users/` - 用户列表
-- `POST /api/accounts/register/` - 用户注册
-- `GET /api/accounts/me/` - 当前用户信息
+### 娴嬭瘯鐢ㄤ緥绠＄悊
+- `GET /api/projects/{project_id}/testcases/` - 鐢ㄤ緥鍒楄〃
+- `POST /api/projects/{project_id}/testcases/` - 鍒涘缓鐢ㄤ緥
+- `GET /api/projects/{project_id}/testcases/{id}/` - 鐢ㄤ緥璇︽儏
+- `GET /api/projects/{project_id}/testcase-modules/` - 椤圭洰鐨勭敤渚嬫ā鍧楀垪琛?- `POST /api/projects/{project_id}/testcase-modules/` - 涓洪」鐩垱寤虹敤渚嬫ā鍧?
+### AI 娴嬭瘯鐢ㄤ緥鐢熸垚
+- `POST /api/lg/chat/` - AI 鏅鸿兘鐢熸垚娴嬭瘯鐢ㄤ緥
+- `POST /api/lg/chat/stream/` - 娴佸紡娴嬭瘯鐢ㄤ緥鐢熸垚
+- `GET /api/lg/chat/history/` - 鐢熸垚鍘嗗彶璁板綍
 
-### 项目管理
-- `GET /api/projects/` - 项目列表
-- `POST /api/projects/` - 创建项目
-- `GET /api/projects/{id}/` - 项目详情
-- `POST /api/projects/{id}/add_member/` - 添加成员
+### MCP 宸ュ叿
+- `GET /api/mcp_tools/configs/` - MCP 閰嶇疆鍒楄〃
+- `POST /api/mcp_tools/configs/` - 鍒涘缓 MCP 閰嶇疆
 
-### 测试用例管理
-- `GET /api/projects/{project_id}/testcases/` - 用例列表
-- `POST /api/projects/{project_id}/testcases/` - 创建用例
-- `GET /api/projects/{project_id}/testcases/{id}/` - 用例详情
-- `GET /api/projects/{project_id}/testcase-modules/` - 项目的用例模块列表
-- `POST /api/projects/{project_id}/testcase-modules/` - 为项目创建用例模块
+- `POST /api/mcp_tools/configs/` - 鍒涘缓 MCP 閰嶇疆
 
-### AI 测试用例生成
-- `POST /api/lg/chat/` - AI 智能生成测试用例
-- `POST /api/lg/chat/stream/` - 流式测试用例生成
-- `GET /api/lg/chat/history/` - 生成历史记录
+### API瀵嗛挜绠＄悊
+- `GET /api/api_keys/` - API瀵嗛挜鍒楄〃 (绀轰緥, 鍏蜂綋鏍规嵁api_keys.urls)
+- `POST /api/api_keys/` - 鍒涘缓API瀵嗛挜 (绀轰緥, 鍏蜂綋鏍规嵁api_keys.urls)
 
-### MCP 工具
-- `GET /api/mcp_tools/configs/` - MCP 配置列表
-- `POST /api/mcp_tools/configs/` - 创建 MCP 配置
+### 鐭ヨ瘑搴撶鐞?(鏂板)
+- `GET /api/knowledge/kbs/` - 鐭ヨ瘑搴撳垪琛?(绀轰緥, 鍏蜂綋鏍规嵁knowledge.urls)
+- `POST /api/knowledge/kbs/` - 鍒涘缓鐭ヨ瘑搴?(绀轰緥, 鍏蜂綋鏍规嵁knowledge.urls)
+- `POST /api/knowledge/kbs/{kb_id}/upload_docs/` - 涓婁紶鏂囨。鍒扮煡璇嗗簱 (绀轰緥)
+- `GET /api/knowledge/kbs/{kb_id}/search_docs/` - 妫€绱㈢煡璇嗗簱鏂囨。 (绀轰緥)
 
-- `POST /api/mcp_tools/configs/` - 创建 MCP 配置
+### API Schema涓庢枃妗?(鏂板)
+- `GET /api/schema/` - 鑾峰彇 OpenAPI 3.0 Schema
+- `GET /api/schema/swagger-ui/` - Swagger UI 鐣岄潰
+- `GET /api/schema/redoc/` - ReDoc UI 鐣岄潰
 
-### API密钥管理
-- `GET /api/api_keys/` - API密钥列表 (示例, 具体根据api_keys.urls)
-- `POST /api/api_keys/` - 创建API密钥 (示例, 具体根据api_keys.urls)
-
-### 知识库管理 (新增)
-- `GET /api/knowledge/kbs/` - 知识库列表 (示例, 具体根据knowledge.urls)
-- `POST /api/knowledge/kbs/` - 创建知识库 (示例, 具体根据knowledge.urls)
-- `POST /api/knowledge/kbs/{kb_id}/upload_docs/` - 上传文档到知识库 (示例)
-- `GET /api/knowledge/kbs/{kb_id}/search_docs/` - 检索知识库文档 (示例)
-
-### API Schema与文档 (新增)
-- `GET /api/schema/` - 获取 OpenAPI 3.0 Schema
-- `GET /api/schema/swagger-ui/` - Swagger UI 界面
-- `GET /api/schema/redoc/` - ReDoc UI 界面
-
-## 快速开始
-
-### 环境要求
-- Python 3.8+ (推荐 3.10+)
+## 蹇€熷紑濮?
+### 鐜瑕佹眰
+- Python 3.8+ (鎺ㄨ崘 3.10+)
 - Django 5.2.1
 - SQLite/PostgreSQL
-- Pip (包管理器)
-- Git (版本控制)
+- Pip (鍖呯鐞嗗櫒)
+- Git (鐗堟湰鎺у埗)
 
-### 系统依赖（Linux/Ubuntu）
-```bash
-# 旧版Word文档(.doc)解析支持
+### 绯荤粺渚濊禆锛圠inux/Ubuntu锛?```bash
+# 鏃х増Word鏂囨。(.doc)瑙ｆ瀽鏀寔
 sudo apt-get install antiword catdoc
 ```
 
-### 安装步骤
+### 瀹夎姝ラ
 
-1. **克隆项目**
+1. **鍏嬮殕椤圭洰**
 ```bash
 git clone https://github.com/MGdaasLab/FlyTest.git
 cd FlyTest_django
 ```
 
-2. **安装依赖**
+2. **瀹夎渚濊禆**
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **数据库迁移**
+3. **鏁版嵁搴撹縼绉?*
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-4. **创建超级用户**
+4. **鍒涘缓瓒呯骇鐢ㄦ埛**
 ```bash
 python manage.py createsuperuser
 ```
 
-5. **启动服务**
+5. **鍚姩鏈嶅姟**
 ```bash
 python manage.py runserver
 ```
 
-### 配置说明
+### 閰嶇疆璇存槑
 
-#### 环境变量配置
+#### 鐜鍙橀噺閰嶇疆
 
-| 变量名 | 必填 | 默认值 | 示例值 | 说明 |
+| 鍙橀噺鍚?| 蹇呭～ | 榛樿鍊?| 绀轰緥鍊?| 璇存槑 |
 |--------|------|--------|--------|------|
-| `DJANGO_DEBUG` | 否 | `False` | `True` | 调试模式开关，开发环境设为 `True`，生产环境设为 `False` |
-| `DJANGO_SECRET_KEY` | 建议设置 | 开发默认值 | `your-production-secret-key-here` | Django 密钥，生产环境必须设置强密钥 |
-| `DJANGO_ALLOWED_HOSTS` | 生产必填 | 开发默认 | `yourdomain.com,localhost,127.0.0.1` | 允许的主机列表，用逗号分隔 |
-| `DJANGO_SUPERUSER_USERNAME` | 否 | `admin` | `admin` | Docker 容器启动时自动创建的超级用户名 |
-| `DJANGO_SUPERUSER_PASSWORD` | 否 | `123456` | `123456` | Docker 容器启动时自动创建的超级用户密码 |
-| `DJANGO_SUPERUSER_EMAIL` | 否 | `admin@qq.com` | `admin@qq.com` | Docker 容器启动时自动创建的超级用户邮箱 |
-| `DJANGO_CORS_ALLOWED_ORIGINS` | 否 | 开发默认 | `http://localhost:3000,http://127.0.0.1:3000` | CORS 允许的源，用逗号分隔 |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | 否 | 开发默认 | `http://localhost:3000,http://127.0.0.1:3000` | CSRF 信任的源，用逗号分隔 |
-| `USER_AGENT` | 否 | 默认值 | `FlyTest-Django/1.0 (AI Test Case Generation Platform)` | HTTP 请求的用户代理标识 |
-| `DATABASE_URL` | 否 | SQLite | `postgresql://user:pass@localhost/dbname` | 数据库连接 URL（生产环境推荐 PostgreSQL） |
-| `OPENAI_API_KEY` | 否 | - | `sk-...` | OpenAI API 密钥（如果使用 OpenAI 模型） |
-| `ANTHROPIC_API_KEY` | 否 | - | `sk-ant-...` | Anthropic API 密钥（注：项目当前默认只支持 OpenAI 兼容格式，如需启用 Anthropic/Claude，请按需安装依赖并修改配置） |
+| `DJANGO_DEBUG` | 鍚?| `False` | `True` | 璋冭瘯妯″紡寮€鍏筹紝寮€鍙戠幆澧冭涓?`True`锛岀敓浜х幆澧冭涓?`False` |
+| `DJANGO_SECRET_KEY` | 寤鸿璁剧疆 | 寮€鍙戦粯璁ゅ€?| `your-production-secret-key-here` | Django 瀵嗛挜锛岀敓浜х幆澧冨繀椤昏缃己瀵嗛挜 |
+| `DJANGO_ALLOWED_HOSTS` | 鐢熶骇蹇呭～ | 寮€鍙戦粯璁?| `yourdomain.com,localhost,127.0.0.1` | 鍏佽鐨勪富鏈哄垪琛紝鐢ㄩ€楀彿鍒嗛殧 |
+| `DJANGO_SUPERUSER_USERNAME` | 鍚?| `admin` | `admin` | Docker 瀹瑰櫒鍚姩鏃惰嚜鍔ㄥ垱寤虹殑瓒呯骇鐢ㄦ埛鍚?|
+| `DJANGO_SUPERUSER_PASSWORD` | 鍚?| `123456` | `123456` | Docker 瀹瑰櫒鍚姩鏃惰嚜鍔ㄥ垱寤虹殑瓒呯骇鐢ㄦ埛瀵嗙爜 |
+| `DJANGO_SUPERUSER_EMAIL` | 鍚?| `admin@qq.com` | `admin@qq.com` | Docker 瀹瑰櫒鍚姩鏃惰嚜鍔ㄥ垱寤虹殑瓒呯骇鐢ㄦ埛閭 |
+| `DJANGO_CORS_ALLOWED_ORIGINS` | 鍚?| 寮€鍙戦粯璁?| `http://localhost:3000,http://127.0.0.1:3000` | CORS 鍏佽鐨勬簮锛岀敤閫楀彿鍒嗛殧 |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | 鍚?| 寮€鍙戦粯璁?| `http://localhost:3000,http://127.0.0.1:3000` | CSRF 淇′换鐨勬簮锛岀敤閫楀彿鍒嗛殧 |
+| `USER_AGENT` | 鍚?| 榛樿鍊?| `FlyTest-Django/1.0 (AI Test Case Generation Platform)` | HTTP 璇锋眰鐨勭敤鎴蜂唬鐞嗘爣璇?|
+| `DATABASE_URL` | 鍚?| SQLite | `postgresql://user:pass@localhost/dbname` | 鏁版嵁搴撹繛鎺?URL锛堢敓浜х幆澧冩帹鑽?PostgreSQL锛?|
+| `OPENAI_API_KEY` | 鍚?| - | `sk-...` | OpenAI API 瀵嗛挜锛堝鏋滀娇鐢?OpenAI 妯″瀷锛?|
+| `ANTHROPIC_API_KEY` | 鍚?| - | `sk-ant-...` | Anthropic API 瀵嗛挜锛堟敞锛氶」鐩綋鍓嶉粯璁ゅ彧鏀寔 OpenAI 鍏煎鏍煎紡锛屽闇€鍚敤 Anthropic/Claude锛岃鎸夐渶瀹夎渚濊禆骞朵慨鏀归厤缃級 |
 
-#### LLM 配置
-在管理后台或通过 API 配置 LLM 供应商和 API 密钥。
+#### LLM 閰嶇疆
+鍦ㄧ鐞嗗悗鍙版垨閫氳繃 API 閰嶇疆 LLM 渚涘簲鍟嗗拰 API 瀵嗛挜銆?
+#### MCP 閰嶇疆
+閰嶇疆 MCP 鏈嶅姟鍣ㄨ繛鎺ヤ俊鎭紝鏀寔鏈湴鍜岃繙绋嬫湇鍔″櫒銆?
+## 鏉冮檺绯荤粺
 
-#### MCP 配置
-配置 MCP 服务器连接信息，支持本地和远程服务器。
+### 鏉冮檺灞傜骇
+1. **鐢ㄦ埛璁よ瘉** - 纭繚鐢ㄦ埛宸茬櫥褰?2. **妯″瀷鏉冮檺** - Django 妯″瀷绾у埆鏉冮檺
+3. **椤圭洰鏉冮檺** - 鍩轰簬椤圭洰鎴愬憳韬唤鐨勬潈闄?
+### 瑙掕壊瀹氫箟
+- **Owner** - 椤圭洰鎷ユ湁鑰咃紝鎷ユ湁鎵€鏈夋潈闄?- **Admin** - 椤圭洰绠＄悊鍛橈紝鍙鐞嗛」鐩拰鎴愬憳
+- **Member** - 椤圭洰鎴愬憳锛屽彲璁块棶椤圭洰璧勬簮
 
-## 权限系统
-
-### 权限层级
-1. **用户认证** - 确保用户已登录
-2. **模型权限** - Django 模型级别权限
-3. **项目权限** - 基于项目成员身份的权限
-
-### 角色定义
-- **Owner** - 项目拥有者，拥有所有权限
-- **Admin** - 项目管理员，可管理项目和成员
-- **Member** - 项目成员，可访问项目资源
-
-## 开发指南
-
-### 代码结构
+## 寮€鍙戞寚鍗?
+### 浠ｇ爜缁撴瀯
 ```
 flytest_django/
-├── accounts/          # 用户管理
-├── projects/          # 项目管理
-├── testcases/         # 测试用例管理
-├── knowledge/         # 知识库管理 (新增)
-├── langgraph_integration/  # AI 对话集成
-├── mcp_tools/         # MCP 工具管理
-├── api_keys/          # API 密钥管理
-├── llm_config/        # LLM 配置管理 (可能存在, 根据实际情况调整)
-├── flytest_django/   # 项目配置
-├── docs/              # 文档
-├── logs/              # 日志文件
-└── templates/         # 模板文件
+鈹溾攢鈹€ accounts/          # 鐢ㄦ埛绠＄悊
+鈹溾攢鈹€ projects/          # 椤圭洰绠＄悊
+鈹溾攢鈹€ testcases/         # 娴嬭瘯鐢ㄤ緥绠＄悊
+鈹溾攢鈹€ knowledge/         # 鐭ヨ瘑搴撶鐞?(鏂板)
+鈹溾攢鈹€ langgraph_integration/  # AI 瀵硅瘽闆嗘垚
+鈹溾攢鈹€ mcp_tools/         # MCP 宸ュ叿绠＄悊
+鈹溾攢鈹€ api_keys/          # API 瀵嗛挜绠＄悊
+鈹溾攢鈹€ llm_config/        # LLM 閰嶇疆绠＄悊 (鍙兘瀛樺湪, 鏍规嵁瀹為檯鎯呭喌璋冩暣)
+鈹溾攢鈹€ flytest_django/   # 椤圭洰閰嶇疆
+鈹溾攢鈹€ docs/              # 鏂囨。
+鈹溾攢鈹€ logs/              # 鏃ュ織鏂囦欢
+鈹斺攢鈹€ templates/         # 妯℃澘鏂囦欢
 ```
 
-### 开发规范
-- 所有视图集继承自 `BaseModelViewSet`
-- 使用统一的响应格式 `UnifiedResponseRenderer`
-- 遵循 RESTful API 设计原则
-- 完善的权限控制和数据隔离
-- 注释规范统一遵循 [`docs/code_comment_rules.md`](./docs/code_comment_rules.md)
+### 寮€鍙戣鑼?- 鎵€鏈夎鍥鹃泦缁ф壙鑷?`BaseModelViewSet`
+- 浣跨敤缁熶竴鐨勫搷搴旀牸寮?`UnifiedResponseRenderer`
+- 閬靛惊 RESTful API 璁捐鍘熷垯
+- 瀹屽杽鐨勬潈闄愭帶鍒跺拰鏁版嵁闅旂
+- 娉ㄩ噴瑙勮寖缁熶竴閬靛惊 [`docs/code_comment_rules.md`](./docs/code_comment_rules.md)
 
-### 注释规范
+### 娉ㄩ噴瑙勮寖
 
-为避免配置注释与逻辑注释风格混用，项目按以下规则执行（详细示例见 [`docs/code_comment_rules.md`](./docs/code_comment_rules.md)）：
+涓洪伩鍏嶉厤缃敞閲婁笌閫昏緫娉ㄩ噴椋庢牸娣风敤锛岄」鐩寜浠ヤ笅瑙勫垯鎵ц锛堣缁嗙ず渚嬭 [`docs/code_comment_rules.md`](./docs/code_comment_rules.md)锛夛細
 
-1. 配置文件（如 `settings.py`）统一使用行尾注释，强调“用途/影响”，且同一列表/字典全量一致。
-2. 业务逻辑文件（`views/services/tasks/permissions`）统一使用上方细粒度注释，说明“条件 -> 动作 -> 结果”或“为什么这么做”。
-3. 同一配置块保持同一风格；新增/修改配置时同步补注释；注释不得与代码语义冲突。
+1. 閰嶇疆鏂囦欢锛堝 `settings.py`锛夌粺涓€浣跨敤琛屽熬娉ㄩ噴锛屽己璋冣€滅敤閫?褰卞搷鈥濓紝涓斿悓涓€鍒楄〃/瀛楀吀鍏ㄩ噺涓€鑷淬€?2. 涓氬姟閫昏緫鏂囦欢锛坄views/services/tasks/permissions`锛夌粺涓€浣跨敤涓婃柟缁嗙矑搴︽敞閲婏紝璇存槑鈥滄潯浠?-> 鍔ㄤ綔 -> 缁撴灉鈥濇垨鈥滀负浠€涔堣繖涔堝仛鈥濄€?3. 鍚屼竴閰嶇疆鍧椾繚鎸佸悓涓€椋庢牸锛涙柊澧?淇敼閰嶇疆鏃跺悓姝ヨˉ娉ㄩ噴锛涙敞閲婁笉寰椾笌浠ｇ爜璇箟鍐茬獊銆?
+## 閮ㄧ讲鎸囧崡
 
-## 部署指南
+### 馃惓 Docker 閮ㄧ讲
 
-### 🐳 Docker 部署
-
-#### 构建镜像
+#### 鏋勫缓闀滃儚
 ```bash
-# 构建 Docker 镜像
+# 鏋勫缓 Docker 闀滃儚
 docker build -t flytest-django .
 ```
 
-#### 运行容器
+#### 杩愯瀹瑰櫒
 ```bash
-# 使用环境变量运行
+# 浣跨敤鐜鍙橀噺杩愯
 docker run -d \n  -p 8000:8000 \n  -e DJANGO_DEBUG=False \n  -e DJANGO_SECRET_KEY=your-production-secret-key \n  -e DJANGO_ALLOWED_HOSTS=yourdomain.com,localhost \n  flytest-django
 
-# 使用 .env 文件运行
+# 浣跨敤 .env 鏂囦欢杩愯
 docker run -d -p 8000:8000 --env-file .env flytest-django
 ```
 
@@ -369,116 +313,102 @@ services:
       - ./data:/app/data
 ```
 
-### 🚀 快速部署
-
-#### 开发环境部署
-```bash
-# 1. 克隆项目
+### 馃殌 蹇€熼儴缃?
+#### 寮€鍙戠幆澧冮儴缃?```bash
+# 1. 鍏嬮殕椤圭洰
 git clone https://github.com/MGdaasLab/FlyTest.git
 cd flytest-django
 
-# 2. 创建虚拟环境
+# 2. 鍒涘缓铏氭嫙鐜
 python3 -m venv venv
 source venv/bin/activate  # Linux/Mac
-# 或 venv\Scripts\activate  # Windows
+# 鎴?venv\Scripts\activate  # Windows
 
-# 3. 安装依赖
+# 3. 瀹夎渚濊禆
 pip install -r requirements.txt
 
-# 4. 数据库迁移
-python manage.py makemigrations
+# 4. 鏁版嵁搴撹縼绉?python manage.py makemigrations
 python manage.py migrate
 
-# 5. 创建超级用户
+# 5. 鍒涘缓瓒呯骇鐢ㄦ埛
 python manage.py createsuperuser
 
-# 6. 启动开发服务器
+# 6. 鍚姩寮€鍙戞湇鍔″櫒
 python manage.py runserver
 ```
 
-#### 生产环境部署
+#### 鐢熶骇鐜閮ㄧ讲
 
-##### 方案1: Ubuntu服务器自动部署（推荐）
-```bash
-# 1. 系统准备
+##### 鏂规1: Ubuntu鏈嶅姟鍣ㄨ嚜鍔ㄩ儴缃诧紙鎺ㄨ崘锛?```bash
+# 1. 绯荤粺鍑嗗
 sudo apt update
 sudo apt install python3-pip python3-venv git
 
-# 2. 克隆项目
+# 2. 鍏嬮殕椤圭洰
 git clone https://github.com/MGdaasLab/FlyTest.git
 cd flytest-django
 
-# 3. 创建虚拟环境
+# 3. 鍒涘缓铏氭嫙鐜
 python3 -m venv venv
 source venv/bin/activate
 
-# 4. 安装完整依赖
+# 4. 瀹夎瀹屾暣渚濊禆
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 5. 配置嵌入服务（使用API）
-export OPENAI_API_KEY=your-api-key
-# 或者使用其他嵌入服务，如Azure OpenAI、Ollama等
-
-# 6. 数据库配置
-python manage.py makemigrations
+# 5. 閰嶇疆宓屽叆鏈嶅姟锛堜娇鐢ˋPI锛?export OPENAI_API_KEY=your-api-key
+# 鎴栬€呬娇鐢ㄥ叾浠栧祵鍏ユ湇鍔★紝濡侫zure OpenAI銆丱llama绛?
+# 6. 鏁版嵁搴撻厤缃?python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
 
-# 7. 收集静态文件
-python manage.py collectstatic --noinput
+# 7. 鏀堕泦闈欐€佹枃浠?python manage.py collectstatic --noinput
 
-# 8. 启动生产服务器（支持 WebSocket）
-uvicorn flytest_django.asgi:application --host 0.0.0.0 --port 8000 --workers 4
+# 8. 鍚姩鐢熶骇鏈嶅姟鍣紙鏀寔 WebSocket锛?uvicorn flytest_django.asgi:application --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-##### 方案2: Docker Compose部署（推荐）
+##### 鏂规2: Docker Compose閮ㄧ讲锛堟帹鑽愶級
 ```bash
-# 创建docker-compose.yml  
+# 鍒涘缓docker-compose.yml  
 cat > docker-compose.yml << 'EOF'
 version: '3.8'
 services:
-  # Django应用
+  # Django搴旂敤
   django-app:
     build: .
     ports:
       - "8000:8000"
     environment:
       - OPENAI_API_KEY=your-api-key
-      # 或使用其他嵌入服务配置
-    restart: unless-stopped
+      # 鎴栦娇鐢ㄥ叾浠栧祵鍏ユ湇鍔￠厤缃?    restart: unless-stopped
 EOF
 
-# 启动服务
+# 鍚姩鏈嶅姟
 docker-compose up -d
 ```
 
-### 🔧 环境配置
+### 馃敡 鐜閰嶇疆
 
-#### 环境变量配置
-创建 `.env` 文件：
-```bash
-# 基础配置
+#### 鐜鍙橀噺閰嶇疆
+鍒涘缓 `.env` 鏂囦欢锛?```bash
+# 鍩虹閰嶇疆
 DEBUG=False
 SECRET_KEY=your-secret-key-here
 ALLOWED_HOSTS=your-domain.com,your-ip-address
 
-# 数据库配置（生产环境推荐PostgreSQL）
-DATABASE_URL=postgresql://user:password@localhost/dbname
+# 鏁版嵁搴撻厤缃紙鐢熶骇鐜鎺ㄨ崘PostgreSQL锛?DATABASE_URL=postgresql://user:password@localhost/dbname
 
-# LLM API Keys (根据实际使用的模型配置)
+# LLM API Keys (鏍规嵁瀹為檯浣跨敤鐨勬ā鍨嬮厤缃?
 OPENAI_API_KEY=your_openai_api_key_here
-# ANTHROPIC_API_KEY=your_anthropic_api_key_here (注：默认未启用 / 如需 Anthropic 支持，请取消注释并安装对应依赖)
-# ... 其他 LLM API Keys
+# ANTHROPIC_API_KEY=your_anthropic_api_key_here (娉細榛樿鏈惎鐢?/ 濡傞渶 Anthropic 鏀寔锛岃鍙栨秷娉ㄩ噴骞跺畨瑁呭搴斾緷璧?
+# ... 鍏朵粬 LLM API Keys
 
-# CORS配置
+# CORS閰嶇疆
 DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
 ```
 
-#### 数据库配置
-```python
-# settings.py - 生产环境数据库配置
-DATABASES = {
+#### 鏁版嵁搴撻厤缃?```python
+# settings.py - 鐢熶骇鐜鏁版嵁搴撻厤缃?DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'flytest_db',
@@ -490,9 +420,8 @@ DATABASES = {
 }
 ```
 
-### 🌐 Web服务器配置
-
-#### Nginx配置
+### 馃寪 Web鏈嶅姟鍣ㄩ厤缃?
+#### Nginx閰嶇疆
 ```nginx
 server {
     listen 80;
@@ -520,147 +449,124 @@ server {
 }
 ```
 
-#### SSL证书配置
+#### SSL璇佷功閰嶇疆
 ```bash
-# 使用Let's Encrypt免费SSL证书
+# 浣跨敤Let's Encrypt鍏嶈垂SSL璇佷功
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com
 ```
 
 
 
-### 📊 性能优化
+### 馃搳 鎬ц兘浼樺寲
 
-#### 嵌入服务选择对比
-| 服务类型 | 精度 | 成本 | 部署复杂度 | 数据隐私 |
+#### 宓屽叆鏈嶅姟閫夋嫨瀵规瘮
+| 鏈嶅姟绫诲瀷 | 绮惧害 | 鎴愭湰 | 閮ㄧ讲澶嶆潅搴?| 鏁版嵁闅愮 |
 |---------|------|------|-----------|---------|
-| OpenAI API | 90-95% | 按量付费 | 简单 | 云端 |
-| Azure OpenAI | 90-95% | 企业定价 | 简单 | 企业级 |
-| Ollama本地 | 80-90% | 免费 | 中等 | 完全私有 |
+| OpenAI API | 90-95% | 鎸夐噺浠樿垂 | 绠€鍗?| 浜戠 |
+| Azure OpenAI | 90-95% | 浼佷笟瀹氫环 | 绠€鍗?| 浼佷笟绾?|
+| Ollama鏈湴 | 80-90% | 鍏嶈垂 | 涓瓑 | 瀹屽叏绉佹湁 |
 
-#### 生产环境优化建议
-1. **选择合适嵌入服务**: 根据精度、成本、隐私要求选择
-2. **配置Gunicorn**: 多进程处理提升并发性能
-3. **启用Nginx缓存**: 静态文件缓存减少服务器负载
-4. **数据库优化**: 使用PostgreSQL并配置连接池
-5. **监控配置**: 配置日志和性能监控
-6. **服务预热**: 启动时预加载嵌入服务减少首次查询延迟
+#### 鐢熶骇鐜浼樺寲寤鸿
+1. **閫夋嫨鍚堥€傚祵鍏ユ湇鍔?*: 鏍规嵁绮惧害銆佹垚鏈€侀殣绉佽姹傞€夋嫨
+2. **閰嶇疆Gunicorn**: 澶氳繘绋嬪鐞嗘彁鍗囧苟鍙戞€ц兘
+3. **鍚敤Nginx缂撳瓨**: 闈欐€佹枃浠剁紦瀛樺噺灏戞湇鍔″櫒璐熻浇
+4. **鏁版嵁搴撲紭鍖?*: 浣跨敤PostgreSQL骞堕厤缃繛鎺ユ睜
+5. **鐩戞帶閰嶇疆**: 閰嶇疆鏃ュ織鍜屾€ц兘鐩戞帶
+6. **鏈嶅姟棰勭儹**: 鍚姩鏃堕鍔犺浇宓屽叆鏈嶅姟鍑忓皯棣栨鏌ヨ寤惰繜
 
-### 🔍 部署验证
+### 馃攳 閮ㄧ讲楠岃瘉
 
-#### 验证嵌入服务状态
-启动服务后，查看日志确认嵌入服务连接正常：
-```bash
-# OpenAI API服务的日志
-🚀 初始化OpenAI嵌入模型: text-embedding-ada-002
-✅ 嵌入模型测试成功: openai_text-embedding-ada-002, 维度: 1536
-🎉 说明: 使用OpenAI嵌入API服务
+#### 楠岃瘉宓屽叆鏈嶅姟鐘舵€?鍚姩鏈嶅姟鍚庯紝鏌ョ湅鏃ュ織纭宓屽叆鏈嶅姟杩炴帴姝ｅ父锛?```bash
+# OpenAI API鏈嶅姟鐨勬棩蹇?馃殌 鍒濆鍖朞penAI宓屽叆妯″瀷: text-embedding-ada-002
+鉁?宓屽叆妯″瀷娴嬭瘯鎴愬姛: openai_text-embedding-ada-002, 缁村害: 1536
+馃帀 璇存槑: 浣跨敤OpenAI宓屽叆API鏈嶅姟
 ```
 
-#### 服务健康检查
-```bash
-# 检查Django API
+#### 鏈嶅姟鍋ュ悍妫€鏌?```bash
+# 妫€鏌jango API
 curl http://localhost:8000/api/knowledge/embedding-services/  
 
-# 检查知识库系统
+# 妫€鏌ョ煡璇嗗簱绯荤粺
 python manage.py check_knowledge_system --verbose
 ```
 
-#### 功能测试
+#### 鍔熻兘娴嬭瘯
 ```bash
-# 测试API接口
+# 娴嬭瘯API鎺ュ彛
 curl -X GET http://localhost:8000/api/projects/ \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
-# 测试AI对话功能
+# 娴嬭瘯AI瀵硅瘽鍔熻兘
 curl -X POST http://localhost:8000/api/lg/chat/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"message": "帮我生成一个登录功能的测试用例", "project_id": 1}'
+  -d '{"message": "甯垜鐢熸垚涓€涓櫥褰曞姛鑳界殑娴嬭瘯鐢ㄤ緥", "project_id": 1}'
 ```
 
-### 🛡️ 安全配置
+### 馃洝锔?瀹夊叏閰嶇疆
 
-#### 防火墙设置
-```bash
-# Ubuntu UFW防火墙配置
-sudo ufw allow 22    # SSH
+#### 闃茬伀澧欒缃?```bash
+# Ubuntu UFW闃茬伀澧欓厤缃?sudo ufw allow 22    # SSH
 sudo ufw allow 80    # HTTP
 sudo ufw allow 443   # HTTPS
 sudo ufw enable
 ```
 
-#### 安全检查清单
-- [ ] 更改默认密码和密钥
-- [ ] 配置HTTPS/SSL证书
-- [ ] 设置防火墙规则
-- [ ] 配置数据库访问权限
-- [ ] 启用日志监控
-- [ ] 定期备份数据
+#### 瀹夊叏妫€鏌ユ竻鍗?- [ ] 鏇存敼榛樿瀵嗙爜鍜屽瘑閽?- [ ] 閰嶇疆HTTPS/SSL璇佷功
+- [ ] 璁剧疆闃茬伀澧欒鍒?- [ ] 閰嶇疆鏁版嵁搴撹闂潈闄?- [ ] 鍚敤鏃ュ織鐩戞帶
+- [ ] 瀹氭湡澶囦唤鏁版嵁
 
-### 📝 部署检查清单
+### 馃摑 閮ㄧ讲妫€鏌ユ竻鍗?
+#### 鍩虹鐜
+- [ ] Python 3.8+ 宸插畨瑁?- [ ] 铏氭嫙鐜宸插垱寤哄苟婵€娲?- [ ] requirements.txt 渚濊禆宸插畨瑁?- [ ] 鏁版嵁搴撳凡閰嶇疆骞惰縼绉?- [ ] 瓒呯骇鐢ㄦ埛宸插垱寤?
+#### AI鍔熻兘
+- [ ] HuggingFace妯″瀷宸蹭笅杞斤紙鐢熶骇鐜锛?- [ ] 鍚戦噺妯″瀷鍔犺浇鐘舵€佸凡楠岃瘉
+- [ ] 鐭ヨ瘑搴撳姛鑳芥祴璇曢€氳繃
+- [ ] AI瀵硅瘽鎺ュ彛娴嬭瘯閫氳繃
 
-#### 基础环境
-- [ ] Python 3.8+ 已安装
-- [ ] 虚拟环境已创建并激活
-- [ ] requirements.txt 依赖已安装
-- [ ] 数据库已配置并迁移
-- [ ] 超级用户已创建
+#### 鐢熶骇鐜
+- [ ] 鐜鍙橀噺宸查厤缃?- [ ] 闈欐€佹枃浠跺凡鏀堕泦
+- [ ] Web鏈嶅姟鍣ㄥ凡閰嶇疆
+- [ ] SSL璇佷功宸插畨瑁?- [ ] 闃茬伀澧欏凡璁剧疆
+- [ ] 鐩戞帶鍜屾棩蹇楀凡閰嶇疆
+- [ ] 澶囦唤绛栫暐宸插疄鏂?
+## 璐＄尞鎸囧崡
 
-#### AI功能
-- [ ] HuggingFace模型已下载（生产环境）
-- [ ] 向量模型加载状态已验证
-- [ ] 知识库功能测试通过
-- [ ] AI对话接口测试通过
-
-#### 生产环境
-- [ ] 环境变量已配置
-- [ ] 静态文件已收集
-- [ ] Web服务器已配置
-- [ ] SSL证书已安装
-- [ ] 防火墙已设置
-- [ ] 监控和日志已配置
-- [ ] 备份策略已实施
-
-## 贡献指南
-
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 创建 Pull Request
+1. Fork 椤圭洰
+2. 鍒涘缓鍔熻兘鍒嗘敮
+3. 鎻愪氦鏇存敼
+4. 鍒涘缓 Pull Request
 
 ## 许可证
 
-本项目采用 [MIT License](LICENSE) 开源协议。
+本项目当前采用 [PolyForm Noncommercial 1.0.0](LICENSE) 许可证。
 
 ### 协议说明
-- ✅ **商业使用** - 可用于商业项目
-- ✅ **修改** - 可以修改源代码
-- ✅ **分发** - 可以分发原始或修改后的代码
-- ❗ **责任** - 作者不承担责任
-- ❗ **保证** - 不提供任何保证
+- 允许个人学习、研究、评估和内部非商业使用
+- 允许在非商业前提下修改和分发
+- 不允许将本项目用于商业目的
+- 商业部署、商业交付、SaaS 或客户项目使用需获得单独书面授权
 
 ### 使用要求
-使用本项目时，请在您的项目中包含以下内容：
-- 保留原始的版权声明
-- 保留MIT许可证全文
+- 保留原始版权声明
+- 保留当前许可证全文
+- 分发修改版本时同步告知接收方授权限制
 
 ### 第三方依赖
-本项目使用的主要依赖库及其协议：
+本项目依赖的第三方库仍分别遵循它们自己的原始许可证，例如：
 - Django (BSD-3-Clause)
-- Django REST Framework (MIT)
-- LangChain系列 (MIT)
-- OpenAI SDK (MIT)
-- 其他依赖库详见 [requirements.txt](requirements.txt)
+- Django REST Framework（依组件原始许可证）
+- LangChain 系列（依组件原始许可证）
+- OpenAI SDK（依原始许可证）
+- 其他依赖详见 [requirements.txt](requirements.txt)
 
-所有依赖库均为宽松开源协议，与MIT协议完全兼容。
+第三方依赖许可证不会因为本项目主代码改为非商用协议而自动改变。
 
 ## 联系方式
 
-如有问题或建议，请通过以下方式联系：
-- 提交 Issue
-- 项目讨论区
-
+濡傛湁闂鎴栧缓璁紝璇烽€氳繃浠ヤ笅鏂瑰紡鑱旂郴锛?- 鎻愪氦 Issue
+- 椤圭洰璁ㄨ鍖?
 ---
 
-**FlyTest** - AI驱动测试用例生成，让测试更智能，让开发更高效！
+**FlyTest** - AI椹卞姩娴嬭瘯鐢ㄤ緥鐢熸垚锛岃娴嬭瘯鏇存櫤鑳斤紝璁╁紑鍙戞洿楂樻晥锛?
