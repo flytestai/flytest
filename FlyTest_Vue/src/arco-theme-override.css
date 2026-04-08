@@ -680,6 +680,39 @@
   padding: 20px 24px;
   max-height: 70vh;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.arco-drawer-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.arco-modal-body::-webkit-scrollbar,
+.arco-drawer-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.arco-modal-body::-webkit-scrollbar-track,
+.arco-drawer-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.arco-modal-body::-webkit-scrollbar-thumb,
+.arco-drawer-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.28);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.arco-modal-body::-webkit-scrollbar-thumb:hover,
+.arco-drawer-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.42);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .arco-modal-footer {

@@ -1,7 +1,7 @@
 <template>
   <div class="llm-config-management">
     <div class="page-header">
-      <h1 class="text-2xl font-semibold mb-4">LLM 配置管理</h1>
+      <h1 class="text-2xl font-semibold mb-4">AI大模型配置管理</h1>
       <div class="header-actions">
         <a-button @click="showPromptManagement">
           <template #icon><icon-file /></template>

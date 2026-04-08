@@ -46,7 +46,7 @@
           <template #icon>
             <icon-settings />
           </template>
-          LLM配置
+          AI大模型配置
         </a-button>
 
         <a-button type="text" @click="$emit('show-tool-approval-settings')">

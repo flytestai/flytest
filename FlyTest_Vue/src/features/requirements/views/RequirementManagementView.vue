@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="requirement-management">
     <section class="workspace-hero workspace-hero--requirements workspace-hero--compact workspace-hero--requirement-command">
       <div class="workspace-hero-copy">
@@ -27,7 +27,7 @@
       <div class="workspace-hero-orb" aria-hidden="true"></div>
     </section>
 
-    <!-- 搜索和筛选 -->
+    <!-- 鎼滅储鍜岀瓫閫?-->
     <div class="filter-section">
       <div class="filter-row">
         <a-input-search
@@ -77,7 +77,7 @@
       </div>
     </div>
 
-    <!-- 文档列表 -->
+    <!-- 鏂囨。鍒楄〃 -->
     <div class="content-section">
       <a-table
         :columns="columns"
@@ -89,19 +89,19 @@
         @page-size-change="handlePageSizeChange"
         row-key="id"
       >
-        <!-- 状态列 -->
+        <!-- 鐘舵€佸垪 -->
         <template #status="{ record }">
           <a-tag :color="getStatusColor(record.status)">
             {{ getStatusText(record.status) }}
           </a-tag>
         </template>
 
-        <!-- 文档类型列 -->
+        <!-- 鏂囨。绫诲瀷鍒?-->
         <template #document_type="{ record }">
           <a-tag color="blue">{{ getTypeText(record.document_type) }}</a-tag>
         </template>
 
-        <!-- 统计信息列 -->
+        <!-- 缁熻淇℃伅鍒?-->
         <template #stats="{ record }">
           <div class="stats-info">
             <span class="stat-item">{{ record.word_count || 0 }} 字</span>
@@ -110,7 +110,7 @@
           </div>
         </template>
 
-        <!-- 操作列 -->
+        <!-- 鎿嶄綔鍒?-->
         <template #actions="{ record }">
           <div class="actions-wrapper">
             <a-button type="text" size="small" @click="viewDocument(record)">
@@ -178,7 +178,7 @@
       </a-table>
     </div>
 
-    <!-- 上传文档模态框 -->
+    <!-- 涓婁紶鏂囨。妯℃€佹 -->
     <a-modal
       v-model:visible="uploadModalVisible"
       title="上传需求文档"
@@ -263,7 +263,7 @@
       </a-form>
     </a-modal>
 
-    <!-- 评审配置模态框 -->
+    <!-- 璇勫閰嶇疆妯℃€佹 -->
     <a-modal
       v-model:visible="reviewConfigVisible"
       :title="reviewAction === 'restart' ? '重新评审配置' : '评审配置'"
@@ -271,19 +271,19 @@
       @cancel="reviewConfigVisible = false"
     >
       <a-alert v-if="reviewAction === 'restart'" type="warning" style="margin-bottom: 16px">
-        重新评审将创建新的评审报告，原有报告将保留。
+        重新评审将创建新的评审报告，原有报告会保留。
       </a-alert>
       
       <a-form :model="reviewConfig" layout="vertical">
         <a-form-item label="并发分析数量" field="max_workers">
           <a-select v-model="reviewConfig.max_workers" placeholder="请选择并发数量">
-            <a-option :value="1">1 (串行分析 - 最慢但最稳定)</a-option>
-            <a-option :value="2">2 (低并发 - 适合低配环境)</a-option>
-            <a-option :value="3">3 (推荐 - 平衡速度与稳定性)</a-option>
-            <a-option :value="5">5 (高并发 - 速度最快)</a-option>
+            <a-option :value="1">1（串行分析，最慢但最稳定）</a-option>
+            <a-option :value="2">2（低并发，适合低配环境）</a-option>
+            <a-option :value="3">3（推荐，平衡速度与稳定性）</a-option>
+            <a-option :value="5">5（高并发，速度最快）</a-option>
           </a-select>
           <template #help>
-            并发数量决定了同时进行的专项分析任务数。如果遇到API限流错误，请尝试降低并发数。
+            并发数量决定了同时进行的专项分析任务数。如果遇到 API 限流错误，请尝试降低并发数。
           </template>
         </a-form-item>
       </a-form>
@@ -292,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
 import { IconPlus, IconUpload, IconFile, IconDelete } from '@arco-design/web-vue/es/icon';
@@ -300,6 +300,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { RequirementDocumentService } from '../services/requirementService';
 import type {
   RequirementDocument,
+  DocumentDetail,
   DocumentStatus,
   DocumentType,
   CreateDocumentRequest,
@@ -310,18 +311,18 @@ import {
   DocumentTypeDisplay
 } from '../types';
 
-// 状态仓库与路由
+// 鐘舵€佷粨搴撲笌璺敱
 const projectStore = useProjectStore();
 const router = useRouter();
 
-// 响应式数据
+// 鍝嶅簲寮忔暟鎹?
 const loading = ref(false);
 const documentList = ref<RequirementDocument[]>([]);
 const searchKeyword = ref('');
 const statusFilter = ref<DocumentStatus | ''>('');
 const typeFilter = ref<DocumentType | ''>('');
 
-// 分页
+// 鍒嗛〉
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -330,7 +331,7 @@ const pagination = reactive({
   showPageSize: true,
 });
 
-// 上传相关
+// 涓婁紶鐩稿叧
 const uploadModalVisible = ref(false);
 const uploadLoading = ref(false);
 const uploadFormRef = ref();
@@ -347,15 +348,20 @@ const uploadForm = reactive<CreateDocumentRequest & { uploadType: 'file' | 'cont
   content: ''
 });
 
-// 评审配置相关
+// 璇勫閰嶇疆鐩稿叧
 const reviewConfigVisible = ref(false);
 const reviewAction = ref<'start' | 'restart' | 'retry'>('start');
 const currentDocument = ref<RequirementDocument | null>(null);
 const reviewConfig = ref({
   max_workers: 3
 });
+const REVIEW_POLL_INTERVAL_MS = 3000;
+const REVIEW_POLL_MAX_ATTEMPTS = 120;
+let reviewPollTimer: ReturnType<typeof setTimeout> | null = null;
+let reviewPollAttempts = 0;
+const trackedReviewingDocumentIds = new Set<string>();
 
-// 表单验证规则
+// 琛ㄥ崟楠岃瘉瑙勫垯
 const uploadRules = {
   title: [
     { required: true, message: '请输入文档标题' },
@@ -392,7 +398,7 @@ const uploadRules = {
   ]
 };
 
-// 表格列定义
+// 琛ㄦ牸鍒楀畾涔?
 const columns = [
   {
     title: '文档标题',
@@ -441,10 +447,177 @@ const columns = [
   }
 ];
 
-// 计算属性
+// 璁＄畻灞炴€?
 const currentProjectId = computed(() => projectStore.currentProjectId);
 
-// 方法
+const hasReviewingDocuments = (documents: RequirementDocument[] = documentList.value) => {
+  return trackedReviewingDocumentIds.size > 0 || documents.some((document) => document.status === 'reviewing');
+};
+
+const resetTrackedReviewingDocuments = () => {
+  trackedReviewingDocumentIds.clear();
+};
+
+const trackReviewingDocument = (documentId: string) => {
+  if (documentId) {
+    trackedReviewingDocumentIds.add(documentId);
+  }
+};
+
+const untrackReviewingDocument = (documentId: string) => {
+  trackedReviewingDocumentIds.delete(documentId);
+};
+
+const syncTrackedReviewingDocuments = (documents: RequirementDocument[] = documentList.value) => {
+  documents.forEach((document) => {
+    if (document.status === 'reviewing') {
+      trackReviewingDocument(document.id);
+    } else if (trackedReviewingDocumentIds.has(document.id)) {
+      untrackReviewingDocument(document.id);
+    }
+  });
+};
+
+const clearReviewPollingTimer = () => {
+  if (reviewPollTimer !== null) {
+    clearTimeout(reviewPollTimer);
+    reviewPollTimer = null;
+  }
+};
+
+const stopReviewPolling = () => {
+  clearReviewPollingTimer();
+  reviewPollAttempts = 0;
+};
+
+const markDocumentAsReviewing = (documentId: string) => {
+  trackReviewingDocument(documentId);
+  const target = documentList.value.find((document) => document.id === documentId);
+  if (target) {
+    target.status = 'reviewing';
+  }
+};
+
+const updateDocumentInList = (nextDocument: DocumentDetail | RequirementDocument) => {
+  const target = documentList.value.find((document) => document.id === nextDocument.id);
+  if (target) {
+    Object.assign(target, nextDocument);
+  }
+};
+
+const notifyTrackedDocumentFinalStatus = (document: RequirementDocument) => {
+  if (document.status === 'review_completed') {
+    Message.success('需求文档《' + document.title + '》评审已完成');
+  } else if (document.status === 'failed') {
+    Message.error('需求文档《' + document.title + '》评审失败，请重试');
+  }
+};
+
+const notifyReviewStatusChanges = (
+  previousStatuses: Map<string, DocumentStatus>,
+  nextDocuments: RequirementDocument[]
+) => {
+  nextDocuments.forEach((document) => {
+    const previousStatus = previousStatuses.get(document.id);
+
+    if (previousStatus === 'reviewing' && document.status === 'review_completed') {
+      Message.success('需求文档《' + document.title + '》评审已完成');
+    } else if (previousStatus === 'reviewing' && document.status === 'failed') {
+      Message.error('需求文档《' + document.title + '》评审失败，请重试');
+    }
+  });
+};
+
+const refreshTrackedReviewStatuses = async () => {
+  const trackedIds = Array.from(trackedReviewingDocumentIds);
+  if (trackedIds.length === 0) {
+    return loadDocuments({ silent: true });
+  }
+
+  let shouldReloadList = false;
+  const responses = await Promise.all(
+    trackedIds.map((documentId) => RequirementDocumentService.getDocumentDetail(documentId))
+  );
+
+  responses.forEach((response, index) => {
+    if (response.status !== 'success' || !response.data) {
+      return;
+    }
+
+    const nextDocument = response.data;
+    updateDocumentInList(nextDocument);
+
+    if (nextDocument.status === 'reviewing') {
+      trackReviewingDocument(nextDocument.id);
+      return;
+    }
+
+    if (trackedReviewingDocumentIds.has(nextDocument.id)) {
+      untrackReviewingDocument(nextDocument.id);
+      notifyTrackedDocumentFinalStatus(nextDocument);
+    }
+    shouldReloadList = true;
+  });
+
+  if (shouldReloadList || !hasReviewingDocuments()) {
+    await loadDocuments({ silent: true });
+  }
+
+  return true;
+};
+
+const refreshReviewStatuses = async () => {
+  reviewPollAttempts = 0;
+  if (trackedReviewingDocumentIds.size > 0) {
+    await refreshTrackedReviewStatuses();
+    return;
+  }
+  await loadDocuments({ silent: true });
+};
+
+const handleWindowFocus = () => {
+  if (hasReviewingDocuments()) {
+    void refreshReviewStatuses();
+  }
+};
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible' && hasReviewingDocuments()) {
+    void refreshReviewStatuses();
+  }
+};
+
+const scheduleReviewPolling = () => {
+  clearReviewPollingTimer();
+
+  if (!hasReviewingDocuments()) {
+    reviewPollAttempts = 0;
+    return;
+  }
+
+  reviewPollTimer = setTimeout(async () => {
+    reviewPollTimer = null;
+    reviewPollAttempts += 1;
+
+    if (reviewPollAttempts >= REVIEW_POLL_MAX_ATTEMPTS) {
+      stopReviewPolling();
+      Message.warning('需求评审耗时较长，请稍后手动刷新查看结果');
+      return;
+    }
+
+    if (trackedReviewingDocumentIds.size > 0) {
+      await refreshTrackedReviewStatuses();
+    } else {
+      await loadDocuments({ silent: true });
+    }
+
+    if (hasReviewingDocuments()) {
+      scheduleReviewPolling();
+    }
+  }, REVIEW_POLL_INTERVAL_MS);
+};
+
+// 鏂规硶
 const getStatusColor = (status: DocumentStatus) => {
   const colorMap = {
     uploaded: 'blue',
@@ -467,14 +640,24 @@ const getTypeText = (type: DocumentType) => {
   return DocumentTypeDisplay[type] || type;
 };
 
-// 加载文档列表
-const loadDocuments = async () => {
+// 鍔犺浇鏂囨。鍒楄〃
+const loadDocuments = async ({ silent = false }: { silent?: boolean } = {}) => {
   if (!currentProjectId.value) {
-    Message.warning('请先选择项目');
-    return;
+    stopReviewPolling();
+    resetTrackedReviewingDocuments();
+    if (!silent) {
+      Message.warning('请先选择项目');
+    }
+    return false;
   }
 
-  loading.value = true;
+  const previousStatuses = new Map(
+    documentList.value.map((document) => [document.id, document.status] as const)
+  );
+
+  if (!silent) {
+    loading.value = true;
+  }
   try {
     const params: DocumentListParams = {
       project: String(currentProjectId.value),
@@ -494,40 +677,56 @@ const loadDocuments = async () => {
 
     const response = await RequirementDocumentService.getDocumentList(params);
 
-    console.log('API响应:', response); // 调试日志
+    console.log('API鍝嶅簲:', response); // 璋冭瘯鏃ュ織
 
     if (response.status === 'success') {
-      // 适配后端返回的数据结构
+      // 閫傞厤鍚庣杩斿洖鐨勬暟鎹粨鏋?
       if (Array.isArray(response.data)) {
-        // 如果直接返回数组
+        // 濡傛灉鐩存帴杩斿洖鏁扮粍
         documentList.value = response.data;
         pagination.total = response.data.length;
       } else if (response.data.results) {
-        // 如果是分页格式
+        // 濡傛灉鏄垎椤垫牸寮?
         documentList.value = response.data.results;
         pagination.total = response.data.count;
       } else {
         documentList.value = [];
         pagination.total = 0;
       }
+      notifyReviewStatusChanges(previousStatuses, documentList.value);
+      syncTrackedReviewingDocuments(documentList.value);
+      if (hasReviewingDocuments(documentList.value)) {
+        scheduleReviewPolling();
+      } else {
+        stopReviewPolling();
+      }
+      return true;
     } else {
+      if (!silent) {
       Message.error(response.message || '加载文档列表失败');
+      }
     }
   } catch (error) {
+    if (!silent) {
     console.error('加载文档列表失败:', error);
     Message.error('加载文档列表失败');
+    }
   } finally {
-    loading.value = false;
+    if (!silent) {
+      loading.value = false;
+    }
   }
+
+  return false;
 };
 
-// 搜索处理
+// 鎼滅储澶勭悊
 const handleSearch = () => {
   pagination.current = 1;
   loadDocuments();
 };
 
-// 分页处理
+// 鍒嗛〉澶勭悊
 const handlePageChange = (page: number) => {
   pagination.current = page;
   loadDocuments();
@@ -539,65 +738,65 @@ const handlePageSizeChange = (pageSize: number) => {
   loadDocuments();
 };
 
-// 显示上传模态框
+// 鏄剧ず涓婁紶妯℃€佹
 const showUploadModal = () => {
   if (!currentProjectId.value) {
     Message.warning('请先选择项目');
     return;
   }
   uploadForm.project = String(currentProjectId.value);
-  console.log('打开上传模态框，项目ID:', uploadForm.project); // 调试日志
+  console.log('鎵撳紑涓婁紶妯℃€佹锛岄」鐩甀D:', uploadForm.project); // 璋冭瘯鏃ュ織
   uploadModalVisible.value = true;
 };
 
-// 文件选择处理
+// 鏂囦欢閫夋嫨澶勭悊
 const handleFileChange = (fileListParam: any[], file: any) => {
-  console.log('文件选择变化:', fileListParam, file); // 调试日志
+  console.log('鏂囦欢閫夋嫨鍙樺寲:', fileListParam, file); // 璋冭瘯鏃ュ織
 
-  // 更新文件列表
+  // 鏇存柊鏂囦欢鍒楄〃
   fileList.value = fileListParam;
 
   if (file && file.file) {
     uploadForm.file = file.file;
-    console.log('设置文件到表单:', file.file); // 调试日志
+    console.log('璁剧疆鏂囦欢鍒拌〃鍗?', file.file); // 璋冭瘯鏃ュ織
 
-    // 自动设置文档类型
+    // 鑷姩璁剧疆鏂囨。绫诲瀷
     const fileName = file.file.name;
     const extension = fileName.split('.').pop()?.toLowerCase();
     if (extension && ['pdf', 'doc', 'docx', 'txt', 'md'].includes(extension)) {
       uploadForm.document_type = extension as DocumentType;
     }
-    // 如果没有标题，使用文件名
+    // 濡傛灉娌℃湁鏍囬锛屼娇鐢ㄦ枃浠跺悕
     if (!uploadForm.title) {
       uploadForm.title = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
     }
   } else if (fileListParam.length === 0) {
-    // 文件被移除
+    // 鏂囦欢琚Щ闄?
     uploadForm.file = undefined;
     console.log('文件被移除'); // 调试日志
   }
 };
 
-// 处理上传类型变化
+// 澶勭悊涓婁紶绫诲瀷鍙樺寲
 const handleUploadTypeChange = () => {
   if (uploadForm.uploadType === 'content') {
-    // 切换到直接输入时，设置文档类型为txt
+    // 鍒囨崲鍒扮洿鎺ヨ緭鍏ユ椂锛岃缃枃妗ｇ被鍨嬩负txt
     uploadForm.document_type = 'txt';
-    // 清空文件相关数据
+    // 娓呯┖鏂囦欢鐩稿叧鏁版嵁
     uploadForm.file = undefined;
     fileList.value = [];
   } else if (uploadForm.uploadType === 'file') {
-    // 切换到文件上传时，重置文档类型为pdf
+    // 鍒囨崲鍒版枃浠朵笂浼犳椂锛岄噸缃枃妗ｇ被鍨嬩负pdf
     uploadForm.document_type = 'pdf';
-    // 清空内容
+    // 娓呯┖鍐呭
     uploadForm.content = '';
   }
 };
 
-// 上传处理
+// 涓婁紶澶勭悊
 const handleUpload = async () => {
   try {
-    // 手动验证必填字段
+    // 鎵嬪姩楠岃瘉蹇呭～瀛楁
     if (!uploadForm.title.trim()) {
       Message.error('请输入文档标题');
       return;
@@ -620,17 +819,17 @@ const handleUpload = async () => {
 
     uploadLoading.value = true;
 
-    console.log('上传数据:', uploadForm); // 调试日志
+    console.log('涓婁紶鏁版嵁:', uploadForm); // 璋冭瘯鏃ュ織
 
     const response = await RequirementDocumentService.uploadDocument(uploadForm);
 
-    console.log('上传响应:', response); // 调试日志
+    console.log('涓婁紶鍝嶅簲:', response); // 璋冭瘯鏃ュ織
 
     if (response.status === 'success') {
       Message.success('文档上传成功');
       uploadModalVisible.value = false;
       resetUploadForm();
-      loadDocuments();
+      await loadDocuments();
     } else {
       Message.error(response.message || '文档上传失败');
     }
@@ -642,7 +841,7 @@ const handleUpload = async () => {
   }
 };
 
-// 重置上传表单
+// 閲嶇疆涓婁紶琛ㄥ崟
 const resetUploadForm = () => {
   uploadFormRef.value?.resetFields();
   fileList.value = [];
@@ -657,7 +856,7 @@ const resetUploadForm = () => {
   });
 };
 
-// 格式化文件大小
+// 鏍煎紡鍖栨枃浠跺ぇ灏?
 const formatFileSize = (size: number | undefined): string => {
   if (!size || isNaN(size)) return '未知大小';
   if (size < 1024) return size + ' B';
@@ -665,41 +864,41 @@ const formatFileSize = (size: number | undefined): string => {
   return (size / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
-// 移除文件
+// 绉婚櫎鏂囦欢
 const removeFile = (index: number) => {
   fileList.value.splice(index, 1);
   uploadForm.file = undefined;
 };
 
-// 文档操作
+// 鏂囨。鎿嶄綔
 const viewDocument = (document: RequirementDocument) => {
   router.push(`/requirements/${document.id}`);
 };
 
-// 移除了startModuleSplit方法，现在统一在详情页面进行拆分配置
+// 绉婚櫎浜唖tartModuleSplit鏂规硶锛岀幇鍦ㄧ粺涓€鍦ㄨ鎯呴〉闈㈣繘琛屾媶鍒嗛厤缃?
 
-// 开始评审 - 打开配置对话框
+// 寮€濮嬭瘎瀹?- 鎵撳紑閰嶇疆瀵硅瘽妗?
 const startReview = (document: RequirementDocument) => {
   currentDocument.value = document;
   reviewAction.value = 'start';
   reviewConfigVisible.value = true;
 };
 
-// 重新评审 - 打开配置对话框
+// 閲嶆柊璇勫 - 鎵撳紑閰嶇疆瀵硅瘽妗?
 const restartReview = (document: RequirementDocument) => {
   currentDocument.value = document;
   reviewAction.value = 'restart';
   reviewConfigVisible.value = true;
 };
 
-// 失败后重试评审 - 打开配置对话框
+// 澶辫触鍚庨噸璇曡瘎瀹?- 鎵撳紑閰嶇疆瀵硅瘽妗?
 const retryReview = (document: RequirementDocument) => {
   currentDocument.value = document;
   reviewAction.value = 'retry';
   reviewConfigVisible.value = true;
 };
 
-// 确认评审
+// 纭璇勫
 const confirmReview = async () => {
   if (!currentDocument.value) return;
   
@@ -719,14 +918,17 @@ const confirmReview = async () => {
     if (reviewAction.value === 'restart') {
       response = await RequirementDocumentService.restartReview(documentId, options);
     } else {
-      // start 和 retry 都调用 startReview
+      // start 鍜?retry 閮借皟鐢?startReview
       response = await RequirementDocumentService.startReview(documentId, options);
     }
 
     if (response.status === 'success') {
       const actionText = reviewAction.value === 'restart' ? '重新评审' : '需求评审';
-      Message.success(`${actionText}已启动 (并发数: ${reviewConfig.value.max_workers})`);
-      loadDocuments();
+      Message.success(`${actionText}已启动（并发数：${reviewConfig.value.max_workers}）`);
+      markDocumentAsReviewing(documentId);
+      reviewPollAttempts = 0;
+      scheduleReviewPolling();
+      await loadDocuments({ silent: true });
     } else {
       Message.error(response.message || '评审启动失败');
     }
@@ -740,7 +942,7 @@ const confirmReview = async () => {
 };
 
 const viewReports = (document: RequirementDocument) => {
-  // 跳转到专门的报告页面
+  // 璺宠浆鍒颁笓闂ㄧ殑鎶ュ憡椤甸潰
   if (document.id) {
     router.push(`/requirements/${document.id}/report`);
   } else {
@@ -767,18 +969,29 @@ const deleteDocument = async (document: RequirementDocument) => {
   }
 };
 
-// 生命周期
+// 鐢熷懡鍛ㄦ湡
 onMounted(() => {
+  window.addEventListener('focus', handleWindowFocus);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
   if (currentProjectId.value) {
-    loadDocuments();
+    void loadDocuments();
   }
 });
 
-// 监听项目变化
+onUnmounted(() => {
+  window.removeEventListener('focus', handleWindowFocus);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  stopReviewPolling();
+  resetTrackedReviewingDocuments();
+});
+
+// 鐩戝惉椤圭洰鍙樺寲
 projectStore.$subscribe((_mutation, state) => {
   const projectId = state.currentProject?.id;
   if (projectId && String(projectId) !== uploadForm.project) {
     uploadForm.project = String(projectId);
+    stopReviewPolling();
+    resetTrackedReviewingDocuments();
     loadDocuments();
   }
 });
@@ -787,7 +1000,7 @@ projectStore.$subscribe((_mutation, state) => {
 <style scoped>
 .requirement-management {
   padding: 24px;
-  background: transparent; /* 使用主布局的背景 */
+  background: transparent; /* 浣跨敤涓诲竷灞€鐨勮儗鏅?*/
 }
 
 .workspace-hero--requirement-command {
@@ -946,15 +1159,15 @@ projectStore.$subscribe((_mutation, state) => {
 
 .stats-info {
   display: flex;
-  flex-direction: row; /* 改为水平排列 */
-  gap: 8px; /* 增加间距 */
-  flex-wrap: wrap; /* 允许换行 */
+  flex-direction: row; /* 鏀逛负姘村钩鎺掑垪 */
+  gap: 8px; /* 澧炲姞闂磋窛 */
+  flex-wrap: wrap; /* 鍏佽鎹㈣ */
 }
 
 .stat-item {
   font-size: 12px;
   color: #86909c;
-  white-space: nowrap; /* 防止单个统计项换行 */
+  white-space: nowrap; /* 闃叉鍗曚釜缁熻椤规崲琛?*/
 }
 
 .upload-area {
@@ -1083,3 +1296,8 @@ projectStore.$subscribe((_mutation, state) => {
   }
 }
 </style>
+
+
+
+
+

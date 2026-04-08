@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="chat-layout">
     <!-- 左侧历史对话列表 -->
     <ChatSidebar

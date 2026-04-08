@@ -10,6 +10,7 @@ import logging
 import subprocess
 import os
 import shutil
+import sys
 import threading
 from typing import Optional
 
@@ -18,6 +19,7 @@ from django.conf import settings
 
 from .output_sanitizer import strip_terminal_control_sequences
 from .persistent_playwright import PlaywrightSessionManager, extract_runjs_args
+from skills.runtime_registry import get_available_skill_names, get_skill_runtime_spec
 
 logger = logging.getLogger("orchestrator_integration")
 
@@ -132,24 +134,19 @@ def get_skill_tools(
         Returns:
             SKILL.md 的完整内容，包含详细的使用说明和示例
         """
-        from skills.models import Skill
-
         logger.info(f"[read_skill_content] skill_name={skill_name}")
 
         try:
-            skill = Skill.objects.filter(name=skill_name, is_active=True).first()
+            skill_spec = get_skill_runtime_spec(skill_name)
 
-            if not skill:
-                available = Skill.objects.filter(is_active=True).values_list(
-                    "name", flat=True
-                )
-                available_list = list(available)
+            if not skill_spec:
+                available_list = get_available_skill_names()
                 return f"错误: 未找到名为 '{skill_name}' 的 Skill。可用的 Skills: {available_list}"
 
-            if not skill.skill_content:
+            if not skill_spec.content:
                 return f"错误: Skill '{skill_name}' 没有 SKILL.md 内容"
 
-            return skill.skill_content
+            return skill_spec.content
 
         except Exception as e:
             logger.error(f"[read_skill_content] 读取失败: {e}", exc_info=True)
@@ -161,24 +158,25 @@ def get_skill_tools(
         session_id: Optional[str] = None,
     ) -> str:
         """内部函数：执行单条 Skill 命令"""
-        from skills.models import Skill
-
         logger.info(
             f"[execute_skill_script] skill_name={skill_name}, command={command}"
         )
 
         try:
-            skill = Skill.objects.filter(name=skill_name, is_active=True).first()
+            skill_spec = get_skill_runtime_spec(skill_name)
 
-            if not skill:
-                available = Skill.objects.filter(is_active=True).values_list(
-                    "name", flat=True
-                )
-                available_list = list(available)
+            if not skill_spec:
+                available_list = get_available_skill_names()
                 return f"错误: 未找到名为 '{skill_name}' 的 Skill。可用的 Skills: {available_list}"
 
-            skill_dir = skill.get_full_path()
+            skill_dir = skill_spec.path
             if not skill_dir or not os.path.isdir(skill_dir):
+                if skill_spec.source == "virtual":
+                    return (
+                        f"Skill '{skill_name}' is guidance-only. "
+                        "Read it with `read_skill_content` and do not call "
+                        "`execute_skill_script`."
+                    )
                 return f"错误: Skill '{skill_name}' 目录不存在"
 
             logger.info(f"[execute_skill_script] 在目录 {skill_dir} 执行: {command}")
@@ -234,6 +232,14 @@ def get_skill_tools(
 
                 if exec_command != command:
                     logger.info(f"[execute_skill_script] Windows 命令转换完成")
+
+            # Keep skill scripts in the same Python environment as the Django backend.
+            exec_command = re.sub(
+                r"^\s*python(?:3(?:\.\d+)?)?(?=\s|$)",
+                lambda _match: f'"{sys.executable}"',
+                exec_command,
+                count=1,
+            )
 
             # 持久化 Playwright 会话路径
             # 仅当 session_id 存在 + skill_name == 'playwright-skill' + 命令是 run.js 调用时启用

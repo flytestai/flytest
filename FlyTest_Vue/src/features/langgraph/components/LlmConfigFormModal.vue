@@ -2,7 +2,6 @@
   <a-modal
     :visible="props.visible"
     :title="isEditing ? '编辑 LLM 配置' : '新增 LLM 配置'"
-    @ok="handleSubmit"
     @cancel="handleCancel"
     :confirm-loading="formLoading"
     :mask-closable="false"
@@ -63,15 +62,34 @@
 
         <!-- 第三行：API URL + API Key -->
         <a-col :span="12">
-          <a-form-item field="api_url" label="API URL" required>
-            <a-input v-model="formData.api_url" :placeholder="apiUrlPlaceholder" />
+          <a-form-item
+            field="api_url"
+            label="API URL"
+            required
+            :validate-status="apiUrlFieldStatus"
+            :help="apiUrlFieldHelp"
+          >
+            <div class="api-url-input-wrapper">
+              <a-input v-model="formData.api_url" :placeholder="apiUrlPlaceholder" />
+              <a-button
+                v-if="urlNeedsV1Hint"
+                type="outline"
+                size="small"
+                class="api-url-fix-button"
+                @click="applySuggestedApiUrl"
+              >
+                补全 /v1
+              </a-button>
+            </div>
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item field="api_key" label="API Key">
+          <a-form-item field="api_key" label="API Key" :help="apiKeyFieldHelp">
             <a-input-password
               v-model="formData.api_key"
-              :placeholder="isEditing ? '留空不修改' : '请输入 API Key（可选）'"
+              :placeholder="isEditing
+                ? (apiKeyConfigured ? '已配置 API Key，如需修改请重新输入' : '留空不修改')
+                : '请输入 API Key（可选）'"
             />
           </a-form-item>
         </a-col>
@@ -79,7 +97,7 @@
         <!-- 提示信息 + 测试按钮 -->
         <a-col :span="24" class="test-button-row">
           <span class="api-hint">{{ apiHintText }}</span>
-          <a-button 
+          <a-button
             type="outline"
             status="success"
             size="small"
@@ -90,7 +108,39 @@
             测试连接
           </a-button>
         </a-col>
-
+        <a-col :span="24" v-if="diagnosticSummary || llmNoticeMessage">
+          <a-alert
+            :type="llmNoticeType"
+            :show-icon="true"
+            class="llm-diagnostic-alert"
+          >
+            <template #title>{{ llmNoticeTitle }}</template>
+            <template #content>
+              <div>{{ llmNoticeMessage }}</div>
+              <div v-if="diagnosticSummary" class="llm-diagnostic-extra">{{ diagnosticSummary }}</div>
+              <div v-if="hasDiagnosticsDetails" class="llm-diagnostic-actions">
+                <a-button type="text" size="small" @click="showDiagnosticsDetails = !showDiagnosticsDetails">
+                  {{ showDiagnosticsDetails ? '收起诊断详情' : '展开诊断详情' }}
+                </a-button>
+              </div>
+              <div v-if="showDiagnosticsDetails && diagnosticsDetailRows.length" class="llm-diagnostic-details">
+                <div
+                  v-for="row in diagnosticsDetailRows"
+                  :key="`${row.label}-${row.value}`"
+                  class="llm-diagnostic-detail-row"
+                >
+                  <span class="llm-diagnostic-detail-label">{{ row.label }}</span>
+                  <span class="llm-diagnostic-detail-value">{{ row.value }}</span>
+                </div>
+              </div>
+              <div v-if="hasCompatibilityIssue" class="llm-diagnostic-actions">
+                <a-button type="outline" status="warning" size="small" @click="showCompatibilitySuggestion">
+                  建议切换兼容网关
+                </a-button>
+              </div>
+            </template>
+          </a-alert>
+        </a-col>
         <!-- 第四行：系统提示词 (全宽) -->
         <a-col :span="24">
           <a-form-item field="system_prompt" label="系统提示词">
@@ -160,6 +210,25 @@
         </a-col>
       </a-row>
     </a-form>
+    <template #footer>
+      <div class="llm-modal-footer">
+        <div v-if="activationRisk" class="activation-risk-hint">
+          <span class="activation-risk-dot"></span>
+          <span>当前配置已检测到“模型列表可用，但聊天补全异常”，不建议直接设为激活。</span>
+        </div>
+        <div class="llm-modal-footer-actions">
+          <a-button @click="handleCancel">取消</a-button>
+          <a-button
+            type="primary"
+            :status="activationRisk ? 'danger' : undefined"
+            :loading="formLoading"
+            @click="handleSubmit"
+          >
+            {{ submitButtonLabel }}
+          </a-button>
+        </div>
+      </div>
+    </template>
   </a-modal>
 </template>
 
@@ -167,6 +236,7 @@
 import { ref, watch, computed, nextTick } from 'vue';
 import {
   Modal as AModal,
+  Alert as AAlert,
   Form as AForm,
   FormItem as AFormItem,
   Input as AInput,
@@ -185,9 +255,14 @@ import {
   type FormInstance,
   type FieldRule,
 } from '@arco-design/web-vue';
-import { IconRefresh, IconThunderbolt } from '@arco-design/web-vue/es/icon';
+import { IconThunderbolt } from '@arco-design/web-vue/es/icon';
 import { createLlmConfig, partialUpdateLlmConfig, testLlmConnection, fetchModels, getProviders } from '@/features/langgraph/services/llmConfigService';
-import type { LlmConfig, CreateLlmConfigRequest, PartialUpdateLlmConfigRequest } from '@/features/langgraph/types/llmConfig';
+import type {
+  LlmConfig,
+  CreateLlmConfigRequest,
+  PartialUpdateLlmConfigRequest,
+  LlmConnectionDiagnostics,
+} from '@/features/langgraph/types/llmConfig';
 
 interface Props {
   visible: boolean;
@@ -215,6 +290,14 @@ const providerOptions = ref<Array<{ label: string; value: string }>>([
 ]);
 const loadingModels = ref(false);
 const testingModel = ref(false);
+const lastModelsFetchStatus = ref<'success' | 'error' | ''>('');
+const lastModelsFetchMessage = ref('');
+const lastModelsDiagnostics = ref<LlmConnectionDiagnostics | null>(null);
+const lastConnectionMessage = ref('');
+const lastConnectionStatus = ref<'success' | 'warning' | 'error' | ''>('');
+const lastConnectionDiagnostics = ref<LlmConnectionDiagnostics | null>(null);
+const showDiagnosticsDetails = ref(false);
+const hasPersistedApiKey = ref(false);
 const QWEN_DEFAULT_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 const defaultFormData: CreateLlmConfigRequest = {
   config_name: '',
@@ -237,6 +320,7 @@ const currentConfigId = ref<number | null>(null);
 const isEditing = computed(() => !!(props.configData?.id || currentConfigId.value));
 // 获取当前配置ID（优先 props，其次是自动保存后的 currentConfigId）
 const effectiveConfigId = computed(() => props.configData?.id || currentConfigId.value);
+const apiKeyConfigured = computed(() => hasPersistedApiKey.value || Boolean(props.configData?.has_api_key));
 
 const formRules: Record<string, FieldRule[]> = {
   config_name: [{ required: true, message: '配置名称不能为空' }],
@@ -258,6 +342,135 @@ const apiHintText = computed(() => (
   formData.value.provider === 'qwen'
     ? 'Qwen 建议使用 DashScope 兼容地址（可自定义）'
     : 'OpenAI 兼容供应商请填写兼容 API 地址'
+));
+
+const normalizedApiUrl = computed(() => formData.value.api_url.trim().replace(/\/+$/, ''));
+
+const urlNeedsV1Hint = computed(() => (
+  formData.value.provider === 'openai_compatible'
+  && Boolean(normalizedApiUrl.value)
+  && !normalizedApiUrl.value.endsWith('/v1')
+));
+
+const apiUrlFieldStatus = computed<'warning' | undefined>(() => (
+  urlNeedsV1Hint.value ? 'warning' : undefined
+));
+
+const apiUrlFieldHelp = computed(() => (
+  urlNeedsV1Hint.value
+    ? '当前地址看起来可能缺少 `/v1` 后缀，这会导致获取模型列表或测试连接返回 404 / 响应异常。'
+    : undefined
+));
+
+const apiKeyFieldHelp = computed(() => (
+  isEditing.value && apiKeyConfigured.value
+    ? '当前已保存 API Key。如需修改，请重新输入新的 Key；留空表示保持原值。'
+    : undefined
+));
+
+const applySuggestedApiUrl = () => {
+  if (!normalizedApiUrl.value) return;
+  formData.value.api_url = `${normalizedApiUrl.value}/v1`;
+  showToast('success', '已自动补全 /v1');
+};
+
+const diagnosticSummary = computed(() => {
+  const tips: string[] = [];
+
+  if (urlNeedsV1Hint.value) {
+    tips.push('当前 API URL 看起来可能缺少 `/v1` 后缀。OpenAI 兼容接口通常应配置为 `https://example.com/v1`。');
+  }
+
+  if (!formData.value.name.trim()) {
+    tips.push('建议先点击“刷新模型列表”，确认当前模型名称与接口实际返回的模型 ID 一致。');
+  }
+
+  if (isEditing.value && !formData.value.api_key) {
+    tips.push('编辑已有配置时，如果本次不修改 API Key，可以留空继续测试。');
+  }
+
+  return tips.join(' ');
+});
+
+const llmNoticeType = computed<'info' | 'warning' | 'success' | 'error'>(() => {
+  if (hasCompatibilityIssue.value) return 'warning';
+  if (lastConnectionStatus.value === 'success') return 'success';
+  if (lastConnectionStatus.value === 'warning') return 'warning';
+  if (lastConnectionStatus.value === 'error') return 'error';
+  return diagnosticSummary.value ? 'warning' : 'info';
+});
+
+const llmNoticeTitle = computed(() => {
+  if (hasCompatibilityIssue.value) return '基础连通性正常，聊天补全异常';
+  if (lastConnectionStatus.value === 'success') return '最近一次连接测试';
+  if (lastConnectionStatus.value === 'warning') return '连接测试提示';
+  if (lastConnectionStatus.value === 'error') return '连接测试失败';
+  return '配置建议';
+});
+
+const llmNoticeMessage = computed(() => {
+  if (hasCompatibilityIssue.value) {
+    return (
+      `${lastModelsFetchMessage.value || '模型列表接口可用。'} `
+      + '但聊天补全返回空正文，说明当前网关很可能只部分兼容 OpenAI。'
+    );
+  }
+  return lastConnectionMessage.value;
+});
+
+const hasCompatibilityIssue = computed(() => (
+  lastModelsFetchStatus.value === 'success'
+  && lastConnectionStatus.value === 'warning'
+  && /聊天响应正文为空|不完全兼容/i.test(lastConnectionMessage.value)
+));
+
+const hasDiagnosticsDetails = computed(() => (
+  Boolean(lastModelsDiagnostics.value || lastConnectionDiagnostics.value)
+));
+
+const diagnosticsDetailRows = computed(() => {
+  const rows: Array<{ label: string; value: string }> = [];
+
+  const modelRows = lastModelsDiagnostics.value
+    ? [
+        { label: '模型列表接口', value: lastModelsFetchMessage.value || lastModelsDiagnostics.value.conclusion || '-' },
+        { label: '模型列表结论', value: lastModelsDiagnostics.value.conclusion || '-' },
+        { label: '模型数量', value: String(lastModelsDiagnostics.value.models_count ?? '-') },
+      ]
+    : [];
+
+  const connectionRows = lastConnectionDiagnostics.value
+    ? [
+        { label: '聊天补全接口', value: lastConnectionMessage.value || lastConnectionDiagnostics.value.conclusion || '-' },
+        { label: '聊天补全结论', value: lastConnectionDiagnostics.value.conclusion || '-' },
+        { label: 'Finish Reason', value: lastConnectionDiagnostics.value.finish_reason || '-' },
+        { label: 'Prompt Tokens', value: String(lastConnectionDiagnostics.value.prompt_tokens ?? '-') },
+        { label: 'Completion Tokens', value: String(lastConnectionDiagnostics.value.completion_tokens ?? '-') },
+        { label: 'Total Tokens', value: String(lastConnectionDiagnostics.value.total_tokens ?? '-') },
+        { label: '返回正文', value: lastConnectionDiagnostics.value.response_text_present ? '有' : '无' },
+      ]
+    : [];
+
+  const sharedSource = lastConnectionDiagnostics.value || lastModelsDiagnostics.value;
+  if (sharedSource) {
+    rows.push(
+      { label: '接口地址', value: sharedSource.endpoint || normalizedApiUrl.value || '-' },
+      { label: '供应商', value: sharedSource.provider || formData.value.provider || '-' },
+      { label: '模型名称', value: sharedSource.model || formData.value.name || '-' },
+    );
+  }
+
+  return [...rows, ...modelRows, ...connectionRows].filter(
+    (row, index, self) =>
+      row.value &&
+      self.findIndex((item) => item.label === row.label && item.value === row.value) === index
+  );
+});
+
+const activationRisk = computed(() => hasCompatibilityIssue.value && formData.value.is_active);
+
+const submitButtonLabel = computed(() => (
+  isEditing.value ? '保存配置' : '创建配置'
 ));
 
 const loadProviderOptions = async () => {
@@ -286,6 +499,7 @@ watch(
   (newVal) => {
     if (newVal) {
       currentConfigId.value = null;
+      hasPersistedApiKey.value = Boolean(props.configData?.has_api_key);
       void loadProviderOptions();
       if (props.configData && props.configData.id) {
         // 编辑模式：填充表单，但不包括 API Key（除非用户想修改）
@@ -308,6 +522,13 @@ watch(
         formData.value = { ...defaultFormData };
       }
       handleProviderChange(formData.value.provider);
+      lastModelsFetchStatus.value = '';
+      lastModelsFetchMessage.value = '';
+      lastModelsDiagnostics.value = null;
+      lastConnectionMessage.value = '';
+      lastConnectionStatus.value = '';
+      lastConnectionDiagnostics.value = null;
+      showDiagnosticsDetails.value = false;
       // 清除之前的校验状态
       nextTick(() => {
         formRef.value?.clearValidate();
@@ -316,12 +537,29 @@ watch(
   }
 );
 
+watch(
+  () => [formData.value.provider, formData.value.api_url, formData.value.api_key, formData.value.name],
+  () => {
+    lastModelsFetchStatus.value = '';
+    lastModelsFetchMessage.value = '';
+    lastModelsDiagnostics.value = null;
+    lastConnectionMessage.value = '';
+    lastConnectionStatus.value = '';
+    lastConnectionDiagnostics.value = null;
+    showDiagnosticsDetails.value = false;
+  }
+);
+
 const handleSubmit = async () => {
   if (!formRef.value) return;
+  warnIfLikelyApiUrlMisconfigured();
+  if (activationRisk.value) {
+    showToast('warning', '当前配置存在兼容风险，建议先修复连接问题后再设为激活。');
+  }
   const validation = await formRef.value.validate();
   if (validation) {
     // 校验失败
-    Message.error('请检查表单输入！');
+    showToast('error', '请检查表单输入！');
     return;
   }
 
@@ -370,12 +608,48 @@ const handleCancel = () => {
   emit('cancel');
 };
 
+const getReadableErrorMessage = (error: any, fallback: string) => {
+  return (
+    error?.error
+    || error?.message
+    || error?.response?.data?.message
+    || error?.response?.data?.detail
+    || fallback
+  );
+};
+
+const showToast = (
+  type: 'success' | 'warning' | 'error',
+  content: string,
+  duration = 10000
+) => {
+  Message[type]({
+    content,
+    duration,
+  });
+};
+
+const warnIfLikelyApiUrlMisconfigured = () => {
+  if (urlNeedsV1Hint.value) {
+    showToast('warning', '当前 API URL 看起来可能缺少 `/v1` 后缀，请优先检查地址是否完整。');
+  }
+};
+
+const showCompatibilitySuggestion = () => {
+  const suggestion = urlNeedsV1Hint.value
+    ? '优先点击“补全 /v1”，然后重新执行“刷新模型列表”和“测试连接”。'
+    : '建议切换到真正兼容 OpenAI `/v1/chat/completions` 的网关地址，或联系服务商确认当前模型是否支持标准文本输出。';
+  showToast('warning', suggestion);
+};
+
 // 从后端 API 获取可用模型列表
 const fetchAvailableModels = async () => {
   if (!formData.value.api_url) {
-    Message.warning('请先填写 API URL');
+    showToast('warning', '请先填写 API URL');
     return;
   }
+
+  warnIfLikelyApiUrlMisconfigured();
 
   loadingModels.value = true;
 
@@ -389,19 +663,31 @@ const fetchAvailableModels = async () => {
     );
     
     if (response.status === 'success' && response.data?.models) {
+      lastModelsFetchStatus.value = 'success';
+      lastModelsFetchMessage.value = response.data.models.length > 0
+        ? `模型列表接口可用，已检测到 ${response.data.models.length} 个模型。`
+        : '模型列表接口可用，但当前未返回任何模型。';
+      lastModelsDiagnostics.value = response.data.diagnostics || null;
       modelOptions.value = response.data.models;
       if (response.data.models.length > 0) {
-        Message.success(`成功获取 ${response.data.models.length} 个模型`);
+        showToast('success', `成功获取 ${response.data.models.length} 个模型`);
       } else {
-        Message.warning('未找到可用模型');
+        showToast('warning', '未找到可用模型');
       }
     } else {
-      Message.error(response.message || '获取模型列表失败');
+      lastModelsFetchStatus.value = 'error';
+      lastModelsFetchMessage.value = response.message || '模型列表接口不可用';
+      lastModelsDiagnostics.value = response.data?.diagnostics || null;
+      showToast('error', response.message || '获取模型列表失败');
       modelOptions.value = [];
     }
   } catch (error: any) {
     console.error('获取模型列表失败:', error);
-    Message.error('获取模型列表失败');
+    const readableMessage = getReadableErrorMessage(error, '获取模型列表失败');
+    lastModelsFetchStatus.value = 'error';
+    lastModelsFetchMessage.value = readableMessage;
+    lastModelsDiagnostics.value = null;
+    showToast('error', readableMessage);
     modelOptions.value = [];
   } finally {
     loadingModels.value = false;
@@ -411,9 +697,10 @@ const fetchAvailableModels = async () => {
 // 测试 LLM 模型连接（后端发起测试）
 const testLlmModel = async () => {
   if (!formRef.value) return;
+  warnIfLikelyApiUrlMisconfigured();
   const validation = await formRef.value.validate();
   if (validation) {
-    Message.error('请先完善表单必填项');
+    showToast('error', '请先完善表单必填项');
     return;
   }
 
@@ -425,12 +712,13 @@ const testLlmModel = async () => {
     if (!configId) {
       const createResp = await createLlmConfig(formData.value);
       if (createResp.status !== 'success' || !createResp.data) {
-        Message.error(createResp.message || '保存配置失败');
+        showToast('error', createResp.message || '保存配置失败');
         return;
       }
       configId = createResp.data.id;
       currentConfigId.value = configId;
-      Message.success('配置已自动保存');
+      hasPersistedApiKey.value = hasPersistedApiKey.value || Boolean(formData.value.api_key);
+      showToast('success', '配置已自动保存');
       emit('auto-saved', false); // false 表示不关闭弹窗
     } else if (isEditing.value) {
       // 编辑模式：先保存更改
@@ -447,21 +735,36 @@ const testLlmModel = async () => {
       if (formData.value.context_limit !== undefined) partialData.context_limit = formData.value.context_limit;
       const updateResp = await partialUpdateLlmConfig(configId, partialData);
       if (updateResp.status !== 'success') {
-        Message.error(updateResp.message || '保存配置失败');
+        showToast('error', updateResp.message || '保存配置失败');
         return;
       }
+      hasPersistedApiKey.value = hasPersistedApiKey.value || Boolean(formData.value.api_key) || Boolean(props.configData?.has_api_key);
     }
 
     // 调用后端测试接口
     const testResp = await testLlmConnection(configId);
-    if (testResp.status === 'success') {
-      Message.success(testResp.data?.message || '连接测试成功');
+    const backendStatus = testResp.data?.status || testResp.status;
+    const backendMessage = testResp.data?.message || testResp.message || '连接测试完成';
+    lastConnectionDiagnostics.value = testResp.data?.diagnostics || null;
+    lastConnectionStatus.value =
+      backendStatus === 'success' || backendStatus === 'warning' || backendStatus === 'error'
+        ? backendStatus
+        : 'error';
+    lastConnectionMessage.value = backendMessage;
+    if (backendStatus === 'success') {
+      showToast('success', backendMessage);
+    } else if (backendStatus === 'warning') {
+      showToast('warning', backendMessage);
     } else {
-      Message.error(testResp.message || '连接测试失败');
+      showToast('error', backendMessage);
     }
   } catch (error: any) {
     console.error('测试失败:', error);
-    Message.error('测试失败: ' + (error.message || '未知错误'));
+    const readableMessage = getReadableErrorMessage(error, '测试连接失败');
+    lastConnectionDiagnostics.value = null;
+    lastConnectionStatus.value = 'error';
+    lastConnectionMessage.value = readableMessage;
+    showToast('error', readableMessage);
   } finally {
     testingModel.value = false;
   }
@@ -495,6 +798,21 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
   flex: 1;
 }
 
+.api-url-input-wrapper {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+}
+
+.api-url-input-wrapper :deep(.arco-input-wrapper) {
+  flex: 1;
+}
+
+.api-url-fix-button {
+  flex-shrink: 0;
+}
+
 .test-button-row {
   display: flex;
   justify-content: space-between;
@@ -506,6 +824,83 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
 .api-hint {
   font-size: 12px;
   color: var(--color-text-3);
+}
+
+.llm-diagnostic-alert {
+  margin-bottom: 16px;
+}
+
+.llm-diagnostic-extra {
+  margin-top: 8px;
+  color: var(--color-text-2);
+  line-height: 1.6;
+}
+
+.llm-diagnostic-actions {
+  margin-top: 12px;
+}
+
+.llm-diagnostic-details {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+  display: grid;
+  gap: 8px;
+}
+
+.llm-diagnostic-detail-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.llm-diagnostic-detail-label {
+  font-size: 12px;
+  color: var(--color-text-3);
+  font-weight: 600;
+}
+
+.llm-diagnostic-detail-value {
+  font-size: 12px;
+  color: var(--color-text-2);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.llm-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.llm-modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.activation-risk-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 420px;
+}
+
+.activation-risk-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+  flex-shrink: 0;
 }
 
 .switch-desc {

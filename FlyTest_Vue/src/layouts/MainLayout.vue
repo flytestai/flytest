@@ -25,9 +25,9 @@
             />
           </a-select>
         </div>
-        <div class="workspace-badge">
+        <div class="workspace-badge" :class="`workspace-badge--${aiStatus.state}`" :title="aiStatusTooltip">
           <span class="workspace-dot"></span>
-          <span>AI Workspace</span>
+          <span>{{ aiStatusLabel }}</span>
         </div>
         <ImportJobStatusBadge v-if="hasApiAutomationPermission" />
       </div>
@@ -134,6 +134,23 @@
             <template #icon><icon-file /></template>
             <span class="menu-link">需求管理</span>
           </a-menu-item>
+
+          <a-sub-menu key="test-management" v-if="hasTestManagementMenuItems">
+            <template #icon><icon-experiment /></template>
+            <template #title>测试管理</template>
+            <a-menu-item key="testcases" v-if="hasTestcasesPermission">
+              <template #icon><icon-code-block /></template>
+              <span class="menu-link">测试用例</span>
+            </a-menu-item>
+            <a-menu-item key="testsuites" v-if="hasTestSuitesPermission">
+              <template #icon><icon-folder /></template>
+              <span class="menu-link">测试套件</span>
+            </a-menu-item>
+            <a-menu-item key="test-executions" v-if="hasTestExecutionsPermission">
+              <template #icon><icon-history /></template>
+              <span class="menu-link">执行历史</span>
+            </a-menu-item>
+          </a-sub-menu>
 
           <a-sub-menu key="api-automation" v-if="hasApiAutomationMenuItems">
             <template #icon><icon-code-block /></template>
@@ -254,23 +271,6 @@
             </a-menu-item>
           </a-sub-menu>
 
-          <a-sub-menu key="test-management" v-if="hasTestManagementMenuItems">
-            <template #icon><icon-experiment /></template>
-            <template #title>测试管理</template>
-            <a-menu-item key="testcases" v-if="hasTestcasesPermission">
-              <template #icon><icon-code-block /></template>
-              <span class="menu-link">测试用例管理</span>
-            </a-menu-item>
-            <a-menu-item key="testsuites" v-if="hasTestSuitesPermission">
-              <template #icon><icon-folder /></template>
-              <span class="menu-link">测试套件</span>
-            </a-menu-item>
-            <a-menu-item key="test-executions" v-if="hasTestExecutionsPermission">
-              <template #icon><icon-history /></template>
-              <span class="menu-link">执行历史</span>
-            </a-menu-item>
-          </a-sub-menu>
-
           <a-menu-item key="langgraph-chat" v-if="hasLangGraphChatPermission">
             <template #icon><icon-message /></template>
             <span class="menu-link">AI 对话</span>
@@ -303,7 +303,7 @@
             </a-menu-item>
             <a-menu-item key="llm-configs" v-if="hasLlmConfigsPermission">
               <template #icon><icon-tool /></template>
-              <span class="menu-link">LLM 配置</span>
+              <span class="menu-link">AI大模型配置</span>
             </a-menu-item>
             <a-menu-item key="api-keys" v-if="hasApiKeysPermission">
               <template #icon><icon-safe /></template>
@@ -337,7 +337,7 @@
       </a-layout-sider>
 
       <!-- 右侧内容区域 -->
-      <a-layout-content class="content" :class="{ 'content--page-scroll': enableContentPageScroll }">
+      <a-layout-content class="content">
         <router-view v-slot="{ Component }">
           <keep-alive include="LangGraphChat">
             <component :is="Component" />
@@ -349,13 +349,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
 import { useAuthStore } from '@/store/authStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useThemeStore } from '@/store/themeStore';
 import { brandLogoUrl } from '@/utils/assetUrl';
 import ImportJobStatusBadge from '@/features/api-automation/components/ImportJobStatusBadge.vue';
+import { fetchModels, getActiveLlmConfig, testLlmConnection } from '@/features/langgraph/services/llmConfigService';
+import type { LlmConfig } from '@/features/langgraph/types/llmConfig';
 import {
   getCurrentVersion,
   formatVersion,
@@ -411,6 +413,21 @@ const router = useRouter();
 const authStore = useAuthStore();
 const projectStore = useProjectStore();
 const themeStore = useThemeStore();
+const AI_STATUS_REFRESH_INTERVAL_MS = 30000;
+type AiStatusState = 'checking' | 'online' | 'warning' | 'offline' | 'unconfigured';
+const aiStatus = ref<{
+  state: AiStatusState;
+  configName: string;
+  modelName: string;
+  message: string;
+}>({
+  state: 'checking',
+  configName: '',
+  modelName: '',
+  message: '正在检测 AI 接口状态'
+});
+let aiStatusTimer: ReturnType<typeof setTimeout> | null = null;
+let aiStatusRefreshInFlight = false;
 
 // 版本信息
 const currentVersion = ref(formatVersion(getCurrentVersion()));
@@ -432,6 +449,34 @@ const releaseNotesPreview = computed(() => {
 });
 
 // 检查版本更新
+const aiStatusLabel = computed(() => {
+  switch (aiStatus.value.state) {
+    case 'online':
+      return 'AI 在线';
+    case 'warning':
+      return 'AI 异常';
+    case 'offline':
+      return 'AI 离线';
+    case 'unconfigured':
+      return 'AI 未配置';
+    default:
+      return 'AI 检测中';
+  }
+});
+
+const aiStatusTooltip = computed(() => {
+  const parts = [aiStatusLabel.value];
+  if (aiStatus.value.modelName) {
+    parts.push(`模型: ${aiStatus.value.modelName}`);
+  } else if (aiStatus.value.configName) {
+    parts.push(`配置: ${aiStatus.value.configName}`);
+  }
+  if (aiStatus.value.message) {
+    parts.push(aiStatus.value.message);
+  }
+  return parts.join(' · ');
+});
+
 async function checkVersion() {
   try {
     versionInfo.value = await checkLatestVersion();
@@ -439,6 +484,101 @@ async function checkVersion() {
     console.warn('版本检查失败', error);
   }
 }
+
+const clearAiStatusTimer = () => {
+  if (aiStatusTimer !== null) {
+    clearTimeout(aiStatusTimer);
+    aiStatusTimer = null;
+  }
+};
+
+const scheduleAiStatusRefresh = (delay = AI_STATUS_REFRESH_INTERVAL_MS) => {
+  clearAiStatusTimer();
+  aiStatusTimer = setTimeout(() => {
+    void refreshAiStatus({ silent: true });
+  }, delay);
+};
+
+const refreshAiStatus = async ({ silent = false }: { silent?: boolean } = {}) => {
+  if (aiStatusRefreshInFlight) {
+    return;
+  }
+
+  aiStatusRefreshInFlight = true;
+  if (!silent) {
+    aiStatus.value = {
+      ...aiStatus.value,
+      state: 'checking',
+      message: '正在检测 AI 接口状态'
+    };
+  }
+
+  try {
+    const activeConfigResponse = await getActiveLlmConfig();
+    const activeConfig: LlmConfig | null = activeConfigResponse.data;
+
+    if (activeConfigResponse.status !== 'success' || !activeConfig) {
+      aiStatus.value = {
+        state: 'unconfigured',
+        configName: '',
+        modelName: '',
+        message: activeConfigResponse.status === 'success'
+          ? '当前没有激活的 AI 配置'
+          : (activeConfigResponse.message || '无法获取 AI 配置')
+      };
+      scheduleAiStatusRefresh();
+      return;
+    }
+
+    let remoteStatus: string = 'error';
+    let message = '';
+
+    const fetchModelsResponse = await fetchModels(activeConfig.api_url, undefined, activeConfig.id);
+    if (fetchModelsResponse.status === 'success') {
+      remoteStatus = 'success';
+      message = fetchModelsResponse.data?.models?.length
+        ? `已检测到 ${fetchModelsResponse.data.models.length} 个可用模型`
+        : 'AI 接口连通正常';
+    } else {
+      const testResponse = await testLlmConnection(activeConfig.id);
+      remoteStatus = testResponse.data?.status || (testResponse.status === 'success' ? 'success' : 'error');
+      message = testResponse.message || fetchModelsResponse.message;
+    }
+
+    const state: AiStatusState =
+      remoteStatus === 'success' ? 'online' :
+      remoteStatus === 'warning' ? 'warning' :
+      'offline';
+
+    aiStatus.value = {
+      state,
+      configName: activeConfig.config_name,
+      modelName: activeConfig.name,
+      message: message || (state === 'online' ? 'AI 接口连接正常' : 'AI 接口连接异常')
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'AI 接口连接异常';
+    aiStatus.value = {
+      state: 'offline',
+      configName: '',
+      modelName: '',
+      message
+    };
+  } finally {
+    aiStatusRefreshInFlight = false;
+    scheduleAiStatusRefresh();
+  }
+};
+
+const handleWindowFocus = () => {
+  void refreshAiStatus({ silent: true });
+};
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    void refreshAiStatus({ silent: true });
+  }
+};
 
 // 用户信息
 const user = computed(() => authStore.currentUser);
@@ -451,8 +591,6 @@ const userInitial = computed(() => {
 });
 
 const themeButtonLabel = computed(() => (themeStore.isBlack ? '切换到默认主题' : '切换到黑色主题'));
-const enableContentPageScroll = computed(() => route.path.startsWith('/data-factory'));
-
 type MenuNavigationTarget = {
   route: RouteLocationRaw;
   requiresProject?: boolean;
@@ -766,6 +904,8 @@ const handlePopupVisibleChange = (visible: boolean) => {
 
 // 在组件挂载时检查认证状态并加载项目列表
 onMounted(async () => {
+  window.addEventListener('focus', handleWindowFocus);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
   // 确保用户信息在组件挂载时被正确加载
   authStore.checkAuthStatus();
   console.log('MainLayout mounted, user:', user.value?.username);
@@ -779,6 +919,13 @@ onMounted(async () => {
   
   // 检查版本更新，在后台执行且不阻塞页面
   checkVersion();
+  await refreshAiStatus();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('focus', handleWindowFocus);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  clearAiStatusTimer();
 });
 </script>
 
@@ -1209,12 +1356,14 @@ onMounted(async () => {
   --dashboard-header-height: 104px;
   --dashboard-header-total-height: 136px;
   height: 100vh;
+  min-height: 100vh;
   background-color: var(--theme-page-bg);
   overflow: hidden;
 }
 
 .inner-layout {
   height: calc(100vh - var(--dashboard-header-total-height));
+  min-height: 0;
 }
 
 .content {
@@ -1334,6 +1483,9 @@ onMounted(async () => {
 .sider {
   margin: 0 0 16px 16px;
   border-radius: 28px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(246, 249, 253, 0.58));
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -1342,6 +1494,8 @@ onMounted(async () => {
 }
 
 .menu {
+  flex: 1;
+  min-height: 0;
   padding: 16px 12px 68px;
   border-radius: 28px;
   background: transparent;
@@ -1424,6 +1578,7 @@ onMounted(async () => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
 .workspace-dot {
@@ -1432,6 +1587,53 @@ onMounted(async () => {
   border-radius: 50%;
   background: linear-gradient(135deg, #34d399, #0ea5e9);
   box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.workspace-badge--checking {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(255, 251, 235, 0.92);
+}
+
+.workspace-badge--checking .workspace-dot {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.16);
+}
+
+.workspace-badge--online {
+  color: #0f766e;
+  border-color: rgba(16, 185, 129, 0.26);
+  background: rgba(236, 253, 245, 0.92);
+}
+
+.workspace-badge--online .workspace-dot {
+  background: linear-gradient(135deg, #34d399, #0ea5e9);
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.14);
+}
+
+.workspace-badge--warning {
+  color: #9a3412;
+  border-color: rgba(249, 115, 22, 0.26);
+  background: rgba(255, 247, 237, 0.92);
+}
+
+.workspace-badge--warning .workspace-dot {
+  background: linear-gradient(135deg, #f97316, #fb7185);
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.14);
+}
+
+.workspace-badge--offline,
+.workspace-badge--unconfigured {
+  color: #991b1b;
+  border-color: rgba(239, 68, 68, 0.24);
+  background: rgba(254, 242, 242, 0.92);
+}
+
+.workspace-badge--offline .workspace-dot,
+.workspace-badge--unconfigured .workspace-dot {
+  background: linear-gradient(135deg, #ef4444, #f43f5e);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
 }
 
 .header {
@@ -1496,15 +1698,11 @@ onMounted(async () => {
 
 .content {
   position: relative;
-  overflow: hidden;
-}
-
-.content--page-scroll {
-  overflow: auto;
-}
-
-.content--page-scroll > * {
-  min-height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .content::before {
@@ -1520,6 +1718,9 @@ onMounted(async () => {
 .content > * {
   position: relative;
   z-index: 1;
+  display: block;
+  min-height: 100%;
+  width: 100%;
 }
 
 .layout-menu-popup,
@@ -1570,6 +1771,14 @@ onMounted(async () => {
 .main-layout ::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.28);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.main-layout ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 @media (max-width: 1100px) {

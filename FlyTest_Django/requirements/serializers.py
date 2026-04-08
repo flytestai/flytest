@@ -115,8 +115,10 @@ class ReviewReportSerializer(serializers.ModelSerializer):
     document_title = serializers.CharField(source='document.title', read_only=True)
     overall_rating_display = serializers.CharField(source='get_overall_rating_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    summary = serializers.SerializerMethodField()
+    recommendations = serializers.SerializerMethodField()
     issues = ReviewIssueSerializer(many=True, read_only=True)
-    module_results = ModuleReviewResultSerializer(many=True, read_only=True)
+    module_results = serializers.SerializerMethodField()
     
     # 新架构字段 - 专项分析和评分
     specialized_analyses = serializers.SerializerMethodField()
@@ -146,58 +148,195 @@ class ReviewReportSerializer(serializers.ModelSerializer):
             'clarity': obj.clarity_score,
             'logic': obj.logic_score,
         }
+
+    @staticmethod
+    def _analysis_name_map():
+        return {
+            'completeness_analysis': '完整性分析',
+            'consistency_analysis': '一致性分析',
+            'testability_analysis': '可测性分析',
+            'feasibility_analysis': '可行性分析',
+            'clarity_analysis': '清晰度分析',
+            'logic_analysis': '逻辑性分析',
+        }
+
+    def _looks_like_default_analysis(self, analysis_key, analysis_data):
+        if not isinstance(analysis_data, dict):
+            return False
+
+        summary = str(analysis_data.get('summary', '') or '')
+        analysis_type = str(analysis_data.get('analysis_type', '') or '')
+        return (
+            analysis_data.get('overall_score') == 70
+            and not analysis_data.get('issues')
+            and not analysis_data.get('recommendations')
+            and (
+                analysis_data.get('degraded')
+                or analysis_data.get('error_reason')
+                or summary.startswith(analysis_type)
+                or summary.startswith(analysis_key)
+            )
+        )
+
+    def _build_fallback_analysis(self, analysis_key, analysis_data):
+        analysis_name = self._analysis_name_map().get(analysis_key, analysis_key)
+        merged = dict(analysis_data or {})
+        merged.setdefault('analysis_type', analysis_key)
+        merged.setdefault('overall_score', 70)
+        merged['summary'] = (
+            merged.get('summary')
+            or f"{analysis_name}未生成完整自动评语，当前结果为兜底摘要，请人工复核。"
+        )
+        merged['strengths'] = merged.get('strengths') or [
+            '系统保留了该维度的基础评分，可作为人工复核的起点。'
+        ]
+        merged['recommendations'] = merged.get('recommendations') or [
+            f'建议优先人工复核{analysis_name}涉及的关键描述、边界条件与异常处理。'
+        ]
+        merged['issues'] = merged.get('issues') or []
+        merged['degraded'] = True
+        return merged
+
+    def _get_enriched_specialized_analyses(self, obj):
+        raw_analyses = obj.specialized_analyses if isinstance(obj.specialized_analyses, dict) else {}
+        if not raw_analyses:
+            raw_analyses = {
+                'completeness_analysis': {
+                    'overall_score': obj.completeness_score,
+                    'summary': f'完整性评分 {obj.completeness_score} 分',
+                    'issues': [],
+                    'strengths': [],
+                    'recommendations': []
+                },
+                'consistency_analysis': {
+                    'overall_score': obj.consistency_score,
+                    'summary': f'一致性评分 {obj.consistency_score} 分',
+                    'issues': [],
+                    'strengths': [],
+                    'recommendations': []
+                },
+                'testability_analysis': {
+                    'overall_score': obj.testability_score,
+                    'summary': f'可测性评分 {obj.testability_score} 分',
+                    'issues': [],
+                    'strengths': [],
+                    'recommendations': []
+                },
+                'feasibility_analysis': {
+                    'overall_score': obj.feasibility_score,
+                    'summary': f'可行性评分 {obj.feasibility_score} 分',
+                    'issues': [],
+                    'strengths': [],
+                    'recommendations': []
+                },
+                'clarity_analysis': {
+                    'overall_score': obj.clarity_score,
+                    'summary': f'清晰度评分 {obj.clarity_score} 分',
+                    'issues': [],
+                    'strengths': [],
+                    'recommendations': []
+                },
+                'logic_analysis': {
+                    'overall_score': obj.logic_score,
+                    'summary': f'逻辑性评分 {obj.logic_score} 分',
+                    'issues': [],
+                    'strengths': [],
+                    'recommendations': []
+                }
+            }
+
+        enriched = {}
+        for analysis_key, analysis_data in raw_analyses.items():
+            if self._looks_like_default_analysis(analysis_key, analysis_data):
+                enriched[analysis_key] = self._build_fallback_analysis(
+                    analysis_key, analysis_data
+                )
+            else:
+                enriched[analysis_key] = analysis_data
+        return enriched
+
+    def _get_degraded_analysis_names(self, obj):
+        names = []
+        for analysis_key, analysis_data in self._get_enriched_specialized_analyses(obj).items():
+            if isinstance(analysis_data, dict) and analysis_data.get('degraded'):
+                names.append(self._analysis_name_map().get(analysis_key, analysis_key))
+        return names
+
+    def get_summary(self, obj):
+        summary = (obj.summary or '').strip()
+        degraded_names = self._get_degraded_analysis_names(obj)
+
+        if degraded_names and '降级' not in summary and '兜底' not in summary:
+            prefix = summary or f'需求文档整体评分为 {obj.completion_score} / 100。'
+            return (
+                f"{prefix} 本次评审有部分专项分析降级为兜底结果，"
+                f"涉及：{'、'.join(degraded_names)}。"
+            )
+
+        return summary
+
+    def get_recommendations(self, obj):
+        recommendations = (obj.recommendations or '').strip()
+        if recommendations:
+            return recommendations
+
+        degraded_names = self._get_degraded_analysis_names(obj)
+        if not degraded_names:
+            return recommendations
+
+        return (
+            "本次评审有部分专项分析未生成完整文字结论，建议优先人工复核："
+            + '、'.join(degraded_names)
+            + '。'
+        )
+
+    def _module_rating_display(self, rating: str) -> str:
+        mapping = dict(ReviewReport.OVERALL_RATING_CHOICES)
+        return mapping.get(rating, rating)
+
+    def _build_fallback_module_results(self, obj):
+        modules = list(obj.document.modules.order_by('order'))
+        if not modules:
+            return []
+
+        degraded_names = self._get_degraded_analysis_names(obj)
+        fallback_results = []
+        overall_score = obj.completion_score or 70
+        severity_score = max(0, 100 - overall_score)
+
+        for module in modules:
+            fallback_results.append({
+                'id': f'fallback-{module.id}',
+                'module': str(module.id),
+                'module_name': module.title,
+                'module_rating': obj.overall_rating or 'average',
+                'module_rating_display': self._module_rating_display(obj.overall_rating or 'average'),
+                'issues_count': 0,
+                'severity_score': severity_score,
+                'analysis_content': '',
+                'strengths': '当前模块未发现显性高优先级问题，可作为后续人工复核的重点入口。',
+                'weaknesses': (
+                    '模块级详细评语未单独落库。'
+                    + (' 部分专项分析已降级为兜底结果。' if degraded_names else '')
+                ),
+                'recommendations': (
+                    f"建议优先人工复核模块「{module.title}」的关键业务规则、边界条件和异常场景。"
+                ),
+                'created_at': obj.created_at,
+                'updated_at': obj.updated_at,
+            })
+
+        return fallback_results
+
+    def get_module_results(self, obj):
+        existing_results = list(obj.module_results.all())
+        if existing_results:
+            return ModuleReviewResultSerializer(existing_results, many=True).data
+        return self._build_fallback_module_results(obj)
     
     def get_specialized_analyses(self, obj):
         """返回专项分析详情,直接从JSONField读取"""
-        # 如果specialized_analyses字段有数据,直接返回
-        if obj.specialized_analyses and isinstance(obj.specialized_analyses, dict):
-            return obj.specialized_analyses
-        
-        # 如果没有(旧数据或默认),则返回基于评分字段构建的基本结构
-        return {
-            'completeness_analysis': {
-                'overall_score': obj.completeness_score,
-                'summary': f"完整性评分: {obj.completeness_score}分",
-                'issues': [],
-                'strengths': [],
-                'recommendations': []
-            },
-            'consistency_analysis': {
-                'overall_score': obj.consistency_score,
-                'summary': f"一致性评分: {obj.consistency_score}分",
-                'issues': [],
-                'strengths': [],
-                'recommendations': []
-            },
-            'testability_analysis': {
-                'overall_score': obj.testability_score,
-                'summary': f"可测性评分: {obj.testability_score}分",
-                'issues': [],
-                'strengths': [],
-                'recommendations': []
-            },
-            'feasibility_analysis': {
-                'overall_score': obj.feasibility_score,
-                'summary': f"可行性评分: {obj.feasibility_score}分",
-                'issues': [],
-                'strengths': [],
-                'recommendations': []
-            },
-            'clarity_analysis': {
-                'overall_score': obj.clarity_score,
-                'summary': f"清晰度评分: {obj.clarity_score}分",
-                'issues': [],
-                'strengths': [],
-                'recommendations': []
-            },
-            'logic_analysis': {
-                'overall_score': obj.logic_score,
-                'summary': f"逻辑分析评分: {obj.logic_score}分",
-                'issues': [],
-                'strengths': [],
-                'recommendations': []
-            }
-        }
+        return self._get_enriched_specialized_analyses(obj)
 
 
 

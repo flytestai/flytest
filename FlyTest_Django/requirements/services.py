@@ -2,6 +2,7 @@ import logging
 import json
 import re
 from string import Template
+from types import SimpleNamespace
 from typing import List, Dict, Any, Optional
 from django.conf import settings
 from langchain_openai import ChatOpenAI
@@ -20,23 +21,135 @@ def create_llm_instance(active_config, temperature=0.1):
     统一使用OpenAI兼容格式，支持所有兼容的服务商
     """
     model_identifier = active_config.name or "gpt-3.5-turbo"
+    provider = (getattr(active_config, "provider", "") or "openai_compatible").lower()
+    api_key = (getattr(active_config, "api_key", "") or "").strip()
+    base_url = (getattr(active_config, "api_url", "") or "").strip() or None
+    request_timeout = getattr(active_config, "request_timeout", 120) or 120
+    max_retries = getattr(active_config, "max_retries", 3)
+    if max_retries is None:
+        max_retries = 3
 
-    llm_kwargs = {
-        "model": model_identifier,
-        "temperature": temperature,
-        "api_key": active_config.api_key,
-        "base_url": active_config.api_url,
-        "max_retries": 3,
-        "timeout": 120,
-    }
-    llm = ChatOpenAI(**llm_kwargs)
+    if provider == "qwen":
+        try:
+            from langchain_qwen import ChatQwen
+        except ImportError as exc:
+            raise ImportError(
+                "Qwen provider requires langchain-qwen. Please install dependencies from requirements.txt."
+            ) from exc
+
+        llm_kwargs = {
+            "model": model_identifier,
+            "temperature": temperature,
+            "timeout": request_timeout,
+            "max_retries": max_retries,
+        }
+        if api_key:
+            llm_kwargs["api_key"] = api_key
+        if base_url:
+            llm_kwargs["base_url"] = base_url
+        llm = ChatQwen(**llm_kwargs)
+    else:
+        llm_kwargs = {
+            "model": model_identifier,
+            "temperature": temperature,
+            "api_key": api_key,
+            "base_url": base_url,
+            "max_retries": max_retries,
+            "timeout": request_timeout,
+        }
+        llm = ChatOpenAI(**llm_kwargs)
+
     logger.info(
-        f"Initialized OpenAI-compatible LLM with model: {model_identifier}, base_url: {active_config.api_url}"
+        "Initialized requirement-review LLM: provider=%s, model=%s, base_url=%s, timeout=%ss, max_retries=%s",
+        provider,
+        model_identifier,
+        base_url,
+        request_timeout,
+        max_retries,
     )
 
     return llm
 
-    return llm
+
+def _extract_text_from_content(content: Any) -> str:
+    if content is None:
+        return ""
+
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        chunks = []
+        for item in content:
+            if isinstance(item, str):
+                text = item.strip()
+            elif isinstance(item, dict):
+                text = str(item.get("text") or item.get("content") or "").strip()
+            else:
+                text = str(
+                    getattr(item, "text", "") or getattr(item, "content", "")
+                ).strip()
+            if text:
+                chunks.append(text)
+        return "\n".join(chunks).strip()
+
+    if isinstance(content, dict):
+        direct_text = str(content.get("text") or content.get("content") or "").strip()
+        if direct_text:
+            return direct_text
+        nested_parts = content.get("parts") or content.get("items")
+        if isinstance(nested_parts, list):
+            return _extract_text_from_content(nested_parts)
+        return ""
+
+    return str(
+        getattr(content, "text", "") or getattr(content, "content", "") or ""
+    ).strip()
+
+
+def _extract_llm_response_text(response) -> str:
+    if response is None:
+        return ""
+    return _extract_text_from_content(getattr(response, "content", None))
+
+
+def _extract_llm_token_usage(response) -> dict:
+    response_metadata = getattr(response, "response_metadata", {}) or {}
+    token_usage = response_metadata.get("token_usage", {}) or {}
+    usage_metadata = getattr(response, "usage_metadata", {}) or {}
+    return {
+        "prompt_tokens": (
+            token_usage.get("prompt_tokens")
+            or usage_metadata.get("input_tokens")
+            or 0
+        ),
+        "completion_tokens": (
+            token_usage.get("completion_tokens")
+            or usage_metadata.get("output_tokens")
+            or 0
+        ),
+        "total_tokens": (
+            token_usage.get("total_tokens")
+            or usage_metadata.get("total_tokens")
+            or 0
+        ),
+        "finish_reason": response_metadata.get("finish_reason") or "",
+    }
+
+
+def _build_empty_llm_response_error(response) -> RuntimeError:
+    usage = _extract_llm_token_usage(response)
+    detail_parts = []
+    if usage.get("finish_reason"):
+        detail_parts.append(f"finish_reason={usage['finish_reason']}")
+    if usage.get("completion_tokens"):
+        detail_parts.append(f"completion_tokens={usage['completion_tokens']}")
+    if usage.get("total_tokens"):
+        detail_parts.append(f"total_tokens={usage['total_tokens']}")
+
+    if detail_parts:
+        return RuntimeError(f"LLM 返回空响应（{', '.join(detail_parts)}）")
+    return RuntimeError("LLM 返回空响应")
 
 
 def safe_llm_invoke(llm, messages, max_retries=3, retry_delay=2):
@@ -97,7 +210,57 @@ def safe_llm_invoke(llm, messages, max_retries=3, retry_delay=2):
     raise last_error or Exception("LLM 调用失败，所有重试都未成功")
 
 
-def extract_json_from_response(content: str) -> Optional[dict]:
+def safe_llm_invoke_v2(llm, messages, max_retries=3, retry_delay=2):
+    """Best-effort invoke that aligns requirement review with current LLM response handling."""
+    import time
+
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            response = llm.invoke(messages)
+            response_text = _extract_llm_response_text(response)
+            if response_text:
+                return SimpleNamespace(
+                    content=response_text,
+                    response_metadata=getattr(response, "response_metadata", {}) or {},
+                    usage_metadata=getattr(response, "usage_metadata", {}) or {},
+                    additional_kwargs=getattr(response, "additional_kwargs", {}) or {},
+                    raw_response=response,
+                )
+
+            last_error = _build_empty_llm_response_error(response)
+            logger.warning("%s，尝试重试 (%s/%s)", last_error, attempt + 1, max_retries)
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (attempt + 1))
+            continue
+        except TypeError as e:
+            if "'NoneType' object is not iterable" in str(e):
+                last_error = e
+                logger.warning(
+                    "LLM API returned empty choices, retrying (%s/%s)",
+                    attempt + 1,
+                    max_retries,
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay * (attempt + 1))
+                continue
+            raise
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                "LLM invocation failed: %s, retrying (%s/%s)",
+                e,
+                attempt + 1,
+                max_retries,
+            )
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (attempt + 1))
+            continue
+
+    raise last_error or Exception("LLM invocation failed after all retries")
+
+
+def extract_json_from_response(content: Any) -> Optional[dict]:
     """
     从 LLM 响应中提取 JSON 对象，支持多种格式。
 
@@ -112,6 +275,9 @@ def extract_json_from_response(content: str) -> Optional[dict]:
     Returns:
         解析后的 dict，或 None（如果无法解析）
     """
+    if not isinstance(content, str):
+        content = _extract_text_from_content(content)
+
     if not content:
         return None
 
@@ -1207,7 +1373,7 @@ class ModuleSplitter:
                 HumanMessage(content=formatted_prompt),
             ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
 
             modules_structure = extract_json_from_response(response.content)
             if not modules_structure:
@@ -2570,7 +2736,7 @@ class RequirementReviewEngine:
                 HumanMessage(content=formatted_prompt),
             ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
 
             analysis_result = extract_json_from_response(response.content)
             if analysis_result:
@@ -2625,7 +2791,11 @@ class RequirementReviewEngine:
         completeness_prompt = self._get_user_prompt("completeness_analysis")
         if not completeness_prompt:
             logger.warning("用户未配置完整性分析提示词，返回默认结果")
-            return self._get_default_analysis_result("completeness_analysis")
+            return self._get_default_analysis_result(
+                "completeness_analysis",
+                fallback_reason="missing prompt configuration",
+                source_content=content,
+            )
 
         try:
             # 准备分析内容（可能是纯文本或多模态）
@@ -2662,7 +2832,7 @@ class RequirementReviewEngine:
                 ]
 
             logger.info("调用LLM进行完整性分析...")
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
             logger.info(f"LLM响应完成，内容长度: {len(response.content)}")
 
             result = extract_json_from_response(response.content)
@@ -2676,14 +2846,22 @@ class RequirementReviewEngine:
             else:
                 logger.warning("完整性分析响应中未找到JSON格式，使用默认结果")
                 logger.debug(f"AI响应内容前500字符: {response.content[:500]}")
-                return self._get_default_analysis_result("completeness_analysis")
+                return self._get_default_analysis_result(
+                    "completeness_analysis",
+                    fallback_reason="LLM response did not contain valid JSON",
+                    source_content=content,
+                )
 
         except Exception as e:
             logger.error(f"完整性分析失败: {e}")
             import traceback
 
             logger.error(f"详细错误: {traceback.format_exc()}")
-            return self._get_default_analysis_result("completeness_analysis")
+            return self._get_default_analysis_result(
+                "completeness_analysis",
+                fallback_reason=str(e),
+                source_content=content,
+            )
 
     def analyze_consistency(
         self, content: str, document: RequirementDocument = None
@@ -2727,7 +2905,7 @@ class RequirementReviewEngine:
                 ]
 
             logger.info("调用LLM进行一致性分析...")
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
             logger.info(f"LLM响应完成，内容长度: {len(response.content)}")
 
             result = extract_json_from_response(response.content)
@@ -2791,7 +2969,7 @@ class RequirementReviewEngine:
                     HumanMessage(content=formatted_prompt),
                 ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
             result = extract_json_from_response(response.content)
             if result:
                 logger.info(
@@ -2849,7 +3027,7 @@ class RequirementReviewEngine:
                     HumanMessage(content=formatted_prompt),
                 ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
             result = extract_json_from_response(response.content)
             if result:
                 logger.info(
@@ -2907,7 +3085,7 @@ class RequirementReviewEngine:
                     HumanMessage(content=formatted_prompt),
                 ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
             result = extract_json_from_response(response.content)
             if result:
                 logger.info(
@@ -2927,14 +3105,410 @@ class RequirementReviewEngine:
             logger.error(f"详细错误: {traceback.format_exc()}")
             return self._get_default_analysis_result("clarity_analysis")
 
-    def _get_default_analysis_result(self, analysis_type: str) -> dict:
+    def _get_analysis_display_name(self, analysis_type: str) -> str:
+        mapping = {
+            "completeness_analysis": "完整性分析",
+            "consistency_analysis": "一致性分析",
+            "testability_analysis": "可测性分析",
+            "feasibility_analysis": "可行性分析",
+            "clarity_analysis": "清晰度分析",
+            "logic_analysis": "逻辑性分析",
+        }
+        return mapping.get(analysis_type, analysis_type)
+
+    def _build_completeness_fallback_result(
+        self, source_content: str, fallback_reason: str | None = None
+    ) -> dict:
+        analysis_type = "completeness_analysis"
+        analysis_name = self._get_analysis_display_name(analysis_type)
+        text = re.sub(r"\s+", " ", source_content or "").strip()
+        if not text:
+            return {
+                "analysis_type": analysis_type,
+                "overall_score": 68,
+                "summary": f"{analysis_name}未获取到可供补充判断的正文，当前仅保留保守兜底结论。",
+                "strengths": ["系统仍保留了该维度的基础评分，可作为人工复核的起点。"],
+                "weaknesses": ["文档正文为空或过短，完整性分析无法展开。"],
+                "recommendations": ["请先补充完整的需求正文，再重新发起评审。"],
+                "issues": [],
+                "degraded": True,
+                "error_reason": (fallback_reason or "AI analysis unavailable").strip(),
+            }
+
+        checkpoints = [
+            {
+                "label": "业务主体与角色",
+                "keywords": ["用户", "管理员", "角色", "客户", "操作员", "系统"],
+                "recommendation": "补充需求涉及的业务角色、触发条件以及各角色可执行的关键操作。",
+                "priority": "medium",
+            },
+            {
+                "label": "核心业务流程",
+                "keywords": ["流程", "步骤", "登录", "注册", "提交", "查询", "创建", "审核", "下单"],
+                "recommendation": "补充主流程、分支流程与流程间前置依赖，说明每一步的输入与输出。",
+                "priority": "high",
+            },
+            {
+                "label": "输入输出与字段约束",
+                "keywords": ["字段", "参数", "输入", "输出", "手机号", "验证码", "密码", "编号", "格式", "长度", "必填"],
+                "recommendation": "补充关键字段、校验规则、格式限制、默认值以及接口或页面的输出结果。",
+                "priority": "high",
+            },
+            {
+                "label": "异常场景与边界条件",
+                "keywords": ["异常", "错误", "失败", "超时", "重试", "提示", "校验", "边界", "限制"],
+                "recommendation": "补充失败提示、超时、重试、幂等、空值与非法输入等异常处理规则。",
+                "priority": "high",
+            },
+            {
+                "label": "状态流转与权限规则",
+                "keywords": ["权限", "角色", "状态", "审核", "启用", "禁用", "可见", "审批"],
+                "recommendation": "补充状态流转、权限边界、可见范围及不同角色的差异化行为。",
+                "priority": "medium",
+            },
+            {
+                "label": "验收标准与非功能要求",
+                "keywords": ["验收", "性能", "响应时间", "安全", "日志", "并发", "兼容", "审计"],
+                "recommendation": "补充验收标准，以及性能、安全、日志留痕、兼容性等非功能约束。",
+                "priority": "medium",
+            },
+        ]
+
+        covered_labels = []
+        missing_labels = []
+        strengths = []
+        weaknesses = []
+        recommendations = []
+        issues = []
+
+        for checkpoint in checkpoints:
+            if any(keyword in text for keyword in checkpoint["keywords"]):
+                covered_labels.append(checkpoint["label"])
+                strengths.append(f"文档已提及{checkpoint['label']}相关内容，可作为后续细化的基础。")
+                continue
+
+            missing_labels.append(checkpoint["label"])
+            weaknesses.append(f"当前文档缺少{checkpoint['label']}的明确说明，完整性仍有补充空间。")
+            recommendations.append(checkpoint["recommendation"])
+            issues.append(
+                {
+                    "title": f"缺少{checkpoint['label']}说明",
+                    "description": f"需求文档中尚未明确覆盖{checkpoint['label']}，这会影响后续设计、测试与验收落地。",
+                    "priority": checkpoint["priority"],
+                    "category": "completeness",
+                    "location": "整篇文档",
+                    "suggestion": checkpoint["recommendation"],
+                }
+            )
+
+        if len(text) >= 120:
+            strengths.append("文档提供了基础业务描述，系统已据此补充了启发式完整性检查。")
+        else:
+            weaknesses.append("当前需求正文较短，信息密度不足，完整性结论只能作为初步参考。")
+            recommendations.append("建议先补充更完整的业务背景、流程描述和约束条件，再重新发起评审。")
+
+        covered_count = len(covered_labels)
+        missing_count = len(missing_labels)
+        overall_score = 58 + covered_count * 5 + min(8, len(text) // 120) - max(0, missing_count - 1) * 2
+        overall_score = max(60, min(82, overall_score))
+
+        summary = (
+            "完整性分析未取得稳定 AI 正文，当前结果已降级为基于文档内容的补充检查。"
+            f" 已识别 {covered_count} 项关键要素"
+            f"{('：' + '、'.join(covered_labels[:4])) if covered_labels else ''}；"
+            f" 仍建议优先补充 {('、'.join(missing_labels[:3])) if missing_labels else '验收标准和异常边界'}。"
+        )
+
+        return {
+            "analysis_type": analysis_type,
+            "overall_score": overall_score,
+            "summary": summary,
+            "strengths": self._dedupe_text_items(strengths, limit=4),
+            "weaknesses": self._dedupe_text_items(weaknesses, limit=5),
+            "recommendations": self._dedupe_text_items(recommendations, limit=6),
+            "issues": issues[:6],
+            "degraded": True,
+            "error_reason": (fallback_reason or "AI analysis unavailable").strip(),
+        }
+
+    def _build_completeness_fallback_result(
+        self, source_content: str, fallback_reason: str | None = None
+    ) -> dict:
+        analysis_type = "completeness_analysis"
+        analysis_name = self._get_analysis_display_name(analysis_type)
+        text = re.sub(r"\s+", " ", source_content or "").strip()
+        if not text:
+            return {
+                "analysis_type": analysis_type,
+                "overall_score": 68,
+                "summary": f"{analysis_name}未获取到可供补充判断的正文，当前仅保留保守兜底结论。",
+                "strengths": ["系统仍保留了该维度的基础评分，可作为人工复核的起点。"],
+                "weaknesses": ["文档正文为空或过短，完整性分析无法展开。"],
+                "recommendations": ["请先补充完整的需求正文，再重新发起评审。"],
+                "issues": [],
+                "degraded": True,
+                "error_reason": (fallback_reason or "AI analysis unavailable").strip(),
+            }
+
+        checkpoints = [
+            {
+                "label": "业务主体与角色",
+                "keywords": ["用户", "管理员", "角色", "客户", "操作员", "系统"],
+                "recommendation": "补充需求涉及的业务角色、触发条件以及各角色可执行的关键操作。",
+                "priority": "medium",
+            },
+            {
+                "label": "核心业务流程",
+                "keywords": ["流程", "步骤", "登录", "注册", "提交", "查询", "创建", "审核", "下单"],
+                "recommendation": "补充主流程、分支流程与流程间前置依赖，说明每一步的输入与输出。",
+                "priority": "high",
+            },
+            {
+                "label": "输入输出与字段约束",
+                "keywords": ["字段", "参数", "输入", "输出", "手机号", "验证码", "密码", "编号", "格式", "长度", "必填"],
+                "recommendation": "补充关键字段、校验规则、格式限制、默认值以及接口或页面的输出结果。",
+                "priority": "high",
+            },
+            {
+                "label": "异常场景与边界条件",
+                "keywords": ["异常", "错误", "失败", "超时", "重试", "提示", "校验", "边界", "限制"],
+                "recommendation": "补充失败提示、超时、重试、幂等、空值与非法输入等异常处理规则。",
+                "priority": "high",
+            },
+            {
+                "label": "状态流转与权限规则",
+                "keywords": ["权限", "角色", "状态", "审核", "启用", "禁用", "可见", "审批"],
+                "recommendation": "补充状态流转、权限边界、可见范围及不同角色的差异化行为。",
+                "priority": "medium",
+            },
+            {
+                "label": "验收标准与非功能要求",
+                "keywords": ["验收", "性能", "响应时间", "安全", "日志", "并发", "兼容", "审计"],
+                "recommendation": "补充验收标准，以及性能、安全、日志留痕、兼容性等非功能约束。",
+                "priority": "medium",
+            },
+        ]
+
+        covered_labels = []
+        missing_labels = []
+        strengths = []
+        weaknesses = []
+        recommendations = []
+        issues = []
+
+        for checkpoint in checkpoints:
+            if any(keyword in text for keyword in checkpoint["keywords"]):
+                covered_labels.append(checkpoint["label"])
+                strengths.append(f"文档已提及{checkpoint['label']}相关内容，可作为后续细化的基础。")
+                continue
+
+            missing_labels.append(checkpoint["label"])
+            weaknesses.append(f"当前文档缺少{checkpoint['label']}的明确说明，完整性仍有补充空间。")
+            recommendations.append(checkpoint["recommendation"])
+            issues.append(
+                {
+                    "title": f"缺少{checkpoint['label']}说明",
+                    "description": f"需求文档中尚未明确覆盖{checkpoint['label']}，这会影响后续设计、测试与验收落地。",
+                    "priority": checkpoint["priority"],
+                    "category": "completeness",
+                    "location": "整篇文档",
+                    "suggestion": checkpoint["recommendation"],
+                }
+            )
+
+        if len(text) >= 120:
+            strengths.append("文档提供了基础业务描述，系统已据此补充了启发式完整性检查。")
+        else:
+            weaknesses.append("当前需求正文较短，信息密度不足，完整性结论只能作为初步参考。")
+            recommendations.append("建议先补充更完整的业务背景、流程描述和约束条件，再重新发起评审。")
+
+        covered_count = len(covered_labels)
+        missing_count = len(missing_labels)
+        overall_score = 58 + covered_count * 5 + min(8, len(text) // 120) - max(0, missing_count - 1) * 2
+        overall_score = max(60, min(82, overall_score))
+
+        summary = (
+            "完整性分析未取得稳定 AI 正文，当前结果已降级为基于文档内容的补充检查。"
+            f" 已识别 {covered_count} 项关键要素"
+            f"{('：' + '、'.join(covered_labels[:4])) if covered_labels else ''}；"
+            f" 仍建议优先补充 {('、'.join(missing_labels[:3])) if missing_labels else '验收标准和异常边界'}。"
+        )
+
+        return {
+            "analysis_type": analysis_type,
+            "overall_score": overall_score,
+            "summary": summary,
+            "strengths": self._dedupe_text_items(strengths, limit=4),
+            "weaknesses": self._dedupe_text_items(weaknesses, limit=5),
+            "recommendations": self._dedupe_text_items(recommendations, limit=6),
+            "issues": issues[:6],
+            "degraded": True,
+            "error_reason": (fallback_reason or "AI analysis unavailable").strip(),
+        }
+
+    def _get_default_analysis_result(
+        self,
+        analysis_type: str,
+        fallback_reason: str | None = None,
+        source_content: str | None = None,
+    ) -> dict:
         """获取默认的分析结果"""
+        if analysis_type == "completeness_analysis" and source_content:
+            return self._build_completeness_fallback_result(
+                source_content, fallback_reason=fallback_reason
+            )
+
+        analysis_name = self._get_analysis_display_name(analysis_type)
+        reason = (fallback_reason or "AI analysis unavailable").strip()
+
         return {
             "analysis_type": analysis_type,
             "overall_score": 70,
-            "summary": f"{analysis_type}分析完成，整体质量中等",
+            "summary": (
+                f"{analysis_name}未能生成完整的自动评语，当前结果为保守兜底结论。"
+                "建议结合原始需求内容进行人工复核。"
+            ),
+            "strengths": [
+                "系统已完成该维度的基础结构扫描，并保留了可参考的基线评分。"
+            ],
+            "weaknesses": [
+                f"{analysis_name}的详细文字分析未成功生成，当前结论可能不完整。"
+            ],
+            "recommendations": [
+                f"优先人工复核{analysis_name}涉及的关键描述、边界条件和异常处理。",
+                "待模型服务稳定后，建议重新发起需求评审以获取完整评语。",
+            ],
             "issues": [],
+            "degraded": True,
+            "error_reason": reason,
         }
+
+    def _is_degraded_analysis_result(self, analysis_result: dict) -> bool:
+        return bool(
+            analysis_result.get("degraded") or analysis_result.get("error_reason")
+        )
+
+    def _dedupe_text_items(self, items: List[str], limit: int = 10) -> List[str]:
+        results: List[str] = []
+        seen: set[str] = set()
+
+        for item in items:
+            text = (item or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            results.append(text)
+            if len(results) >= limit:
+                break
+
+        return results
+
+    def _issue_matches_module(
+        self, issue: dict, module: RequirementModule, total_modules: int
+    ) -> bool:
+        if total_modules == 1:
+            return True
+
+        module_id = str(module.id)
+        issue_module_id = issue.get("module_id")
+        if issue_module_id and str(issue_module_id) == module_id:
+            return True
+
+        module_title = (module.title or "").strip().lower()
+        haystack = " ".join(
+            str(issue.get(key, "") or "")
+            for key in ["module_name", "section", "location", "title", "description"]
+        ).lower()
+        return bool(module_title and module_title in haystack)
+
+    def _build_module_analyses_v2(
+        self,
+        document: RequirementDocument,
+        all_issues: List[dict],
+        overall_score: int,
+        degraded_analysis_names: List[str],
+    ) -> List[dict]:
+        if not document:
+            return []
+
+        modules = list(document.modules.order_by("order"))
+        if not modules:
+            return []
+
+        module_analyses: List[dict] = []
+        total_modules = len(modules)
+        degraded_hint = (
+            "部分专项分析因AI响应异常降级，当前模块文字评价可能不完整。"
+        )
+
+        for module in modules:
+            module_issues = [
+                issue
+                for issue in all_issues
+                if self._issue_matches_module(issue, module, total_modules)
+            ]
+
+            high_count = sum(
+                1 for issue in module_issues if issue.get("priority") == "high"
+            )
+            medium_count = sum(
+                1 for issue in module_issues if issue.get("priority") == "medium"
+            )
+            low_count = max(0, len(module_issues) - high_count - medium_count)
+
+            module_score = max(
+                40, overall_score - high_count * 15 - medium_count * 8 - low_count * 4
+            )
+
+            strengths: List[str] = []
+            weaknesses: List[str] = []
+            recommendations: List[str] = []
+
+            if module_issues:
+                weaknesses.extend(
+                    [
+                        issue.get("title") or issue.get("description") or "存在待确认问题"
+                        for issue in module_issues[:3]
+                    ]
+                )
+                recommendations.extend(
+                    [
+                        issue.get("suggestion") or issue.get("description") or ""
+                        for issue in module_issues[:5]
+                    ]
+                )
+            else:
+                strengths.append("当前自动评审未发现该模块的显性高优先级问题。")
+
+            if degraded_analysis_names:
+                weaknesses.append(degraded_hint)
+                recommendations.append(
+                    "建议结合原始需求文档对该模块进行人工复核，并在模型服务稳定后重新发起评审。"
+                )
+
+            if not recommendations:
+                recommendations.append(
+                    "建议继续补充该模块的业务规则、边界条件、异常场景和验收标准。"
+                )
+
+            if not weaknesses:
+                weaknesses.append("当前模块未生成更多专项文字分析。")
+
+            module_analyses.append(
+                {
+                    "module_id": str(module.id),
+                    "module_name": module.title,
+                    "overall_score": module_score,
+                    "issues": module_issues,
+                    "strengths": self._dedupe_text_items(strengths, limit=3),
+                    "weaknesses": self._dedupe_text_items(weaknesses, limit=4),
+                    "recommendations": self._dedupe_text_items(
+                        recommendations, limit=5
+                    ),
+                }
+            )
+
+        return module_analyses
 
     def analyze_logic(self, content: str, document: RequirementDocument = None) -> dict:
         """逻辑分析专项分析 - 分析完整文档的业务逻辑，支持多模态"""
@@ -2978,7 +3552,7 @@ class RequirementReviewEngine:
                 ]
 
             logger.info("调用LLM进行逻辑分析...")
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
             logger.info(f"LLM响应完成，内容长度: {len(response.content)}")
 
             result = extract_json_from_response(response.content)
@@ -3104,7 +3678,11 @@ class RequirementReviewEngine:
                         logger.error(f"{display_name}分析失败: {e}")
                         # 使用默认结果
                         results[analysis_name] = self._get_default_analysis_result(
-                            f"{analysis_name}_analysis"
+                            f"{analysis_name}_analysis",
+                            fallback_reason=str(e),
+                            source_content=(
+                                document.content if analysis_name == "completeness" else None
+                            ),
                         )
 
                         # 即使失败也更新进度
@@ -3169,17 +3747,23 @@ class RequirementReviewEngine:
             logic = analyses.get("logic", {})
             document = analyses.get("document")
             image_warning = analyses.get("image_warning")  # 图片警告信息
+            analysis_entries = [
+                ("completeness", completeness),
+                ("consistency", consistency),
+                ("testability", testability),
+                ("feasibility", feasibility),
+                ("clarity", clarity),
+                ("logic", logic),
+            ]
+            degraded_analysis_names = [
+                self._get_analysis_display_name(f"{analysis_name}_analysis")
+                for analysis_name, analysis_data in analysis_entries
+                if self._is_degraded_analysis_result(analysis_data)
+            ]
 
             # 计算总体评分（6个维度平均）
             scores = []
-            for analysis in [
-                completeness,
-                consistency,
-                testability,
-                feasibility,
-                clarity,
-                logic,
-            ]:
+            for _analysis_name, analysis in analysis_entries:
                 score = analysis.get("overall_score", 70)
                 scores.append(score)
 
@@ -3187,14 +3771,7 @@ class RequirementReviewEngine:
 
             # 收集所有问题
             all_issues = []
-            for analysis_name, analysis_data in [
-                ("completeness", completeness),
-                ("consistency", consistency),
-                ("testability", testability),
-                ("feasibility", feasibility),
-                ("clarity", clarity),
-                ("logic", logic),
-            ]:
+            for analysis_name, analysis_data in analysis_entries:
                 issues = analysis_data.get("issues", [])
                 for issue in issues:
                     issue["source"] = analysis_name
@@ -3238,14 +3815,7 @@ class RequirementReviewEngine:
 
             # 收集改进建议
             recommendations = []
-            for analysis in [
-                completeness,
-                consistency,
-                testability,
-                feasibility,
-                clarity,
-                logic,
-            ]:
+            for _analysis_name, analysis in analysis_entries:
                 recs = analysis.get("recommendations", [])
                 if isinstance(recs, list):
                     recommendations.extend(recs)
@@ -3253,11 +3823,31 @@ class RequirementReviewEngine:
                     recommendations.append(recs)
 
             # 去重
-            recommendations = list(set(recommendations))[:10]
+            recommendations = self._dedupe_text_items(recommendations, limit=10)
+            if degraded_analysis_names:
+                recommendations = self._dedupe_text_items(
+                    [
+                        (
+                            "本次评审有部分专项分析降级为兜底结果，建议优先人工复核："
+                            + "、".join(degraded_analysis_names)
+                        ),
+                        *recommendations,
+                    ],
+                    limit=10,
+                )
 
             # 生成总结
             summary = self._generate_summary(
-                overall_score, len(all_issues), len(high_priority)
+                overall_score,
+                len(all_issues),
+                len(high_priority),
+                degraded_analysis_names,
+            )
+            module_analyses = self._build_module_analyses_v2(
+                document,
+                all_issues,
+                overall_score,
+                degraded_analysis_names,
             )
 
             # 构建综合报告
@@ -3291,6 +3881,8 @@ class RequirementReviewEngine:
                     "clarity_analysis": clarity,
                     "logic_analysis": logic,
                 },
+                "module_analyses": module_analyses,
+                "degraded_analyses": degraded_analysis_names,
                 # 改进建议
                 "recommendations": recommendations,
                 # 总结
@@ -3336,7 +3928,7 @@ class RequirementReviewEngine:
                 HumanMessage(content=formatted_prompt),
             ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
 
             global_analysis = extract_json_from_response(response.content)
             if not global_analysis:
@@ -3397,7 +3989,7 @@ class RequirementReviewEngine:
                 HumanMessage(content=formatted_prompt),
             ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
 
             analysis = extract_json_from_response(response.content)
             if analysis:
@@ -3441,7 +4033,7 @@ class RequirementReviewEngine:
                 HumanMessage(content=formatted_prompt),
             ]
 
-            response = safe_llm_invoke(self.llm, messages)
+            response = safe_llm_invoke_v2(self.llm, messages)
 
             consistency_analysis = extract_json_from_response(response.content)
             if not consistency_analysis:
@@ -3585,7 +4177,11 @@ class RequirementReviewEngine:
         return comprehensive_report
 
     def _generate_summary(
-        self, overall_score: int, total_issues: int, high_priority_issues: int
+        self,
+        overall_score: int,
+        total_issues: int,
+        high_priority_issues: int,
+        degraded_analysis_names: Optional[List[str]] = None,
     ) -> str:
         """生成评审总结"""
         if overall_score >= 90:
@@ -3601,6 +4197,12 @@ class RequirementReviewEngine:
 
         summary = f"需求文档整体质量{quality}（评分：{overall_score}/100）。"
 
+        if degraded_analysis_names:
+            summary += (
+                "本次评审有部分专项分析降级为兜底结果，"
+                f"涉及：{'、'.join(degraded_analysis_names)}。"
+            )
+
         if high_priority_issues > 0:
             summary += f"发现{high_priority_issues}个高优先级问题需要立即解决。"
 
@@ -3609,7 +4211,10 @@ class RequirementReviewEngine:
         elif total_issues > 0:
             summary += f"发现{total_issues}个问题，整体可控。"
         else:
-            summary += "未发现明显问题，质量较高。"
+            if degraded_analysis_names:
+                summary += "由于专项评语未完整生成，请不要只依据分数判断质量。"
+            else:
+                summary += "未发现明显问题，质量较高。"
 
         return summary
 

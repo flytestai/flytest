@@ -1,5 +1,5 @@
 <template>
-  <div :class="['message-wrapper', messageClass]">
+  <div v-if="!shouldSuppressMessage" :class="['message-wrapper', messageClass]">
     <!-- Step Separator: 步骤分隔符 -->
     <template v-if="message.messageType === 'step_separator'">
       <div class="step-separator">
@@ -186,6 +186,8 @@ interface ChatMessage {
   isStepSeparator?: boolean;
 }
 
+const HIDDEN_TOOL_MESSAGE_NAMES = new Set(['read_skill_content', 'execute_skill_script']);
+
 interface Props {
   message: ChatMessage;
   floatingToolImageSrc?: string | null;
@@ -213,6 +215,25 @@ const toolImageSrc = computed(() => {
 });
 
 const isToolImage = computed(() => props.message.messageType === 'tool' && !!toolImageSrc.value);
+
+const shouldSuppressMessage = computed(() => {
+  if (props.message.messageType !== 'tool') return false;
+  if (props.message.toolName && HIDDEN_TOOL_MESSAGE_NAMES.has(props.message.toolName)) {
+    return true;
+  }
+
+  const normalized = (props.message.content || '').trim();
+  return (
+    normalized === '' ||
+    normalized === '[]' ||
+    normalized === '{}' ||
+    normalized === 'null' ||
+    normalized.startsWith('{') ||
+    normalized.startsWith('[') ||
+    normalized.startsWith('---\nname:') ||
+    normalized.startsWith('---\r\nname:')
+  );
+});
 
 const isThisImageFloating = computed(() => {
   return isToolImage.value && props.floatingToolImageSrc === toolImageSrc.value;

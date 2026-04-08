@@ -5,6 +5,8 @@ import type {
   CreateLlmConfigRequest,
   UpdateLlmConfigRequest,
   PartialUpdateLlmConfigRequest,
+  LlmConnectionResult,
+  LlmModelProbeResult,
 } from '@/features/langgraph/types/llmConfig';
 
 
@@ -195,8 +197,8 @@ export async function deleteLlmConfig(id: number): Promise<ApiResponse<null>> {
 /**
  * 测试 LLM 配置连接（后端发起测试）
  */
-export async function testLlmConnection(id: number): Promise<ApiResponse<{ status: string; message: string }>> {
-  const response = await request<{ status: string; message: string }>({
+export async function testLlmConnection(id: number): Promise<ApiResponse<LlmConnectionResult>> {
+  const response = await request<LlmConnectionResult>({
     url: `${API_BASE_URL}/${id}/test_connection/`,
     method: 'POST'
   });
@@ -218,6 +220,39 @@ export async function testLlmConnection(id: number): Promise<ApiResponse<{ statu
       errors: { detail: response.error }
     };
   }
+}
+
+export async function probeLlmModels(
+  id: number,
+  models: string[] = [],
+  limit = 8
+): Promise<ApiResponse<LlmModelProbeResult>> {
+  const response = await request<LlmModelProbeResult>({
+    url: `${API_BASE_URL}/${id}/probe_models/`,
+    method: 'POST',
+    data: {
+      models,
+      limit,
+    }
+  });
+
+  if (response.success) {
+    return {
+      status: 'success',
+      code: 200,
+      message: response.data?.message || '模型探测完成',
+      data: response.data!,
+      errors: null
+    };
+  }
+
+  return {
+    status: 'error',
+    code: 500,
+    message: response.error || '批量测试模型失败',
+    data: null,
+    errors: { detail: response.error }
+  };
 }
 
 /**
@@ -282,8 +317,8 @@ export async function fetchModels(
   apiUrl: string,
   apiKey?: string,
   configId?: number
-): Promise<ApiResponse<{ models: string[] }>> {
-  const response = await request<{ status: string; models?: string[]; message?: string }>({
+): Promise<ApiResponse<{ models: string[]; diagnostics?: LlmConnectionResult['diagnostics'] }>> {
+  const response = await request<{ status: string; models?: string[]; message?: string; diagnostics?: LlmConnectionResult['diagnostics'] }>({
     url: `${API_BASE_URL}/fetch_models/`,
     method: 'POST',
     data: {
@@ -298,7 +333,7 @@ export async function fetchModels(
       status: 'success',
       code: 200,
       message: 'Models fetched successfully',
-      data: { models: response.data.models || [] },
+      data: { models: response.data.models || [], diagnostics: response.data.diagnostics || null },
       errors: null,
     };
   } else {

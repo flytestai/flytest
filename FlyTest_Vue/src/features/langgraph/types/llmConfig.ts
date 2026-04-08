@@ -8,6 +8,7 @@ export interface LlmConfig {
   name: string; // 模型名称
   api_url: string;
   api_key?: string; // 在列表视图中可能不返回，在详细视图中可能返回
+  has_api_key?: boolean; // 后端是否已保存 API Key
   system_prompt?: string; // 系统提示词
   supports_vision?: boolean; // 是否支持图片/多模态输入
   context_limit?: number; // 上下文Token限制
@@ -18,6 +19,40 @@ export interface LlmConfig {
   is_active: boolean;
   created_at: string; // ISO 8601 date string
   updated_at: string; // ISO 8601 date string
+}
+
+export interface LlmConnectionDiagnostics {
+  endpoint?: string;
+  provider?: string;
+  model?: string;
+  conclusion?: string;
+  finish_reason?: string;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  response_text_present?: boolean;
+  response_text_preview?: string;
+  models_count?: number;
+  request_kind?: 'fetch_models' | 'test_connection';
+}
+
+export interface LlmConnectionResult {
+  status: string;
+  message: string;
+  diagnostics?: LlmConnectionDiagnostics | null;
+}
+
+export interface LlmModelProbeItem {
+  model: string;
+  status: 'success' | 'warning' | 'error';
+  message: string;
+  diagnostics?: LlmConnectionDiagnostics | null;
+}
+
+export interface LlmModelProbeResult {
+  status: string;
+  message: string;
+  results: LlmModelProbeItem[];
 }
 
 /**

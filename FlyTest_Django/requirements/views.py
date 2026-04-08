@@ -4,8 +4,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
+from django.conf import settings
+from django.utils import timezone
 import logging
 import os
+import socket
+from urllib.parse import urlparse
+from datetime import timedelta
 
 from flytest_django.viewsets import BaseModelViewSet
 from prompts.models import UserPrompt
@@ -51,8 +56,55 @@ from .services import (
 logger = logging.getLogger(__name__)
 
 
+def _is_celery_endpoint_reachable(endpoint: str, timeout: float = 0.2) -> bool:
+    """Fast connectivity probe so review requests don't block on Celery retries."""
+    if not endpoint:
+        return True
+
+    parsed = urlparse(endpoint)
+    scheme = (parsed.scheme or "").lower()
+
+    if scheme in {"redis", "rediss"}:
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 6379
+    elif scheme in {"amqp", "pyamqp"}:
+        host = parsed.hostname or "localhost"
+        port = parsed.port or 5672
+    else:
+        return True
+
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError as exc:
+        logger.warning("Celery endpoint unavailable: %s (%s)", endpoint, exc)
+        return False
+
+
+def _can_dispatch_requirement_review_task() -> tuple[bool, str]:
+    broker_url = getattr(settings, "CELERY_BROKER_URL", "")
+    result_backend = getattr(settings, "CELERY_RESULT_BACKEND", "")
+
+    if broker_url and not _is_celery_endpoint_reachable(broker_url):
+        return False, f"broker unavailable: {broker_url}"
+
+    if result_backend and not _is_celery_endpoint_reachable(result_backend):
+        return False, f"result backend unavailable: {result_backend}"
+
+    return True, ""
+
+
 class RequirementDocumentViewSet(BaseModelViewSet):
     """需求文档视图集"""
+
+    REVIEW_STALE_TIMEOUT = timedelta(
+        seconds=int(
+            os.environ.get(
+                "REQUIREMENT_REVIEW_STALE_TIMEOUT_SECONDS",
+                getattr(settings, "REQUIREMENT_REVIEW_STALE_TIMEOUT_SECONDS", 8 * 60),
+            )
+        )
+    )
 
     queryset = RequirementDocument.objects.all()
     serializer_class = RequirementDocumentSerializer
@@ -100,8 +152,45 @@ class RequirementDocumentViewSet(BaseModelViewSet):
             return RequirementDocumentDetailSerializer
         return RequirementDocumentSerializer
 
+    def _recover_stale_review(self, document):
+        latest_active_review = (
+            document.review_reports.filter(status__in=["pending", "in_progress"])
+            .order_by("-review_date")
+            .first()
+        )
+        if not latest_active_review:
+            return None
+
+        last_updated_at = latest_active_review.updated_at or latest_active_review.review_date
+        if not last_updated_at:
+            return None
+
+        if timezone.now() - last_updated_at <= self.REVIEW_STALE_TIMEOUT:
+            return None
+
+        current_step = latest_active_review.current_step or "评审已中断"
+        if "中断" not in current_step and "失败" not in current_step:
+            current_step = f"{current_step}（评审中断）"
+
+        latest_active_review.status = "failed"
+        latest_active_review.current_step = current_step
+        latest_active_review.save(update_fields=["status", "current_step", "updated_at"])
+
+        if document.status == "reviewing":
+            document.status = "failed"
+            document.save(update_fields=["status", "updated_at"])
+
+        logger.warning(
+            "Recovered stale requirement review: document_id=%s report_id=%s last_updated_at=%s",
+            document.id,
+            latest_active_review.id,
+            last_updated_at,
+        )
+        return latest_active_review
+
     def _get_active_review(self, document):
         """返回当前仍应阻止新评审启动的活动评审报告。"""
+        self._recover_stale_review(document)
         latest_active_review = (
             document.review_reports.filter(status__in=["pending", "in_progress"])
             .order_by("-review_date")
@@ -122,6 +211,25 @@ class RequirementDocumentViewSet(BaseModelViewSet):
             return None
 
         return latest_active_review
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        documents = list(page) if page is not None else list(queryset)
+
+        for document in documents:
+            self._recover_stale_review(document)
+
+        serializer = self.get_serializer(documents, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self._recover_stale_review(instance)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         """创建文档时自动设置上传人并提取内容"""
@@ -626,85 +734,96 @@ class RequirementDocumentViewSet(BaseModelViewSet):
             )
 
             review_type = "direct" if direct_review else "comprehensive"
-            try:
-                task = execute_requirement_review.delay(
-                    str(document.id),
-                    analysis_options,
-                    review_type,
-                    user_id=request.user.id,  # 传递用户ID用于获取提示词配置
-                )
+            can_dispatch, dispatch_skip_reason = _can_dispatch_requirement_review_task()
+            dispatch_error = None
 
-                # 只有任务成功投递后，才将文档状态更新为评审中
-                document.status = "reviewing"
-                document.save()
-
-                # 立即返回，不等待任务完成
-                return Response(
-                    {
-                        "message": "评审任务已启动",
-                        "task_id": task.id,
-                        "review_type": "直接评审" if direct_review else "模块评审",
-                        "direct_review": direct_review,
-                        "status": "reviewing",
-                        "document_id": str(document.id),
-                        "execution_mode": "async",
-                    }
-                )
-            except Exception as dispatch_error:
-                logger.warning(
-                    "异步评审任务投递失败，降级为本地后台线程执行: %s",
-                    dispatch_error,
-                    exc_info=True,
-                )
-
+            if can_dispatch:
                 try:
-                    if direct_review:
-                        if document.status == "failed":
-                            document.status = "uploaded"
-                            document.save()
-                    else:
-                        if document.status not in ["ready_for_review", "reviewing"]:
-                            document.status = "ready_for_review"
-                            document.save()
-
-                    document.status = "reviewing"
-                    document.save()
-
-                    start_local_requirement_review(
+                    task = execute_requirement_review.delay(
                         str(document.id),
                         analysis_options,
                         review_type,
-                        user_id=request.user.id,
+                        user_id=request.user.id,  # 传递用户ID用于获取提示词配置
                     )
 
+                    # 只有任务成功投递后，才将文档状态更新为评审中
+                    document.status = "reviewing"
+                    document.save()
+
+                    # 立即返回，不等待任务完成
                     return Response(
                         {
-                            "message": "Redis/Celery 不可用，评审已切换为本地后台执行。",
+                            "message": "评审任务已启动",
+                            "task_id": task.id,
                             "review_type": "直接评审" if direct_review else "模块评审",
                             "direct_review": direct_review,
                             "status": "reviewing",
                             "document_id": str(document.id),
-                            "execution_mode": "local_async_fallback",
+                            "execution_mode": "async",
                         }
                     )
-                except Exception as local_fallback_error:
-                    document.status = "failed"
-                    document.save()
-                    logger.error(
-                        "启动评审失败：异步投递和本地后台兜底都失败。dispatch_error=%s, local_fallback_error=%s",
+                except Exception as exc:
+                    dispatch_error = exc
+                    logger.warning(
+                        "异步评审任务投递失败，降级为本地后台线程执行: %s",
                         dispatch_error,
-                        local_fallback_error,
                         exc_info=True,
                     )
-                    return Response(
-                        {
-                            "error": (
-                                "启动评审失败：Redis/Celery 不可用，且本地后台执行也失败了。"
-                                f" 详情：{local_fallback_error}"
-                            )
-                        },
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
+            else:
+                dispatch_error = RuntimeError(dispatch_skip_reason)
+                logger.warning(
+                    "Celery/Redis 不可用，跳过异步投递并直接使用本地后台线程: %s",
+                    dispatch_skip_reason,
+                )
+
+            try:
+                if direct_review:
+                    if document.status == "failed":
+                        document.status = "uploaded"
+                        document.save()
+                else:
+                    if document.status not in ["ready_for_review", "reviewing"]:
+                        document.status = "ready_for_review"
+                        document.save()
+
+                document.status = "reviewing"
+                document.save()
+
+                start_local_requirement_review(
+                    str(document.id),
+                    analysis_options,
+                    review_type,
+                    user_id=request.user.id,
+                )
+
+                return Response(
+                    {
+                        "message": "Redis/Celery 不可用，评审已切换为本地后台执行。",
+                        "review_type": "直接评审" if direct_review else "模块评审",
+                        "direct_review": direct_review,
+                        "status": "reviewing",
+                        "document_id": str(document.id),
+                        "execution_mode": "local_async_fallback",
+                    }
+                )
+            except Exception as local_fallback_error:
+                document.status = "failed"
+                document.save()
+                logger.error(
+                    "启动评审失败：异步投递和本地后台兜底都失败。dispatch_error=%s, local_fallback_error=%s",
+                    dispatch_error,
+                    local_fallback_error,
+                    exc_info=True,
+                )
+                return Response(
+                    {
+                        "error": (
+                            "启动评审失败：Redis/Celery 不可用，且本地后台执行也失败了。"
+                            f" 详情：{local_fallback_error}"
+                        )
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
                 try:
                     review_service = RequirementReviewService(user=request.user)

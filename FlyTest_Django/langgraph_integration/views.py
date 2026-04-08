@@ -17,6 +17,18 @@ from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
 
+HIDDEN_TOOL_MESSAGE_NAMES = {"read_skill_content"}
+
+
+def _should_hide_tool_message(tool_name: str | None, content) -> bool:
+    if tool_name in HIDDEN_TOOL_MESSAGE_NAMES:
+        return True
+
+    if tool_name == "execute_skill_script":
+        return True
+
+    return False
+
 # 项目相关导入
 from projects.models import Project, ProjectMember
 from projects.permissions import IsProjectMember
@@ -94,6 +106,7 @@ from knowledge.models import KnowledgeBase
 from django.conf import settings
 import logging  # Import logging
 from asgiref.sync import sync_to_async  # For async operations in sync context
+import requests as http_requests
 
 # 统一的 Checkpointer 工厂
 from flytest_django.checkpointer import (
@@ -212,6 +225,252 @@ def create_sse_data(data_dict):
     """
     json_str = json.dumps(data_dict, ensure_ascii=False)
     return f"data: {json_str}\n\n"
+
+
+def _extract_llm_response_text(response) -> str:
+    """Best-effort extraction for different provider response formats."""
+    if response is None:
+        return ""
+
+    content = getattr(response, "content", None)
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        chunks: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                text = item.strip()
+                if text:
+                    chunks.append(text)
+            elif isinstance(item, dict):
+                text = str(item.get("text") or item.get("content") or "").strip()
+                if text:
+                    chunks.append(text)
+            else:
+                text = str(
+                    getattr(item, "text", "") or getattr(item, "content", "")
+                ).strip()
+                if text:
+                    chunks.append(text)
+        return "\n".join(chunks).strip()
+
+    if isinstance(content, dict):
+        return str(content.get("text") or content.get("content") or "").strip()
+
+    return str(content or "").strip()
+
+
+def _extract_llm_token_usage(response) -> dict:
+    response_metadata = getattr(response, "response_metadata", {}) or {}
+    token_usage = response_metadata.get("token_usage", {}) or {}
+    usage_metadata = getattr(response, "usage_metadata", {}) or {}
+
+    return {
+        "prompt_tokens": (
+            token_usage.get("prompt_tokens")
+            or usage_metadata.get("input_tokens")
+            or 0
+        ),
+        "completion_tokens": (
+            token_usage.get("completion_tokens")
+            or usage_metadata.get("output_tokens")
+            or 0
+        ),
+        "total_tokens": (
+            token_usage.get("total_tokens")
+            or usage_metadata.get("total_tokens")
+            or 0
+        ),
+        "finish_reason": response_metadata.get("finish_reason") or "",
+    }
+
+
+def _build_llm_diagnostics(
+    *,
+    config,
+    request_kind: str,
+    conclusion: str,
+    usage: dict | None = None,
+    response_text: str = "",
+    models_count: int | None = None,
+):
+    usage = usage or {}
+    return {
+        "endpoint": getattr(config, "api_url", ""),
+        "provider": getattr(config, "provider", ""),
+        "model": getattr(config, "name", ""),
+        "request_kind": request_kind,
+        "conclusion": conclusion,
+        "finish_reason": usage.get("finish_reason", ""),
+        "prompt_tokens": usage.get("prompt_tokens", 0),
+        "completion_tokens": usage.get("completion_tokens", 0),
+        "total_tokens": usage.get("total_tokens", 0),
+        "response_text_present": bool(response_text.strip()),
+        "response_text_preview": response_text[:160] if response_text else "",
+        "models_count": models_count,
+    }
+
+
+def _build_openai_compatible_headers(api_key: str) -> dict:
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def _fetch_available_models_for_probe(api_url: str, api_key: str, limit: int = 8) -> list[str]:
+    headers = _build_openai_compatible_headers(api_key)
+    response = http_requests.get(f"{api_url.rstrip('/')}/models", headers=headers, timeout=15)
+    response.raise_for_status()
+    payload = response.json()
+    models = [
+        item.get("id")
+        for item in payload.get("data", [])
+        if isinstance(item, dict) and item.get("id")
+    ]
+    return models[:limit]
+
+
+def _extract_chat_completion_text(payload: dict) -> str:
+    choices = payload.get("choices") or []
+    if not choices:
+        return ""
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text = str(item.get("text") or item.get("content") or "").strip()
+                if text:
+                    parts.append(text)
+        return "\n".join(parts).strip()
+    return ""
+
+
+def _probe_model_compatibility(config, model_name: str) -> dict:
+    api_url = (getattr(config, "api_url", "") or "").rstrip("/")
+    api_key = getattr(config, "api_key", "") or ""
+    headers = _build_openai_compatible_headers(api_key)
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Reply with the exact text: OK"},
+        ],
+        "temperature": 0.1,
+    }
+
+    try:
+        response = http_requests.post(
+            f"{api_url}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=20,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = _extract_chat_completion_text(data)
+        usage = data.get("usage", {}) or {}
+        diagnostics = {
+            "endpoint": api_url,
+            "provider": getattr(config, "provider", ""),
+            "model": model_name,
+            "request_kind": "probe_models",
+            "finish_reason": ((data.get("choices") or [{}])[0].get("finish_reason") or ""),
+            "prompt_tokens": usage.get("prompt_tokens", 0),
+            "completion_tokens": usage.get("completion_tokens", 0),
+            "total_tokens": usage.get("total_tokens", 0),
+            "response_text_present": bool(text),
+            "response_text_preview": text[:160] if text else "",
+        }
+
+        if text:
+            diagnostics["conclusion"] = "chat_completion_ok"
+            return {
+                "model": model_name,
+                "status": "success",
+                "message": f"返回正文：{text[:80]}",
+                "diagnostics": diagnostics,
+            }
+
+        diagnostics["conclusion"] = "chat_completion_empty"
+        return {
+            "model": model_name,
+            "status": "warning",
+            "message": "接口可连通，但聊天正文为空。",
+            "diagnostics": diagnostics,
+        }
+    except Exception as exc:
+        return {
+            "model": model_name,
+            "status": "error",
+            "message": _diagnose_llm_connection_error(config, exc),
+            "diagnostics": {
+                "endpoint": api_url,
+                "provider": getattr(config, "provider", ""),
+                "model": model_name,
+                "request_kind": "probe_models",
+                "conclusion": "chat_completion_error",
+            },
+        }
+
+
+def _diagnose_llm_connection_error(config, error) -> str:
+    api_url = (getattr(config, "api_url", "") or "").strip()
+    provider = (getattr(config, "provider", "") or "").strip()
+    model_name = (getattr(config, "name", "") or "").strip()
+    raw_message = str(error or "").strip()
+    lowered = raw_message.lower()
+
+    if "timed out" in lowered or "timeout" in lowered:
+        return "连接超时：AI 接口长时间未响应，请检查 API 地址、网络连通性或服务端负载。"
+
+    if "401" in lowered or "unauthorized" in lowered or "invalid_api_key" in lowered:
+        return "认证失败：API Key 无效、已过期，或当前 Key 没有访问该模型的权限。"
+
+    if "403" in lowered or "forbidden" in lowered or "permission" in lowered:
+        return "权限不足：当前 API Key 没有调用该模型或该接口的权限。"
+
+    if "429" in lowered or "rate limit" in lowered or "quota" in lowered:
+        return "请求受限：接口已触发频率限制或额度不足，请稍后重试或检查账户额度。"
+
+    if "404" in lowered or "not found" in lowered:
+        if provider == "openai_compatible" and api_url and not api_url.rstrip("/").endswith("/v1"):
+            return (
+                f"接口地址不存在：当前地址 `{api_url}` 可能缺少 `/v1` 后缀。"
+                "OpenAI 兼容接口通常应配置为类似 `https://example.com/v1`。"
+            )
+        return f"接口地址不存在：请检查 API URL 是否正确。当前配置地址为 `{api_url}`。"
+
+    if (
+        "name or service not known" in lowered
+        or "nodename nor servname" in lowered
+        or "getaddrinfo" in lowered
+        or "failed to resolve" in lowered
+    ):
+        return "域名解析失败：请检查 API URL 是否填写正确，或当前网络 DNS 是否可用。"
+
+    if (
+        "connection error" in lowered
+        or "connection refused" in lowered
+        or "max retries exceeded" in lowered
+        or "actively refused" in lowered
+    ):
+        return f"无法连接到 AI 接口：请检查服务地址 `{api_url}` 是否可访问、端口是否开放。"
+
+    if "ssl" in lowered or "certificate" in lowered:
+        return "TLS/证书校验失败：请检查 HTTPS 证书是否有效，或确认接口地址是否正确。"
+
+    if "model" in lowered and ("not found" in lowered or "does not exist" in lowered):
+        return f"模型不存在：当前模型 `{model_name}` 不在该接口提供的模型列表中。"
+
+    if raw_message:
+        return f"连接失败：{raw_message}"
+    return "连接失败：发生未知错误，请检查 API 地址、Key 与模型名称。"
 
 
 _REQ_DOC_ID_RE = re.compile(r"需求文档ID[:：]\s*([0-9a-fA-F-]{36})")
@@ -391,17 +650,104 @@ class LLMConfigViewSet(BaseModelViewSet):
 
         try:
             llm = create_llm_instance(config, temperature=0.1)
-            response = llm.invoke("Hi")
-            if getattr(response, "content", None):
-                return Response({"status": "success", "message": "连接测试成功"})
+            response = llm.invoke("请只回复 OK")
+            response_text = _extract_llm_response_text(response)
+            usage = _extract_llm_token_usage(response)
+            if response_text:
+                return Response(
+                    {
+                        "status": "success",
+                        "message": "连接正常",
+                        "diagnostics": _build_llm_diagnostics(
+                            config=config,
+                            request_kind="test_connection",
+                            conclusion="chat_completion_ok",
+                            usage=usage,
+                            response_text=response_text,
+                        ),
+                    }
+                )
+            diagnostics = _build_llm_diagnostics(
+                config=config,
+                request_kind="test_connection",
+                conclusion="chat_completion_empty_but_reachable",
+                usage=usage,
+                response_text=response_text,
+            )
+            diagnostics["conclusion"] = "connection_ok_response_text_empty"
             return Response(
-                {"status": "warning", "message": "响应格式异常"},
+                {
+                    "status": "success",
+                    "message": "连接正常",
+                    "diagnostics": diagnostics,
+                },
                 status=status.HTTP_200_OK,
             )
         except Exception as e:
-            msg = str(e)
             return Response(
-                {"status": "error", "message": f"连接失败: {msg}"},
+                {
+                    "status": "error",
+                    "message": _diagnose_llm_connection_error(config, e),
+                    "diagnostics": _build_llm_diagnostics(
+                        config=config,
+                        request_kind="test_connection",
+                        conclusion="chat_completion_error",
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    @action(detail=True, methods=["post"])
+    def probe_models(self, request, pk=None):
+        """批量探测当前网关下哪些模型能正常返回聊天正文"""
+        config = self.get_object()
+        requested_models = request.data.get("models") or []
+        limit = min(max(int(request.data.get("limit", 8)), 1), 20)
+
+        try:
+            if requested_models:
+                models = [str(item).strip() for item in requested_models if str(item).strip()]
+            else:
+                models = _fetch_available_models_for_probe(config.api_url, config.api_key, limit=limit)
+
+            if not models:
+                return Response(
+                    {
+                        "status": "warning",
+                        "message": "未获取到可探测的模型列表，请先检查模型列表接口是否可用。",
+                        "results": [],
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            results = [_probe_model_compatibility(config, model_name) for model_name in models]
+            success_count = sum(1 for item in results if item["status"] == "success")
+            warning_count = sum(1 for item in results if item["status"] == "warning")
+            error_count = sum(1 for item in results if item["status"] == "error")
+
+            overall_status = "success" if success_count else ("warning" if warning_count else "error")
+            message = (
+                f"已完成 {len(results)} 个模型探测："
+                f"{success_count} 个可正常返回正文，"
+                f"{warning_count} 个接口可连通但正文为空，"
+                f"{error_count} 个探测失败。"
+            )
+
+            return Response(
+                {
+                    "status": overall_status,
+                    "message": message,
+                    "results": results,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:
+            return Response(
+                {
+                    "status": "error",
+                    "message": f"批量测试模型失败：{_diagnose_llm_connection_error(config, exc)}",
+                    "results": [],
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -451,18 +797,43 @@ class LLMConfigViewSet(BaseModelViewSet):
 
             if data.get("data"):
                 models = [model.get("id") for model in data["data"] if model.get("id")]
-                return Response({"status": "success", "models": models})
+                return Response(
+                    {
+                        "status": "success",
+                        "models": models,
+                        "diagnostics": _build_llm_diagnostics(
+                            config=type(
+                                "TmpConfig",
+                                (),
+                                {"api_url": api_url, "provider": "openai_compatible", "name": ""},
+                            )(),
+                            request_kind="fetch_models",
+                            conclusion="models_list_ok",
+                            models_count=len(models),
+                        ),
+                    }
+                )
             else:
                 return Response(
                     {
                         "status": "warning",
                         "message": "API 返回格式不符合预期",
                         "models": [],
+                        "diagnostics": _build_llm_diagnostics(
+                            config=type(
+                                "TmpConfig",
+                                (),
+                                {"api_url": api_url, "provider": "openai_compatible", "name": ""},
+                            )(),
+                            request_kind="fetch_models",
+                            conclusion="models_list_unexpected_format",
+                            models_count=0,
+                        ),
                     }
                 )
         except http_requests.Timeout:
             return Response(
-                {"status": "error", "message": "请求超时"},
+                {"status": "error", "message": "请求超时：模型列表接口长时间未响应，请检查网络或服务状态。"},
                 status=status.HTTP_408_REQUEST_TIMEOUT,
             )
         except http_requests.RequestException as e:
@@ -473,7 +844,17 @@ class LLMConfigViewSet(BaseModelViewSet):
                 except Exception:
                     msg = e.response.text[:200] if e.response.text else str(e)
             return Response(
-                {"status": "error", "message": f"获取模型列表失败: {msg}"},
+                {
+                    "status": "error",
+                    "message": _diagnose_llm_connection_error(
+                        type("TmpConfig", (), {
+                            "api_url": api_url,
+                            "provider": "openai_compatible",
+                            "name": "",
+                        })(),
+                        msg,
+                    ),
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -585,13 +966,17 @@ async def _format_project_skills(project):
         str: 格式化后的 Skills 元数据文本
     """
     try:
-        from skills.models import Skill
+        from skills.runtime_registry import get_available_skill_specs
 
         # Skills 全局共享，不限制项目
-        skills = await sync_to_async(list)(Skill.objects.filter(is_active=True).all())
+        skills = await sync_to_async(get_available_skill_specs)()
 
         if not skills:
-            return ""
+            return (
+                "\n\n# Available Skills\n\n"
+                "当前环境没有可用 Skills。不要调用 `read_skill_content` 或 "
+                "`execute_skill_script`。\n"
+            )
 
         skills_text = "\n\n# Available Skills\n\n"
         skills_text += "以下是可用的 Skills 列表。需要使用某个 Skill 时，先调用 `read_skill_content` 工具获取完整的使用说明，再调用 `execute_skill_script` 执行命令。\n\n"
@@ -1845,6 +2230,15 @@ class ChatHistoryAPIView(APIView):
 
                                 elif isinstance(msg, ToolMessage):
                                     msg_type = "tool"
+                                    tool_name = getattr(msg, "name", None)
+                                    if _should_hide_tool_message(tool_name, getattr(msg, "content", None)):
+                                        logger.debug(
+                                            "ChatHistoryAPIView: Skipping hidden tool message '%s' at index %s",
+                                            tool_name,
+                                            i,
+                                        )
+                                        continue
+
                                     content = (
                                         msg.content
                                         if hasattr(msg, "content")
@@ -1936,6 +2330,8 @@ class ChatHistoryAPIView(APIView):
 
                                     # ⭐ 如果是工具消息，添加步骤号和事件类型
                                     elif msg_type == "tool":
+                                        if "tool_name" in locals() and tool_name:
+                                            message_data["tool_name"] = tool_name
                                         if "step" in locals() and step is not None:
                                             message_data["step"] = step
                                         if (

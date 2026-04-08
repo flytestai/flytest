@@ -292,7 +292,7 @@
             导入时会先做规则解析，再按需调用系统设置中的当前激活模型进行 AI 增强解析，自动补全接口定义、断言，并批量生成脚本与测试用例。
           </div>
           <div class="import-hero-meta">
-            <span class="hero-pill">系统设置 &gt; LLM配置</span>
+            <span class="hero-pill">系统设置 &gt; AI大模型配置</span>
             <span class="hero-pill">提示词管理 &gt; API自动化解析</span>
             <span class="hero-pill">失败自动回退规则解析</span>
           </div>

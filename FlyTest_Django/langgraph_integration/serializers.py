@@ -8,6 +8,8 @@ class LLMConfigSerializer(serializers.ModelSerializer):
     注意：为了安全，在读取时不返回 api_key 字段
     """
 
+    has_api_key = serializers.SerializerMethodField()
+
     class Meta:
         model = LLMConfig
         fields = [
@@ -17,6 +19,7 @@ class LLMConfigSerializer(serializers.ModelSerializer):
             "name",
             "api_url",
             "api_key",
+            "has_api_key",
             "system_prompt",
             "supports_vision",
             "context_limit",
@@ -44,6 +47,9 @@ class LLMConfigSerializer(serializers.ModelSerializer):
             # 或者用掩码显示（如果需要显示部分信息用于识别）
             # 如需展示掩码，可在此将 api_key 替换为固定长度星号。
         return data
+
+    def get_has_api_key(self, obj):
+        return bool(obj.api_key)
 
     def validate_config_name(self, value):
         """验证配置名称"""
