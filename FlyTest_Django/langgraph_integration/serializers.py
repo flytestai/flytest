@@ -1,17 +1,13 @@
 import re
 
 from django.contrib.auth.models import Group, User
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import LLMConfig, UserToolApproval, get_user_active_llm_config
 
 
 class LLMConfigSerializer(serializers.ModelSerializer):
-    """
-    LLM 配置序列化器。
-    读取时隐藏 api_key，并按当前请求用户控制敏感字段可见性。
-    """
-
     has_api_key = serializers.SerializerMethodField()
     owner_id = serializers.IntegerField(source="owner.id", read_only=True)
     owner_name = serializers.SerializerMethodField()
@@ -35,6 +31,8 @@ class LLMConfigSerializer(serializers.ModelSerializer):
     can_view_sensitive = serializers.SerializerMethodField()
     is_shared = serializers.SerializerMethodField()
     sharing_summary = serializers.SerializerMethodField()
+    sharing_limits_summary = serializers.SerializerMethodField()
+    share_status = serializers.SerializerMethodField()
     sensitive_fields_hidden = serializers.SerializerMethodField()
 
     class Meta:
@@ -61,18 +59,21 @@ class LLMConfigSerializer(serializers.ModelSerializer):
             "shared_user_ids",
             "shared_groups",
             "shared_users",
+            "shared_daily_token_limit",
+            "shared_total_token_limit",
+            "shared_expires_at",
             "can_edit",
             "can_view_sensitive",
             "is_shared",
             "sharing_summary",
+            "sharing_limits_summary",
+            "share_status",
             "sensitive_fields_hidden",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-        extra_kwargs = {
-            "api_key": {"write_only": True},
-        }
+        extra_kwargs = {"api_key": {"write_only": True}}
 
     @staticmethod
     def _normalize_api_url(value: str) -> str:
@@ -98,7 +99,6 @@ class LLMConfigSerializer(serializers.ModelSerializer):
         is_sensitive_visible = instance.can_view_sensitive(user) if request else True
 
         data.pop("api_key", None)
-
         active_config = get_user_active_llm_config(user) if user and user.is_authenticated else None
         data["is_active"] = bool(active_config and active_config.pk == instance.pk)
 
@@ -143,12 +143,37 @@ class LLMConfigSerializer(serializers.ModelSerializer):
         users = obj.shared_users.count()
         if not groups and not users:
             return "仅自己可用"
-        parts = []
+        parts: list[str] = []
         if groups:
             parts.append(f"共享给 {groups} 个组织")
         if users:
             parts.append(f"共享给 {users} 名成员")
-        return "，".join(parts)
+        return "；".join(parts)
+
+    def get_sharing_limits_summary(self, obj):
+        parts: list[str] = []
+        if obj.shared_daily_token_limit:
+            parts.append(f"每用户每日 {int(obj.shared_daily_token_limit):,} Token")
+        if obj.shared_total_token_limit:
+            parts.append(f"共享总量 {int(obj.shared_total_token_limit):,} Token")
+        if obj.shared_expires_at:
+            parts.append(f"有效期至 {timezone.localtime(obj.shared_expires_at).strftime('%Y-%m-%d %H:%M')}")
+        return "；".join(parts) if parts else "未设置共享限额"
+
+    def get_share_status(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not request or not obj.is_shared_with(user):
+            return "owner" if obj.owner_id == getattr(user, "id", None) else "private"
+        share_state = obj.get_share_state_for_user(user)
+        if share_state["expired"]:
+            return "expired"
+        usage_snapshot = obj.get_shared_usage_snapshot_for_user(user)
+        if share_state["daily_limit"] and usage_snapshot["daily_used_tokens"] >= share_state["daily_limit"]:
+            return "daily_limit_reached"
+        if share_state["total_limit"] and usage_snapshot["total_used_tokens"] >= share_state["total_limit"]:
+            return "total_limit_reached"
+        return "shared_active"
 
     def get_sensitive_fields_hidden(self, obj):
         request = self.context.get("request")
@@ -166,8 +191,6 @@ class LLMConfigSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate_api_key(self, value):
-        if value and len(value.strip()) < 1:
-            raise serializers.ValidationError("API 密钥长度至少需要 1 个字符")
         return value.strip() if value else ""
 
     def validate_api_url(self, value):
@@ -198,10 +221,23 @@ class LLMConfigSerializer(serializers.ModelSerializer):
         if provider == "qwen" and wire_api == "messages":
             raise serializers.ValidationError({"wire_api": "当前供应商不支持 Claude Messages 协议。"})
 
+        for limit_field in ("shared_daily_token_limit", "shared_total_token_limit"):
+            if limit_field in attrs:
+                value = attrs.get(limit_field)
+                if value in ("", None):
+                    attrs[limit_field] = None
+                elif int(value) < 0:
+                    raise serializers.ValidationError({limit_field: "限额不能为负数"})
+
+        expires_at = attrs.get("shared_expires_at")
+        if expires_at and expires_at <= timezone.now():
+            raise serializers.ValidationError({"shared_expires_at": "共享有效期必须晚于当前时间"})
+
         if request and request.user and not request.user.is_superuser and not request.user.is_staff:
             shared_groups = attrs.get("shared_groups")
             shared_users = attrs.get("shared_users")
-            if shared_groups or shared_users:
+            share_limit_fields = {"shared_daily_token_limit", "shared_total_token_limit", "shared_expires_at"}
+            if shared_groups or shared_users or share_limit_fields.intersection(attrs.keys()):
                 raise serializers.ValidationError("只有管理员可以将 AI 大模型配置共享给组织或其他成员。")
 
         return attrs
@@ -229,17 +265,13 @@ class UserToolApprovalSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         scope = attrs.get("scope", "permanent")
         session_id = attrs.get("session_id")
-
         if scope == "session" and not session_id:
             raise serializers.ValidationError({"session_id": "会话级别偏好必须提供 session_id"})
-
         return attrs
 
 
 class UserToolApprovalBatchSerializer(serializers.Serializer):
     tool_name = serializers.CharField(max_length=100)
     policy = serializers.ChoiceField(choices=UserToolApproval.POLICY_CHOICES)
-    scope = serializers.ChoiceField(
-        choices=UserToolApproval.SCOPE_CHOICES, default="permanent"
-    )
+    scope = serializers.ChoiceField(choices=UserToolApproval.SCOPE_CHOICES, default="permanent")
     session_id = serializers.CharField(max_length=255, required=False, allow_null=True)

@@ -7,6 +7,7 @@ import type {
   PartialUpdateLlmConfigRequest,
   LlmConnectionResult,
   LlmModelProbeResult,
+  TokenUsageStats,
 } from '@/features/langgraph/types/llmConfig';
 
 
@@ -345,4 +346,37 @@ export async function fetchModels(
       errors: { detail: response.error },
     };
   }
+}
+
+export async function fetchTokenUsageStats(params?: {
+  preset?: string;
+  start_date?: string;
+  end_date?: string;
+  group_by?: 'day' | 'week' | 'month';
+  user_id?: number;
+  source?: string;
+}): Promise<ApiResponse<TokenUsageStats>> {
+  const response = await request<TokenUsageStats>({
+    url: `/lg/token-usage/`,
+    method: 'GET',
+    params,
+  });
+
+  if (response.success) {
+    return {
+      status: 'success',
+      code: 200,
+      message: response.message || 'success',
+      data: response.data!,
+      errors: null,
+    };
+  }
+
+  return {
+    status: 'error',
+    code: 500,
+    message: response.error || 'Failed to fetch token usage stats',
+    data: null,
+    errors: { detail: response.error },
+  };
 }

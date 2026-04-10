@@ -49,7 +49,12 @@ from .middleware_config import (
 )
 from .playwright_instructions import PLAYWRIGHT_SCRIPT_INSTRUCTION
 from .stop_signal import should_stop, clear_stop_signal
-from langgraph_integration.models import ChatSession, LLMConfig, get_user_active_llm_config
+from langgraph_integration.models import (
+    ChatSession,
+    LLMConfig,
+    get_user_active_llm_config,
+    record_llm_token_usage,
+)
 from langgraph_integration.views import (
     create_llm_instance,
     create_sse_data,
@@ -659,7 +664,13 @@ class AgentLoopStreamAPIView(View):
     MAX_STEPS = 500
 
     def _update_session_token_usage(
-        self, session_id: str, input_tokens: int, output_tokens: int
+        self,
+        session_id: str,
+        input_tokens: int,
+        output_tokens: int,
+        *,
+        user=None,
+        llm_config=None,
     ):
         """更新会话的 Token 使用统计"""
         try:
@@ -672,6 +683,15 @@ class AgentLoopStreamAPIView(View):
                 total_tokens=F("total_tokens") + input_tokens + output_tokens,
                 request_count=F("request_count") + 1,
                 updated_at=timezone.now(),
+            )
+            record_llm_token_usage(
+                user=user,
+                llm_config=llm_config,
+                prompt_tokens=input_tokens,
+                completion_tokens=output_tokens,
+                total_tokens=input_tokens + output_tokens,
+                source="langgraph_chat",
+                session_id=session_id,
             )
         except Exception as e:
             logger.warning(f"Failed to update session token usage: {e}")

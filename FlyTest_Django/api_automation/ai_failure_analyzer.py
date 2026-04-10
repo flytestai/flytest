@@ -543,7 +543,16 @@ def _analyze_execution_failure_uncached(*, record: ApiExecutionRecord, user) -> 
     )
 
     try:
-        llm = create_llm_instance(active_config, temperature=0.1)
+        llm = create_llm_instance(
+            active_config,
+            temperature=0.1,
+            usage_context={
+                "user": user,
+                "llm_config": active_config,
+                "source": "api_automation",
+                "metadata": {"feature": "failure_analysis"},
+            },
+        )
         response = safe_llm_invoke(
             llm,
             [

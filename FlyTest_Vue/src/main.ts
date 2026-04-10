@@ -26,8 +26,12 @@ app.use(ArcoVueIcon)
 
 const bootstrapApp = async () => {
   useThemeStore(pinia).initializeTheme()
-  await useAuthStore(pinia).bootstrapSession()
   app.mount('#app')
+  try {
+    await useAuthStore(pinia).bootstrapSession()
+  } catch (error) {
+    console.error('Failed to bootstrap session:', error)
+  }
 }
 
 void bootstrapApp()

@@ -24,10 +24,15 @@ export interface LlmConfig {
   shared_user_ids?: number[];
   shared_groups?: Array<{ id: number; name: string }>;
   shared_users?: Array<{ id: number; username: string; email?: string }>;
+  shared_daily_token_limit?: number | null;
+  shared_total_token_limit?: number | null;
+  shared_expires_at?: string | null;
   can_edit?: boolean;
   can_view_sensitive?: boolean;
   is_shared?: boolean;
   sharing_summary?: string;
+  sharing_limits_summary?: string;
+  share_status?: string;
   sensitive_fields_hidden?: boolean;
   created_at: string; // ISO 8601 date string
   updated_at: string; // ISO 8601 date string
@@ -87,6 +92,9 @@ export interface CreateLlmConfigRequest {
   is_active?: boolean; // 可选,布尔值, 默认为 false
   shared_group_ids?: number[];
   shared_user_ids?: number[];
+  shared_daily_token_limit?: number | null;
+  shared_total_token_limit?: number | null;
+  shared_expires_at?: string | null;
 }
 
 /**
@@ -114,4 +122,69 @@ export interface PartialUpdateLlmConfigRequest {
   is_active?: boolean;
   shared_group_ids?: number[];
   shared_user_ids?: number[];
+  shared_daily_token_limit?: number | null;
+  shared_total_token_limit?: number | null;
+  shared_expires_at?: string | null;
+}
+
+export interface TokenUsagePeriod {
+  preset?: string;
+  start_date: string;
+  end_date: string;
+  group_by: 'day' | 'week' | 'month';
+  days?: number;
+}
+
+export interface TokenUsageTotal {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  request_count: number;
+  user_count: number;
+  model_count: number;
+}
+
+export interface TokenUsageTimeItem {
+  period: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  request_count: number;
+  user_count: number;
+  model_count: number;
+}
+
+export interface TokenUsageUserItem {
+  rank: number;
+  user_id: number;
+  username: string;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  request_count: number;
+  model_count: number;
+}
+
+export interface TokenUsageModelItem {
+  rank: number;
+  model_name: string;
+  provider: string;
+  config_name: string;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  request_count: number;
+  user_count: number;
+}
+
+export interface TokenUsageStats {
+  period: TokenUsagePeriod;
+  permissions: {
+    is_admin: boolean;
+    can_view_all_users: boolean;
+  };
+  total: TokenUsageTotal;
+  by_time: TokenUsageTimeItem[];
+  by_user: TokenUsageUserItem[];
+  by_model: TokenUsageModelItem[];
 }

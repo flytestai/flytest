@@ -25,6 +25,19 @@
       @page-size-change="handlePageSizeChange"
     />
 
+    <LlmTokenUsageDashboard
+      :stats="tokenUsageStats"
+      :loading="tokenUsageLoading"
+      :preset="usagePreset"
+      :source="usageSource"
+      :start-date="usageStartDate"
+      :end-date="usageEndDate"
+      @update:preset="handleUsagePresetChange"
+      @update:source="handleUsageSourceChange"
+      @update:date-range="handleUsageDateRangeChange"
+      @refresh="fetchTokenUsage"
+    />
+
     <LlmConfigFormModal
       :visible="isModalVisible"
       :config-data="currentConfig"
@@ -51,15 +64,17 @@ import { Button as AButton, Message, Modal as AModal } from '@arco-design/web-vu
 import { IconPlus, IconFile } from '@arco-design/web-vue/es/icon';
 import LlmConfigTable from '@/features/langgraph/components/LlmConfigTable.vue';
 import LlmConfigFormModal from '@/features/langgraph/components/LlmConfigFormModal.vue';
+import LlmTokenUsageDashboard from '@/features/langgraph/components/LlmTokenUsageDashboard.vue';
 import SystemPromptModal from '@/features/langgraph/components/SystemPromptModal.vue';
-import type { LlmConfig, CreateLlmConfigRequest, PartialUpdateLlmConfigRequest } from '@/features/langgraph/types/llmConfig';
+import type { LlmConfig, CreateLlmConfigRequest, PartialUpdateLlmConfigRequest, TokenUsageStats } from '@/features/langgraph/types/llmConfig';
 import {
   listLlmConfigs,
   createLlmConfig,
   updateLlmConfig,
   partialUpdateLlmConfig,
   deleteLlmConfig,
-  getLlmConfigDetails
+  getLlmConfigDetails,
+  fetchTokenUsageStats,
 } from '@/features/langgraph/services/llmConfigService';
 import type { PaginationProps } from '@arco-design/web-vue';
 import { useProjectStore } from '@/store/projectStore';
@@ -79,6 +94,18 @@ const isFormLoading = ref(false);
 // 提示词管理弹窗相关
 const isPromptModalVisible = ref(false);
 const currentLlmConfigForPrompt = ref<LlmConfig | null>(null);
+const tokenUsageStats = ref<TokenUsageStats | null>(null);
+const tokenUsageLoading = ref(false);
+const usagePreset = ref<'today' | '7d' | '30d' | 'custom'>('today');
+const usageSource = ref('');
+
+const formatDate = (date: Date) => {
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const usageStartDate = ref(formatDate(new Date()));
+const usageEndDate = ref(formatDate(new Date()));
 
 const showPromptManagement = () => {
   // 获取第一个激活的LLM配置作为默认配置
@@ -135,6 +162,59 @@ const handlePageSizeChange = (pageSize: number) => {
   pagination.pageSize = pageSize;
   pagination.current = 1; // 通常页码大小改变后回到第一页
   // fetchLlmConfigs(); // 如果后端支持分页，则重新获取数据
+};
+
+const fetchTokenUsage = async () => {
+  tokenUsageLoading.value = true;
+  try {
+    const response = await fetchTokenUsageStats({
+      preset: usagePreset.value === 'custom' ? undefined : usagePreset.value,
+      start_date: usagePreset.value === 'custom' ? usageStartDate.value : undefined,
+      end_date: usagePreset.value === 'custom' ? usageEndDate.value : undefined,
+      source: usageSource.value || undefined,
+    });
+    if (response.status === 'success') {
+      tokenUsageStats.value = response.data;
+    } else {
+      Message.error(response.message || '获取 Token 统计失败');
+    }
+  } catch (error) {
+    console.error('Error fetching token usage stats:', error);
+    Message.error('获取 Token 统计失败');
+  } finally {
+    tokenUsageLoading.value = false;
+  }
+};
+
+const handleUsagePresetChange = (preset: string) => {
+  usagePreset.value = preset as typeof usagePreset.value;
+  const end = new Date();
+  const start = new Date();
+  if (preset === 'today') {
+    usageStartDate.value = formatDate(end);
+    usageEndDate.value = formatDate(end);
+  } else if (preset === '7d') {
+    start.setDate(end.getDate() - 6);
+    usageStartDate.value = formatDate(start);
+    usageEndDate.value = formatDate(end);
+  } else if (preset === '30d') {
+    start.setDate(end.getDate() - 29);
+    usageStartDate.value = formatDate(start);
+    usageEndDate.value = formatDate(end);
+  }
+  fetchTokenUsage();
+};
+
+const handleUsageSourceChange = (source: string) => {
+  usageSource.value = source;
+  fetchTokenUsage();
+};
+
+const handleUsageDateRangeChange = (payload: { startDate: string; endDate: string }) => {
+  usageStartDate.value = payload.startDate;
+  usageEndDate.value = payload.endDate;
+  usagePreset.value = 'custom';
+  fetchTokenUsage();
 };
 
 const handleAddNewConfig = () => {
@@ -279,6 +359,7 @@ watch(() => projectStore.currentProjectId, (newProjectId, oldProjectId) => {
 
 onMounted(() => {
   fetchLlmConfigs();
+  fetchTokenUsage();
 });
 </script>
 

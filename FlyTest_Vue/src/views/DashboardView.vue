@@ -261,6 +261,19 @@
             </div>
           </div>
         </div>
+
+        <LlmTokenUsageDashboard
+          :stats="tokenUsageStats"
+          :loading="tokenUsageLoading"
+          :preset="usagePreset"
+          :source="usageSource"
+          :start-date="usageStartDate"
+          :end-date="usageEndDate"
+          @update:preset="handleUsagePresetChange"
+          @update:source="handleUsageSourceChange"
+          @update:date-range="handleUsageDateRangeChange"
+          @refresh="fetchTokenUsage"
+        />
       </a-spin>
     </div>
   </div>
@@ -274,12 +287,19 @@ import {
 } from '@arco-design/web-vue/es/icon';
 import { getProjectStatistics, getTokenUsageStats, type ProjectStatistics, type TokenUsageStats } from '@/services/projectService';
 import { useProjectStore } from '@/store/projectStore';
+import LlmTokenUsageDashboard from '@/features/langgraph/components/LlmTokenUsageDashboard.vue';
+import { fetchTokenUsageStats } from '@/features/langgraph/services/llmConfigService';
+import type { TokenUsageStats as LlmTokenUsageStats } from '@/features/langgraph/types/llmConfig';
 
 const projectStore = useProjectStore();
 const loading = ref(false);
 const statistics = ref<ProjectStatistics | null>(null);
 const tokenStats = ref<TokenUsageStats | null>(null);
 const tokenPeriod = ref<'day' | 'week' | 'month'>('day');
+const tokenUsageStats = ref<LlmTokenUsageStats | null>(null);
+const tokenUsageLoading = ref(false);
+const usagePreset = ref<'today' | '7d' | '30d' | 'custom'>('today');
+const usageSource = ref('');
 const currentProjectName = computed(() => projectStore.currentProject?.name || 'FlyTest Project');
 
 const periodOptions = [
@@ -289,6 +309,14 @@ const periodOptions = [
 ];
 
 const currentProjectId = computed(() => projectStore.currentProjectId);
+
+const formatDashboardDate = (date: Date): string => {
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const usageStartDate = ref(formatDashboardDate(new Date()));
+const usageEndDate = ref(formatDashboardDate(new Date()));
 
 const passRate = computed(() => {
   const total = statistics.value?.executions?.case_results?.total || 0;
@@ -358,6 +386,56 @@ const changeTokenPeriod = (period: 'day' | 'week' | 'month') => {
   fetchTokenStats();
 };
 
+const fetchTokenUsage = async () => {
+  tokenUsageLoading.value = true;
+  try {
+    const response = await fetchTokenUsageStats({
+      preset: usagePreset.value === 'custom' ? undefined : usagePreset.value,
+      start_date: usagePreset.value === 'custom' ? usageStartDate.value : undefined,
+      end_date: usagePreset.value === 'custom' ? usageEndDate.value : undefined,
+      source: usageSource.value || undefined,
+    });
+    if (response.status === 'success') {
+      tokenUsageStats.value = response.data;
+    }
+  } catch (error) {
+    console.error('获取 Token 仪表盘数据出错:', error);
+  } finally {
+    tokenUsageLoading.value = false;
+  }
+};
+
+const handleUsagePresetChange = (preset: string) => {
+  usagePreset.value = preset as typeof usagePreset.value;
+  const end = new Date();
+  const start = new Date();
+  if (preset === 'today') {
+    usageStartDate.value = formatDashboardDate(end);
+    usageEndDate.value = formatDashboardDate(end);
+  } else if (preset === '7d') {
+    start.setDate(end.getDate() - 6);
+    usageStartDate.value = formatDashboardDate(start);
+    usageEndDate.value = formatDashboardDate(end);
+  } else if (preset === '30d') {
+    start.setDate(end.getDate() - 29);
+    usageStartDate.value = formatDashboardDate(start);
+    usageEndDate.value = formatDashboardDate(end);
+  }
+  void fetchTokenUsage();
+};
+
+const handleUsageSourceChange = (source: string) => {
+  usageSource.value = source;
+  void fetchTokenUsage();
+};
+
+const handleUsageDateRangeChange = (payload: { startDate: string; endDate: string }) => {
+  usageStartDate.value = payload.startDate;
+  usageEndDate.value = payload.endDate;
+  usagePreset.value = 'custom';
+  void fetchTokenUsage();
+};
+
 const fetchStatistics = async () => {
   if (!currentProjectId.value) return;
 
@@ -390,6 +468,7 @@ watch(currentProjectId, () => {
 
 onMounted(() => {
   fetchTokenStats();
+  fetchTokenUsage();
   if (currentProjectId.value) {
     fetchStatistics();
   }

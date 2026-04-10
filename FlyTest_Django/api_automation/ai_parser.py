@@ -17,7 +17,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from flytest_django.claude_messages_model import ClaudeMessagesCompatibleChatModel
-from langgraph_integration.models import LLMConfig, get_user_active_llm_config
+from langgraph_integration.models import (
+    LLMConfig,
+    attach_llm_usage_context,
+    get_user_active_llm_config,
+    record_llm_response_usage,
+)
 from prompts.models import PromptType, UserPrompt
 from prompts.services import get_default_prompts
 
@@ -289,6 +294,7 @@ def create_llm_instance(
     temperature: float = 0.1,
     *,
     prefer_extended_timeout: bool = False,
+    usage_context: dict[str, Any] | None = None,
 ):
     provider = (getattr(active_config, "provider", None) or "openai_compatible").strip()
     wire_api = (getattr(active_config, "wire_api", None) or "chat_completions").strip().lower()
@@ -321,13 +327,16 @@ def create_llm_instance(
             llm_kwargs["api_key"] = api_key
         if base_url:
             llm_kwargs["base_url"] = base_url
-        return ChatQwen(**llm_kwargs)
+        llm = ChatQwen(**llm_kwargs)
+        if usage_context:
+            attach_llm_usage_context(llm, **usage_context)
+        return llm
 
     if provider == "siliconflow" and not base_url:
         base_url = "https://api.siliconflow.cn/v1"
 
     if wire_api == "messages":
-        return ClaudeMessagesCompatibleChatModel(
+        llm = ClaudeMessagesCompatibleChatModel(
             model=model_identifier,
             temperature=temperature,
             api_key=api_key,
@@ -336,8 +345,11 @@ def create_llm_instance(
             max_retries=max_retries,
             wire_api=wire_api,
         )
+        if usage_context:
+            attach_llm_usage_context(llm, **usage_context)
+        return llm
 
-    return ChatOpenAI(
+    llm = ChatOpenAI(
         model=model_identifier,
         temperature=temperature,
         api_key=api_key,
@@ -345,6 +357,9 @@ def create_llm_instance(
         timeout=request_timeout,
         max_retries=max_retries,
     )
+    if usage_context:
+        attach_llm_usage_context(llm, **usage_context)
+    return llm
 
 
 def format_prompt_template(template: str, **kwargs) -> str:
@@ -946,6 +961,7 @@ def safe_llm_invoke(llm, messages, max_retries: int = 4):
         try:
             response = llm.invoke(messages)
             response_text = _extract_llm_response_text(response)
+            record_llm_response_usage(llm, response)
             if response_text:
                 return SimpleNamespace(
                     content=response_text,

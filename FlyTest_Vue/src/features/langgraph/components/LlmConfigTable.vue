@@ -26,6 +26,17 @@
       <template #sharing="{ record }">
         <span>{{ record.sharing_summary || '仅自己可用' }}</span>
       </template>
+      <template #sharingLimits="{ record }">
+        <span>{{ record.sharing_limits_summary || '未设置共享限额' }}</span>
+      </template>
+      <template #shareStatus="{ record }">
+        <a-tag
+          size="small"
+          :color="shareStatusColorMap[record.share_status || 'private'] || 'gray'"
+        >
+          {{ shareStatusLabelMap[record.share_status || 'private'] || '私有' }}
+        </a-tag>
+      </template>
       <template #isActive="{ record }">
         <a-switch
           :model-value="record.is_active"
@@ -105,6 +116,24 @@ const emit = defineEmits<{
   (e: 'page-size-change', pageSize: number): void;
 }>();
 
+const shareStatusLabelMap: Record<string, string> = {
+  owner: '所有者',
+  private: '私有',
+  shared_active: '共享中',
+  expired: '已过期',
+  daily_limit_reached: '日限额用尽',
+  total_limit_reached: '总限额用尽',
+};
+
+const shareStatusColorMap: Record<string, string> = {
+  owner: 'green',
+  private: 'gray',
+  shared_active: 'arcoblue',
+  expired: 'red',
+  daily_limit_reached: 'orange',
+  total_limit_reached: 'orangered',
+};
+
 const columns: TableColumnData[] = [
   { title: 'ID', dataIndex: 'id', width: 80, sortable: { sortDirections: ['ascend', 'descend'] } },
   { title: '配置名称', dataIndex: 'config_name', width: 150, ellipsis: true, tooltip: true },
@@ -118,6 +147,8 @@ const columns: TableColumnData[] = [
   { title: '创建时间', dataIndex: 'created_at', slotName: 'createdAt', width: 150, sortable: { sortDirections: ['ascend', 'descend'] } },
   { title: '更新时间', dataIndex: 'updated_at', slotName: 'updatedAt', width: 150, sortable: { sortDirections: ['ascend', 'descend'] } },
   { title: '操作', slotName: 'actions', width: 220, align: 'center', fixed: 'right' },
+  { title: '共享限额', dataIndex: 'sharing_limits_summary', slotName: 'sharingLimits', width: 220, ellipsis: true, tooltip: true },
+  { title: '共享状态', dataIndex: 'share_status', slotName: 'shareStatus', width: 120, align: 'center' },
 ];
 
 </script>

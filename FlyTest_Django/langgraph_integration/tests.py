@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 
-from langgraph_integration.models import LLMConfig, get_user_active_llm_config
+from langgraph_integration.models import LLMConfig, LLMTokenUsage, get_user_active_llm_config
 from langgraph_integration.views import (
     LLMConfigViewSet,
     create_llm_instance,
@@ -234,3 +236,105 @@ class LlmConfigSharingTests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class TokenUsageDashboardTests(TestCase):
+    def setUp(self) -> None:
+        self.admin = User.objects.create_superuser(
+            username="dashboard_admin",
+            email="dashboard_admin@example.com",
+            password="password123",
+        )
+        self.user_a = User.objects.create_user(
+            username="alice",
+            email="alice@example.com",
+            password="password123",
+        )
+        self.user_b = User.objects.create_user(
+            username="bob",
+            email="bob@example.com",
+            password="password123",
+        )
+        self.config_a = LLMConfig.objects.create(
+            owner=self.admin,
+            config_name="GLM",
+            provider="siliconflow",
+            name="Pro/zai-org/GLM-5.1",
+            api_url="https://api.siliconflow.cn/v1",
+            api_key="sk-test",
+        )
+        self.config_b = LLMConfig.objects.create(
+            owner=self.admin,
+            config_name="GPT",
+            provider="openai_compatible",
+            name="gpt-5.4",
+            api_url="https://example.com/v1",
+            api_key="sk-test",
+        )
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        week_ago = today - timedelta(days=6)
+
+        LLMTokenUsage.objects.create(
+            user=self.user_a,
+            llm_config=self.config_a,
+            config_name=self.config_a.config_name,
+            provider=self.config_a.provider,
+            model_name=self.config_a.name,
+            source="api_automation",
+            prompt_tokens=120,
+            completion_tokens=80,
+            total_tokens=200,
+            request_count=2,
+            usage_date=today,
+        )
+        LLMTokenUsage.objects.create(
+            user=self.user_b,
+            llm_config=self.config_b,
+            config_name=self.config_b.config_name,
+            provider=self.config_b.provider,
+            model_name=self.config_b.name,
+            source="requirements_review",
+            prompt_tokens=300,
+            completion_tokens=100,
+            total_tokens=400,
+            request_count=1,
+            usage_date=yesterday,
+        )
+        LLMTokenUsage.objects.create(
+            user=self.user_a,
+            llm_config=self.config_b,
+            config_name=self.config_b.config_name,
+            provider=self.config_b.provider,
+            model_name=self.config_b.name,
+            source="langgraph_chat",
+            prompt_tokens=50,
+            completion_tokens=25,
+            total_tokens=75,
+            request_count=1,
+            usage_date=week_ago,
+        )
+        self.client = APIClient()
+
+    def test_token_usage_dashboard_returns_by_model_and_by_user(self):
+        self.client.force_authenticate(self.admin)
+
+        response = self.client.get("/api/lg/token-usage/", {"preset": "7d"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"]["total_tokens"], 675)
+        self.assertEqual(response.data["permissions"]["is_admin"], True)
+        self.assertEqual(len(response.data["by_model"]), 2)
+        self.assertEqual(response.data["by_model"][0]["model_name"], "gpt-5.4")
+        self.assertEqual(response.data["by_user"][0]["username"], "bob")
+
+    def test_token_usage_dashboard_for_regular_user_only_returns_self(self):
+        self.client.force_authenticate(self.user_a)
+
+        response = self.client.get("/api/lg/token-usage/", {"preset": "7d"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"]["total_tokens"], 275)
+        self.assertEqual(response.data["permissions"]["can_view_all_users"], False)
+        self.assertEqual(len(response.data["by_user"]), 1)
+        self.assertEqual(response.data["by_user"][0]["username"], "alice")

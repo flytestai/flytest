@@ -9,14 +9,19 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from flytest_django.claude_messages_model import ClaudeMessagesCompatibleChatModel
-from langgraph_integration.models import LLMConfig, get_user_active_llm_config
+from langgraph_integration.models import (
+    LLMConfig,
+    attach_llm_usage_context,
+    get_user_active_llm_config,
+    record_llm_response_usage,
+)
 from .models import RequirementDocument, RequirementModule, DocumentImage
 from prompts.models import UserPrompt
 
 logger = logging.getLogger(__name__)
 
 
-def create_llm_instance(active_config, temperature=0.1):
+def create_llm_instance(active_config, temperature=0.1, *, usage_context=None):
     """
     根据配置创建LLM实例
     统一使用OpenAI兼容格式，支持所有兼容的服务商
@@ -73,6 +78,9 @@ def create_llm_instance(active_config, temperature=0.1):
                 "timeout": request_timeout,
             }
             llm = ChatOpenAI(**llm_kwargs)
+
+    if usage_context:
+        attach_llm_usage_context(llm, **usage_context)
 
     logger.info(
         "Initialized requirement-review LLM: provider=%s, model=%s, base_url=%s, timeout=%ss, max_retries=%s",
@@ -233,6 +241,7 @@ def safe_llm_invoke_v2(llm, messages, max_retries=3, retry_delay=2):
     for attempt in range(max_retries):
         try:
             response = llm.invoke(messages)
+            record_llm_response_usage(llm, response)
             response_text = _extract_llm_response_text(response)
             if response_text:
                 return SimpleNamespace(
@@ -1319,7 +1328,16 @@ class ModuleSplitter:
                 raise Exception("没有可用的LLM配置")
 
             # 使用新的LLM工厂函数，支持多供应商
-            return create_llm_instance(active_config, temperature=0.1)
+            return create_llm_instance(
+                active_config,
+                temperature=0.1,
+                usage_context={
+                    "user": self.user,
+                    "llm_config": active_config,
+                    "source": "requirements_review",
+                    "metadata": {"engine": self.__class__.__name__},
+                },
+            )
         except Exception as e:
             logger.error(f"获取LLM实例失败: {e}")
             raise
@@ -2627,7 +2645,16 @@ class RequirementReviewEngine:
 
             self.llm_config = active_config  # 保存配置引用
             # 使用新的LLM工厂函数，支持多供应商
-            return create_llm_instance(active_config, temperature=0.1)
+            return create_llm_instance(
+                active_config,
+                temperature=0.1,
+                usage_context={
+                    "user": self.user,
+                    "llm_config": active_config,
+                    "source": "requirements_review",
+                    "metadata": {"engine": self.__class__.__name__},
+                },
+            )
         except Exception as e:
             logger.error(f"获取LLM实例失败: {e}")
             raise

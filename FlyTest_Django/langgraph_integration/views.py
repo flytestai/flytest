@@ -14,8 +14,10 @@ from .models import (
     LLMConfig,
     ChatSession,
     ChatMessage,
+    LLMTokenUsage,
     get_user_active_llm_config,
     set_user_active_llm_config,
+    record_llm_token_usage,
 )
 from .serializers import LLMConfigSerializer
 import logging
@@ -649,7 +651,12 @@ class LLMConfigViewSet(BaseModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        return LLMConfig.visible_to_user_queryset(self.request.user).order_by("-created_at")
+        queryset = LLMConfig.visible_to_user_queryset(self.request.user).order_by("-created_at")
+        user = self.request.user
+        if user.is_superuser:
+            return queryset
+        visible_ids = [config.pk for config in queryset if config.can_user_use(user) or config.can_manage(user)]
+        return queryset.filter(pk__in=visible_ids)
 
     def perform_create(self, serializer):
         """执行创建操作"""
@@ -665,7 +672,10 @@ class LLMConfigViewSet(BaseModelViewSet):
         updated = serializer.save()
         if "is_active" in serializer.validated_data:
             if serializer.validated_data.get("is_active", False):
-                set_user_active_llm_config(self.request.user, updated)
+                try:
+                    set_user_active_llm_config(self.request.user, updated)
+                except ValueError as exc:
+                    raise PermissionDenied(str(exc))
             else:
                 active_config = get_user_active_llm_config(self.request.user)
                 if active_config and active_config.pk == updated.pk:
@@ -678,7 +688,10 @@ class LLMConfigViewSet(BaseModelViewSet):
             if payload_keys.issubset({"is_active"}) and "is_active" in request.data:
                 desired_active = str(request.data.get("is_active")).strip().lower() in {"1", "true", "yes", "on"}
                 if desired_active:
-                    set_user_active_llm_config(request.user, instance)
+                    try:
+                        set_user_active_llm_config(request.user, instance)
+                    except ValueError as exc:
+                        raise PermissionDenied(str(exc))
                 else:
                     active_config = get_user_active_llm_config(request.user)
                     if active_config and active_config.pk == instance.pk:
@@ -3801,13 +3814,16 @@ class TokenUsageStatsAPIView(APIView):
         from datetime import datetime, timedelta
 
         user = request.user
+        preset = (request.query_params.get("preset") or "").strip().lower()
         start_date_str = request.query_params.get("start_date")
         end_date_str = request.query_params.get("end_date")
         group_by = request.query_params.get("group_by", "day")
         target_user_id = request.query_params.get("user_id")
+        source = (request.query_params.get("source") or "").strip()
+        is_admin = bool(user.is_superuser or user.is_staff)
 
         # 权限检查：只有管理员可以查看其他用户的统计
-        if target_user_id and not user.is_superuser:
+        if target_user_id and not is_admin:
             return Response(
                 {"error": "无权查看其他用户的统计信息"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -3820,10 +3836,22 @@ class TokenUsageStatsAPIView(APIView):
 
             local_now = tz.localtime(tz.now())
             today = local_now.date()
+            preset_applied = False
+            if preset in {"today", "1d"}:
+                start_date = end_date = today
+                preset_applied = True
+            elif preset in {"7d", "last7"}:
+                end_date = today
+                start_date = today - timedelta(days=6)
+                preset_applied = True
+            elif preset in {"30d", "last30"}:
+                end_date = today
+                start_date = today - timedelta(days=29)
+                preset_applied = True
 
-            if start_date_str:
+            if not preset_applied and start_date_str:
                 start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-            else:
+            elif not preset_applied:
                 # 根据 group_by 自动计算起始日期
                 if group_by == "day":
                     start_date = today
@@ -3836,9 +3864,9 @@ class TokenUsageStatsAPIView(APIView):
                 else:
                     start_date = (timezone.now() - timedelta(days=30)).date()
 
-            if end_date_str:
+            if not preset_applied and end_date_str:
                 end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-            else:
+            elif not preset_applied:
                 end_date = today
         except ValueError:
             return Response(
@@ -3847,6 +3875,12 @@ class TokenUsageStatsAPIView(APIView):
             )
 
         # 构建查询
+        if start_date > end_date:
+            return Response(
+                {"error": "Start date cannot be later than end date"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         import logging
 
         logger = logging.getLogger("langgraph_integration")
@@ -3854,30 +3888,35 @@ class TokenUsageStatsAPIView(APIView):
             f"[TokenUsageStats] 查询日期范围: {start_date} ~ {end_date}, group_by={group_by}"
         )
 
-        queryset = ChatSession.objects.filter(
-            created_at__date__gte=start_date, created_at__date__lte=end_date
+        queryset = LLMTokenUsage.objects.filter(
+            usage_date__gte=start_date,
+            usage_date__lte=end_date,
         )
+        if source:
+            queryset = queryset.filter(source=source)
 
         logger.info(f"[TokenUsageStats] 查询到 {queryset.count()} 个会话")
 
         # 用于个人统计的查询（只看自己的数据）
         if target_user_id:
             personal_queryset = queryset.filter(user_id=target_user_id)
+        elif is_admin:
+            personal_queryset = queryset
         else:
             personal_queryset = queryset.filter(user=user)
 
         # 用户排行榜使用全部数据（所有人都能看到排行榜）
-        all_users_queryset = queryset
+        all_users_queryset = queryset if is_admin else queryset.filter(user=user)
 
         # 用户维度统计（排行榜 - 使用全部数据）
         user_stats = (
             all_users_queryset.values("user__username", "user_id")
             .annotate(
-                total_input=Sum("total_input_tokens"),
-                total_output=Sum("total_output_tokens"),
+                total_input=Sum("prompt_tokens"),
+                total_output=Sum("completion_tokens"),
                 total_tokens=Sum("total_tokens"),
                 total_requests=Sum("request_count"),
-                session_count=Count("id"),
+                model_count=Count("model_name", distinct=True),
             )
             .order_by("-total_tokens")
         )
@@ -3891,49 +3930,71 @@ class TokenUsageStatsAPIView(APIView):
             personal_queryset.annotate(period=trunc_func("created_at"))
             .values("period")
             .annotate(
-                total_input=Sum("total_input_tokens"),
-                total_output=Sum("total_output_tokens"),
+                total_input=Sum("prompt_tokens"),
+                total_output=Sum("completion_tokens"),
                 total_tokens=Sum("total_tokens"),
                 total_requests=Sum("request_count"),
-                session_count=Count("id"),
+                user_count=Count("user_id", distinct=True),
+                model_count=Count("model_name", distinct=True),
             )
             .order_by("period")
         )
 
+        model_stats = (
+            personal_queryset.values("model_name", "provider", "config_name")
+            .annotate(
+                total_input=Sum("prompt_tokens"),
+                total_output=Sum("completion_tokens"),
+                total_tokens=Sum("total_tokens"),
+                total_requests=Sum("request_count"),
+                user_count=Count("user_id", distinct=True),
+            )
+            .order_by("-total_tokens", "model_name")
+        )
+
         # 总计统计（使用个人数据）
         total_stats = personal_queryset.aggregate(
-            total_input=Sum("total_input_tokens"),
-            total_output=Sum("total_output_tokens"),
+            total_input=Sum("prompt_tokens"),
+            total_output=Sum("completion_tokens"),
             total_tokens=Sum("total_tokens"),
             total_requests=Sum("request_count"),
-            session_count=Count("id"),
+            user_count=Count("user_id", distinct=True),
+            model_count=Count("model_name", distinct=True),
         )
 
         return Response(
             {
                 "period": {
+                    "preset": preset or "custom",
                     "start_date": start_date.isoformat(),
                     "end_date": end_date.isoformat(),
                     "group_by": group_by,
+                    "days": max((end_date - start_date).days + 1, 1),
+                },
+                "permissions": {
+                    "is_admin": is_admin,
+                    "can_view_all_users": is_admin,
                 },
                 "total": {
                     "input_tokens": total_stats["total_input"] or 0,
                     "output_tokens": total_stats["total_output"] or 0,
                     "total_tokens": total_stats["total_tokens"] or 0,
                     "request_count": total_stats["total_requests"] or 0,
-                    "session_count": total_stats["session_count"] or 0,
+                    "user_count": total_stats["user_count"] or 0,
+                    "model_count": total_stats["model_count"] or 0,
                 },
                 "by_user": [
                     {
+                        "rank": index + 1,
                         "user_id": item["user_id"],
                         "username": item["user__username"],
                         "input_tokens": item["total_input"] or 0,
                         "output_tokens": item["total_output"] or 0,
                         "total_tokens": item["total_tokens"] or 0,
                         "request_count": item["total_requests"] or 0,
-                        "session_count": item["session_count"] or 0,
+                        "model_count": item["model_count"] or 0,
                     }
-                    for item in user_stats
+                    for index, item in enumerate(user_stats)
                 ],
                 "by_time": [
                     {
@@ -3944,9 +4005,24 @@ class TokenUsageStatsAPIView(APIView):
                         "output_tokens": item["total_output"] or 0,
                         "total_tokens": item["total_tokens"] or 0,
                         "request_count": item["total_requests"] or 0,
-                        "session_count": item["session_count"] or 0,
+                        "user_count": item["user_count"] or 0,
+                        "model_count": item["model_count"] or 0,
                     }
                     for item in time_stats
+                ],
+                "by_model": [
+                    {
+                        "rank": index + 1,
+                        "model_name": item["model_name"] or "未知模型",
+                        "provider": item["provider"] or "",
+                        "config_name": item["config_name"] or "",
+                        "input_tokens": item["total_input"] or 0,
+                        "output_tokens": item["total_output"] or 0,
+                        "total_tokens": item["total_tokens"] or 0,
+                        "request_count": item["total_requests"] or 0,
+                        "user_count": item["user_count"] or 0,
+                    }
+                    for index, item in enumerate(model_stats)
                 ],
             }
         )

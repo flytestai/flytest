@@ -387,7 +387,7 @@
                 正在检测当前 AI 配置与文档导入的兼容性...
               </div>
             </div>
-            <a-switch v-model="enableAiParse" :disabled="importAiParseBlocked" />
+            <a-switch v-model="enableAiParse" :disabled="importAiParseBlocked || documentImportMode === 'text'" />
           </div>
           <div class="import-option-card">
             <div class="option-copy">

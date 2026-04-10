@@ -135,6 +135,37 @@
             </template>
           </a-alert>
         </a-col>
+        <a-col :span="8">
+          <a-form-item field="shared_daily_token_limit" label="每用户每日 Token 限额">
+            <a-input-number
+              v-model="formData.shared_daily_token_limit"
+              :min="0"
+              :step="1000"
+              placeholder="不填表示不限"
+              allow-clear
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item field="shared_total_token_limit" label="共享总 Token 限额">
+            <a-input-number
+              v-model="formData.shared_total_token_limit"
+              :min="0"
+              :step="1000"
+              placeholder="不填表示不限"
+              allow-clear
+            />
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item field="shared_expires_at" label="共享有效期截止">
+            <input
+              v-model="sharedExpiresAtInput"
+              class="native-datetime-input"
+              type="datetime-local"
+            />
+          </a-form-item>
+        </a-col>
         <a-col :span="24">
           <a-alert type="info" :show-icon="true" class="llm-sharing-alert">
             <template #title>共享范围</template>
@@ -340,6 +371,7 @@ const loadingOrganizations = ref(false);
 const loadingMembers = ref(false);
 const QWEN_DEFAULT_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 const SILICONFLOW_DEFAULT_API_URL = 'https://api.siliconflow.cn/v1';
+const sharedExpiresAtInput = ref('');
 const defaultFormData: CreateLlmConfigRequest = {
   config_name: '',
   provider: 'openai_compatible',
@@ -356,6 +388,9 @@ const defaultFormData: CreateLlmConfigRequest = {
   is_active: false,
   shared_group_ids: [],
   shared_user_ids: [],
+  shared_daily_token_limit: null,
+  shared_total_token_limit: null,
+  shared_expires_at: null,
 };
 const formData = ref<CreateLlmConfigRequest>({ ...defaultFormData });
 const currentConfigId = ref<number | null>(null);
@@ -385,6 +420,21 @@ const apiUrlPlaceholder = computed(() => (
     ? QWEN_DEFAULT_API_URL
     : 'https://api.openai.com/v1'
 ));
+
+const toLocalDateTimeInputValue = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const fromLocalDateTimeInputValue = (value: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+};
 
 const apiHintText = computed(() => (
   formData.value.wire_api === 'messages'
@@ -581,11 +631,15 @@ watch(
           is_active: props.configData.is_active,
           shared_group_ids: props.configData.shared_groups?.map(item => item.id) || [],
           shared_user_ids: props.configData.shared_users?.map(item => item.id) || [],
+          shared_daily_token_limit: props.configData.shared_daily_token_limit ?? null,
+          shared_total_token_limit: props.configData.shared_total_token_limit ?? null,
+          shared_expires_at: props.configData.shared_expires_at || null,
         };
       } else {
         // 新增模式：重置表单
         formData.value = { ...defaultFormData };
       }
+      sharedExpiresAtInput.value = toLocalDateTimeInputValue(formData.value.shared_expires_at || null);
       handleProviderChange(formData.value.provider);
       lastModelsFetchStatus.value = '';
       lastModelsFetchMessage.value = '';
@@ -614,6 +668,10 @@ watch(
     showDiagnosticsDetails.value = false;
   }
 );
+
+watch(sharedExpiresAtInput, (value) => {
+  formData.value.shared_expires_at = fromLocalDateTimeInputValue(value);
+});
 
 const handleSubmit = async () => {
   if (!formRef.value) return;
@@ -967,5 +1025,23 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
   font-size: 13px;
   color: var(--color-text-3);
   cursor: pointer;
+}
+
+.native-datetime-input {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-neutral-3);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-text-1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.native-datetime-input:focus {
+  border-color: rgb(var(--primary-6));
+  box-shadow: 0 0 0 2px rgba(var(--primary-6), 0.14);
 }
 </style>

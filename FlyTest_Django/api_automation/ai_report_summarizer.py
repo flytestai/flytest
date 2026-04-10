@@ -375,7 +375,16 @@ def _summarize_execution_report_uncached(*, report_payload: dict[str, Any], user
     )
 
     try:
-        llm = create_llm_instance(active_config, temperature=0.1)
+        llm = create_llm_instance(
+            active_config,
+            temperature=0.1,
+            usage_context={
+                "user": user,
+                "llm_config": active_config,
+                "source": "api_automation",
+                "metadata": {"feature": "report_summary"},
+            },
+        )
         response = safe_llm_invoke(
             llm,
             [

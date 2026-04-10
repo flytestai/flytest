@@ -1908,7 +1908,16 @@ def _generate_test_case_drafts_with_ai_uncached(
         formatted_prompt = f"{formatted_prompt}\n\nStrict output contract:\n{generation_contract_json}"
 
     try:
-        llm = create_llm_instance(active_config, temperature=0.2)
+        llm = create_llm_instance(
+            active_config,
+            temperature=0.2,
+            usage_context={
+                "user": user,
+                "llm_config": active_config,
+                "source": "api_automation",
+                "metadata": {"feature": "case_generation"},
+            },
+        )
         response = safe_llm_invoke(
             llm,
             [
