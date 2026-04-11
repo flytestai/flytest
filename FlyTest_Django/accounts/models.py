@@ -76,6 +76,11 @@ class UserProfile(models.Model):
         default="",
         verbose_name="真实姓名",
     )
+    password_changed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="密码修改时间",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
 

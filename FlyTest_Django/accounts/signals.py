@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=User)
 def ensure_user_approval_status(sender, instance, created, **kwargs):
     """
-    确保用户始终存在审批记录，已有管理员默认视为已通过。
+    确保用户始终存在审批记录。
+    只有注册流程会显式改成待审核；其他后端直接创建的用户默认已通过。
     """
     if created:
         ensure_user_profile(instance)
@@ -32,7 +33,7 @@ def ensure_user_approval_status(sender, instance, created, **kwargs):
         return
 
     if created:
-        ensure_user_approval_record(instance, status=UserApproval.STATUS_PENDING)
+        ensure_user_approval_record(instance, status=UserApproval.STATUS_APPROVED)
         ensure_user_profile(instance)
 
 

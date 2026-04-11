@@ -1219,7 +1219,10 @@ class ChatAPIView(APIView):
     支持项目隔离，聊天记录按项目分组。
     """
 
-    permission_classes = [HasModelPermission]
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        return [IsAuthenticated(), HasModelPermission("langgraph_integration.view_chatsession")]
 
     async def dispatch(self, request, *args, **kwargs):
         """

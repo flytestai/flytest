@@ -216,6 +216,7 @@ class UserRegistrationApprovalTests(TestCase):
             email="pending-perm-user@example.com",
             password="Testpass123!",
         )
+        ensure_user_approval_record(user, status=UserApproval.STATUS_PENDING)
         user.user_permissions.add(Permission.objects.first())
 
         self.client.force_authenticate(user=user)
@@ -230,6 +231,7 @@ class UserRegistrationApprovalTests(TestCase):
             email="pending-deny-user@example.com",
             password="Testpass123!",
         )
+        ensure_user_approval_record(user, status=UserApproval.STATUS_PENDING)
 
         self.client.force_authenticate(user=user)
         response = self.client.get("/api/accounts/content-types/")
@@ -286,6 +288,7 @@ class UserRegistrationApprovalTests(TestCase):
             email="pending-filter-user@example.com",
             password="Testpass123!",
         )
+        ensure_user_approval_record(pending_user, status=UserApproval.STATUS_PENDING)
         approved_user = User.objects.create_user(
             username="approved-filter-user",
             email="approved-filter-user@example.com",
@@ -306,6 +309,11 @@ class UserRegistrationApprovalTests(TestCase):
             username="summary-pending-user",
             email="summary-pending-user@example.com",
             password="Testpass123!",
+        )
+        pending_user = User.objects.get(username="summary-pending-user")
+        ensure_user_approval_record(
+            pending_user,
+            status=UserApproval.STATUS_PENDING,
         )
         rejected_user = User.objects.create_user(
             username="summary-rejected-user",
@@ -338,6 +346,11 @@ class CurrentUserProfileTests(TestCase):
             password="Testpass123!",
         )
         self.client.force_authenticate(user=self.user)
+
+    def _payload(self, response):
+        if isinstance(response.data, dict) and "data" in response.data:
+            return response.data["data"]
+        return response.data
 
     def test_can_update_current_user_profile(self):
         response = self.client.put(
@@ -396,3 +409,55 @@ class CurrentUserProfileTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("Newpass123!"))
+
+    def test_profile_partial_update_allows_phone_only(self):
+        response = self.client.put(
+            "/api/accounts/profile/",
+            {
+                "phone_number": "13900000000",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.profile.phone_number, "13900000000")
+
+    def test_change_password_invalidates_existing_access_and_refresh_tokens(self):
+        self.client.force_authenticate(user=None)
+        token_response = self.client.post(
+            "/api/token/",
+            {"username": "profile-user", "password": "Testpass123!"},
+            format="json",
+        )
+        payload = self._payload(token_response)
+        access_token = payload["access"]
+        refresh_token = payload["refresh"]
+
+        response = self.client.post(
+            "/api/accounts/change-password/",
+            {
+                "current_password": "Testpass123!",
+                "new_password": "Newpass123!",
+                "confirm_password": "Newpass123!",
+            },
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.cookies[settings.JWT_ACCESS_COOKIE_NAME].value, "")
+        self.assertEqual(response.cookies[settings.JWT_REFRESH_COOKIE_NAME].value, "")
+
+        old_access_response = self.client.get(
+            "/api/accounts/me/",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        )
+        self.assertEqual(old_access_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        refresh_response = self.client.post(
+            "/api/token/refresh/",
+            {"refresh": refresh_token},
+            format="json",
+        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)

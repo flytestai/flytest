@@ -3,9 +3,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+from rest_framework.permissions import IsAuthenticated
 
 from flytest_django.viewsets import BaseModelViewSet
-from flytest_django.permissions import HasModelPermission
 from .models import UserPrompt, PromptType
 from .serializers import (
     UserPromptSerializer,
@@ -27,10 +27,8 @@ class UserPromptViewSet(BaseModelViewSet):
     ordering = ['-updated_at']
 
     def get_permissions(self):
-        """返回此视图所需权限的实例列表"""
-        return [
-            HasModelPermission(),
-        ]
+        """用户自己的提示词仅要求登录即可。"""
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         """只返回当前用户的提示词"""

@@ -19,8 +19,8 @@ class UserPromptSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("提示词内容不能为空")
 
         # 检查内容长度（可根据需要调整）
-        if len(value.strip()) < 10:
-            raise serializers.ValidationError("提示词内容至少需要10个字符")
+        if len(value.strip()) < 4:
+            raise serializers.ValidationError("提示词内容至少需要4个字符")
 
         if len(value) > 10000:
             raise serializers.ValidationError("提示词内容不能超过10000个字符")

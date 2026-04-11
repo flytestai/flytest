@@ -1034,8 +1034,21 @@ def sync_legacy_test_case_from_specs(test_case: ApiTestCase):
         timeout_ms=int(timeout_ms),
         assertions=assertions,
     )
+    script["request"] = {
+        "method": effective_method,
+        "url": effective_url,
+        "headers": headers,
+        "params": params,
+        "body_type": body_type,
+        "body": body,
+        "timeout_ms": int(timeout_ms),
+    }
     script["extractors"] = serialize_extractor_specs(test_case)
     script["request_override_spec"] = override_payload
+    if override_payload.get("replace_fields"):
+        script["request_override_replace_fields"] = list(
+            override_payload.get("replace_fields") or []
+        )
     if isinstance(legacy_script.get("workflow_steps"), list):
         script["workflow_steps"] = legacy_script["workflow_steps"]
     test_case.script = script

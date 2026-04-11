@@ -60,9 +60,11 @@ class ProjectViewSet(BaseModelViewSet):
         """
         根据操作类型设置不同的权限
         """
-        # 成员管理操作：先过项目成员模型权限，再校验调用者属于该项目。
-        if self.action in ['members', 'add_member', 'remove_member', 'update_member_role']:
-            return [HasProjectMemberPermission(), IsProjectMember()]
+        # 成员查看只要求登录且属于该项目；成员变更要求项目管理员或拥有者。
+        if self.action == 'members':
+            return [IsAuthenticated(), IsProjectMember()]
+        if self.action in ['add_member', 'remove_member', 'update_member_role']:
+            return [IsAuthenticated(), IsProjectAdmin()]
 
         # 统计接口只读，要求登录且属于项目即可。
         if self.action == 'statistics':

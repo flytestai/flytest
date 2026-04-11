@@ -9,7 +9,10 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from langgraph_integration.models import LLMConfig, get_user_active_llm_config
+from langgraph_integration.models import (
+    LLMConfig,
+    get_user_active_llm_config as resolve_user_active_llm_config,
+)
 from prompts.models import PromptType, UserPrompt
 from prompts.services import get_default_prompts
 
@@ -21,6 +24,13 @@ logger = logging.getLogger(__name__)
 DEFAULT_AI_REPORT_SUMMARY_CACHE_TTL_SECONDS = 1800
 DEFAULT_AI_REPORT_SUMMARY_LOCK_TIMEOUT_SECONDS = 25
 SUPPORTED_ACTION_PRIORITIES = {"high", "medium", "low"}
+
+
+def _resolve_active_llm_config(user):
+    active_config = resolve_user_active_llm_config(user)
+    if active_config and isinstance(getattr(active_config, "name", None), str):
+        return active_config
+    return LLMConfig.objects.filter(is_active=True).first()
 
 DEFAULT_REPORT_SUMMARY_PROMPT = """你是 FlyTest 的 API 自动化测试报告分析助手。
 请基于给定的测试报告聚合结果，输出结构化的摘要结论。
@@ -363,7 +373,7 @@ def _attach_runtime_meta(
 
 def _summarize_execution_report_uncached(*, report_payload: dict[str, Any], user) -> ExecutionReportSummaryResult:
     fallback_result = _build_rule_based_report_summary(report_payload)
-    active_config = get_user_active_llm_config(user)
+    active_config = _resolve_active_llm_config(user)
     if not active_config:
         return fallback_result
 
@@ -371,7 +381,12 @@ def _summarize_execution_report_uncached(*, report_payload: dict[str, Any], user
     context_payload = _build_report_context_payload(report_payload)
     formatted_prompt = _format_prompt(
         prompt_template,
-        report_context_json=json.dumps(context_payload, ensure_ascii=False, indent=2),
+        report_context_json=json.dumps(
+            context_payload,
+            ensure_ascii=False,
+            indent=2,
+            default=str,
+        ),
     )
 
     try:
@@ -431,7 +446,7 @@ def _summarize_execution_report_uncached(*, report_payload: dict[str, Any], user
 
 
 def summarize_execution_report(*, report_payload: dict[str, Any], user) -> ExecutionReportSummaryResult:
-    active_config = get_user_active_llm_config(user)
+    active_config = _resolve_active_llm_config(user)
     if not active_config:
         return _build_rule_based_report_summary(report_payload)
 

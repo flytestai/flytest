@@ -473,8 +473,14 @@ def record_llm_token_usage(
 
 def extract_llm_usage_metrics(response: Any) -> dict[str, int]:
     response_metadata = getattr(response, "response_metadata", {}) or {}
+    if not isinstance(response_metadata, dict):
+        response_metadata = {}
     token_usage = response_metadata.get("token_usage", {}) or {}
+    if not isinstance(token_usage, dict):
+        token_usage = {}
     usage_metadata = getattr(response, "usage_metadata", {}) or {}
+    if not isinstance(usage_metadata, dict):
+        usage_metadata = {}
 
     prompt_tokens = int(
         token_usage.get("prompt_tokens")
@@ -530,6 +536,8 @@ def record_llm_response_usage(
     metadata: dict | None = None,
 ):
     usage_context = getattr(llm, "_flytest_usage_context", None) or {}
+    if not isinstance(usage_context, dict):
+        usage_context = {}
     user = usage_context.get("user")
     llm_config = usage_context.get("llm_config")
     source = usage_context.get("source")
@@ -544,7 +552,10 @@ def record_llm_response_usage(
     ):
         return None
 
-    merged_metadata = dict(usage_context.get("metadata") or {})
+    base_metadata = usage_context.get("metadata") or {}
+    if not isinstance(base_metadata, dict):
+        base_metadata = {}
+    merged_metadata = dict(base_metadata)
     if metadata:
         merged_metadata.update(metadata)
 

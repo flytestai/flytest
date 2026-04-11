@@ -44,10 +44,10 @@ class HasModelPermission(permissions.BasePermission):
         # 尝试从视图获取模型信息
         model_cls, app_label, model_name = self._get_model_info(view)
 
-        # 如果无法确定模型，则允许访问（由其他权限类处理）
+        # 如果无法确定模型，默认拒绝访问，避免权限旁路。
         if model_cls is None:
-            logger.warning(f"无法确定视图 {view.__class__.__name__} 的模型，跳过权限检查")
-            return True
+            logger.warning(f"无法确定视图 {view.__class__.__name__} 的模型，拒绝访问")
+            return False
 
         # 获取视图的操作类型
         action = getattr(view, 'action', None)

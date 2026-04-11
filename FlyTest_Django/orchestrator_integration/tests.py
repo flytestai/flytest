@@ -121,7 +121,8 @@ class SkillScreenshotDirectoryTests(SimpleTestCase):
             with override_settings(MEDIA_ROOT=temp_media_root):
                 screenshots_dir = _build_skill_screenshots_dir(1, "89")
 
-        self.assertTrue(screenshots_dir.endswith("skill_runtime/screenshots/1/89"))
+        normalized_dir = screenshots_dir.replace("\\", "/")
+        self.assertTrue(normalized_dir.endswith("skill_runtime/screenshots/1/89"))
         self.assertNotIn("/skills/1/11/", screenshots_dir)
 
     def test_build_skill_screenshots_dir_keeps_path_inside_media_root(self):

@@ -1,9 +1,11 @@
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer as BaseTokenObtainPairSerializer,
+    TokenRefreshSerializer as BaseTokenRefreshSerializer,
 )
 from .models import (
     UserApproval,
@@ -980,13 +982,14 @@ class UserApprovalReviewSerializer(serializers.Serializer):
 
 
 class CurrentUserProfileSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=True)
+    email = serializers.EmailField(required=False)
     phone_number = serializers.CharField(required=False, allow_blank=True, max_length=30)
     real_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
     def update(self, instance, validated_data):
-        instance.email = validated_data["email"]
-        instance.save(update_fields=["email"])
+        if "email" in validated_data:
+            instance.email = validated_data["email"]
+            instance.save(update_fields=["email"])
 
         profile = ensure_user_profile(instance)
         profile.phone_number = validated_data.get("phone_number", profile.phone_number)
@@ -1007,6 +1010,25 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(attrs["current_password"]):
             raise serializers.ValidationError({"current_password": "当前密码不正确。"})
         return attrs
+
+
+class PasswordAwareTokenRefreshSerializer(BaseTokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+        user_id = refresh.get("user_id")
+        user = User.objects.filter(id=user_id).first()
+        profile = get_user_profile(user)
+        password_changed_at = getattr(profile, "password_changed_at", None)
+        token_issued_at = refresh.get("iat")
+
+        if (
+            password_changed_at
+            and token_issued_at
+            and token_issued_at < int(password_changed_at.timestamp())
+        ):
+            raise AuthenticationFailed("登录状态已失效，请重新登录。")
+
+        return super().validate(attrs)
 
 
 class MyTokenObtainPairSerializer(BaseTokenObtainPairSerializer):

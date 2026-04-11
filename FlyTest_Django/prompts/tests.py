@@ -9,6 +9,9 @@ from .models import UserPrompt
 class UserPromptModelTests(TestCase):
     """用户提示词模型测试"""
 
+    def _clear_initialized_prompts(self):
+        UserPrompt.objects.filter(user=self.user).delete()
+
     def setUp(self):
         """测试前准备"""
         self.user = User.objects.create_user(
@@ -16,6 +19,7 @@ class UserPromptModelTests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
+        self._clear_initialized_prompts()
 
         # 创建默认提示词
         self.default_prompt = UserPrompt.objects.create(
@@ -67,6 +71,9 @@ class UserPromptModelTests(TestCase):
 class UserPromptAPITests(TestCase):
     """用户提示词API测试"""
 
+    def _clear_initialized_prompts(self):
+        UserPrompt.objects.filter(user=self.user).delete()
+
     def setUp(self):
         """测试前准备"""
         self.client = APIClient()
@@ -75,6 +82,7 @@ class UserPromptAPITests(TestCase):
             email='test@example.com',
             password='testpass123'
         )
+        self._clear_initialized_prompts()
 
         # 创建默认提示词
         self.default_prompt = UserPrompt.objects.create(

@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.db.utils import OperationalError
 from django.db.models import Q
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -36,6 +37,7 @@ from .serializers import (
     UpdateUserPermissionsSerializer,
     UpdateGroupPermissionsSerializer,
     MyTokenObtainPairSerializer,
+    PasswordAwareTokenRefreshSerializer,
     UserApprovalReviewSerializer,
 )
 from .models import (
@@ -123,13 +125,19 @@ class ChangeCurrentUserPasswordAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save(update_fields=["password"])
-        return Response(
+        profile = ensure_user_profile(request.user)
+        profile.password_changed_at = timezone.now()
+        profile.save(update_fields=["password_changed_at", "updated_at"])
+
+        response = Response(
             {
                 "status": "success",
                 "message": "密码修改成功，请重新登录。",
                 "data": None,
             }
         )
+        clear_auth_cookies(response)
+        return response
 
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -1122,7 +1130,7 @@ class MyTokenObtainPairView(BaseTokenObtainPairView):
 
 
 class CookieTokenRefreshView(BaseTokenRefreshView):
-    serializer_class = TokenRefreshSerializer
+    serializer_class = PasswordAwareTokenRefreshSerializer
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
