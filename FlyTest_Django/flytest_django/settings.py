@@ -62,6 +62,8 @@ LOCAL_HTTP_RUNTIME = DEBUG or RUNNING_TESTS or RUNNING_DEV_SERVER
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if SECRET_KEY:
     SECRET_KEY = SECRET_KEY.strip()
+    if RUNNING_TESTS and len(SECRET_KEY) < 32:
+        SECRET_KEY = (SECRET_KEY + token_urlsafe(32))[:64]
 elif DEBUG or RUNNING_TESTS or RUNNING_DEV_SERVER:
     SECRET_KEY = token_urlsafe(64)
 else:

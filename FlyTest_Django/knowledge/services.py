@@ -923,7 +923,10 @@ class VectorStoreManager:
                 )
 
             except Exception as e:
-                logger.error(f"❌ 嵌入服务 {embedding_service} 初始化失败: {str(e)}")
+                if embedding_service == "custom" and "api_base_url" in str(e):
+                    logger.warning(f"⚠️ 嵌入服务 {embedding_service} 未完整配置，已跳过初始化: {str(e)}")
+                else:
+                    logger.error(f"❌ 嵌入服务 {embedding_service} 初始化失败: {str(e)}")
                 raise
 
         return self._embeddings_cache[cache_key]
