@@ -7,7 +7,8 @@ import asyncio
 import json
 import logging
 from typing import Optional, Callable, Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit, parse_qsl, urlencode
+from urllib.request import Request, urlopen
 import websockets
 from websockets.client import WebSocketClientProtocol
 
@@ -47,12 +48,54 @@ class WebSocketClient:
 
         scheme = 'https' if parsed.scheme in ('https', 'wss') else 'http'
         return f'{scheme}://{parsed.netloc}'
+
+    def _get_access_token(self) -> Optional[str]:
+        token = getattr(self.config, 'access_token', None) if self.config else None
+        if token:
+            return token
+
+        api_url = getattr(self.config, 'api_url', None) if self.config else None
+        username = getattr(self.config, 'api_username', None) if self.config else None
+        password = getattr(self.config, 'api_password', None) if self.config else None
+        if not api_url or not username or not password:
+            return None
+
+        request = Request(
+            f"{api_url.rstrip('/')}/api/token/",
+            data=json.dumps({"username": username, "password": password}).encode('utf-8'),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(request, timeout=15) as response:
+            token_payload = json.loads(response.read().decode('utf-8'))
+
+        token = token_payload.get('access')
+        if token and self.config is not None:
+            setattr(self.config, 'access_token', token)
+            if token_payload.get('refresh'):
+                setattr(self.config, 'refresh_token', token_payload.get('refresh'))
+        return token
+
+    def _build_connect_url(self) -> str:
+        split_result = urlsplit(self.url)
+        query = dict(parse_qsl(split_result.query, keep_blank_values=True))
+        query['actuator_id'] = self.actuator_id
+        access_token = self._get_access_token()
+        if access_token:
+            query['token'] = access_token
+        return urlunsplit((
+            split_result.scheme,
+            split_result.netloc,
+            split_result.path,
+            urlencode(query),
+            split_result.fragment,
+        ))
     
     async def connect(self) -> bool:
         """建立WebSocket连接"""
         try:
             # 连接URL带上actuator_id
-            connect_url = f"{self.url}?{self.actuator_id}"
+            connect_url = self._build_connect_url()
             origin = self._build_origin()
             self.websocket = await websockets.connect(
                 connect_url,

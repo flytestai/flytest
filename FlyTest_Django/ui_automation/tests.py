@@ -27,7 +27,7 @@ from ui_automation.ai_mode_runtime import (
     _resolve_runtime_terminal_status,
     request_stop_ai_execution,
 )
-from ui_automation.models import UiAICase, UiAIExecutionRecord, UiEnvironmentConfig, UiModule, UiPage
+from ui_automation.models import UiAICase, UiAIExecutionRecord, UiActuatorSession, UiEnvironmentConfig, UiModule, UiPage
 
 
 ACTUATOR_PATH = Path(__file__).resolve().parents[2] / "FlyTest_Actuator"
@@ -262,6 +262,65 @@ class UiAutomationApiTests(APITestCase):
             creator=self.user,
         )
 
+    def test_actuator_endpoints_require_authenticated_user(self):
+        self.client.force_authenticate(user=None)
+
+        list_response = self.client.get("/api/ui-automation/actuators/list_actuators/")
+        status_response = self.client.get("/api/ui-automation/actuators/status/")
+
+        self.assertEqual(list_response.status_code, 401)
+        self.assertEqual(status_response.status_code, 401)
+
+    def test_actuator_endpoints_allow_authenticated_superuser(self):
+        list_response = self.client.get("/api/ui-automation/actuators/list_actuators/")
+        status_response = self.client.get("/api/ui-automation/actuators/status/")
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(status_response.status_code, 200)
+
+    def test_actuator_endpoints_read_database_sessions(self):
+        recent_time = timezone.now()
+        stale_time = recent_time - timedelta(seconds=180)
+        UiActuatorSession.objects.create(
+            actuator_id="act-1",
+            name="执行器一号",
+            ip="127.0.0.1",
+            type="desktop",
+            is_open=True,
+            is_online=True,
+            connected_at=recent_time,
+            last_seen_at=recent_time,
+            owner=self.user,
+        )
+        UiActuatorSession.objects.create(
+            actuator_id="act-2",
+            name="执行器二号",
+            ip="127.0.0.2",
+            type="desktop",
+            is_open=True,
+            is_online=True,
+            connected_at=stale_time,
+            last_seen_at=stale_time,
+            owner=self.user,
+        )
+
+        list_response = self.client.get("/api/ui-automation/actuators/list_actuators/")
+        status_response = self.client.get("/api/ui-automation/actuators/status/")
+
+        self.assertEqual(list_response.status_code, 200)
+        payload = list_response.json()["data"]["data"]
+        self.assertEqual(payload["count"], 2)
+        self.assertEqual(payload["items"][0]["id"], "act-1")
+        self.assertTrue(payload["items"][0]["is_online"])
+        self.assertEqual(payload["items"][1]["id"], "act-2")
+        self.assertFalse(payload["items"][1]["is_online"])
+
+        status_payload = status_response.json()["data"]["data"]
+        self.assertEqual(status_payload["total_actuators"], 2)
+        self.assertEqual(status_payload["online_actuators"], 1)
+        self.assertEqual(status_payload["available_actuators"], 1)
+        self.assertTrue(status_payload["has_available"])
+
     def test_pages_list_supports_optional_server_side_pagination(self):
         for index in range(15):
             UiPage.objects.create(
@@ -313,7 +372,7 @@ class UiAutomationApiTests(APITestCase):
         payload = response.json()["data"]
         self.assertEqual(payload["case_name"], ai_case.name)
         self.assertEqual(payload["execution_mode"], "vision")
-        self.assertEqual(payload["status"], "running")
+        self.assertEqual(payload["status"], "pending")
         self.assertFalse(payload["enable_gif"])
         mocked_start_ai_execution.assert_called_once()
         mocked_validate_ai_execution_request.assert_called_once_with(self.project.id, "vision", user=self.user)

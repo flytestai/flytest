@@ -60,7 +60,7 @@
           style="width: 150px; margin-right: 12px"
         >
           <a-option v-for="env in envConfigs" :key="env.id" :value="env.id">
-            {{ env.name }}{{ env.is_default ? ' (默认)' : '' }}
+            {{ env.name }}{{ env.is_default ? '（默认）' : '' }}
           </a-option>
         </a-select>
         <a-button
@@ -141,7 +141,7 @@
             <template #icon><icon-edit /></template>
             编辑
           </a-button>
-          <a-popconfirm content="确定删除该用例？" @ok="deleteTestCase(record)">
+          <a-popconfirm content="确定删除该用例吗？" @ok="deleteTestCase(record)">
             <a-button type="text" status="danger" size="mini">
               <template #icon><icon-delete /></template>
               删除
@@ -151,7 +151,6 @@
       </template>
     </a-table>
 
-    <!-- 新增/编辑弹窗 -->
     <a-modal
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑用例' : '新增用例'"
@@ -191,7 +190,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 步骤管理抽屉 -->
     <a-drawer
       v-model:visible="stepsDrawerVisible"
       :title="`用例步骤 - ${currentTestCase?.name || ''}`"
@@ -202,7 +200,6 @@
     </a-drawer>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, onUnmounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -260,7 +257,6 @@ const formData = reactive<UiTestCaseForm>({
   parametrize: [],
   case_flow: '',
 })
-
 const rules = {
   module: [{ required: true, message: '请选择模块' }],
   name: [{ required: true, message: '请输入用例名称' }],

@@ -58,6 +58,8 @@ class Config:
         self.use_gui = getattr(sys, 'frozen', False)
         self.api_username = "admin"
         self.api_password = "admin123"
+        self.access_token: str | None = None
+        self.refresh_token: str | None = None
         self.actuator_id: str | None = None
         self.actuator_name: str | None = None
         self.actuator_description: str | None = None
@@ -279,6 +281,8 @@ async def main():
         
         config.api_username = login_result['username']
         config.api_password = login_result['password']
+        config.access_token = login_result.get('access_token')
+        config.refresh_token = login_result.get('refresh_token')
         # 更新执行器名称
         if login_result.get('actuator_name'):
             config.actuator_name = login_result['actuator_name']

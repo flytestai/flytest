@@ -3,6 +3,7 @@
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
@@ -11,6 +12,8 @@ from django.db.models.deletion import ProtectedError
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
+from datetime import timedelta
+from flytest_django.permissions import HasModelPermission
 
 from data_factory.reference import build_reference_tree
 from projects.models import Project
@@ -24,7 +27,7 @@ from .ai_mode import (
 from .models import (
     UiModule, UiPage, UiElement, UiPageSteps, UiPageStepsDetailed,
     UiTestCase, UiCaseStepsDetailed, UiExecutionRecord, UiAICase, UiAIExecutionRecord,
-    UiPublicData, UiEnvironmentConfig, UiBatchExecutionRecord
+    UiPublicData, UiEnvironmentConfig, UiBatchExecutionRecord, UiActuator, UiActuatorSession
 )
 from .serializers import (
     UiModuleSerializer, UiPageSerializer, UiPageDetailSerializer,
@@ -77,6 +80,9 @@ class UiAutomationOptionalPagination(PageNumberPagination):
     page_query_param = 'page_number'
     page_size_query_param = 'page_size'
     max_page_size = 200
+
+
+ACTUATOR_STALE_TIMEOUT = timedelta(seconds=90)
 
 
 class OptionalPaginationMixin:
@@ -555,27 +561,36 @@ class UiEnvironmentConfigViewSet(OptionalPaginationMixin, viewsets.ModelViewSet)
 
 class ActuatorViewSet(viewsets.ViewSet):
     """执行器管理视图"""
-    permission_classes = []  # 公开访问，不需要特殊权限
+    queryset = UiActuator.objects.none()
+    permission_classes = [IsAuthenticated, HasModelPermission]
+
+    def _serialize_actuators(self):
+        stale_before = timezone.now() - ACTUATOR_STALE_TIMEOUT
+        sessions = UiActuatorSession.objects.select_related('owner').order_by('actuator_id')
+        actuators = []
+        for session in sessions:
+            is_online = bool(session.is_online and session.last_seen_at and session.last_seen_at >= stale_before)
+            actuators.append({
+                'id': session.actuator_id,
+                'name': session.name or session.actuator_id,
+                'ip': session.ip or 'unknown',
+                'type': session.type or 'web_ui',
+                'is_open': bool(session.is_open and is_online),
+                'is_online': is_online,
+                'debug': session.debug,
+                'browser_type': session.browser_type or 'chromium',
+                'headless': session.headless,
+                'version': session.version,
+                'connected_at': session.connected_at.isoformat() if session.connected_at else None,
+                'last_seen_at': session.last_seen_at.isoformat() if session.last_seen_at else None,
+                'owner': session.owner.username if session.owner else '',
+            })
+        return actuators
 
     @action(detail=False, methods=['get'])
     def list_actuators(self, request):
         """获取所有在线执行器列表"""
-        from .consumers import SocketUserManager
-
-        actuators = []
-        for actuator_id, consumer in SocketUserManager._actuator_users.items():
-            actuator_info = getattr(consumer, 'actuator_info', {})
-            actuators.append({
-                'id': actuator_id,
-                'name': actuator_info.get('name', actuator_id),
-                'ip': actuator_info.get('ip', 'unknown'),
-                'type': actuator_info.get('type', 'web_ui'),
-                'is_open': actuator_info.get('is_open', True),
-                'debug': actuator_info.get('debug', False),
-                'browser_type': actuator_info.get('browser_type', 'chromium'),
-                'headless': actuator_info.get('headless', False),
-                'connected_at': actuator_info.get('connected_at'),
-            })
+        actuators = self._serialize_actuators()
 
         return Response({
             'status': 'success',
@@ -589,12 +604,17 @@ class ActuatorViewSet(viewsets.ViewSet):
     def status(self, request):
         """获取执行器状态统计"""
         from .consumers import SocketUserManager
+        actuators = self._serialize_actuators()
+        online_count = sum(1 for item in actuators if item['is_online'])
+        available_count = sum(1 for item in actuators if item['is_open'])
 
         return Response({
             'status': 'success',
             'data': {
-                'total_actuators': SocketUserManager.get_actuator_count(),
-                'has_available': SocketUserManager.has_actuator(),
+                'total_actuators': len(actuators),
+                'online_actuators': online_count,
+                'available_actuators': available_count,
+                'has_available': available_count > 0,
                 'web_users': len(SocketUserManager._web_users),
             }
         })
@@ -703,7 +723,7 @@ class UiAICaseViewSet(OptionalPaginationMixin, viewsets.ModelViewSet):
             task_description=ai_case.task_description,
             execution_mode=execution_mode,
             enable_gif=_coerce_bool(request.data.get('enable_gif'), ai_case.enable_gif),
-            status='running',
+            status='pending',
             executed_by=request.user,
             logs='',
         )
@@ -791,7 +811,7 @@ class UiAIExecutionRecordViewSet(OptionalPaginationMixin, viewsets.ModelViewSet)
             task_description=task_description,
             execution_mode=execution_mode,
             enable_gif=_coerce_bool(request.data.get('enable_gif'), True),
-            status='running',
+            status='pending',
             executed_by=request.user,
             logs='',
         )

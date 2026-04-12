@@ -214,6 +214,30 @@ pip install -r requirements.txt
 python main.py
 ```
 
+#### 6. 启动 UI 自动化 AI 队列 Worker（可选但推荐）
+
+如果你希望 `UI自动化 -> AI智能模式` 使用 Celery + Redis 队列，而不是本地兜底调度，请额外启动：
+
+```bash
+docker run -d --name flytest-redis -p 6379:6379 redis:7
+```
+
+Windows `bat`：
+
+```bat
+deploy-scripts\start-ui-ai-celery-worker.bat
+```
+
+Windows PowerShell：
+
+```powershell
+.\deploy-scripts\start-ui-ai-celery-worker.ps1
+```
+
+相关说明见：
+
+- [`docs/UI_AI_QUEUE.md`](./docs/UI_AI_QUEUE.md)
+
 ## 常见配置项
 
 建议从根目录 `.env.example` 开始配置。常见变量包括：
@@ -222,6 +246,8 @@ python main.py
 - `POSTGRES_HOST` / `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD`
 - `CELERY_BROKER_URL`
 - `CELERY_RESULT_BACKEND`
+- `UI_AUTOMATION_AI_USE_CELERY`
+- `UI_AUTOMATION_CELERY_QUEUE`
 - `DJANGO_SECRET_KEY`
 - `DJANGO_ALLOWED_HOSTS`
 - `DJANGO_CORS_ALLOWED_ORIGINS`

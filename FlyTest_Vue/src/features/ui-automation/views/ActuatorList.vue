@@ -1,6 +1,5 @@
 <template>
   <div class="actuator-list">
-    <!-- 头部 -->
     <div class="header">
       <div class="title">
         <h3>在线执行器</h3>
@@ -14,17 +13,15 @@
       </div>
     </div>
 
-    <!-- 状态提示 -->
     <a-alert
       v-if="!loading && actuators.length === 0"
       type="warning"
       class="mb-4"
     >
       <template #title>暂无在线执行器</template>
-      请先启动执行器服务：cd FlyTest_Actuator && .venv\Scripts\python.exe main.py --no-gui
+      请先启动执行器服务：`cd FlyTest_Actuator && .venv\Scripts\python.exe main.py --no-gui`
     </a-alert>
 
-    <!-- 执行器表格 -->
     <a-table
       :data="actuators"
       :loading="loading"
@@ -38,7 +35,7 @@
           </template>
         </a-table-column>
         <a-table-column title="名称" data-index="name" :width="160" />
-        <a-table-column title="IP地址" data-index="ip" :width="150" />
+        <a-table-column title="IP 地址" data-index="ip" :width="150" />
         <a-table-column title="类型" :width="100">
           <template #cell="{ record }">
             <a-tag :color="getTypeTagColor(record.type)" size="small">
@@ -92,8 +89,8 @@ const loadActuators = async () => {
     const res = await actuatorApi.list()
     const data = extractResponseData<{ count: number; items: ActuatorInfo[] }>(res)
     actuators.value = data?.items ?? []
-  } catch (e) {
-    console.error('Load actuators error:', e)
+  } catch (error) {
+    console.error('Load actuators error:', error)
     actuators.value = []
   } finally {
     loading.value = false
@@ -137,7 +134,6 @@ defineExpose({ refresh })
 
 onMounted(() => {
   loadActuators()
-  // 每30秒刷新一次
   refreshTimer = setInterval(loadActuators, 30000)
 })
 
@@ -195,4 +191,3 @@ onUnmounted(() => {
   color: var(--color-text-3);
 }
 </style>
-

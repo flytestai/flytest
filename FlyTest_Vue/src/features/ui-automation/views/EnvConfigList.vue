@@ -59,7 +59,7 @@
             <template #icon><icon-edit /></template>
             编辑
           </a-button>
-          <a-popconfirm content="确定删除？" @ok="deleteConfig(record)">
+          <a-popconfirm content="确定删除吗？" @ok="deleteConfig(record)">
             <a-button type="text" status="danger" size="mini">
               <template #icon><icon-delete /></template>
               删除
@@ -69,7 +69,6 @@
       </template>
     </a-table>
 
-    <!-- 新增/编辑弹窗 -->
     <a-modal
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑环境配置' : '新增环境配置'"
@@ -190,7 +189,6 @@ const isEdit = ref(false)
 const currentConfig = ref<UiEnvironmentConfig | null>(null)
 const formRef = ref()
 
-// MySQL 配置表单
 const mysqlConfig = reactive({
   host: '',
   port: 3306,
@@ -327,7 +325,6 @@ const editConfig = (record: UiEnvironmentConfig) => {
   modalVisible.value = true
 }
 
-/** 构建 MySQL 配置对象 */
 const buildMysqlConfig = () => {
   if (!formData.db_c_status && !formData.db_rud_status) return {}
   const cfg: Record<string, unknown> = {}
@@ -404,7 +401,6 @@ const refresh = () => fetchData()
 
 defineExpose({ refresh })
 
-// 监听项目变化，重新加载数据
 watch(projectId, () => {
   if (projectId.value) {
     pagination.current = 1

@@ -88,6 +88,9 @@ services:
       # Celery配置
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - UI_AUTOMATION_AI_USE_CELERY=true
+      - UI_AUTOMATION_CELERY_QUEUE=ui_automation
+      - CHANNEL_REDIS_URL=redis://redis:6379/1
       # Qdrant向量数据库
       - QDRANT_URL=http://qdrant:6333
       # 内部API基础URL - 使用localhost因为在同一容器

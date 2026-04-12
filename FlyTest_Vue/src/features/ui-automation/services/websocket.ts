@@ -69,7 +69,10 @@ class UiWebSocketService {
   private getWsUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = import.meta.env.VITE_WS_HOST || window.location.host
-    return `${protocol}//${host}/ws/ui/web/`
+    const authStore = useAuthStore()
+    const accessToken = authStore.getAccessToken
+    const query = accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''
+    return `${protocol}//${host}/ws/ui/web/${query}`
   }
   
   /** 连接 WebSocket */

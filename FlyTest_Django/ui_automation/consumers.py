@@ -9,9 +9,12 @@ UI自动化 WebSocket Consumer
 
 import json
 import logging
+import re
 from typing import Optional
+from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 
 from .socket_models import (
     SocketDataModel, QueueModel, NoticeType, ResponseCode,
@@ -19,6 +22,7 @@ from .socket_models import (
 )
 
 logger = logging.getLogger('ui_automation')
+ACTUATOR_ID_SANITIZE_RE = re.compile(r'[^a-zA-Z0-9_.:-]+')
 
 
 class SocketUserManager:
@@ -102,6 +106,8 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
         """建立连接"""
         import datetime
         path = self.scope.get('path', '')
+        query_params = parse_qs(self.scope.get('query_string', b'').decode('utf-8'))
+        user = self.scope.get('user')
         
         # 获取客户端IP
         client = self.scope.get('client', ['unknown', 0])
@@ -109,10 +115,15 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
         
         # 根据路径判断是前端还是执行器
         if '/actuator/' in path:
+            if not user or not getattr(user, 'is_authenticated', False):
+                logger.warning("Rejecting actuator websocket without authenticated user")
+                await self.close(code=4401)
+                return
+
             self.is_actuator = True
-            self.user_id = self.scope.get('query_string', b'').decode('utf-8')
-            if not self.user_id:
-                self.user_id = f"actuator_{id(self)}"
+            requested_id = (query_params.get('actuator_id') or query_params.get('id') or [None])[0]
+            sanitized_id = ACTUATOR_ID_SANITIZE_RE.sub('-', requested_id or '').strip('-')
+            self.user_id = sanitized_id[:64] if sanitized_id else f"actuator-{user.id}-{id(self)}"
             
             # 初始化执行器信息
             self.actuator_info = {
@@ -125,16 +136,18 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
                 'browser_type': 'chromium',
                 'headless': False,
                 'connected_at': datetime.datetime.now().isoformat(),
+                'owner': getattr(user, 'username', ''),
             }
             SocketUserManager.add_actuator(self.user_id, self)
+            await self.sync_actuator_session(is_online=True)
         else:
             self.is_actuator = False
             # 从用户认证获取ID
-            user = self.scope.get('user')
-            if user and hasattr(user, 'username'):
-                self.user_id = user.username
-            else:
-                self.user_id = f"web_{id(self)}"
+            if not user or not getattr(user, 'is_authenticated', False):
+                logger.warning("Rejecting web websocket without authenticated user")
+                await self.close(code=4401)
+                return
+            self.user_id = user.username
             SocketUserManager.add_web_user(self.user_id, self)
         
         await self.channel_layer.group_add(self.group_name, self.channel_name)
@@ -152,9 +165,10 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         """断开连接"""
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        
+
         if self.is_actuator:
             SocketUserManager.remove_actuator(self.user_id)
+            await self.sync_actuator_session(is_online=False)
         else:
             SocketUserManager.remove_web_user(self.user_id)
         
@@ -168,6 +182,8 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
         try:
             data = json.loads(text_data)
             socket_data = SocketDataModel(**data)
+            if self.is_actuator:
+                await self.sync_actuator_session(is_online=True)
             
             # 如果有func_name，进行路由处理
             if socket_data.data and socket_data.data.func_name:
@@ -602,6 +618,7 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
             self.actuator_info['version'] = args['version']
         
         logger.info(f"执行器 {self.user_id} 信息已更新: {self.actuator_info}")
+        await self.sync_actuator_session(is_online=True)
         
         await self.send_json(SocketDataModel(
             code=ResponseCode.SUCCESS,
@@ -611,6 +628,72 @@ class UiAutomationConsumer(AsyncWebsocketConsumer):
     async def send_json(self, data: SocketDataModel):
         """发送JSON消息"""
         await self.send(text_data=data.model_dump_json())
+
+    @sync_to_async
+    def sync_actuator_session(self, is_online: bool) -> None:
+        """同步执行器在线状态到数据库，避免完全依赖进程内内存。"""
+        if not self.is_actuator or not self.user_id:
+            return
+
+        from .models import UiActuatorSession
+
+        now = timezone.now()
+        owner = self.scope.get('user')
+        session, created = UiActuatorSession.objects.get_or_create(
+            actuator_id=self.user_id,
+            defaults={
+                'name': self.actuator_info.get('name', self.user_id),
+                'ip': self.actuator_info.get('ip', 'unknown'),
+                'type': self.actuator_info.get('type', 'web_ui'),
+                'is_open': self.actuator_info.get('is_open', True),
+                'debug': self.actuator_info.get('debug', False),
+                'browser_type': self.actuator_info.get('browser_type', 'chromium'),
+                'headless': self.actuator_info.get('headless', False),
+                'version': self.actuator_info.get('version'),
+                'owner_id': getattr(owner, 'id', None),
+                'is_online': is_online,
+                'connected_at': now if is_online else None,
+                'last_seen_at': now,
+                'disconnected_at': None if is_online else now,
+            },
+        )
+        if created:
+            return
+
+        was_online = session.is_online
+        session.name = self.actuator_info.get('name', self.user_id)
+        session.ip = self.actuator_info.get('ip', 'unknown')
+        session.type = self.actuator_info.get('type', 'web_ui')
+        session.is_open = self.actuator_info.get('is_open', True)
+        session.debug = self.actuator_info.get('debug', False)
+        session.browser_type = self.actuator_info.get('browser_type', 'chromium')
+        session.headless = self.actuator_info.get('headless', False)
+        session.version = self.actuator_info.get('version')
+        session.owner_id = getattr(owner, 'id', None)
+        session.is_online = is_online
+        session.last_seen_at = now
+        if is_online:
+            if not was_online or session.connected_at is None:
+                session.connected_at = now
+            session.disconnected_at = None
+        else:
+            session.disconnected_at = now
+        session.save(update_fields=[
+            'name',
+            'ip',
+            'type',
+            'is_open',
+            'debug',
+            'browser_type',
+            'headless',
+            'version',
+            'owner',
+            'is_online',
+            'connected_at',
+            'last_seen_at',
+            'disconnected_at',
+            'updated_at',
+        ])
     
     @classmethod
     async def send_to_actuator(cls, task: ExecutionTaskModel, user: str) -> bool:

@@ -481,6 +481,9 @@ class UiAIExecutionRecord(models.Model):
     gif_path = models.CharField(_('GIF 路径'), max_length=500, null=True, blank=True)
     error_message = models.TextField(_('错误信息'), null=True, blank=True)
     model_config_name = models.CharField(_('模型配置名称'), max_length=255, null=True, blank=True)
+    queue_task_id = models.CharField(_('队列任务ID'), max_length=64, null=True, blank=True)
+    worker_token = models.CharField(_('工作节点令牌'), max_length=64, null=True, blank=True)
+    heartbeat_at = models.DateTimeField(_('最近心跳时间'), null=True, blank=True)
     executed_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
         related_name='ui_ai_executions', verbose_name=_('执行人')
@@ -494,6 +497,39 @@ class UiAIExecutionRecord(models.Model):
 
     def __str__(self):
         return f"{self.case_name} - {self.status}"
+
+
+class UiActuatorSession(models.Model):
+    """执行器在线状态与心跳"""
+
+    actuator_id = models.CharField(_('执行器ID'), max_length=128, unique=True)
+    name = models.CharField(_('执行器名称'), max_length=128, blank=True, default='')
+    ip = models.CharField(_('执行器 IP'), max_length=128, blank=True, default='unknown')
+    type = models.CharField(_('执行器类型'), max_length=64, blank=True, default='web_ui')
+    is_open = models.BooleanField(_('是否可用'), default=True)
+    debug = models.BooleanField(_('调试模式'), default=False)
+    browser_type = models.CharField(_('浏览器类型'), max_length=32, blank=True, default='chromium')
+    headless = models.BooleanField(_('无头模式'), default=False)
+    version = models.CharField(_('版本号'), max_length=64, null=True, blank=True)
+    owner = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ui_actuator_sessions', verbose_name=_('所属用户')
+    )
+    is_online = models.BooleanField(_('是否在线'), default=True)
+    connected_at = models.DateTimeField(_('连接时间'), null=True, blank=True)
+    last_seen_at = models.DateTimeField(_('最近心跳时间'), null=True, blank=True)
+    disconnected_at = models.DateTimeField(_('断开时间'), null=True, blank=True)
+    created_at = models.DateTimeField(_('创建时间'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('更新时间'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('UI 执行器会话')
+        verbose_name_plural = _('UI 执行器会话')
+        ordering = ['actuator_id']
+        db_table = 'ui_actuator_session'
+
+    def __str__(self):
+        return self.name or self.actuator_id
 
 
 class UiPublicData(models.Model):

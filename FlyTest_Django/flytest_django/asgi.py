@@ -30,6 +30,7 @@ from channels.security.websocket import (
 
 # 导入 Django ASGI 应用工厂。
 from django.core.asgi import get_asgi_application
+from flytest_django.websocket_auth import WebSocketJWTAuthMiddleware
 
 # 导入 WebSocket 路由
 # 导入 UI 自动化模块的 WebSocket 路由清单。
@@ -47,7 +48,7 @@ application = ProtocolTypeRouter(
         # 对 WebSocket 连接启用主机来源校验。
         "websocket": AllowedHostsOriginValidator(
             # 使用 UI 自动化路由表匹配并分发 WebSocket 连接。
-            URLRouter(ui_ws_patterns)
+            WebSocketJWTAuthMiddleware(URLRouter(ui_ws_patterns))
         ),
     }
 )

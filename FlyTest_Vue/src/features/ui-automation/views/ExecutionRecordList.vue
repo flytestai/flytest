@@ -61,7 +61,7 @@
             <template #icon><icon-eye /></template>
             详情
           </a-button>
-          <a-popconfirm content="确定删除此执行记录？关联的截图、视频、Trace文件将一并删除。" @ok="handleDelete(record.id)">
+          <a-popconfirm content="确定删除此执行记录吗？关联的截图、视频和 Trace 文件也会一并删除。" @ok="handleDelete(record.id)">
             <a-button type="text" size="mini" status="danger">
               <template #icon><icon-delete /></template>
               删除
@@ -71,7 +71,6 @@
       </template>
     </a-table>
 
-    <!-- 详情抽屉 -->
     <a-drawer
       v-model:visible="drawerVisible"
       title="执行记录详情"
@@ -102,19 +101,16 @@
           </a-descriptions-item>
         </a-descriptions>
 
-        <!-- 错误信息 -->
         <template v-if="currentRecord.error_message">
           <a-divider>错误信息</a-divider>
           <a-alert type="error" :title="currentRecord.error_message" />
         </template>
 
-        <!-- 执行日志 -->
         <template v-if="currentRecord.log">
           <a-divider>执行日志</a-divider>
           <pre class="log-content">{{ currentRecord.log }}</pre>
         </template>
 
-        <!-- 步骤执行结果 -->
         <template v-if="currentRecord.step_results?.length">
           <a-divider>步骤执行结果</a-divider>
           <a-collapse :default-active-key="[]">
@@ -147,7 +143,6 @@
           </a-collapse>
         </template>
 
-        <!-- 截图 -->
         <template v-if="currentRecord.screenshots?.length">
           <a-divider>执行截图</a-divider>
           <a-image-preview-group>
@@ -164,7 +159,6 @@
           </a-image-preview-group>
         </template>
 
-        <!-- 录制视频 -->
         <template v-if="currentRecord.video_path">
           <a-divider>执行录像</a-divider>
           <video :src="currentRecord.video_path" controls style="max-width: 100%; max-height: 300px;" />
@@ -236,7 +230,6 @@ const formatTime = (time: string) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-/** 步骤结果辅助函数 */
 type StepResult = Record<string, unknown>
 
 const getStepStatus = (step: unknown) => ((step as StepResult)?.status as string) ?? 'unknown'
@@ -253,19 +246,15 @@ const getStepStatusColor = (step: unknown) => {
 }
 const getStepMessage = (step: unknown) => ((step as StepResult)?.message as string) ?? ''
 const getStepDuration = (step: unknown) => {
-  const d = (step as StepResult)?.duration as number | undefined
-  return d != null ? d.toFixed(2) : ''
+  const duration = (step as StepResult)?.duration as number | undefined
+  return duration != null ? duration.toFixed(2) : ''
 }
 const getStepScreenshot = (step: unknown) => ((step as StepResult)?.screenshot as string) ?? ''
 
-/** 格式化截图 URL */
 const formatScreenshotUrl = (path: string) => {
   if (!path) return ''
-  // 如果是 Base64 数据 URL，直接返回
   if (path.startsWith('data:')) return path
-  // 如果是完整 URL 或已处理的 media 路径，直接返回
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/media/')) return path
-  // 本地相对路径（兼容旧数据）：提取文件名，尝试访问 media 目录
   const filename = path.split('/').pop() || path
   return `/media/ui_screenshots/${filename}`
 }
@@ -306,9 +295,8 @@ const onPageSizeChange = (size: number) => {
 }
 
 const viewDetail = async (record: UiExecutionRecord) => {
-  currentRecord.value = record  // 先显示列表数据
+  currentRecord.value = record
   drawerVisible.value = true
-  // 获取详情数据
   try {
     const res = await executionRecordApi.get(record.id)
     const detail = extractResponseData<UiExecutionRecord>(res)
@@ -316,16 +304,14 @@ const viewDetail = async (record: UiExecutionRecord) => {
       currentRecord.value = detail
     }
   } catch {
-    // 静默失败，使用列表数据
+    // 保留列表数据作为兜底
   }
 }
 
-/** 跳转到 Trace 详情页 */
 const viewTrace = (recordId: number) => {
   router.push({ name: 'TraceDetail', params: { id: recordId } })
 }
 
-/** 删除执行记录 */
 const handleDelete = async (id: number) => {
   try {
     await executionRecordApi.delete(id)
@@ -340,7 +326,6 @@ const refresh = () => fetchRecords()
 
 defineExpose({ refresh })
 
-// 监听项目变化，重新加载数据
 watch(projectId, () => {
   if (projectId.value) {
     pagination.current = 1
@@ -387,28 +372,34 @@ watch(projectId, () => {
   overflow: auto;
   max-height: 200px;
 }
+
 .step-header {
   display: flex;
   align-items: center;
 }
+
 .step-duration {
   margin-left: auto;
   font-size: 12px;
   color: var(--color-text-3);
 }
+
 .step-detail {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+
 .step-message {
   margin-bottom: 8px;
 }
+
 .step-screenshot {
   max-width: 100%;
   border-radius: 4px;
   overflow: hidden;
 }
+
 .step-raw {
   margin-top: 8px;
 }

@@ -8,6 +8,8 @@ import re
 import shutil
 import threading
 import time
+import uuid
+from datetime import timedelta
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,6 +17,8 @@ from typing import Any, Sequence
 
 from django.conf import settings
 from django.db import close_old_connections
+from django.db import transaction
+from django.db.utils import OperationalError
 from django.utils import timezone
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
@@ -28,11 +32,21 @@ logger = logging.getLogger(__name__)
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")
 
 AI_STOP_SIGNALS: dict[int, bool] = {}
+AI_EXECUTION_STALE_TIMEOUT_SECONDS = 180
+AI_EXECUTION_DISPATCH_INTERVAL_SECONDS = 2.0
+AI_EXECUTION_PROCESS_TOKEN = f"{os.getpid()}-{uuid.uuid4().hex[:8]}"
+UI_AI_CELERY_ENABLED = os.environ.get("UI_AUTOMATION_AI_USE_CELERY", "").strip().lower() in {"1", "true", "yes", "on"}
+UI_AI_CELERY_QUEUE = os.environ.get("UI_AUTOMATION_CELERY_QUEUE", "ui_automation")
 ACTION_CALL_RE = re.compile(r"^(?P<name>\w+)\((?P<params>.*)\)$")
 PLACEHOLDER_SCREENSHOT_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 )
 _BROWSER_USE_RUNTIME_PATCHES_APPLIED = False
+_AI_DISPATCHER_THREAD: threading.Thread | None = None
+_AI_DISPATCHER_LOCK = threading.Lock()
+_AI_DISPATCHER_WAKE_EVENT = threading.Event()
+_ACTIVE_EXECUTION_THREADS: dict[int, threading.Thread] = {}
+_ACTIVE_EXECUTION_LOCK = threading.Lock()
 
 __all__ = [
     "AI_STOP_SIGNALS",
@@ -279,14 +293,153 @@ def _apply_browser_use_runtime_patches() -> None:
         logger.warning("Unable to apply browser-use runtime patches: %s", exc)
 
 
-def start_ai_execution(record_id: int) -> None:
-    thread = threading.Thread(
-        target=run_ai_execution,
-        args=(record_id,),
-        daemon=True,
-        name=f"ui-ai-exec-{record_id}",
+def _ensure_ai_dispatcher_started() -> None:
+    global _AI_DISPATCHER_THREAD
+
+    with _AI_DISPATCHER_LOCK:
+        if _AI_DISPATCHER_THREAD and _AI_DISPATCHER_THREAD.is_alive():
+            return
+
+        _AI_DISPATCHER_THREAD = threading.Thread(
+            target=_dispatch_ai_executions_forever,
+            daemon=True,
+            name="ui-ai-dispatcher",
+        )
+        _AI_DISPATCHER_THREAD.start()
+
+
+def _dispatch_ai_executions_forever() -> None:
+    while True:
+        try:
+            _requeue_stale_ai_executions()
+            claimed = _claim_next_ai_execution()
+            if claimed:
+                record_id, worker_token = claimed
+                _spawn_ai_execution_worker(record_id, worker_token)
+                continue
+        except OperationalError as exc:
+            if 'locked' in str(exc).lower():
+                logger.debug("Skip one dispatcher cycle because database is locked")
+            else:
+                logger.exception("UI AI execution dispatcher hit database error")
+        except Exception:
+            logger.exception("UI AI execution dispatcher loop failed")
+
+        _AI_DISPATCHER_WAKE_EVENT.wait(timeout=AI_EXECUTION_DISPATCH_INTERVAL_SECONDS)
+        _AI_DISPATCHER_WAKE_EVENT.clear()
+
+
+def _requeue_stale_ai_executions() -> None:
+    close_old_connections()
+    stale_before = timezone.now() - timedelta(seconds=AI_EXECUTION_STALE_TIMEOUT_SECONDS)
+    UiAIExecutionRecord.objects.filter(
+        status="running",
+        heartbeat_at__lt=stale_before,
+    ).update(
+        status="pending",
+        worker_token=None,
+        heartbeat_at=None,
+        end_time=None,
+        duration=None,
+        error_message=None,
     )
-    thread.start()
+
+
+def _claim_next_ai_execution() -> tuple[int, str] | None:
+    close_old_connections()
+    with transaction.atomic():
+        record = (
+            UiAIExecutionRecord.objects.select_for_update()
+            .filter(status="pending")
+            .order_by("start_time", "id")
+            .first()
+        )
+        if record is None:
+            return None
+
+        worker_token = f"{AI_EXECUTION_PROCESS_TOKEN}:{record.id}:{uuid.uuid4().hex[:8]}"
+        record.status = "running"
+        record.worker_token = worker_token
+        record.heartbeat_at = timezone.now()
+        record.end_time = None
+        record.duration = None
+        record.error_message = None
+        record.save(update_fields=["status", "worker_token", "heartbeat_at", "end_time", "duration", "error_message"])
+        return record.id, worker_token
+
+
+def _spawn_ai_execution_worker(record_id: int, worker_token: str) -> None:
+    with _ACTIVE_EXECUTION_LOCK:
+        existing = _ACTIVE_EXECUTION_THREADS.get(record_id)
+        if existing and existing.is_alive():
+            return
+
+        thread = threading.Thread(
+            target=run_ai_execution,
+            args=(record_id, worker_token),
+            daemon=True,
+            name=f"ui-ai-exec-{record_id}",
+        )
+        _ACTIVE_EXECUTION_THREADS[record_id] = thread
+        thread.start()
+
+
+def _release_ai_execution_worker(record_id: int) -> None:
+    with _ACTIVE_EXECUTION_LOCK:
+        _ACTIVE_EXECUTION_THREADS.pop(record_id, None)
+
+
+def _claim_ai_execution_for_worker(record_id: int, worker_token: str) -> bool:
+    close_old_connections()
+    with transaction.atomic():
+        record = (
+            UiAIExecutionRecord.objects.select_for_update()
+            .filter(pk=record_id)
+            .first()
+        )
+        if record is None:
+            return False
+
+        if record.status == "running":
+            return record.worker_token == worker_token
+
+        if record.status != "pending":
+            return False
+
+        record.status = "running"
+        record.worker_token = worker_token
+        record.heartbeat_at = timezone.now()
+        record.end_time = None
+        record.duration = None
+        record.error_message = None
+        record.save(update_fields=["status", "worker_token", "heartbeat_at", "end_time", "duration", "error_message"])
+        return True
+
+
+def start_ai_execution(record_id: int) -> None:
+    close_old_connections()
+    UiAIExecutionRecord.objects.filter(pk=record_id).update(
+        status="pending",
+        queue_task_id=None,
+        worker_token=None,
+        heartbeat_at=None,
+        end_time=None,
+        duration=None,
+        error_message=None,
+    )
+    if UI_AI_CELERY_ENABLED:
+        try:
+            from .tasks import execute_ui_ai_record
+
+            async_result = execute_ui_ai_record.apply_async(args=[record_id], queue=UI_AI_CELERY_QUEUE)
+            UiAIExecutionRecord.objects.filter(pk=record_id).update(queue_task_id=async_result.id)
+            logger.info("Queued UI AI execution %s to Celery task %s", record_id, async_result.id)
+            return
+        except Exception as exc:
+            logger.warning("Failed to queue UI AI execution %s to Celery, fallback to local dispatcher: %s", record_id, exc)
+
+    _ensure_ai_dispatcher_started()
+    _AI_DISPATCHER_WAKE_EVENT.set()
 
 
 def request_stop_ai_execution(record_id: int) -> bool:
@@ -298,6 +451,14 @@ def request_stop_ai_execution(record_id: int) -> bool:
     if record is None:
         AI_STOP_SIGNALS.pop(record_id, None)
         return False
+
+    if record.queue_task_id:
+        try:
+            from flytest_django.celery import app as celery_app
+
+            celery_app.control.revoke(record.queue_task_id, terminate=False)
+        except Exception as exc:
+            logger.warning("Failed to revoke Celery task %s for UI AI execution %s: %s", record.queue_task_id, record_id, exc)
 
     record.status = "stopped"
     record.end_time = timezone.now()
@@ -759,13 +920,19 @@ def build_ai_execution_report(record: UiAIExecutionRecord, report_type: str = "s
     return report
 
 
-def run_ai_execution(record_id: int) -> None:
+def run_ai_execution(record_id: int, worker_token: str | None = None) -> None:
     close_old_connections()
+
+    if worker_token and not _claim_ai_execution_for_worker(record_id, worker_token):
+        logger.info("Skip UI AI execution %s because it cannot be claimed by worker %s", record_id, worker_token)
+        _release_ai_execution_worker(record_id)
+        return
 
     try:
         record = UiAIExecutionRecord.objects.select_related("project", "ai_case").get(pk=record_id)
     except UiAIExecutionRecord.DoesNotExist:
         logger.warning("AI execution record %s no longer exists", record_id)
+        _release_ai_execution_worker(record_id)
         return
 
     started_at = time.time()
@@ -888,6 +1055,8 @@ def run_ai_execution(record_id: int) -> None:
                 "gif_path",
                 "model_config_name",
                 "execution_backend",
+                "worker_token",
+                "heartbeat_at",
             ],
         )
     except Exception as exc:
@@ -915,9 +1084,16 @@ def run_ai_execution(record_id: int) -> None:
                 "gif_path",
                 "model_config_name",
                 "execution_backend",
+                "worker_token",
+                "heartbeat_at",
             ],
         )
     finally:
+        UiAIExecutionRecord.objects.filter(pk=record_id).update(
+            worker_token=None,
+            heartbeat_at=timezone.now(),
+        )
+        _release_ai_execution_worker(record_id)
         AI_STOP_SIGNALS.pop(record_id, None)
         close_old_connections()
 
@@ -1548,6 +1724,7 @@ def _update_runtime_state_sync(runtime_state: ExecutionRuntimeState) -> None:
         gif_path=runtime_state.gif_path,
         model_config_name=runtime_state.model_config_name,
         execution_backend=runtime_state.execution_backend,
+        heartbeat_at=timezone.now(),
     )
     runtime_state.last_persist_at = time.monotonic()
 
