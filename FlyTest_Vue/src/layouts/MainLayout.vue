@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <a-layout class="main-layout">
-    <!-- 顶部导航栏 -->
+    <!-- 椤堕儴瀵艰埅鏍?-->
     <a-layout-header class="header">
       <div class="left-section">
         <div class="logo" unselectable="on">
@@ -107,7 +107,7 @@
       <!-- 左侧菜单栏 -->
       <a-layout-sider
         :width="196"
-        :collapsed-width="56"
+        :collapsed-width="84"
         :collapsed="collapsed"
         :trigger="null"
         hide-trigger
@@ -119,6 +119,7 @@
           v-model:open-keys="openKeys"
           :auto-open-selected="true"
           :collapsed="collapsed"
+          :collapsed-width="84"
           :popup-max-height="false"
           :trigger-props="{ contentClass: 'layout-menu-popup' }"
           class="menu"
@@ -126,233 +127,332 @@
           @sub-menu-click="handleSubMenuClick"
         >
           <a-menu-item key="dashboard" v-if="isApproved">
-            <template #icon><icon-home /></template>
-            <span class="menu-link">首页</span>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M5 10.5L12 5l7 5.5" />
+                  <path d="M7.5 9.5V18h9V9.5" />
+                  <path d="M10 18v-4h4v4" />
+                </svg>
+              </span>
+            </template>
+            <span class="menu-link" title="首页">首页</span>
           </a-menu-item>
 
           <a-menu-item key="projects" v-if="hasProjectsPermission">
-            <template #icon><icon-storage /></template>
-            <span class="menu-link">项目管理</span>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="5" y="5" width="14" height="4" rx="1.5" />
+                  <rect x="5" y="10" width="14" height="4" rx="1.5" />
+                  <rect x="5" y="15" width="14" height="4" rx="1.5" />
+                </svg>
+              </span>
+            </template>
+            <span class="menu-link" title="项目管理">项目管理</span>
           </a-menu-item>
 
           <a-menu-item key="requirements" v-if="hasRequirementsPermission">
-            <template #icon><icon-file /></template>
-            <span class="menu-link">需求管理</span>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M8 4.5h6l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-7A2.5 2.5 0 0 1 6 18V6.5A2 2 0 0 1 8 4.5z" />
+                  <path d="M14 4.5V8h3" />
+                  <path d="M9 12h6" />
+                  <path d="M9 15h4" />
+                </svg>
+              </span>
+            </template>
+            <span class="menu-link" title="需求管理">需求管理</span>
           </a-menu-item>
 
           <a-sub-menu key="test-management" v-if="hasTestManagementMenuItems">
-            <template #icon><icon-experiment /></template>
-            <template #title>测试管理</template>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="5" y="4" width="14" height="16" rx="3" />
+                  <path d="M9 9h6" />
+                  <path d="M9 13h3" />
+                  <path d="M13.5 13.5l1.5 1.5 3-3" />
+                </svg>
+              </span>
+            </template>
+            <template #title><span class="menu-title-text" title="测试管理">测试管理</span></template>
             <a-menu-item key="testcases" v-if="hasTestcasesPermission">
               <template #icon><icon-code-block /></template>
-              <span class="menu-link">测试用例</span>
+              <span class="menu-link" title="测试用例">测试用例</span>
             </a-menu-item>
             <a-menu-item key="testsuites" v-if="hasTestSuitesPermission">
               <template #icon><icon-folder /></template>
-              <span class="menu-link">测试套件</span>
+              <span class="menu-link" title="测试套件">测试套件</span>
             </a-menu-item>
             <a-menu-item key="test-executions" v-if="hasTestExecutionsPermission">
               <template #icon><icon-history /></template>
-              <span class="menu-link">执行历史</span>
+              <span class="menu-link" title="执行历史">执行历史</span>
             </a-menu-item>
           </a-sub-menu>
 
           <a-sub-menu key="api-automation" v-if="hasApiAutomationMenuItems">
-            <template #icon><icon-code-block /></template>
-            <template #title>AI接口自动化</template>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="6" width="16" height="12" rx="3" />
+                  <path d="M9 10l-2 2 2 2" />
+                  <path d="M15 10l2 2-2 2" />
+                  <path d="M11.5 15l1-6" />
+                </svg>
+              </span>
+            </template>
+            <template #title><span class="menu-title-text" title="AI接口自动化">AI接口自动化</span></template>
             <a-menu-item key="api-automation-requests" v-if="hasApiAutomationRequestsPermission">
               <template #icon><icon-code-block /></template>
-              <span class="menu-link">请求管理</span>
+              <span class="menu-link" title="请求管理">请求管理</span>
             </a-menu-item>
             <a-menu-item key="api-automation-test-cases" v-if="hasApiAutomationTestCasesPermission">
               <template #icon><icon-folder /></template>
-              <span class="menu-link">测试用例</span>
+              <span class="menu-link" title="测试用例">测试用例</span>
             </a-menu-item>
             <a-menu-item key="api-automation-environments" v-if="hasApiAutomationEnvironmentsPermission">
               <template #icon><icon-tool /></template>
-              <span class="menu-link">环境配置</span>
+              <span class="menu-link" title="环境配置">环境配置</span>
             </a-menu-item>
             <a-menu-item key="api-automation-execution-records" v-if="hasApiAutomationExecutionRecordsPermission">
               <template #icon><icon-history /></template>
-              <span class="menu-link">执行记录</span>
+              <span class="menu-link" title="执行记录">执行记录</span>
             </a-menu-item>
             <a-menu-item key="api-automation-execution-report" v-if="hasApiAutomationExecutionReportPermission">
               <template #icon><icon-bar-chart /></template>
-              <span class="menu-link">测试报告</span>
-            </a-menu-item>
-          </a-sub-menu>
-
-          <a-sub-menu key="app-automation" v-if="hasAppAutomationMenuItems">
-            <template #icon><icon-apps /></template>
-            <template #title>APP自动化</template>
-            <a-menu-item key="app-automation-overview" v-if="hasAppAutomationOverviewPermission">
-              <template #icon><icon-home /></template>
-              <span class="menu-link">概览</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-devices" v-if="hasAppAutomationDevicesPermission">
-              <template #icon><icon-storage /></template>
-              <span class="menu-link">设备管理</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-packages" v-if="hasAppAutomationPackagesPermission">
-              <template #icon><icon-folder /></template>
-              <span class="menu-link">应用包</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-elements" v-if="hasAppAutomationElementsPermission">
-              <template #icon><icon-code-block /></template>
-              <span class="menu-link">元素管理</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-scene-builder" v-if="hasAppAutomationSceneBuilderPermission">
-              <template #icon><icon-code-block /></template>
-              <span class="menu-link">场景编排</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-test-cases" v-if="hasAppAutomationTestCasesPermission">
-              <template #icon><icon-experiment /></template>
-              <span class="menu-link">测试用例</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-suites" v-if="hasAppAutomationSuitesPermission">
-              <template #icon><icon-folder /></template>
-              <span class="menu-link">测试套件</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-executions" v-if="hasAppAutomationExecutionsPermission">
-              <template #icon><icon-history /></template>
-              <span class="menu-link">执行记录</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-scheduled-tasks" v-if="hasAppAutomationScheduledTasksPermission">
-              <template #icon><icon-tool /></template>
-              <span class="menu-link">定时任务</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-notifications" v-if="hasAppAutomationNotificationsPermission">
-              <template #icon><icon-message /></template>
-              <span class="menu-link">通知日志</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-reports" v-if="hasAppAutomationReportsPermission">
-              <template #icon><icon-bar-chart /></template>
-              <span class="menu-link">执行报告</span>
-            </a-menu-item>
-            <a-menu-item key="app-automation-settings" v-if="hasAppAutomationSettingsPermission">
-              <template #icon><icon-tool /></template>
-              <span class="menu-link">环境设置</span>
+              <span class="menu-link" title="测试报告">测试报告</span>
             </a-menu-item>
           </a-sub-menu>
 
           <a-sub-menu key="ui-automation" v-if="hasUiAutomationMenuItems">
-            <template #icon><icon-computer /></template>
-            <template #title>UI自动化</template>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="5" width="16" height="11" rx="2.5" />
+                  <path d="M9 19h6" />
+                  <path d="M12 16v3" />
+                  <path d="M10 9l-2 2 2 2" />
+                  <path d="M14 9l2 2-2 2" />
+                </svg>
+              </span>
+            </template>
+            <template #title><span class="menu-title-text" title="UI自动化">UI自动化</span></template>
             <a-menu-item key="ui-automation-ai-intelligent" v-if="hasUiAutomationAiIntelligentPermission">
               <template #icon><icon-message /></template>
-              <span class="menu-link">AI智能模式</span>
+              <span class="menu-link" title="AI智能模式">AI智能模式</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-pages" v-if="hasUiAutomationPagesPermission">
               <template #icon><icon-computer /></template>
-              <span class="menu-link">页面管理</span>
+              <span class="menu-link" title="页面管理">页面管理</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-page-steps" v-if="hasUiAutomationPageStepsPermission">
               <template #icon><icon-code-block /></template>
-              <span class="menu-link">页面步骤</span>
+              <span class="menu-link" title="页面步骤">页面步骤</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-testcases" v-if="hasUiAutomationTestCasesPermission">
               <template #icon><icon-folder /></template>
-              <span class="menu-link">测试用例</span>
+              <span class="menu-link" title="测试用例">测试用例</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-execution-records" v-if="hasUiAutomationExecutionRecordsPermission">
               <template #icon><icon-history /></template>
-              <span class="menu-link">执行记录</span>
+              <span class="menu-link" title="执行记录">执行记录</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-batch-records" v-if="hasUiAutomationBatchRecordsPermission">
               <template #icon><icon-bar-chart /></template>
-              <span class="menu-link">批量执行</span>
+              <span class="menu-link" title="批量执行">批量执行</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-public-data" v-if="hasUiAutomationPublicDataPermission">
               <template #icon><icon-book /></template>
-              <span class="menu-link">公共数据</span>
+              <span class="menu-link" title="公共数据">公共数据</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-env-config" v-if="hasUiAutomationEnvConfigPermission">
               <template #icon><icon-tool /></template>
-              <span class="menu-link">环境配置</span>
+              <span class="menu-link" title="环境配置">环境配置</span>
             </a-menu-item>
             <a-menu-item key="ui-automation-actuators" v-if="hasUiAutomationActuatorsPermission">
               <template #icon><icon-apps /></template>
-              <span class="menu-link">执行器</span>
+              <span class="menu-link" title="执行器">执行器</span>
+            </a-menu-item>
+          </a-sub-menu>
+
+          <a-sub-menu key="app-automation" v-if="hasAppAutomationMenuItems">
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="7" y="3.5" width="10" height="17" rx="3" />
+                  <path d="M10 6.5h4" />
+                  <circle cx="12" cy="17.5" r="0.9" fill="currentColor" stroke="none" />
+                </svg>
+              </span>
+            </template>
+            <template #title><span class="menu-title-text" title="APP自动化">APP自动化</span></template>
+            <a-menu-item key="app-automation-overview" v-if="hasAppAutomationOverviewPermission">
+              <template #icon><icon-home /></template>
+              <span class="menu-link" title="概览">概览</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-devices" v-if="hasAppAutomationDevicesPermission">
+              <template #icon><icon-storage /></template>
+              <span class="menu-link" title="设备管理">设备管理</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-packages" v-if="hasAppAutomationPackagesPermission">
+              <template #icon><icon-folder /></template>
+              <span class="menu-link" title="应用包">应用包</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-elements" v-if="hasAppAutomationElementsPermission">
+              <template #icon><icon-code-block /></template>
+              <span class="menu-link" title="元素管理">元素管理</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-scene-builder" v-if="hasAppAutomationSceneBuilderPermission">
+              <template #icon><icon-code-block /></template>
+              <span class="menu-link" title="场景编排">场景编排</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-test-cases" v-if="hasAppAutomationTestCasesPermission">
+              <template #icon><icon-experiment /></template>
+              <span class="menu-link" title="测试用例">测试用例</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-suites" v-if="hasAppAutomationSuitesPermission">
+              <template #icon><icon-folder /></template>
+              <span class="menu-link" title="测试套件">测试套件</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-executions" v-if="hasAppAutomationExecutionsPermission">
+              <template #icon><icon-history /></template>
+              <span class="menu-link" title="执行记录">执行记录</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-scheduled-tasks" v-if="hasAppAutomationScheduledTasksPermission">
+              <template #icon><icon-tool /></template>
+              <span class="menu-link" title="定时任务">定时任务</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-notifications" v-if="hasAppAutomationNotificationsPermission">
+              <template #icon><icon-message /></template>
+              <span class="menu-link" title="通知日志">通知日志</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-reports" v-if="hasAppAutomationReportsPermission">
+              <template #icon><icon-bar-chart /></template>
+              <span class="menu-link" title="执行报告">执行报告</span>
+            </a-menu-item>
+            <a-menu-item key="app-automation-settings" v-if="hasAppAutomationSettingsPermission">
+              <template #icon><icon-tool /></template>
+              <span class="menu-link" title="环境设置">环境设置</span>
             </a-menu-item>
           </a-sub-menu>
 
           <a-menu-item key="langgraph-chat" v-if="hasLangGraphChatPermission">
-            <template #icon><icon-message /></template>
-            <span class="menu-link">AI 对话</span>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M7.5 6h9A3.5 3.5 0 0 1 20 9.5v4a3.5 3.5 0 0 1-3.5 3.5H12l-4.5 3v-3H7.5A3.5 3.5 0 0 1 4 13.5v-4A3.5 3.5 0 0 1 7.5 6z" />
+                  <path d="M8.5 10h7" />
+                  <path d="M8.5 13h4.5" />
+                </svg>
+              </span>
+            </template>
+            <span class="menu-link" title="AI 对话">AI 对话</span>
           </a-menu-item>
 
           <a-menu-item key="knowledge-management" v-if="hasKnowledgePermission">
-            <template #icon><icon-book /></template>
-            <span class="menu-link">知识库管理</span>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M6 5.5h5a3 3 0 0 1 3 3v10H9a3 3 0 0 0-3 3V5.5z" />
+                  <path d="M18 5.5h-5a3 3 0 0 0-3 3v10h5a3 3 0 0 1 3 3V5.5z" />
+                </svg>
+              </span>
+            </template>
+            <span class="menu-link" title="知识库管理">知识库管理</span>
           </a-menu-item>
           <a-sub-menu key="data-factory" v-if="hasDataFactoryMenuItems">
-            <template #icon><icon-tool /></template>
-            <template #title>数据工厂</template>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 4l6 3.5-6 3.5-6-3.5L12 4z" />
+                  <path d="M6 11.5l6 3.5 6-3.5" />
+                  <path d="M6 15.5l6 3.5 6-3.5" />
+                  <path d="M12 11v8" />
+                </svg>
+              </span>
+            </template>
+            <template #title><span class="menu-title-text" title="数据工厂">数据工厂</span></template>
             <a-menu-item key="data-factory-all" v-if="hasDataFactoryPermission">
               <template #icon><icon-apps /></template>
-              <span class="menu-link">工具面板</span>
+              <span class="menu-link" title="工具面板">工具面板</span>
             </a-menu-item>
             <a-menu-item key="data-factory-string" v-if="hasDataFactoryPermission">
               <template #icon><icon-font-colors /></template>
-              <span class="menu-link">字符工具</span>
+              <span class="menu-link" title="字符工具">字符工具</span>
             </a-menu-item>
             <a-menu-item key="data-factory-encoding" v-if="hasDataFactoryPermission">
               <template #icon><icon-code-block /></template>
-              <span class="menu-link">编码工具</span>
+              <span class="menu-link" title="编码工具">编码工具</span>
             </a-menu-item>
             <a-menu-item key="data-factory-random" v-if="hasDataFactoryPermission">
               <template #icon><icon-fire /></template>
-              <span class="menu-link">随机工具</span>
+              <span class="menu-link" title="随机工具">随机工具</span>
             </a-menu-item>
             <a-menu-item key="data-factory-encryption" v-if="hasDataFactoryPermission">
               <template #icon><icon-lock /></template>
-              <span class="menu-link">加密工具</span>
+              <span class="menu-link" title="加密工具">加密工具</span>
             </a-menu-item>
             <a-menu-item key="data-factory-test-data" v-if="hasDataFactoryPermission">
               <template #icon><icon-user-group /></template>
-              <span class="menu-link">测试数据</span>
+              <span class="menu-link" title="测试数据">测试数据</span>
             </a-menu-item>
             <a-menu-item key="data-factory-json" v-if="hasDataFactoryPermission">
               <template #icon><icon-file /></template>
-              <span class="menu-link">JSON工具</span>
+              <span class="menu-link" title="JSON工具">JSON工具</span>
             </a-menu-item>
             <a-menu-item key="data-factory-crontab" v-if="hasDataFactoryPermission">
               <template #icon><icon-clock-circle /></template>
-              <span class="menu-link">Crontab工具</span>
+              <span class="menu-link" title="Crontab工具">Crontab工具</span>
             </a-menu-item>
           </a-sub-menu>
 
 
           <a-sub-menu key="settings" v-if="hasSystemMenuItems">
-            <template #icon><icon-settings /></template>
-            <template #title>系统管理</template>
+            <template #icon>
+              <span class="menu-parent-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 4.5v2" />
+                  <path d="M12 17.5v2" />
+                  <path d="M4.5 12h2" />
+                  <path d="M17.5 12h2" />
+                  <path d="M6.7 6.7l1.4 1.4" />
+                  <path d="M15.9 15.9l1.4 1.4" />
+                  <path d="M17.3 6.7l-1.4 1.4" />
+                  <path d="M8.1 15.9l-1.4 1.4" />
+                </svg>
+              </span>
+            </template>
+            <template #title><span class="menu-title-text" title="系统管理">系统管理</span></template>
             <a-menu-item key="users" v-if="hasUsersPermission">
               <template #icon><icon-user /></template>
-              <span class="menu-link">用户管理</span>
+              <span class="menu-link" title="用户管理">用户管理</span>
             </a-menu-item>
             <a-menu-item key="organizations" v-if="hasOrganizationsPermission">
               <template #icon><icon-apps /></template>
-              <span class="menu-link">组织管理</span>
+              <span class="menu-link" title="组织管理">组织管理</span>
             </a-menu-item>
             <a-menu-item key="permissions" v-if="hasPermissionsPermission">
               <template #icon><icon-safe /></template>
-              <span class="menu-link">权限管理</span>
+              <span class="menu-link" title="权限管理">权限管理</span>
             </a-menu-item>
             <a-menu-item key="llm-configs" v-if="hasLlmConfigsPermission">
               <template #icon><icon-tool /></template>
-              <span class="menu-link">AI大模型配置</span>
+              <span class="menu-link" title="AI大模型配置">AI大模型配置</span>
             </a-menu-item>
             <a-menu-item key="api-keys" v-if="hasApiKeysPermission">
               <template #icon><icon-safe /></template>
-              <span class="menu-link">API KEY 管理</span>
+              <span class="menu-link" title="API KEY 管理">API KEY 管理</span>
             </a-menu-item>
             <a-menu-item key="remote-mcp-configs" v-if="hasMcpConfigsPermission">
               <template #icon><icon-cloud /></template>
-              <span class="menu-link">MCP 配置</span>
+              <span class="menu-link" title="MCP 配置">MCP 配置</span>
             </a-menu-item>
             <a-menu-item key="skills" v-if="hasSkillsPermission">
               <template #icon><icon-apps /></template>
-              <span class="menu-link">Skills 管理</span>
+              <span class="menu-link" title="Skills 管理">Skills 管理</span>
             </a-menu-item>
           </a-sub-menu>
         </a-menu>
@@ -373,7 +473,7 @@
         </div>
       </a-layout-sider>
 
-      <!-- 右侧内容区域 -->
+      <!-- 鍙充晶鍐呭鍖哄煙 -->
       <a-layout-content class="content">
         <router-view v-slot="{ Component }">
           <keep-alive include="LangGraphChat">
@@ -442,7 +542,7 @@ import {
   IconMoonFill,
   IconUserGroup,
 } from '@arco-design/web-vue/es/icon';
-import '@arco-design/web-vue/dist/arco.css'; // 引入 Arco Design 样式
+import '@arco-design/web-vue/dist/arco.css'; // 寮曞叆 Arco Design 鏍峰紡
 
 const ALayoutHeader = ALayout.Header;
 const ALayoutSider = ALayout.Sider;
@@ -477,20 +577,18 @@ const versionInfo = ref<VersionInfo | null>(null);
 const hasUpdate = computed(() => versionInfo.value?.hasUpdate ?? false);
 const versionUpdatesUrl = getVersionUpdatesUrl();
 
-// 更新说明预览（显示完整内容）
+// 更新说明预览
 const releaseNotesPreview = computed(() => {
   const notes = versionInfo.value?.releaseNotes;
   if (!notes) return '';
-  // 移除 Markdown 标题符号，提取纯文本
+  // 提取发布说明中的纯文本
   return notes
-    .replace(/^#+\s*/gm, '')  // 移除标题 #
-    .replace(/\r\n/g, '\n')    // 统一换行符
-    .replace(/\*\*/g, '')      // 移除粗体
-    .replace(/`[^`]+`/g, '')   // 移除代码
+    .replace(/^#+\\s*/gm, '')
+    .replace(/\\r\\n/g, '\\n').replace(/\\*\\*/g, '')
+    .replace(/`[^`]+`/g, '')
     .trim();
 });
 
-// 检查版本更新
 const aiStatusLabel = computed(() => {
   switch (aiStatus.value.state) {
     case 'online':
@@ -516,14 +614,14 @@ const aiStatusTooltip = computed(() => {
   if (aiStatus.value.message) {
     parts.push(aiStatus.value.message);
   }
-  return parts.join(' · ');
+  return parts.join(' 路 ');
 });
 
 async function checkVersion() {
   try {
     versionInfo.value = await checkLatestVersion();
   } catch (error) {
-    console.warn('版本检查失败', error);
+    console.warn('版本检查失败:', error);
   }
 }
 
@@ -622,7 +720,7 @@ const handleVisibilityChange = () => {
   }
 };
 
-// 用户信息
+// 鐢ㄦ埛淇℃伅
 const user = computed(() => authStore.currentUser);
 const isApproved = computed(() => authStore.isApproved);
 const username = computed(() => user.value?.username || '');
@@ -779,7 +877,6 @@ const activeGroupKey = computed(() => {
 const openKeys = ref<string[]>([]);
 const collapsed = ref(false);
 
-// 检查各个菜单项的权限
 const hasProjectsPermission = computed(() => {
   return authStore.hasPermission('projects.view_project');
 });
@@ -964,14 +1061,12 @@ const hasSkillsPermission = computed(() => {
   return authStore.hasPermission('skills.view_skill');
 });
 
-// 检查是否有测试管理菜单项的权限
 const hasTestManagementMenuItems = computed(() => {
   return hasTestcasesPermission.value ||
          hasTestSuitesPermission.value ||
          hasTestExecutionsPermission.value;
 });
 
-// 检查是否有系统管理菜单项的权限
 const hasSystemMenuItems = computed(() => {
   return hasUsersPermission.value ||
          hasOrganizationsPermission.value ||
@@ -982,7 +1077,6 @@ const hasSystemMenuItems = computed(() => {
          hasSkillsPermission.value;
 });
 
-// 切换侧边栏收起状态
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value;
 
@@ -1042,10 +1136,8 @@ const handleOpenPersonalCenter = () => {
   router.push('/personal-center');
 };
 
-// 项目选择器相关
 const showProjectSelector = computed(() => isApproved.value);
 
-// 当前选中的项目 ID
 const selectedProjectId = computed({
   get: () => projectStore.currentProjectId,
   set: (value) => {
@@ -1055,35 +1147,25 @@ const selectedProjectId = computed({
   }
 });
 
-// 处理项目变更
 const handleProjectChange = (projectId: number) => {
   projectStore.setCurrentProjectById(projectId);
 };
 
-// 处理下拉框显示状态变化
 const handlePopupVisibleChange = (visible: boolean) => {
   if (visible) {
-    // 当下拉框打开时，重新获取项目列表
     projectStore.fetchProjects();
   }
 };
 
-// 在组件挂载时检查认证状态并加载项目列表
 onMounted(async () => {
   window.addEventListener('focus', handleWindowFocus);
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  // 确保用户信息在组件挂载时被正确加载
   authStore.checkAuthStatus();
   console.log('MainLayout mounted, user:', user.value?.username);
-
-  // 加载项目列表
   await projectStore.fetchProjects();
-
   if (activeGroupKey.value && !openKeys.value.includes(activeGroupKey.value)) {
     openKeys.value = [...openKeys.value, activeGroupKey.value];
   }
-  
-  // 检查版本更新，在后台执行且不阻塞页面
   checkVersion();
   await refreshAiStatus();
 });
@@ -1113,7 +1195,7 @@ onUnmounted(() => {
 .left-section {
   display: flex;
   align-items: center;
-  margin-left: 0; /* 移除左边距，让 logo 顶着边缘 */
+  margin-left: 0; /* 绉婚櫎宸﹁竟璺濓紝璁?logo 椤剁潃杈圭紭 */
 }
 
 .logo {
@@ -1219,7 +1301,7 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-/* 版本号样式 */
+/* 鐗堟湰鍙锋牱寮?*/
 .version-badge {
   font-size: 13px;
   color: #86909c;
@@ -1263,7 +1345,7 @@ onUnmounted(() => {
   }
 }
 
-/* 版本更新弹出框样式 */
+/* 鐗堟湰鏇存柊寮瑰嚭妗嗘牱寮?*/
 .version-update-info {
   max-width: 320px;
   padding: 4px;
@@ -1339,6 +1421,38 @@ onUnmounted(() => {
 .menu-link {
   display: block;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-title-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-parent-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  color: inherit;
+}
+
+.menu-parent-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .username {
@@ -1394,7 +1508,7 @@ onUnmounted(() => {
   margin: 0 0 10px 10px;
   border-radius: 8px;
   box-shadow: -4px 0 10px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.2), 0 0 10px rgba(0, 0, 0, 0.15);
-  height: auto; /* 让 flex 自动撑开 */
+  height: auto; /* 璁?flex 鑷姩鎾戝紑 */
 }
 
 .menu {
@@ -1431,37 +1545,100 @@ onUnmounted(() => {
   color: inherit;
 }
 
-/* 收起状态下的菜单项样式 */
-:deep(.arco-menu-collapse .arco-menu-item) {
+/* 鏀惰捣鐘舵€佷笅鐨勮彍鍗曢」鏍峰紡 */
+:deep(.arco-menu-collapsed .arco-menu-item) {
   padding-left: 0 !important;
   padding-right: 0 !important;
   text-align: center;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  width: calc(100% - 12px);
+  min-height: 48px;
+  margin-inline: auto;
   border-left: none !important;
 }
 
-:deep(.arco-menu-collapse .arco-menu-selected) {
+:deep(.arco-menu-collapsed .arco-menu-selected) {
   border-left: none !important;
 }
 
-:deep(.arco-menu-collapse .arco-menu-item .arco-icon) {
+:deep(.arco-menu-collapsed .arco-menu-item .arco-icon) {
   margin-right: 0;
   margin-left: 0;
   float: none;
-  font-size: 18px;
+  font-size: 20px;
 }
 
-:deep(.arco-menu-collapse .arco-menu-inline-header) {
+:deep(.arco-menu-collapsed .arco-menu-inline-header),
+:deep(.arco-menu-collapsed .arco-menu-pop-header) {
   padding-left: 0 !important;
   padding-right: 0 !important;
   text-align: center;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  width: calc(100% - 12px);
+  min-height: 48px;
+  margin-inline: auto;
+}
+
+::deep(.arco-menu-collapsed .arco-menu-item),
+::deep(.arco-menu-collapsed .arco-menu-inline-header),
+::deep(.arco-menu-collapsed .arco-menu-pop-header) {
+  overflow: visible;
+}
+
+::deep(.arco-menu-collapsed .arco-menu-item .arco-icon),
+::deep(.arco-menu-collapsed .arco-menu-inline-header .arco-icon),
+::deep(.arco-menu-collapsed .arco-menu-pop-header .arco-icon),
+::deep(.arco-menu-collapsed .arco-menu-item .arco-menu-icon),
+::deep(.arco-menu-collapsed .arco-menu-inline-header .arco-menu-icon),
+::deep(.arco-menu-collapsed .arco-menu-pop-header .arco-menu-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+  overflow: visible;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-item .arco-menu-icon > .arco-icon),
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-menu-icon > .arco-icon),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-menu-icon > .arco-icon),
+:deep(.arco-menu-collapsed .menu-parent-icon),
+:deep(.arco-menu-collapsed .arco-menu-item .arco-icon svg),
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-icon svg),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-icon svg),
+:deep(.arco-menu-collapsed .menu-parent-icon svg),
+:deep(.arco-menu-collapsed .arco-menu-item .arco-menu-icon svg),
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-menu-icon svg),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-menu-icon svg) {
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+:deep(.arco-menu-collapsed) {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  width: 100% !important;
+}
+
+:deep(.arco-menu-collapsed .menu-link) {
+  display: none;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-title),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-menu-title),
+:deep(.arco-menu-collapsed .arco-menu-icon-suffix),
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-icon-down),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-icon-right),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-icon-down) {
+  display: none !important;
 }
 
 :deep(.arco-menu-light .arco-menu-item:hover) {
@@ -1504,13 +1681,36 @@ onUnmounted(() => {
   text-align: left;
 }
 
-/* 收起状态下的子菜单图标样式 */
-:deep(.arco-menu-collapse .arco-menu-inline-header .arco-icon) {
+/* 鏀惰捣鐘舵€佷笅鐨勫瓙鑿滃崟鍥炬爣鏍峰紡 */
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-icon) {
   margin-right: 0;
   margin-left: 0;
   float: none;
   position: relative;
   left: 0;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-item .arco-icon),
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-icon),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-icon) {
+  margin-right: 0 !important;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-item .arco-menu-icon),
+:deep(.arco-menu-collapsed .arco-menu-inline-header .arco-menu-icon),
+:deep(.arco-menu-collapsed .arco-menu-pop-header .arco-menu-icon) {
+  margin: 0 auto !important;
+  flex: 0 0 36px !important;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-item > *:not(.arco-menu-icon)),
+:deep(.arco-menu-collapsed .arco-menu-inline-header > *:not(.arco-menu-icon)),
+:deep(.arco-menu-collapsed .arco-menu-pop-header > *:not(.arco-menu-icon)) {
+  display: none !important;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-icon) {
+  margin-right: 0 !important;
 }
 
 :deep(.arco-menu-light .arco-menu-inline .arco-menu-item a) {
@@ -1532,9 +1732,9 @@ onUnmounted(() => {
 }
 </style>
 
-<!-- 全局样式 - 用于菜单弹出层备用 -->
+<!-- 鍏ㄥ眬鏍峰紡 - 鐢ㄤ簬鑿滃崟寮瑰嚭灞傚鐢?-->
 <style>
-/* 备用样式：确保弹出菜单不受高度限制 */
+/* 澶囩敤鏍峰紡锛氱‘淇濆脊鍑鸿彍鍗曚笉鍙楅珮搴﹂檺鍒?*/
 .arco-menu-pop .arco-menu-inner {
   max-height: unset !important;
 }
@@ -1558,7 +1758,7 @@ onUnmounted(() => {
   background-color: var(--theme-page-bg);
   height: calc(100vh - var(--dashboard-header-total-height) - 16px);
   margin: 0 10px 10px 10px;
-  overflow: hidden; /* 让子组件自行控制滚动 */
+  overflow: hidden; /* 璁╁瓙缁勪欢鑷鎺у埗婊氬姩 */
   border-radius: 8px;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.2), 0 0 10px rgba(0, 0, 0, 0.15);
 }
@@ -1587,7 +1787,7 @@ onUnmounted(() => {
   color: var(--theme-accent);
 }
 
-/* 收起状态下的按钮样式 */
+/* 鏀惰捣鐘舵€佷笅鐨勬寜閽牱寮?*/
 .sider-footer .arco-btn-icon-only {
   width: 32px;
   height: 32px;
@@ -1870,6 +2070,17 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+.sider:deep(.arco-layout-sider-children) {
+  width: 100%;
+}
+
+.sider:deep(.arco-layout-sider-collapsed) {
+  width: 84px !important;
+  min-width: 84px !important;
+  max-width: 84px !important;
+  flex: 0 0 84px !important;
+}
+
 .sider::before {
   content: '';
   position: absolute;
@@ -1893,6 +2104,25 @@ onUnmounted(() => {
 
 :deep(.arco-menu-light .arco-menu-inline .arco-menu-item) {
   padding-left: 18px !important;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-item),
+:deep(.arco-menu-collapsed .arco-menu-inline-header),
+:deep(.arco-menu-collapsed .arco-menu-pop-header) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  justify-content: center !important;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-inline-header > .arco-menu-indent-list),
+:deep(.arco-menu-collapsed .arco-menu-pop-header > .arco-menu-indent-list) {
+  display: none !important;
+}
+
+:deep(.arco-menu-collapsed .arco-menu-inline-header > .arco-menu-icon),
+:deep(.arco-menu-collapsed .arco-menu-pop-header > .arco-menu-icon),
+:deep(.arco-menu-collapsed .arco-menu-item > .arco-menu-icon) {
+  margin: 0 auto !important;
 }
 
 .content {
