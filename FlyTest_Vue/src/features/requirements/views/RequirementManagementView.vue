@@ -1110,15 +1110,15 @@ projectStore.$subscribe((_mutation, state) => {
 
 .stats-info {
   display: flex;
-  flex-direction: row; /* 鏀逛负姘村钩鎺掑垪 */
-  gap: 8px; /* 澧炲姞闂磋窛 */
-  flex-wrap: wrap; /* 鍏佽鎹㈣ */
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .stat-item {
   font-size: 12px;
   color: #86909c;
-  white-space: nowrap; /* 闃叉鍗曚釜缁熻椤规崲琛?*/
+  white-space: nowrap;
 }
 
 .upload-area {
