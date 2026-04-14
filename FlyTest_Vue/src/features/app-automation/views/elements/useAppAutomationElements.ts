@@ -315,6 +315,15 @@ export function useAppAutomationElements() {
       selectedElementIds.value = selectedElementIds.value.filter(id =>
         elements.value.some(item => item.id === id),
       )
+      if (detailRecord.value?.id) {
+        const nextDetail = elements.value.find(item => item.id === detailRecord.value?.id) || null
+        if (nextDetail) {
+          detailRecord.value = nextDetail
+        } else {
+          detailVisible.value = false
+          detailRecord.value = null
+        }
+      }
       const maxPage = Math.max(1, Math.ceil(elements.value.length / pagination.pageSize))
       if (pagination.current > maxPage) {
         pagination.current = maxPage
@@ -462,10 +471,13 @@ export function useAppAutomationElements() {
     const previousValue = record.is_active
     record.is_active = nextValue
     try {
-      await AppAutomationService.updateElement(
+      const updated = await AppAutomationService.updateElement(
         record.id,
         buildPayloadFromRecord(record, { is_active: nextValue }),
       )
+      if (detailRecord.value?.id === record.id) {
+        detailRecord.value = updated
+      }
       Message.success(nextValue ? '元素已启用' : '元素已停用')
     } catch (error: any) {
       record.is_active = previousValue
@@ -510,6 +522,13 @@ export function useAppAutomationElements() {
       content: '确认删除这个元素吗？',
       onOk: async () => {
         await AppAutomationService.deleteElement(id)
+        if (detailRecord.value?.id === id) {
+          detailVisible.value = false
+          detailRecord.value = null
+        }
+        if (form.id === id) {
+          closeEditor()
+        }
         Message.success('元素已删除')
         await loadElements()
       },
@@ -542,6 +561,13 @@ export function useAppAutomationElements() {
             return
           }
 
+          if (detailRecord.value?.id && ids.includes(detailRecord.value.id)) {
+            detailVisible.value = false
+            detailRecord.value = null
+          }
+          if (form.id && ids.includes(form.id)) {
+            closeEditor()
+          }
           selectedElementIds.value = []
           if (failedCount) {
             Message.warning(`已删除 ${successCount} 个元素，${failedCount} 个删除失败`)
@@ -586,6 +612,15 @@ export function useAppAutomationElements() {
     value => {
       if (!value) {
         updateLocalPreviewUrl('')
+      }
+    },
+  )
+
+  watch(
+    () => visible.value,
+    value => {
+      if (!value) {
+        resetForm()
       }
     },
   )

@@ -236,6 +236,19 @@ export function useAppAutomationSuites() {
       suites.value = suiteList
       testCases.value = caseList
       devices.value = deviceList
+      if (selectedSuite.value?.id) {
+        const nextSuite = suiteList.find(item => item.id === selectedSuite.value?.id) || null
+        if (nextSuite) {
+          selectedSuite.value = nextSuite
+        } else {
+          detailVisible.value = false
+          historyVisible.value = false
+          executionDetailVisible.value = false
+          selectedSuite.value = null
+          history.value = []
+          currentExecution.value = null
+        }
+      }
     } catch (error: any) {
       Message.error(error.message || '加载测试套件失败')
     } finally {
@@ -397,6 +410,14 @@ export function useAppAutomationSuites() {
       content: '确认删除该测试套件吗？',
       onOk: async () => {
         await AppAutomationService.deleteTestSuite(id)
+        if (selectedSuite.value?.id === id) {
+          detailVisible.value = false
+          historyVisible.value = false
+          executionDetailVisible.value = false
+          selectedSuite.value = null
+          history.value = []
+          currentExecution.value = null
+        }
         Message.success('测试套件已删除')
         await loadData()
       },

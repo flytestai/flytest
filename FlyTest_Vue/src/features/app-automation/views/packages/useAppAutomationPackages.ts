@@ -174,6 +174,10 @@ export function useAppAutomationPackages() {
       onOk: async () => {
         try {
           await AppAutomationService.deletePackage(record.id)
+          if (form.id === record.id) {
+            visible.value = false
+            resetForm()
+          }
           Message.success('应用包已删除')
           await loadPackages()
         } catch (error: any) {

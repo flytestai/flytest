@@ -317,7 +317,11 @@ export function useAppAutomationScheduledTasks() {
     const matched = tasks.value.find(item => item.id === taskId)
     if (matched) {
       currentTask.value = matched
+      return
     }
+    currentTask.value = null
+    detailVisible.value = false
+    taskNotifications.value = []
   }
 
   const loadData = async () => {

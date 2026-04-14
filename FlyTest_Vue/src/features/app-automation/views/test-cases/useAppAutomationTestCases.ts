@@ -354,6 +354,15 @@ export function useAppAutomationTestCases() {
       content: '确认删除该测试用例吗？',
       onOk: async () => {
         await AppAutomationService.deleteTestCase(id)
+        if (form.id === id) {
+          visible.value = false
+          resetForm()
+        }
+        if (currentExecutionCaseId.value === id) {
+          executeVisible.value = false
+          resetExecuteState()
+        }
+        selectedCaseIds.value = selectedCaseIds.value.filter(item => item !== id)
         Message.success('测试用例已删除')
         await loadData()
       },

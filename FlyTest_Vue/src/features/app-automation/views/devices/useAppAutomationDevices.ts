@@ -114,6 +114,28 @@ export function useAppAutomationDevices() {
     Boolean(record.ip_address) &&
     record.connection_type !== 'emulator'
 
+  const syncCurrentDevice = (updated?: AppDevice | null) => {
+    const targetId = updated?.id ?? currentDevice.value?.id
+    if (!targetId) {
+      return
+    }
+
+    const nextRecord = updated || devices.value.find(item => item.id === targetId) || null
+    if (!nextRecord) {
+      detailVisible.value = false
+      editVisible.value = false
+      currentDevice.value = null
+      if (editingDeviceId.value === targetId) {
+        editingDeviceId.value = null
+      }
+      return
+    }
+
+    if (currentDevice.value?.id === targetId) {
+      currentDevice.value = { ...nextRecord }
+    }
+  }
+
   const loadDevices = async (options: { silent?: boolean } = {}) => {
     if (loading.value && options.silent) {
       return
@@ -126,6 +148,7 @@ export function useAppAutomationDevices() {
         status: filters.status || undefined,
       })
       lastUpdatedAt.value = new Date().toISOString()
+      syncCurrentDevice()
     } catch (error: any) {
       if (!options.silent) {
         Message.error(error.message || '加载设备失败')
@@ -209,7 +232,8 @@ export function useAppAutomationDevices() {
 
   const lock = async (id: number) => {
     try {
-      await AppAutomationService.lockDevice(id, authStore.currentUser?.username || 'FlyTest')
+      const updated = await AppAutomationService.lockDevice(id, authStore.currentUser?.username || 'FlyTest')
+      syncCurrentDevice(updated)
       Message.success('设备已锁定')
       await loadDevices()
     } catch (error: any) {
@@ -219,7 +243,8 @@ export function useAppAutomationDevices() {
 
   const unlock = async (id: number) => {
     try {
-      await AppAutomationService.unlockDevice(id)
+      const updated = await AppAutomationService.unlockDevice(id)
+      syncCurrentDevice(updated)
       Message.success('设备已释放')
       await loadDevices()
     } catch (error: any) {
@@ -229,7 +254,8 @@ export function useAppAutomationDevices() {
 
   const disconnect = async (id: number) => {
     try {
-      await AppAutomationService.disconnectDevice(id)
+      const updated = await AppAutomationService.disconnectDevice(id)
+      syncCurrentDevice(updated)
       Message.success('设备已断开')
       await loadDevices()
     } catch (error: any) {
@@ -273,6 +299,13 @@ export function useAppAutomationDevices() {
       content: '确认删除这条设备记录吗？',
       onOk: async () => {
         await AppAutomationService.deleteDevice(id)
+        if (currentDevice.value?.id === id) {
+          detailVisible.value = false
+          screenshotVisible.value = false
+          editVisible.value = false
+          currentDevice.value = null
+          currentScreenshot.value = null
+        }
         Message.success('设备已删除')
         await loadDevices()
       },
