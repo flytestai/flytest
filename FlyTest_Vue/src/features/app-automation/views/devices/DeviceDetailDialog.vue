@@ -50,17 +50,9 @@
 </template>
 
 <script setup lang="ts">
-import type { AppDevice } from '../../types'
+import type { DeviceDetailDialogProps } from './deviceViewModels'
 
-interface Props {
-  currentDevice: AppDevice | null
-  formatDateTime: (value?: string | null) => string
-  getStatusLabel: (status: string) => string
-  getConnectionLabel: (connectionType: string) => string
-  formatEndpoint: (record: AppDevice) => string
-}
-
-defineProps<Props>()
+defineProps<DeviceDetailDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 </script>

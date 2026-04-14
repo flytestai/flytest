@@ -12,16 +12,12 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
-  loading: boolean
-}
+import type { PackagesHeaderBarEmits } from './packageEventModels'
+import type { PackagesHeaderBarProps } from './packageViewModels'
 
-defineProps<Props>()
+defineProps<PackagesHeaderBarProps>()
 
-const emit = defineEmits<{
-  refresh: []
-  create: []
-}>()
+const emit = defineEmits<PackagesHeaderBarEmits>()
 </script>
 
 <style scoped>

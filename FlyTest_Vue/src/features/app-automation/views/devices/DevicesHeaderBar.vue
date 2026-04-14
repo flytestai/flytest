@@ -17,19 +17,12 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
-  loading: boolean
-  autoRefreshEnabled: boolean
-  lastUpdatedText: string
-}
+import type { DevicesHeaderBarEmits } from './deviceEventModels'
+import type { DevicesHeaderBarProps } from './deviceViewModels'
 
-defineProps<Props>()
+defineProps<DevicesHeaderBarProps>()
 
-const emit = defineEmits<{
-  'toggle-auto-refresh': [value: string | number | boolean]
-  'open-connect': []
-  discover: []
-}>()
+const emit = defineEmits<DevicesHeaderBarEmits>()
 </script>
 
 <style scoped>

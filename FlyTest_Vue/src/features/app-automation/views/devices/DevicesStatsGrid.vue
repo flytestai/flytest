@@ -20,18 +20,9 @@
 </template>
 
 <script setup lang="ts">
-interface DeviceStats {
-  total: number
-  available: number
-  locked: number
-  offline: number
-}
+import type { DevicesStatsGridProps } from './deviceViewModels'
 
-interface Props {
-  stats: DeviceStats
-}
-
-defineProps<Props>()
+defineProps<DevicesStatsGridProps>()
 </script>
 
 <style scoped>

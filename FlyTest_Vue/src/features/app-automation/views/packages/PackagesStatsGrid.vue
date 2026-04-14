@@ -24,18 +24,9 @@
 </template>
 
 <script setup lang="ts">
-interface PackageStats {
-  total: number
-  android: number
-  ios: number
-  configuredActivity: number
-}
+import type { PackagesStatsGridProps } from './packageViewModels'
 
-interface Props {
-  stats: PackageStats
-}
-
-defineProps<Props>()
+defineProps<PackagesStatsGridProps>()
 </script>
 
 <style scoped>

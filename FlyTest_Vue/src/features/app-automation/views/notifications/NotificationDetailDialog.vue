@@ -79,33 +79,14 @@
 </template>
 
 <script setup lang="ts">
-import type { AppNotificationLog } from '../../types'
+import type { NotificationDetailDialogEmits } from './notificationEventModels'
+import type { NotificationDetailDialogProps } from './notificationViewModels'
 
-interface ParsedContentItem {
-  label: string
-  value: string
-}
-
-interface Props {
-  currentLog: AppNotificationLog | null
-  retryingId: number | null
-  parsedContent: ParsedContentItem[]
-  formatDateTime: (value?: string | null) => string
-  getTaskTypeLabel: (value: string) => string
-  getNotificationTypeLabel: (value: string) => string
-  recipientSummary: (record: AppNotificationLog) => string
-  getPrimaryExecutionId: (record: AppNotificationLog) => number | undefined
-}
-
-defineProps<Props>()
+defineProps<NotificationDetailDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<{
-  'open-task-detail': [taskId: number]
-  'open-execution': [record: AppNotificationLog]
-  retry: [id: number]
-}>()
+const emit = defineEmits<NotificationDetailDialogEmits>()
 </script>
 
 <style scoped>

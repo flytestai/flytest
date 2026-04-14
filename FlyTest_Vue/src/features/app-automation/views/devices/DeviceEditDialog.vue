@@ -28,23 +28,12 @@
 </template>
 
 <script setup lang="ts">
-interface EditForm {
-  name: string
-  description: string
-  location: string
-  status: string
-}
+import type { DeviceEditDialogEmits } from './deviceEventModels'
+import type { DeviceEditDialogProps } from './deviceViewModels'
 
-interface Props {
-  editForm: EditForm
-  editSaving: boolean
-}
-
-defineProps<Props>()
+defineProps<DeviceEditDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<{
-  submit: []
-}>()
+const emit = defineEmits<DeviceEditDialogEmits>()
 </script>

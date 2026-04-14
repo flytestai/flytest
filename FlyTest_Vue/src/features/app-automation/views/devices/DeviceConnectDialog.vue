@@ -12,20 +12,12 @@
 </template>
 
 <script setup lang="ts">
-interface ConnectForm {
-  ip_address: string
-  port: number
-}
+import type { DeviceConnectDialogEmits } from './deviceEventModels'
+import type { DeviceConnectDialogProps } from './deviceViewModels'
 
-interface Props {
-  connectForm: ConnectForm
-}
-
-defineProps<Props>()
+defineProps<DeviceConnectDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<{
-  connect: []
-}>()
+const emit = defineEmits<DeviceConnectDialogEmits>()
 </script>

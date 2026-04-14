@@ -63,12 +63,14 @@
 </template>
 
 <script setup lang="ts">
-import ExecutionsDetailDialog from './executions/ExecutionsDetailDialog.vue'
-import ExecutionsFilterCard from './executions/ExecutionsFilterCard.vue'
-import ExecutionsHeaderBar from './executions/ExecutionsHeaderBar.vue'
-import ExecutionsStatsGrid from './executions/ExecutionsStatsGrid.vue'
-import ExecutionsTableCard from './executions/ExecutionsTableCard.vue'
-import { useAppAutomationExecutions } from './executions/useAppAutomationExecutions'
+import {
+  ExecutionsDetailDialog,
+  ExecutionsFilterCard,
+  ExecutionsHeaderBar,
+  ExecutionsStatsGrid,
+  ExecutionsTableCard,
+  useAppAutomationExecutions,
+} from './executions'
 
 const {
   projectStore,

@@ -74,33 +74,12 @@
 </template>
 
 <script setup lang="ts">
-import type { AppDevice } from '../../types'
+import type { DevicesTableCardEmits } from './deviceEventModels'
+import type { DevicesTableCardProps } from './deviceViewModels'
 
-interface Props {
-  devices: AppDevice[]
-  loading: boolean
-  screenshotLoadingId: number | null
-  formatDateTime: (value?: string | null) => string
-  getStatusLabel: (status: string) => string
-  getStatusColor: (status: string) => string
-  getConnectionLabel: (connectionType: string) => string
-  formatEndpoint: (record: AppDevice) => string
-  canReconnect: (record: AppDevice) => boolean
-  canDisconnect: (record: AppDevice) => boolean
-}
+defineProps<DevicesTableCardProps>()
 
-defineProps<Props>()
-
-const emit = defineEmits<{
-  'open-detail': [record: AppDevice]
-  'open-edit': [record: AppDevice]
-  'preview-screenshot': [id: number]
-  lock: [id: number]
-  unlock: [id: number]
-  reconnect: [record: AppDevice]
-  disconnect: [id: number]
-  remove: [id: number]
-}>()
+const emit = defineEmits<DevicesTableCardEmits>()
 </script>
 
 <style scoped>

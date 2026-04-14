@@ -69,15 +69,17 @@
 </template>
 
 <script setup lang="ts">
-import DeviceConnectDialog from './devices/DeviceConnectDialog.vue'
-import DeviceDetailDialog from './devices/DeviceDetailDialog.vue'
-import DeviceEditDialog from './devices/DeviceEditDialog.vue'
-import DevicesFilterCard from './devices/DevicesFilterCard.vue'
-import DevicesHeaderBar from './devices/DevicesHeaderBar.vue'
-import DeviceScreenshotDialog from './devices/DeviceScreenshotDialog.vue'
-import DevicesStatsGrid from './devices/DevicesStatsGrid.vue'
-import DevicesTableCard from './devices/DevicesTableCard.vue'
-import { useAppAutomationDevices } from './devices/useAppAutomationDevices'
+import {
+  DeviceConnectDialog,
+  DeviceDetailDialog,
+  DeviceEditDialog,
+  DeviceScreenshotDialog,
+  DevicesFilterCard,
+  DevicesHeaderBar,
+  DevicesStatsGrid,
+  DevicesTableCard,
+  useAppAutomationDevices,
+} from './devices'
 
 const {
   loading,

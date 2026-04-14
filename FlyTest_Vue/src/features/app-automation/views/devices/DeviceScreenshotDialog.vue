@@ -13,14 +13,9 @@
 </template>
 
 <script setup lang="ts">
-import type { AppDeviceScreenshot } from '../../types'
+import type { DeviceScreenshotDialogProps } from './deviceViewModels'
 
-interface Props {
-  currentScreenshot: AppDeviceScreenshot | null
-  formatTimestamp: (timestamp?: number) => string
-}
-
-defineProps<Props>()
+defineProps<DeviceScreenshotDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 </script>

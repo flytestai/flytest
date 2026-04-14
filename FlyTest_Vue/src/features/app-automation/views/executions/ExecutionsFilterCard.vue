@@ -30,25 +30,12 @@
 </template>
 
 <script setup lang="ts">
-import type { AppTestSuite } from '../../types'
+import type { ExecutionsFilterCardEmits } from './executionEventModels'
+import type { ExecutionsFilterCardProps } from './executionViewModels'
 
-interface ExecutionFilters {
-  search: string
-  status: string
-  suite: string
-}
+defineProps<ExecutionsFilterCardProps>()
 
-interface Props {
-  filters: ExecutionFilters
-  suites: AppTestSuite[]
-}
-
-defineProps<Props>()
-
-const emit = defineEmits<{
-  search: []
-  reset: []
-}>()
+const emit = defineEmits<ExecutionsFilterCardEmits>()
 </script>
 
 <style scoped>

@@ -24,18 +24,9 @@
 </template>
 
 <script setup lang="ts">
-interface NotificationStatistics {
-  total: number
-  success: number
-  failed: number
-  retried: number
-}
+import type { NotificationsStatsGridProps } from './notificationViewModels'
 
-interface Props {
-  statistics: NotificationStatistics
-}
-
-defineProps<Props>()
+defineProps<NotificationsStatsGridProps>()
 </script>
 
 <style scoped>

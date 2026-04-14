@@ -4,24 +4,13 @@ import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
 import type { AppExecution, AppTestSuite } from '../../types'
-
-interface ExecutionFilters {
-  search: string
-  status: string
-  suite: string
-}
-
-interface PaginationState {
-  current: number
-  pageSize: number
-}
-
-interface ExecutionArtifact {
-  key: string
-  relativePath: string
-  message: string
-  level: string
-}
+import type {
+  ExecutionArtifact,
+  ExecutionFilters,
+  ExecutionPaginationState,
+  ExecutionStatistics,
+  ExecutionStatusMeta,
+} from './executionViewModels'
 
 const statusConfig = {
   pending: { label: '等待执行', color: 'gold', hex: '#ffb400' },
@@ -53,7 +42,7 @@ export function useAppAutomationExecutions() {
     suite: 'all',
   })
 
-  const pagination = reactive<PaginationState>({
+  const pagination = reactive<ExecutionPaginationState>({
     current: 1,
     pageSize: 10,
   })
@@ -124,7 +113,7 @@ export function useAppAutomationExecutions() {
     return 'unknown'
   }
 
-  const getExecutionStatusMeta = (record: AppExecution) =>
+  const getExecutionStatusMeta = (record: AppExecution): ExecutionStatusMeta =>
     statusConfig[getExecutionState(record)] || statusConfig.unknown
 
   const getExecutionSource = (record: AppExecution) => {
@@ -197,7 +186,7 @@ export function useAppAutomationExecutions() {
     return filteredExecutions.value.slice(start, start + pagination.pageSize)
   })
 
-  const statistics = computed(() => {
+  const statistics = computed<ExecutionStatistics>(() => {
     const running = filteredExecutions.value.filter(item => isExecutionRunning(item)).length
     const passed = filteredExecutions.value.filter(
       item => getExecutionState(item) === 'passed',

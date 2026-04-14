@@ -55,13 +55,15 @@
 </template>
 
 <script setup lang="ts">
-import NotificationDetailDialog from './notifications/NotificationDetailDialog.vue'
-import NotificationsFilterCard from './notifications/NotificationsFilterCard.vue'
-import NotificationsHeaderBar from './notifications/NotificationsHeaderBar.vue'
-import NotificationsStatsGrid from './notifications/NotificationsStatsGrid.vue'
-import NotificationsTableCard from './notifications/NotificationsTableCard.vue'
-import NotificationsTaskContextAlert from './notifications/NotificationsTaskContextAlert.vue'
-import { useAppAutomationNotifications } from './notifications/useAppAutomationNotifications'
+import {
+  NotificationDetailDialog,
+  NotificationsFilterCard,
+  NotificationsHeaderBar,
+  NotificationsStatsGrid,
+  NotificationsTableCard,
+  NotificationsTaskContextAlert,
+  useAppAutomationNotifications,
+} from './notifications'
 
 const {
   loading,

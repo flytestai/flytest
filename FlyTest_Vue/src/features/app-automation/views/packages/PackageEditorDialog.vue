@@ -36,28 +36,14 @@
 </template>
 
 <script setup lang="ts">
-interface PackageForm {
-  id: number
-  project_id: number
-  name: string
-  package_name: string
-  activity_name: string
-  platform: string
-  description: string
-}
+import type { PackageEditorDialogEmits } from './packageEventModels'
+import type { PackageEditorDialogProps } from './packageViewModels'
 
-interface Props {
-  form: PackageForm
-  submitting: boolean
-}
-
-defineProps<Props>()
+defineProps<PackageEditorDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<{
-  submit: []
-}>()
+const emit = defineEmits<PackageEditorDialogEmits>()
 </script>
 
 <style scoped>

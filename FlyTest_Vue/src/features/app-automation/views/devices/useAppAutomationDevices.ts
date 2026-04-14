@@ -3,23 +3,12 @@ import { Message, Modal } from '@arco-design/web-vue'
 import { useAuthStore } from '@/store/authStore'
 import { AppAutomationService } from '../../services/appAutomationService'
 import type { AppDevice, AppDeviceScreenshot } from '../../types'
-
-interface DeviceFilters {
-  search: string
-  status: string
-}
-
-interface ConnectForm {
-  ip_address: string
-  port: number
-}
-
-interface EditForm {
-  name: string
-  description: string
-  location: string
-  status: string
-}
+import type {
+  DeviceConnectFormModel,
+  DeviceEditFormModel,
+  DeviceFilters,
+  DeviceStats,
+} from './deviceViewModels'
 
 export function useAppAutomationDevices() {
   const authStore = useAuthStore()
@@ -45,19 +34,19 @@ export function useAppAutomationDevices() {
     status: '',
   })
 
-  const connectForm = reactive<ConnectForm>({
+  const connectForm = reactive<DeviceConnectFormModel>({
     ip_address: '',
     port: 5555,
   })
 
-  const editForm = reactive<EditForm>({
+  const editForm = reactive<DeviceEditFormModel>({
     name: '',
     description: '',
     location: '',
     status: 'available',
   })
 
-  const stats = computed(() => {
+  const stats = computed<DeviceStats>(() => {
     const total = devices.value.length
     const available = devices.value.filter(item =>
       ['available', 'online'].includes(item.status),

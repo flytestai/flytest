@@ -43,12 +43,14 @@
 </template>
 
 <script setup lang="ts">
-import PackageEditorDialog from './packages/PackageEditorDialog.vue'
-import PackagesFilterCard from './packages/PackagesFilterCard.vue'
-import PackagesHeaderBar from './packages/PackagesHeaderBar.vue'
-import PackagesStatsGrid from './packages/PackagesStatsGrid.vue'
-import PackagesTableCard from './packages/PackagesTableCard.vue'
-import { useAppAutomationPackages } from './packages/useAppAutomationPackages'
+import {
+  PackageEditorDialog,
+  PackagesFilterCard,
+  PackagesHeaderBar,
+  PackagesStatsGrid,
+  PackagesTableCard,
+  useAppAutomationPackages,
+} from './packages'
 
 const {
   projectStore,

@@ -3,16 +3,11 @@ import { Message, Modal } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
 import type { AppPackage } from '../../types'
-
-interface PackageForm {
-  id: number
-  project_id: number
-  name: string
-  package_name: string
-  activity_name: string
-  platform: string
-  description: string
-}
+import type {
+  PackageFormModel,
+  PackagePaginationState,
+  PackageStats,
+} from './packageViewModels'
 
 export function useAppAutomationPackages() {
   const projectStore = useProjectStore()
@@ -23,12 +18,12 @@ export function useAppAutomationPackages() {
   const platformFilter = ref('')
   const packages = ref<AppPackage[]>([])
 
-  const pagination = reactive({
+  const pagination = reactive<PackagePaginationState>({
     current: 1,
     pageSize: 10,
   })
 
-  const form = reactive<PackageForm>({
+  const form = reactive<PackageFormModel>({
     id: 0,
     project_id: 0,
     name: '',
@@ -61,7 +56,7 @@ export function useAppAutomationPackages() {
     return filteredPackages.value.slice(start, start + pagination.pageSize)
   })
 
-  const packageStats = computed(() => ({
+  const packageStats = computed<PackageStats>(() => ({
     total: filteredPackages.value.length,
     android: filteredPackages.value.filter(item => item.platform === 'android').length,
     ios: filteredPackages.value.filter(item => item.platform === 'ios').length,

@@ -21,13 +21,12 @@
 </template>
 
 <script setup lang="ts">
+import type { PackagesFilterCardEmits } from './packageEventModels'
+
 const searchModel = defineModel<string>('search', { required: true })
 const platformFilterModel = defineModel<string>('platformFilter', { required: true })
 
-const emit = defineEmits<{
-  search: []
-  reset: []
-}>()
+const emit = defineEmits<PackagesFilterCardEmits>()
 </script>
 
 <style scoped>

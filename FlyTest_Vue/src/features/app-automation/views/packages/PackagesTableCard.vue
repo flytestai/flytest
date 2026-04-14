@@ -64,26 +64,15 @@
 </template>
 
 <script setup lang="ts">
-import type { AppPackage } from '../../types'
+import type { PackagesTableCardEmits } from './packageEventModels'
+import type { PackagesTableCardProps } from './packageViewModels'
 
-interface Props {
-  packages: AppPackage[]
-  loading: boolean
-  total: number
-  formatDateTime: (value?: string | null) => string
-  getPlatformLabel: (platform: string) => string
-  getPlatformColor: (platform: string) => string
-}
-
-defineProps<Props>()
+defineProps<PackagesTableCardProps>()
 
 const currentModel = defineModel<number>('current', { required: true })
 const pageSizeModel = defineModel<number>('pageSize', { required: true })
 
-const emit = defineEmits<{
-  'open-edit': [record: AppPackage]
-  remove: [record: AppPackage]
-}>()
+const emit = defineEmits<PackagesTableCardEmits>()
 </script>
 
 <style scoped>

@@ -11,15 +11,12 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
-  loading: boolean
-}
+import type { NotificationsHeaderBarEmits } from './notificationEventModels'
+import type { NotificationsHeaderBarProps } from './notificationViewModels'
 
-defineProps<Props>()
+defineProps<NotificationsHeaderBarProps>()
 
-const emit = defineEmits<{
-  refresh: []
-}>()
+const emit = defineEmits<NotificationsHeaderBarEmits>()
 </script>
 
 <style scoped>

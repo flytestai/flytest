@@ -101,46 +101,14 @@
 </template>
 
 <script setup lang="ts">
-import type { AppExecution } from '../../types'
+import type { ExecutionsDetailDialogEmits } from './executionEventModels'
+import type { ExecutionsDetailDialogProps } from './executionViewModels'
 
-interface ExecutionStatusMeta {
-  label: string
-  color: string
-  hex: string
-}
-
-interface ExecutionArtifact {
-  key: string
-  relativePath: string
-  message: string
-  level: string
-}
-
-interface Props {
-  detailLoading: boolean
-  currentExecution: AppExecution | null
-  executionArtifacts: ExecutionArtifact[]
-  stoppingIds: Record<number, boolean>
-  formatDateTime: (value?: string | null) => string
-  formatDuration: (value?: number | null) => string
-  formatRate: (value?: number | null) => number
-  formatProgress: (value?: number | null) => number
-  getExecutionSource: (record: AppExecution) => string
-  getExecutionStatusMeta: (record: AppExecution) => ExecutionStatusMeta
-  getLogLevelColor: (value?: string) => string
-  canOpenReport: (record: AppExecution) => boolean
-  isExecutionRunning: (record: AppExecution) => boolean
-}
-
-defineProps<Props>()
+defineProps<ExecutionsDetailDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<{
-  'open-report': [record: AppExecution]
-  'stop-execution': [record: AppExecution]
-  'open-artifact': [record: AppExecution, relativePath: string]
-}>()
+const emit = defineEmits<ExecutionsDetailDialogEmits>()
 </script>
 
 <style scoped>

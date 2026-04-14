@@ -11,18 +11,12 @@
 </template>
 
 <script setup lang="ts">
-import type { AppScheduledTask } from '../../types'
+import type { NotificationsTaskContextAlertEmits } from './notificationEventModels'
+import type { NotificationsTaskContextAlertProps } from './notificationViewModels'
 
-interface Props {
-  taskContext: AppScheduledTask | null
-}
+defineProps<NotificationsTaskContextAlertProps>()
 
-defineProps<Props>()
-
-const emit = defineEmits<{
-  'open-task-detail': [taskId: number]
-  'clear-task-context': []
-}>()
+const emit = defineEmits<NotificationsTaskContextAlertEmits>()
 </script>
 
 <style scoped>

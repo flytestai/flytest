@@ -3,24 +3,12 @@ import { Message } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AppAutomationService } from '../../services/appAutomationService'
 import type { AppNotificationLog, AppScheduledTask } from '../../types'
-
-interface NotificationFilters {
-  search: string
-  status: string
-  notification_type: string
-  start_date: string
-  end_date: string
-}
-
-interface PaginationState {
-  current: number
-  pageSize: number
-}
-
-interface ParsedContentItem {
-  label: string
-  value: string
-}
+import type {
+  NotificationFilters,
+  NotificationPaginationState,
+  NotificationParsedContentItem,
+  NotificationStatistics,
+} from './notificationViewModels'
 
 export function useAppAutomationNotifications() {
   const route = useRoute()
@@ -41,7 +29,7 @@ export function useAppAutomationNotifications() {
     end_date: '',
   })
 
-  const pagination = reactive<PaginationState>({
+  const pagination = reactive<NotificationPaginationState>({
     current: 1,
     pageSize: 10,
   })
@@ -87,14 +75,14 @@ export function useAppAutomationNotifications() {
     return filteredLogs.value.slice(start, start + pagination.pageSize)
   })
 
-  const statistics = computed(() => ({
+  const statistics = computed<NotificationStatistics>(() => ({
     total: filteredLogs.value.length,
     success: filteredLogs.value.filter(item => item.status === 'success').length,
     failed: filteredLogs.value.filter(item => item.status === 'failed').length,
     retried: filteredLogs.value.filter(item => item.is_retried).length,
   }))
 
-  const parsedContent = computed<ParsedContentItem[]>(() => {
+  const parsedContent = computed<NotificationParsedContentItem[]>(() => {
     const content = currentLog.value?.notification_content
     if (!content) return []
 
@@ -120,7 +108,7 @@ export function useAppAutomationNotifications() {
             ? { label: item.slice(0, index).trim(), value: item.slice(index + 1).trim() }
             : null
         })
-        .filter(Boolean) as ParsedContentItem[]
+        .filter(Boolean) as NotificationParsedContentItem[]
     } catch {
       return content
         .split('\n')
@@ -132,7 +120,7 @@ export function useAppAutomationNotifications() {
             ? { label: item.slice(0, index).trim(), value: item.slice(index + 1).trim() }
             : null
         })
-        .filter(Boolean) as ParsedContentItem[]
+        .filter(Boolean) as NotificationParsedContentItem[]
     }
   })
 

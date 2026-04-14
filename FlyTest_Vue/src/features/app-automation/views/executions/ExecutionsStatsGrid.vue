@@ -24,18 +24,9 @@
 </template>
 
 <script setup lang="ts">
-interface ExecutionStatistics {
-  total: number
-  running: number
-  passed: number
-  averagePassRate: number
-}
+import type { ExecutionsStatsGridProps } from './executionViewModels'
 
-interface Props {
-  statistics: ExecutionStatistics
-}
-
-defineProps<Props>()
+defineProps<ExecutionsStatsGridProps>()
 </script>
 
 <style scoped>

@@ -38,24 +38,12 @@
 </template>
 
 <script setup lang="ts">
-interface NotificationFilters {
-  search: string
-  status: string
-  notification_type: string
-  start_date: string
-  end_date: string
-}
+import type { NotificationsFilterCardEmits } from './notificationEventModels'
+import type { NotificationsFilterCardProps } from './notificationViewModels'
 
-interface Props {
-  filters: NotificationFilters
-}
+defineProps<NotificationsFilterCardProps>()
 
-defineProps<Props>()
-
-const emit = defineEmits<{
-  search: []
-  reset: []
-}>()
+const emit = defineEmits<NotificationsFilterCardEmits>()
 </script>
 
 <style scoped>

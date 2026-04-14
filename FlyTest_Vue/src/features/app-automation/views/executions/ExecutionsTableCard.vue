@@ -100,39 +100,15 @@
 </template>
 
 <script setup lang="ts">
-import type { AppExecution } from '../../types'
+import type { ExecutionsTableCardEmits } from './executionEventModels'
+import type { ExecutionsTableCardProps } from './executionViewModels'
 
-interface ExecutionStatusMeta {
-  label: string
-  color: string
-  hex: string
-}
-
-interface Props {
-  loading: boolean
-  executions: AppExecution[]
-  total: number
-  stoppingIds: Record<number, boolean>
-  formatDateTime: (value?: string | null) => string
-  formatDuration: (value?: number | null) => string
-  formatRate: (value?: number | null) => number
-  formatProgress: (value?: number | null) => number
-  getExecutionSource: (record: AppExecution) => string
-  getExecutionStatusMeta: (record: AppExecution) => ExecutionStatusMeta
-  canOpenReport: (record: AppExecution) => boolean
-  isExecutionRunning: (record: AppExecution) => boolean
-}
-
-defineProps<Props>()
+defineProps<ExecutionsTableCardProps>()
 
 const currentModel = defineModel<number>('current', { required: true })
 const pageSizeModel = defineModel<number>('pageSize', { required: true })
 
-const emit = defineEmits<{
-  'view-detail': [id: number]
-  'open-report': [record: AppExecution]
-  'stop-execution': [record: AppExecution]
-}>()
+const emit = defineEmits<ExecutionsTableCardEmits>()
 </script>
 
 <style scoped>

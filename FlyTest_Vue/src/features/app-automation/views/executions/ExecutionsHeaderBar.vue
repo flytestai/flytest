@@ -12,16 +12,12 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
-  loading: boolean
-  lastUpdatedText: string
-}
+import type { ExecutionsHeaderBarEmits } from './executionEventModels'
+import type { ExecutionsHeaderBarProps } from './executionViewModels'
 
-defineProps<Props>()
+defineProps<ExecutionsHeaderBarProps>()
 
-const emit = defineEmits<{
-  refresh: []
-}>()
+const emit = defineEmits<ExecutionsHeaderBarEmits>()
 </script>
 
 <style scoped>

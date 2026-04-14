@@ -87,34 +87,15 @@
 </template>
 
 <script setup lang="ts">
-import type { AppNotificationLog } from '../../types'
+import type { NotificationsTableCardEmits } from './notificationEventModels'
+import type { NotificationsTableCardProps } from './notificationViewModels'
 
-interface Props {
-  loading: boolean
-  logs: AppNotificationLog[]
-  total: number
-  retryingId: number | null
-  formatDateTime: (value?: string | null) => string
-  getTaskTypeLabel: (value: string) => string
-  getNotificationTypeLabel: (value: string) => string
-  getNotificationTypeColor: (value: string) => string
-  getStatusColor: (value: string) => string
-  recipientSummary: (record: AppNotificationLog) => string
-  getDeliverySummary: (record: AppNotificationLog) => string
-  getPrimaryExecutionId: (record: AppNotificationLog) => number | undefined
-}
-
-defineProps<Props>()
+defineProps<NotificationsTableCardProps>()
 
 const currentModel = defineModel<number>('current', { required: true })
 const pageSizeModel = defineModel<number>('pageSize', { required: true })
 
-const emit = defineEmits<{
-  'view-detail': [record: AppNotificationLog]
-  'open-task-detail': [taskId: number]
-  'open-execution': [record: AppNotificationLog]
-  retry: [id: number]
-}>()
+const emit = defineEmits<NotificationsTableCardEmits>()
 </script>
 
 <style scoped>

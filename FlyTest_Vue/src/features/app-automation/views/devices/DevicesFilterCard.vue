@@ -23,21 +23,12 @@
 </template>
 
 <script setup lang="ts">
-interface DeviceFilters {
-  search: string
-  status: string
-}
+import type { DevicesFilterCardEmits } from './deviceEventModels'
+import type { DevicesFilterCardProps } from './deviceViewModels'
 
-interface Props {
-  filters: DeviceFilters
-}
+defineProps<DevicesFilterCardProps>()
 
-defineProps<Props>()
-
-const emit = defineEmits<{
-  search: []
-  reset: []
-}>()
+const emit = defineEmits<DevicesFilterCardEmits>()
 </script>
 
 <style scoped>
