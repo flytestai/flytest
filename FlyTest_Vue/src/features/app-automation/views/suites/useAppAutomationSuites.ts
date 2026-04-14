@@ -4,6 +4,10 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
+import {
+  openExecutionArtifactWindow,
+  openExecutionReportWindow,
+} from '../appAutomationNavigation'
 import type { AppDevice, AppExecution, AppTestCase, AppTestSuite } from '../../types'
 import type {
   SuiteFilters,
@@ -365,26 +369,11 @@ export function useAppAutomationSuites() {
   }
 
   const openExecutionReport = (record: AppExecution) => {
-    window.open(AppAutomationService.getExecutionReportUrl(record.id), '_blank', 'noopener')
+    openExecutionReportWindow(record.id)
   }
 
   const openExecutionArtifact = (record: AppExecution, relativePath: string) => {
-    if (!relativePath) return
-
-    if (
-      relativePath.startsWith('http://') ||
-      relativePath.startsWith('https://') ||
-      relativePath.startsWith('data:')
-    ) {
-      window.open(relativePath, '_blank', 'noopener')
-      return
-    }
-
-    window.open(
-      AppAutomationService.getExecutionReportAssetUrl(record.id, relativePath),
-      '_blank',
-      'noopener',
-    )
+    openExecutionArtifactWindow(record.id, relativePath)
   }
 
   const duplicateSuite = async (record: AppTestSuite) => {

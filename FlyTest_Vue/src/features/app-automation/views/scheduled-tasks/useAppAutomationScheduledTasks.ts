@@ -4,6 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
+import {
+  openExecutionReportWindow,
+  replaceAppAutomationQuery,
+} from '../appAutomationNavigation'
 import type {
   AppDevice,
   AppNotificationLog,
@@ -355,15 +359,6 @@ export function useAppAutomationScheduledTasks() {
     }
   }
 
-  const updateRouteQuery = (queryPatch: Record<string, string | undefined>) =>
-    router.replace({
-      path: '/app-automation',
-      query: {
-        ...route.query,
-        ...queryPatch,
-      },
-    })
-
   const loadTaskDetail = async (taskId: number, options: { syncRoute?: boolean } = {}) => {
     detailLoading.value = true
     taskNotificationsLoading.value = true
@@ -378,7 +373,7 @@ export function useAppAutomationScheduledTasks() {
       detailVisible.value = true
 
       if (options.syncRoute !== false) {
-        await updateRouteQuery({ tab: 'scheduled-tasks', taskId: String(taskId) })
+        await replaceAppAutomationQuery(route, router, { tab: 'scheduled-tasks', taskId: String(taskId) })
       }
     } catch (error: any) {
       Message.error(error.message || '加载任务详情失败')
@@ -520,15 +515,11 @@ export function useAppAutomationScheduledTasks() {
   }
 
   const goToExecutionContext = async (executionId?: number, suiteId?: number | null) => {
-    await router.replace({
-      path: '/app-automation',
-      query: {
-        ...route.query,
-        tab: 'executions',
-        taskId: undefined,
-        executionId: executionId ? String(executionId) : undefined,
-        suiteId: suiteId ? String(suiteId) : undefined,
-      },
+    await replaceAppAutomationQuery(route, router, {
+      tab: 'executions',
+      taskId: undefined,
+      executionId: executionId ? String(executionId) : undefined,
+      suiteId: suiteId ? String(suiteId) : undefined,
     })
   }
 
@@ -551,19 +542,15 @@ export function useAppAutomationScheduledTasks() {
       Message.warning('当前任务还没有可打开的报告')
       return
     }
-    window.open(AppAutomationService.getExecutionReportUrl(executionId), '_blank', 'noopener')
+    openExecutionReportWindow(executionId)
   }
 
   const openTaskNotifications = async (task: AppScheduledTask) => {
-    await router.replace({
-      path: '/app-automation',
-      query: {
-        ...route.query,
-        tab: 'notifications',
-        taskId: String(task.id),
-        executionId: undefined,
-        suiteId: undefined,
-      },
+    await replaceAppAutomationQuery(route, router, {
+      tab: 'notifications',
+      taskId: String(task.id),
+      executionId: undefined,
+      suiteId: undefined,
     })
   }
 
@@ -678,7 +665,7 @@ export function useAppAutomationScheduledTasks() {
     () => detailVisible.value,
     value => {
       if (!value && route.query.tab === 'scheduled-tasks' && route.query.taskId) {
-        void updateRouteQuery({ taskId: undefined })
+        void replaceAppAutomationQuery(route, router, { taskId: undefined })
       }
     },
   )

@@ -5,6 +5,7 @@ import { getActiveLlmConfig, getLlmConfigDetails } from '@/features/langgraph/se
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
+import { openExecutionReportWindow } from '../appAutomationNavigation'
 import type {
   AppAutomationTab,
   AppDashboardStatistics,
@@ -423,7 +424,7 @@ export const useAppAutomationDashboard = () => {
   }
 
   const openReport = (executionId: number) => {
-    window.open(AppAutomationService.getExecutionReportUrl(executionId), '_blank', 'noopener')
+    openExecutionReportWindow(executionId)
   }
 
   const openLlmConfigManagement = async () => {

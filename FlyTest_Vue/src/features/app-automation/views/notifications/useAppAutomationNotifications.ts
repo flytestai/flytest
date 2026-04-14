@@ -2,6 +2,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { AppAutomationService } from '../../services/appAutomationService'
+import { replaceAppAutomationQuery } from '../appAutomationNavigation'
 import type { AppNotificationLog, AppScheduledTask } from '../../types'
 import type {
   NotificationFilters,
@@ -214,25 +215,17 @@ export function useAppAutomationNotifications() {
   }
 
   const openTaskDetail = async (taskId: number) => {
-    await router.replace({
-      path: '/app-automation',
-      query: {
-        ...route.query,
-        tab: 'scheduled-tasks',
-        taskId: String(taskId),
-        executionId: undefined,
-        suiteId: undefined,
-      },
+    await replaceAppAutomationQuery(route, router, {
+      tab: 'scheduled-tasks',
+      taskId: String(taskId),
+      executionId: undefined,
+      suiteId: undefined,
     })
   }
 
   const clearTaskContext = async () => {
-    await router.replace({
-      path: '/app-automation',
-      query: {
-        ...route.query,
-        taskId: undefined,
-      },
+    await replaceAppAutomationQuery(route, router, {
+      taskId: undefined,
     })
   }
 
@@ -243,17 +236,13 @@ export function useAppAutomationNotifications() {
       return
     }
 
-    void router.replace({
-      path: '/app-automation',
-      query: {
-        ...route.query,
-        tab: 'executions',
-        taskId: undefined,
-        executionId: String(executionId),
-        suiteId: record.response_info.test_suite_id
-          ? String(record.response_info.test_suite_id)
-          : undefined,
-      },
+    void replaceAppAutomationQuery(route, router, {
+      tab: 'executions',
+      taskId: undefined,
+      executionId: String(executionId),
+      suiteId: record.response_info.test_suite_id
+        ? String(record.response_info.test_suite_id)
+        : undefined,
     })
   }
 

@@ -1,8 +1,13 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
-import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
+import {
+  openExecutionArtifactWindow,
+  openExecutionReportWindow,
+  replaceAppAutomationQuery,
+} from '../appAutomationNavigation'
 import type { AppExecution, AppTestSuite } from '../../types'
 import type {
   ExecutionArtifact,
@@ -238,38 +243,6 @@ export function useAppAutomationExecutions() {
       .filter(Boolean) as ExecutionArtifact[]
   })
 
-  const replaceRouteQuery = async (patch: Record<string, string | undefined>) => {
-    const nextQuery: LocationQueryRaw = { ...route.query }
-
-    Object.entries(patch).forEach(([key, value]) => {
-      if (value === undefined || value === '') {
-        delete nextQuery[key]
-      } else {
-        nextQuery[key] = value
-      }
-    })
-
-    const keys = new Set([...Object.keys(route.query), ...Object.keys(nextQuery)])
-    const changed = [...keys].some(key => {
-      const currentValue = route.query[key]
-      const nextValue = nextQuery[key]
-      const currentText = Array.isArray(currentValue)
-        ? String(currentValue[0] ?? '')
-        : String(currentValue ?? '')
-      const nextText = Array.isArray(nextValue)
-        ? String(nextValue[0] ?? '')
-        : String(nextValue ?? '')
-      return currentText !== nextText
-    })
-
-    if (!changed) return
-
-    await router.replace({
-      path: '/app-automation',
-      query: nextQuery,
-    })
-  }
-
   const syncRouteContext = async () => {
     if (route.query.tab !== 'executions' || !projectStore.currentProjectId) {
       return
@@ -326,7 +299,7 @@ export function useAppAutomationExecutions() {
       }
 
       if (options.syncRoute !== false) {
-        await replaceRouteQuery({
+        await replaceAppAutomationQuery(route, router, {
           tab: 'executions',
           executionId: String(id),
         })
@@ -385,26 +358,11 @@ export function useAppAutomationExecutions() {
   }
 
   const openReport = (record: AppExecution) => {
-    window.open(AppAutomationService.getExecutionReportUrl(record.id), '_blank', 'noopener')
+    openExecutionReportWindow(record.id)
   }
 
   const openExecutionArtifact = (record: AppExecution, relativePath: string) => {
-    if (!relativePath) return
-
-    if (
-      relativePath.startsWith('http://') ||
-      relativePath.startsWith('https://') ||
-      relativePath.startsWith('data:')
-    ) {
-      window.open(relativePath, '_blank', 'noopener')
-      return
-    }
-
-    window.open(
-      AppAutomationService.getExecutionReportAssetUrl(record.id, relativePath),
-      '_blank',
-      'noopener',
-    )
+    openExecutionArtifactWindow(record.id, relativePath)
   }
 
   const stopExecution = (record: AppExecution) => {
@@ -472,7 +430,7 @@ export function useAppAutomationExecutions() {
     () => detailVisible.value,
     value => {
       if (!value && route.query.tab === 'executions' && route.query.executionId) {
-        void replaceRouteQuery({ executionId: undefined })
+        void replaceAppAutomationQuery(route, router, { executionId: undefined })
       }
     },
   )

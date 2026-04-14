@@ -1,8 +1,13 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
+import {
+  openExecutionArtifactWindow,
+  openExecutionReportWindow,
+  replaceAppAutomationQuery,
+} from '../appAutomationNavigation'
 import type { AppExecution, AppTestSuite } from '../../types'
 import type {
   ReportCaseFilters,
@@ -274,38 +279,6 @@ export function useAppAutomationReports() {
       : '暂无执行日志',
   )
 
-  const replaceRouteQuery = async (patch: Record<string, string | undefined>) => {
-    const nextQuery: LocationQueryRaw = { ...route.query }
-
-    Object.entries(patch).forEach(([key, value]) => {
-      if (value === undefined || value === '') {
-        delete nextQuery[key]
-      } else {
-        nextQuery[key] = value
-      }
-    })
-
-    const keys = new Set([...Object.keys(route.query), ...Object.keys(nextQuery)])
-    const changed = [...keys].some(key => {
-      const currentValue = route.query[key]
-      const nextValue = nextQuery[key]
-      const currentText = Array.isArray(currentValue)
-        ? String(currentValue[0] ?? '')
-        : String(currentValue ?? '')
-      const nextText = Array.isArray(nextValue)
-        ? String(nextValue[0] ?? '')
-        : String(nextValue ?? '')
-      return currentText !== nextText
-    })
-
-    if (!changed) return
-
-    await router.replace({
-      path: '/app-automation',
-      query: nextQuery,
-    })
-  }
-
   const loadData = async () => {
     if (!projectStore.currentProjectId) {
       suites.value = []
@@ -361,11 +334,11 @@ export function useAppAutomationReports() {
     suiteDetailVisible.value = true
     activeTab.value = 'suite'
 
-    if (options.syncRoute !== false) {
-      await replaceRouteQuery({
-        tab: 'reports',
-        reportMode: 'suite',
-        suiteId: String(suite.id),
+      if (options.syncRoute !== false) {
+        await replaceAppAutomationQuery(route, router, {
+          tab: 'reports',
+          reportMode: 'suite',
+          suiteId: String(suite.id),
         executionId: undefined,
       })
     }
@@ -392,7 +365,7 @@ export function useAppAutomationReports() {
       activeTab.value = 'case'
 
       if (options.syncRoute !== false) {
-        await replaceRouteQuery({
+        await replaceAppAutomationQuery(route, router, {
           tab: 'reports',
           reportMode: 'case',
           executionId: String(id),
@@ -405,26 +378,11 @@ export function useAppAutomationReports() {
   }
 
   const openExecutionReport = (record: AppExecution) => {
-    window.open(AppAutomationService.getExecutionReportUrl(record.id), '_blank', 'noopener')
+    openExecutionReportWindow(record.id)
   }
 
   const openExecutionArtifact = (record: AppExecution, relativePath: string) => {
-    if (!relativePath) return
-
-    if (
-      relativePath.startsWith('http://') ||
-      relativePath.startsWith('https://') ||
-      relativePath.startsWith('data:')
-    ) {
-      window.open(relativePath, '_blank', 'noopener')
-      return
-    }
-
-    window.open(
-      AppAutomationService.getExecutionReportAssetUrl(record.id, relativePath),
-      '_blank',
-      'noopener',
-    )
+    openExecutionArtifactWindow(record.id, relativePath)
   }
 
   const openSuiteReport = async (suite: AppTestSuite) => {
@@ -509,7 +467,7 @@ export function useAppAutomationReports() {
     () => suiteDetailVisible.value,
     value => {
       if (!value && route.query.tab === 'reports' && route.query.suiteId) {
-        void replaceRouteQuery({ suiteId: undefined })
+        void replaceAppAutomationQuery(route, router, { suiteId: undefined })
       }
     },
   )
@@ -518,7 +476,7 @@ export function useAppAutomationReports() {
     () => executionDetailVisible.value,
     value => {
       if (!value && route.query.tab === 'reports' && route.query.executionId) {
-        void replaceRouteQuery({ executionId: undefined })
+        void replaceAppAutomationQuery(route, router, { executionId: undefined })
       }
     },
   )
