@@ -1,6 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
 import { replaceAppAutomationQuery } from '../appAutomationNavigation'
 import type { AppNotificationLog, AppScheduledTask } from '../../types'
@@ -14,6 +15,7 @@ import type {
 export function useAppAutomationNotifications() {
   const route = useRoute()
   const router = useRouter()
+  const projectStore = useProjectStore()
 
   const loading = ref(false)
   const retryingId = ref<number | null>(null)
@@ -185,6 +187,7 @@ export function useAppAutomationNotifications() {
     loading.value = true
     try {
       logs.value = await AppAutomationService.getNotificationLogs({
+        project_id: projectStore.currentProjectId || undefined,
         search: filters.search || undefined,
         status: filters.status || undefined,
         notification_type: filters.notification_type || undefined,

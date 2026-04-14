@@ -708,6 +708,24 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(device["status"], "locked")
         self.assertEqual(device["locked_by"], "tester")
 
+    def test_delete_execution_allows_stopped_runs(self):
+        fixture = self.create_execution_fixture(case_name="stopped-delete-case")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE executions SET status = 'stopped', result = 'stopped', finished_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, fixture["execution_id"]),
+            )
+
+        response = self.client.delete(f"/executions/{fixture['execution_id']}/")
+        self.assertEqual(response.status_code, 200)
+
+        with database.connection() as conn:
+            execution = database.fetch_one(conn, "SELECT id FROM executions WHERE id = ?", (fixture["execution_id"],))
+
+        self.assertIsNone(execution)
+
     def test_delete_test_suite_cleans_related_tasks_and_keeps_execution_history(self):
         fixture = self.create_execution_fixture(case_name="suite-delete-case", suite_name="suite-delete")
 
@@ -836,6 +854,16 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertTrue(payload["trigger_payload"]["execution_id"] > 0)
         self.assertEqual(payload["successful_runs"], 0)
         self.assertEqual(payload["failed_runs"], 0)
+
+        with database.connection() as conn:
+            execution = database.fetch_one(
+                conn,
+                "SELECT trigger_mode, package_id FROM executions WHERE id = ?",
+                (payload["trigger_payload"]["execution_id"],),
+            )
+
+        self.assertEqual(execution["trigger_mode"], "scheduled")
+        self.assertEqual(execution["package_id"], fixture["package_id"])
 
         log_response = self.client.get("/notification-logs/", params={"task_id": task_id})
         self.assertEqual(log_response.status_code, 200)
@@ -1010,6 +1038,67 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["task_name"], "target-log")
+
+    def test_notification_logs_support_project_filter(self):
+        with database.connection() as conn:
+            conn.executemany(
+                """
+                INSERT INTO notification_logs (
+                    project_id, task_id, task_name, task_type, notification_type, actual_notification_type,
+                    sender_name, sender_email, recipient_info, webhook_bot_info, notification_content,
+                    status, error_message, response_info, created_at, sent_at, retry_count, is_retried
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        1001,
+                        None,
+                        "project-1001-log",
+                        "TEST_CASE",
+                        "task_execution",
+                        "email",
+                        "FlyTest",
+                        "noreply@flytest.local",
+                        json.dumps([{"email": "qa@example.com"}], ensure_ascii=False),
+                        "{}",
+                        "project 1001 notification",
+                        "success",
+                        "",
+                        "{}",
+                        "2026-04-03T09:00:00+00:00",
+                        None,
+                        0,
+                        0,
+                    ),
+                    (
+                        2002,
+                        None,
+                        "project-2002-log",
+                        "TEST_CASE",
+                        "task_execution",
+                        "email",
+                        "FlyTest",
+                        "noreply@flytest.local",
+                        json.dumps([{"email": "qa@example.com"}], ensure_ascii=False),
+                        "{}",
+                        "project 2002 notification",
+                        "success",
+                        "",
+                        "{}",
+                        "2026-04-03T10:00:00+00:00",
+                        None,
+                        0,
+                        0,
+                    ),
+                ],
+            )
+
+        response = self.client.get("/notification-logs/", params={"project_id": 1001})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["data"]
+
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["task_name"], "project-1001-log")
 
     def test_execution_report_uses_relative_artifact_link(self):
         fixture = self.create_execution_fixture(case_name="artifact-case")

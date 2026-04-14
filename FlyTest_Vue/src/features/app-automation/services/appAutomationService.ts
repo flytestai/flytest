@@ -599,6 +599,7 @@ export const AppAutomationService = {
   },
 
   getNotificationLogs(params?: {
+    project_id?: number
     search?: string
     status?: string
     notification_type?: string

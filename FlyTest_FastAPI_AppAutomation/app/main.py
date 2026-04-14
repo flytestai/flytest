@@ -479,6 +479,11 @@ def run_execution(execution_id: int) -> None:
             device = get_device_or_404(conn, execution["device_id"])
             settings = get_settings(conn)
             steps = extract_steps(test_case["ui_flow"])
+            package_override = (
+                get_package_or_404(conn, int(execution["package_id"]))
+                if execution.get("package_id")
+                else None
+            )
 
             report_dir = ensure_reports_root(conn) / f"execution-{execution_id}"
             artifact_dir = report_dir / "artifacts"
@@ -490,8 +495,12 @@ def run_execution(execution_id: int) -> None:
                 project_id=int(test_case["project_id"]),
                 variables=test_case.get("variables") or [],
                 default_timeout=int(test_case.get("timeout") or settings.get("default_timeout") or 30),
-                default_package_name=str(test_case.get("package_name") or "").strip(),
-                default_activity_name=str(test_case.get("activity_name") or "").strip(),
+                default_package_name=str(
+                    (package_override or {}).get("package_name") or test_case.get("package_name") or ""
+                ).strip(),
+                default_activity_name=str(
+                    (package_override or {}).get("activity_name") or test_case.get("activity_name") or ""
+                ).strip(),
                 report_dir=report_dir,
                 artifact_dir=artifact_dir,
                 stop_requested=lambda: _execution_is_stopped(execution_id),
@@ -1303,12 +1312,21 @@ def execute_test_case(test_case_id: int, payload: ExecuteTestCasePayload) -> dic
         conn.execute(
             """
             INSERT INTO executions (
-                project_id, test_case_id, device_id, status, result, progress, trigger_mode, triggered_by,
+                project_id, test_case_id, package_id, device_id, status, result, progress, trigger_mode, triggered_by,
                 logs, report_summary, report_path, error_message, total_steps, passed_steps, failed_steps,
                 started_at, finished_at, duration, created_at, updated_at
-            ) VALUES (?, ?, ?, 'pending', '', 0, ?, ?, '[]', '', '', '', 0, 0, 0, NULL, NULL, 0, ?, ?)
+            ) VALUES (?, ?, ?, ?, 'pending', '', 0, ?, ?, '[]', '', '', '', 0, 0, 0, NULL, NULL, 0, ?, ?)
             """,
-            (test_case["project_id"], test_case_id, payload.device_id, payload.trigger_mode, payload.triggered_by, now, now),
+            (
+                test_case["project_id"],
+                test_case_id,
+                test_case.get("package_id"),
+                payload.device_id,
+                payload.trigger_mode,
+                payload.triggered_by,
+                now,
+                now,
+            ),
         )
         execution_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         execution = get_execution_or_404(conn, execution_id)
@@ -1400,7 +1418,7 @@ def stop_execution(execution_id: int) -> dict[str, Any]:
 def delete_execution(execution_id: int) -> dict[str, Any]:
     with connection() as conn:
         execution = get_execution_or_404(conn, execution_id)
-        if execution["status"] in {"pending", "running", "stopped"}:
+        if execution["status"] in {"pending", "running"}:
             raise HTTPException(status_code=409, detail="执行仍在收尾中，请等待完成后再删除")
         conn.execute("DELETE FROM executions WHERE id = ?", (execution_id,))
         return success(None, "执行记录已删除")

@@ -381,7 +381,10 @@ export function useAppAutomationScheduledTasks() {
     try {
       const [task, notifications] = await Promise.all([
         AppAutomationService.getScheduledTask(taskId),
-        AppAutomationService.getNotificationLogs({ task_id: taskId }),
+        AppAutomationService.getNotificationLogs({
+          project_id: projectStore.currentProjectId || undefined,
+          task_id: taskId,
+        }),
       ])
       currentTask.value = task
       taskNotifications.value = notifications

@@ -137,6 +137,7 @@ def init_storage() -> None:
                 project_id INTEGER NOT NULL,
                 test_case_id INTEGER,
                 test_suite_id INTEGER,
+                package_id INTEGER,
                 device_id INTEGER,
                 status TEXT NOT NULL DEFAULT 'pending',
                 result TEXT NOT NULL DEFAULT '',
@@ -157,6 +158,7 @@ def init_storage() -> None:
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY(test_case_id) REFERENCES test_cases(id),
                 FOREIGN KEY(test_suite_id) REFERENCES test_suites(id),
+                FOREIGN KEY(package_id) REFERENCES packages(id),
                 FOREIGN KEY(device_id) REFERENCES devices(id)
             );
 
@@ -274,6 +276,7 @@ def init_storage() -> None:
 
             CREATE TABLE IF NOT EXISTS notification_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
                 task_id INTEGER,
                 task_name TEXT NOT NULL,
                 task_type TEXT NOT NULL DEFAULT '',
@@ -294,6 +297,7 @@ def init_storage() -> None:
                 FOREIGN KEY(task_id) REFERENCES scheduled_tasks(id)
             );
 
+            CREATE INDEX IF NOT EXISTS idx_notification_logs_project ON notification_logs(project_id);
             CREATE INDEX IF NOT EXISTS idx_notification_logs_status ON notification_logs(status);
             CREATE INDEX IF NOT EXISTS idx_notification_logs_created_at ON notification_logs(created_at DESC);
             """
@@ -302,6 +306,8 @@ def init_storage() -> None:
         execution_columns = {row["name"] for row in conn.execute("PRAGMA table_info(executions)").fetchall()}
         if "test_suite_id" not in execution_columns:
             conn.execute("ALTER TABLE executions ADD COLUMN test_suite_id INTEGER")
+        if "package_id" not in execution_columns:
+            conn.execute("ALTER TABLE executions ADD COLUMN package_id INTEGER")
         if "report_path" not in execution_columns:
             conn.execute("ALTER TABLE executions ADD COLUMN report_path TEXT NOT NULL DEFAULT ''")
         if "total_steps" not in execution_columns:
@@ -310,6 +316,10 @@ def init_storage() -> None:
             conn.execute("ALTER TABLE executions ADD COLUMN passed_steps INTEGER NOT NULL DEFAULT 0")
         if "failed_steps" not in execution_columns:
             conn.execute("ALTER TABLE executions ADD COLUMN failed_steps INTEGER NOT NULL DEFAULT 0")
+
+        notification_log_columns = {row["name"] for row in conn.execute("PRAGMA table_info(notification_logs)").fetchall()}
+        if "project_id" not in notification_log_columns:
+            conn.execute("ALTER TABLE notification_logs ADD COLUMN project_id INTEGER")
 
         existing = conn.execute("SELECT id FROM settings WHERE id = 1").fetchone()
         if existing is None:

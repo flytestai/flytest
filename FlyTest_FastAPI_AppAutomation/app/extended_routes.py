@@ -450,6 +450,7 @@ def get_task_or_404(conn, task_id: int) -> dict[str, Any]:
 
 
 def create_notification_log(
+    project_id: int | None,
     task_id: int | None,
     task_name: str,
     task_type: str,
@@ -467,12 +468,13 @@ def create_notification_log(
         db_conn.execute(
             """
             INSERT INTO notification_logs (
-                task_id, task_name, task_type, notification_type, actual_notification_type,
+                project_id, task_id, task_name, task_type, notification_type, actual_notification_type,
                 sender_name, sender_email, recipient_info, webhook_bot_info, notification_content,
                 status, error_message, response_info, created_at, sent_at, retry_count, is_retried
-            ) VALUES (?, ?, ?, 'task_execution', ?, 'FlyTest', 'noreply@flytest.local', ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+            ) VALUES (?, ?, ?, ?, 'task_execution', ?, 'FlyTest', 'noreply@flytest.local', ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
             """,
             (
+                project_id,
                 task_id,
                 task_name,
                 task_type,
@@ -491,6 +493,7 @@ def create_notification_log(
 
     with connection() as conn:
         create_notification_log(
+            project_id=project_id,
             task_id=task_id,
             task_name=task_name,
             task_type=task_type,
@@ -517,6 +520,37 @@ def normalize_task_payload(task: dict[str, Any]) -> None:
             raise HTTPException(status_code=400, detail="定时任务缺少测试用例配置")
         return
     raise HTTPException(status_code=400, detail="不支持的任务类型")
+
+
+def get_package_override_or_404(
+    conn,
+    project_id: int,
+    *,
+    package_id: int | None = None,
+    package_name: str = "",
+) -> dict[str, Any] | None:
+    if package_id:
+        package = fetch_one(
+            conn,
+            "SELECT * FROM packages WHERE id = ? AND project_id = ?",
+            (package_id, project_id),
+        )
+        if package is None:
+            raise HTTPException(status_code=404, detail="鎸囧畾鐨勫簲鐢ㄥ寘涓嶅瓨鍦ㄦ垨涓嶅睘浜庡綋鍓嶉」鐩?")
+        return package
+
+    normalized_package_name = str(package_name or "").strip()
+    if not normalized_package_name:
+        return None
+
+    package = fetch_one(
+        conn,
+        "SELECT * FROM packages WHERE project_id = ? AND package_name = ?",
+        (project_id, normalized_package_name),
+    )
+    if package is None:
+        raise HTTPException(status_code=404, detail="鎸囧畾鐨勫簲鐢ㄥ寘涓嶅瓨鍦ㄦ垨涓嶅睘浜庡綋鍓嶉」鐩?")
+    return package
 
 
 def update_task_run_state(
@@ -586,6 +620,7 @@ def _create_task_notification(
         return
 
     create_notification_log(
+        project_id=task["project_id"],
         task_id=task["id"],
         task_name=task["name"],
         task_type=task["task_type"],
@@ -978,17 +1013,20 @@ def create_execution(
     device_id: int,
     triggered_by: str,
     test_suite_id: int | None = None,
+    *,
+    trigger_mode: str = "manual",
+    package_id: int | None = None,
 ) -> int:
     now = utc_now()
     conn.execute(
         """
         INSERT INTO executions (
-            project_id, test_case_id, test_suite_id, device_id, status, result, progress, trigger_mode,
+            project_id, test_case_id, test_suite_id, package_id, device_id, status, result, progress, trigger_mode,
             triggered_by, logs, report_summary, report_path, error_message, total_steps, passed_steps, failed_steps,
             started_at, finished_at, duration, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, 'pending', '', 0, 'manual', ?, '[]', '', '', '', 0, 0, 0, NULL, NULL, 0, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, 'pending', '', 0, ?, ?, '[]', '', '', '', 0, 0, 0, NULL, NULL, 0, ?, ?)
         """,
-        (project_id, test_case_id, test_suite_id, device_id, triggered_by, now, now),
+        (project_id, test_case_id, test_suite_id, package_id, device_id, trigger_mode, triggered_by, now, now),
     )
     return conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
@@ -1365,6 +1403,11 @@ def run_test_suite(suite_id: int, payload: TestSuiteRunPayload) -> dict[str, Any
         suite = get_suite_or_404(conn, suite_id)
         if not suite["suite_cases"]:
             raise HTTPException(status_code=400, detail="该测试套件没有可执行的用例")
+        package_override = get_package_override_or_404(
+            conn,
+            suite["project_id"],
+            package_name=payload.package_name,
+        )
         conn.execute(
             "UPDATE test_suites SET execution_status = 'running', execution_result = '', updated_at = ? WHERE id = ?",
             (utc_now(), suite_id),
@@ -1372,7 +1415,16 @@ def run_test_suite(suite_id: int, payload: TestSuiteRunPayload) -> dict[str, Any
         execution_ids: list[int] = []
         for item in suite["suite_cases"]:
             execution_ids.append(
-                create_execution(conn, suite["project_id"], item["test_case"]["id"], payload.device_id, payload.triggered_by, suite_id)
+                create_execution(
+                    conn,
+                    suite["project_id"],
+                    item["test_case"]["id"],
+                    payload.device_id,
+                    payload.triggered_by,
+                    suite_id,
+                    trigger_mode="manual",
+                    package_id=package_override["id"] if package_override else None,
+                )
             )
     Thread(target=run_suite_background, args=(suite_id, execution_ids), daemon=True).start()
     return success(
@@ -1422,6 +1474,11 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                 suite = get_suite_or_404(conn, task["test_suite_id"])
                 if not suite["suite_cases"]:
                     raise HTTPException(status_code=400, detail="测试套件中没有可执行的用例")
+                package_override = get_package_override_or_404(
+                    conn,
+                    task["project_id"],
+                    package_id=task.get("package_id"),
+                )
                 execution_ids: list[int] = []
                 for item in suite["suite_cases"]:
                     execution_ids.append(
@@ -1432,6 +1489,8 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                             task["device_id"],
                             triggered_by,
                             suite["id"],
+                            trigger_mode="scheduled",
+                            package_id=package_override["id"] if package_override else None,
                         )
                     )
                 conn.execute(
@@ -1456,7 +1515,21 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                     "triggered_at": triggered_at,
                 }
             else:
-                execution_id = create_execution(conn, task["project_id"], task["test_case_id"], task["device_id"], triggered_by, None)
+                package_override = get_package_override_or_404(
+                    conn,
+                    task["project_id"],
+                    package_id=task.get("package_id"),
+                )
+                execution_id = create_execution(
+                    conn,
+                    task["project_id"],
+                    task["test_case_id"],
+                    task["device_id"],
+                    triggered_by,
+                    None,
+                    trigger_mode="scheduled",
+                    package_id=package_override["id"] if package_override else None,
+                )
                 Thread(
                     target=_run_case_task_in_background,
                     args=(task_id, execution_id),
@@ -1485,6 +1558,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
 
         if False and task.get("notification_type") and (task.get("notify_on_success") or task.get("notify_on_failure")):
             create_notification_log(
+                project_id=task["project_id"],
                 task_id=task_id,
                 task_name=task["name"],
                 task_type=task["task_type"],
@@ -1520,6 +1594,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                 )
                 if existing.get("notification_type") and existing.get("notify_on_failure"):
                     create_notification_log(
+                        project_id=existing.get("project_id"),
                         task_id=task_id,
                         task_name=existing["name"],
                         task_type=existing["task_type"],
@@ -1552,6 +1627,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                 )
                 if existing.get("notification_type") and existing.get("notify_on_failure"):
                     create_notification_log(
+                        project_id=existing.get("project_id"),
                         task_id=task_id,
                         task_name=existing["name"],
                         task_type=existing["task_type"],
@@ -1743,6 +1819,7 @@ def run_now(task_id: int, triggered_by: str = Query(default="FlyTest")) -> dict[
 
 @router.get("/notification-logs/")
 def list_notification_logs(
+    project_id: int | None = Query(default=None),
     search: str | None = Query(default=None),
     status: str | None = Query(default=None),
     notification_type: str | None = Query(default=None),
@@ -1766,6 +1843,9 @@ def list_notification_logs(
 
     query = "SELECT * FROM notification_logs WHERE 1 = 1"
     params: list[Any] = []
+    if project_id is not None:
+        query += " AND project_id = ?"
+        params.append(project_id)
     if search:
         query += " AND (task_name LIKE ? OR notification_content LIKE ? OR error_message LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
