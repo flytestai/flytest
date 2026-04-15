@@ -932,6 +932,74 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(logs[0]["response_info"]["execution_id"], execution_id)
         self.assertEqual(logs[0]["response_info"]["triggered_by"], "smoke")
 
+    def test_create_scheduled_task_rejects_cross_project_test_case(self):
+        fixture = self.create_execution_fixture(case_name="cross-project-case")
+
+        response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 2002,
+                "name": "invalid-cross-project-task",
+                "description": "",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": fixture["device_id"],
+                "package_id": None,
+                "test_suite_id": None,
+                "test_case_id": fixture["test_case_id"],
+                "notify_on_success": False,
+                "notify_on_failure": True,
+                "notification_type": "email",
+                "notify_emails": ["qa@example.com"],
+                "status": "ACTIVE",
+                "created_by": "tester",
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("测试用例", response.json()["detail"])
+
+    def test_create_scheduled_task_rejects_invalid_package_id(self):
+        fixture = self.create_execution_fixture(case_name="invalid-package-task")
+
+        response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 1001,
+                "name": "invalid-package-task",
+                "description": "",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": fixture["device_id"],
+                "package_id": 999999,
+                "test_suite_id": None,
+                "test_case_id": fixture["test_case_id"],
+                "notify_on_success": False,
+                "notify_on_failure": True,
+                "notification_type": "email",
+                "notify_emails": ["qa@example.com"],
+                "status": "ACTIVE",
+                "created_by": "tester",
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+        with database.connection() as conn:
+            task = database.fetch_one(
+                conn,
+                "SELECT id FROM scheduled_tasks WHERE name = ?",
+                ("invalid-package-task",),
+            )
+
+        self.assertIsNone(task)
+
     def test_retry_notification_updates_response_info(self):
         with database.connection() as conn:
             now = database.utc_now()

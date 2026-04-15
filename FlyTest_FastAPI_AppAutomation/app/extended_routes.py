@@ -522,6 +522,42 @@ def normalize_task_payload(task: dict[str, Any]) -> None:
     raise HTTPException(status_code=400, detail="不支持的任务类型")
 
 
+def validate_scheduled_task_payload(conn, payload: ScheduledTaskPayload) -> None:
+    if payload.device_id is not None:
+        device = fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (payload.device_id,))
+        if device is None:
+            raise HTTPException(status_code=404, detail="执行设备不存在")
+
+    if payload.package_id is not None:
+        _ = get_package_override_or_404(conn, payload.project_id, package_id=payload.package_id)
+
+    if payload.task_type == "TEST_SUITE":
+        if payload.test_suite_id is None:
+            raise HTTPException(status_code=400, detail="定时任务缺少测试套件配置")
+        suite = fetch_one(
+            conn,
+            "SELECT id FROM test_suites WHERE id = ? AND project_id = ?",
+            (payload.test_suite_id, payload.project_id),
+        )
+        if suite is None:
+            raise HTTPException(status_code=404, detail="测试套件不存在或不属于当前项目")
+        return
+
+    if payload.task_type == "TEST_CASE":
+        if payload.test_case_id is None:
+            raise HTTPException(status_code=400, detail="定时任务缺少测试用例配置")
+        test_case = fetch_one(
+            conn,
+            "SELECT id FROM test_cases WHERE id = ? AND project_id = ?",
+            (payload.test_case_id, payload.project_id),
+        )
+        if test_case is None:
+            raise HTTPException(status_code=404, detail="测试用例不存在或不属于当前项目")
+        return
+
+    raise HTTPException(status_code=400, detail="不支持的任务类型")
+
+
 def get_package_override_or_404(
     conn,
     project_id: int,
@@ -1701,6 +1737,7 @@ def get_scheduled_task(task_id: int) -> dict[str, Any]:
 def create_scheduled_task(payload: ScheduledTaskPayload) -> dict[str, Any]:
     next_run_time = compute_next_run(payload.trigger_type, payload.cron_expression, payload.interval_seconds, payload.execute_at)
     with connection() as conn:
+        validate_scheduled_task_payload(conn, payload)
         now = utc_now()
         conn.execute(
             """
@@ -1745,6 +1782,7 @@ def update_scheduled_task(task_id: int, payload: ScheduledTaskPayload) -> dict[s
     next_run_time = compute_next_run(payload.trigger_type, payload.cron_expression, payload.interval_seconds, payload.execute_at)
     with connection() as conn:
         _ = get_task_or_404(conn, task_id)
+        validate_scheduled_task_payload(conn, payload)
         conn.execute(
             """
             UPDATE scheduled_tasks
