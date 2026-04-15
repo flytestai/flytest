@@ -320,6 +320,17 @@ def init_storage() -> None:
         notification_log_columns = {row["name"] for row in conn.execute("PRAGMA table_info(notification_logs)").fetchall()}
         if "project_id" not in notification_log_columns:
             conn.execute("ALTER TABLE notification_logs ADD COLUMN project_id INTEGER")
+        conn.execute(
+            """
+            UPDATE notification_logs
+            SET project_id = (
+                SELECT st.project_id
+                FROM scheduled_tasks st
+                WHERE st.id = notification_logs.task_id
+            )
+            WHERE project_id IS NULL AND task_id IS NOT NULL
+            """
+        )
 
         existing = conn.execute("SELECT id FROM settings WHERE id = 1").fetchone()
         if existing is None:

@@ -1100,6 +1100,87 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["task_name"], "project-1001-log")
 
+    def test_init_storage_backfills_notification_log_project_id_from_task(self):
+        fixture = self.create_execution_fixture(case_name="backfill-log-case")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO scheduled_tasks (
+                    project_id, name, description, task_type, trigger_type, cron_expression, interval_seconds, execute_at,
+                    device_id, package_id, test_suite_id, test_case_id, notify_on_success, notify_on_failure,
+                    notification_type, notify_emails, status, last_run_time, next_run_time, total_runs, successful_runs,
+                    failed_runs, last_result, error_message, created_by, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, 0, 0, '{}', '', ?, ?, ?)
+                """,
+                (
+                    1001,
+                    "legacy-task",
+                    "",
+                    "TEST_CASE",
+                    "ONCE",
+                    "",
+                    None,
+                    None,
+                    fixture["device_id"],
+                    fixture["package_id"],
+                    None,
+                    fixture["test_case_id"],
+                    0,
+                    1,
+                    "email",
+                    "[]",
+                    "ACTIVE",
+                    "tester",
+                    now,
+                    now,
+                ),
+            )
+            task_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+            conn.execute(
+                """
+                INSERT INTO notification_logs (
+                    project_id, task_id, task_name, task_type, notification_type, actual_notification_type,
+                    sender_name, sender_email, recipient_info, webhook_bot_info, notification_content,
+                    status, error_message, response_info, created_at, sent_at, retry_count, is_retried
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    None,
+                    task_id,
+                    "legacy-task-log",
+                    "TEST_CASE",
+                    "task_execution",
+                    "email",
+                    "FlyTest",
+                    "noreply@flytest.local",
+                    json.dumps([{"email": "qa@example.com"}], ensure_ascii=False),
+                    "{}",
+                    "legacy notification",
+                    "success",
+                    "",
+                    "{}",
+                    database.utc_now(),
+                    None,
+                    0,
+                    0,
+                ),
+            )
+
+        database.init_storage()
+
+        with database.connection() as conn:
+            log_row = database.fetch_one(
+                conn,
+                "SELECT project_id FROM notification_logs WHERE task_name = ?",
+                ("legacy-task-log",),
+            )
+
+        self.assertIsNotNone(log_row)
+        self.assertEqual(log_row["project_id"], 1001)
+
     def test_execution_report_uses_relative_artifact_link(self):
         fixture = self.create_execution_fixture(case_name="artifact-case")
 
