@@ -16,6 +16,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from .adb import (
     AdbError,
@@ -24,6 +25,15 @@ from .adb import (
     disconnect_remote_device,
     discover_devices,
     inspect_adb_environment,
+)
+from .access_control import (
+    apply_project_scope_filter,
+    bind_request_context,
+    enforce_request_module_permission,
+    ensure_project_access,
+    ensure_row_project_access,
+    reset_request_context,
+    resolve_scoped_project_ids,
 )
 from .ai_planner import build_scene_plan, build_step_suggestion
 from .database import (
@@ -52,7 +62,7 @@ from .schemas import (
     StepSuggestionPayload,
     TestCasePayload,
 )
-from .security import should_skip_auth, validate_request_token
+from .security import extract_bearer_token, should_skip_auth, validate_request_token
 
 init_storage()
 
@@ -81,12 +91,19 @@ async def require_app_automation_auth(request: Request, call_next):
     if should_skip_auth(request):
         return await call_next(request)
 
+    context_tokens: dict[str, Any] | None = None
     try:
-        request.state.auth = validate_request_token(request)
+        raw_token = extract_bearer_token(request)
+        request.state.auth = validate_request_token(request, token=raw_token)
+        context_tokens = bind_request_context(request.state.auth, raw_token)
+        await run_in_threadpool(enforce_request_module_permission, request)
     except HTTPException as exc:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
-    return await call_next(request)
+    try:
+        return await call_next(request)
+    finally:
+        reset_request_context(context_tokens)
 
 
 def success(data: Any = None, message: str = "success", code: int = 200) -> dict[str, Any]:
@@ -254,8 +271,18 @@ def compute_file_hash(content: bytes) -> str:
     return hashlib.md5(content).hexdigest()
 
 
-def find_duplicate_element_asset(conn, file_hash: str, exclude_element_id: int | None = None) -> dict[str, Any] | None:
-    rows = fetch_all(conn, "SELECT * FROM elements WHERE element_type = 'image' AND is_active = 1")
+def find_duplicate_element_asset(
+    conn,
+    file_hash: str,
+    *,
+    project_id: int,
+    exclude_element_id: int | None = None,
+) -> dict[str, Any] | None:
+    rows = fetch_all(
+        conn,
+        "SELECT * FROM elements WHERE project_id = ? AND element_type = 'image' AND is_active = 1",
+        (project_id,),
+    )
     for row in rows:
         if exclude_element_id is not None and int(row["id"]) == exclude_element_id:
             continue
@@ -329,6 +356,7 @@ def get_package_or_404(conn, package_id: int) -> dict[str, Any]:
     row = fetch_one(conn, "SELECT * FROM packages WHERE id = ?", (package_id,))
     if row is None:
         raise HTTPException(status_code=404, detail="应用包不存在")
+    ensure_row_project_access(row)
     return row
 
 
@@ -336,6 +364,7 @@ def get_element_or_404(conn, element_id: int) -> dict[str, Any]:
     row = fetch_one(conn, "SELECT * FROM elements WHERE id = ?", (element_id,))
     if row is None:
         raise HTTPException(status_code=404, detail="元素不存在")
+    ensure_row_project_access(row)
     return serialize_element(row)
 
 
@@ -352,6 +381,7 @@ def get_test_case_or_404(conn, test_case_id: int) -> dict[str, Any]:
     )
     if row is None:
         raise HTTPException(status_code=404, detail="测试用例不存在")
+    ensure_row_project_access(row)
     return serialize_test_case(row)
 
 
@@ -369,6 +399,7 @@ def get_execution_or_404(conn, execution_id: int) -> dict[str, Any]:
     )
     if row is None:
         raise HTTPException(status_code=404, detail="执行记录不存在")
+    ensure_row_project_access(row)
     return serialize_execution(row)
 
 
@@ -430,6 +461,33 @@ def upsert_device(conn, payload: dict[str, Any], preserve_lock: bool = True) -> 
 
 def finish_device_lock(conn, device_id: int) -> None:
     now = utc_now()
+    next_execution = fetch_one(
+        conn,
+        """
+        SELECT triggered_by, created_at
+        FROM executions
+        WHERE device_id = ? AND status IN ('pending', 'running')
+        ORDER BY CASE WHEN status = 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC
+        LIMIT 1
+        """,
+        (device_id,),
+    )
+    if next_execution is not None:
+        conn.execute(
+            """
+            UPDATE devices
+            SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                str(next_execution.get("triggered_by") or "").strip(),
+                next_execution.get("created_at") or now,
+                now,
+                device_id,
+            ),
+        )
+        return
+
     conn.execute(
         """
         UPDATE devices
@@ -444,6 +502,39 @@ def _execution_is_stopped(execution_id: int) -> bool:
     with connection() as conn:
         row = fetch_one(conn, "SELECT status FROM executions WHERE id = ?", (execution_id,))
         return bool(row and row.get("status") == "stopped")
+
+
+def reserve_device_for_execution(conn, device_id: int, *, locked_by: str) -> dict[str, Any]:
+    device = get_device_or_404(conn, device_id)
+    device_name = str(device.get("name") or device.get("device_id") or device_id)
+    if device["status"] == "offline":
+        raise HTTPException(status_code=409, detail=f"设备 {device_name} 当前离线，无法执行")
+    if device["status"] == "locked":
+        holder = str(device.get("locked_by") or "").strip()
+        detail = f"设备 {device_name} 当前正被占用，无法执行"
+        if holder:
+            detail = f"设备 {device_name} 当前正被 {holder} 占用，无法执行"
+        raise HTTPException(status_code=409, detail=detail)
+
+    now = utc_now()
+    updated = conn.execute(
+        """
+        UPDATE devices
+        SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ?
+        WHERE id = ? AND status NOT IN ('locked', 'offline')
+        """,
+        (locked_by.strip(), now, now, device_id),
+    )
+    if updated.rowcount != 1:
+        fresh_device = get_device_or_404(conn, device_id)
+        if fresh_device["status"] == "offline":
+            raise HTTPException(status_code=409, detail=f"设备 {device_name} 当前离线，无法执行")
+        holder = str(fresh_device.get("locked_by") or "").strip()
+        detail = f"设备 {device_name} 当前正被占用，无法执行"
+        if holder:
+            detail = f"设备 {device_name} 当前正被 {holder} 占用，无法执行"
+        raise HTTPException(status_code=409, detail=detail)
+    return get_device_or_404(conn, device_id)
 
 
 def _refresh_suite_stats_for_execution(conn, execution_id: int) -> None:
@@ -521,6 +612,7 @@ def run_execution(execution_id: int) -> None:
                     ("设备离线，无法执行", json_dumps(logs), now, now, execution_id),
                 )
                 _update_test_case_last_run(conn, test_case["id"], "failed", now)
+                finish_device_lock(conn, device["id"])
                 write_execution_report(conn, execution_id)
                 _refresh_suite_stats_for_execution(conn, execution_id)
                 return
@@ -537,6 +629,7 @@ def run_execution(execution_id: int) -> None:
                     ("未检测到可执行步骤", json_dumps(logs), now, now, execution_id),
                 )
                 _update_test_case_last_run(conn, test_case["id"], "failed", now)
+                finish_device_lock(conn, device["id"])
                 write_execution_report(conn, execution_id)
                 _refresh_suite_stats_for_execution(conn, execution_id)
                 return

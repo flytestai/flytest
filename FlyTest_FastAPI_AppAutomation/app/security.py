@@ -45,10 +45,6 @@ def get_access_cookie_name() -> str:
 
 
 def extract_bearer_token(request: Request) -> str:
-    query_token = (request.query_params.get("token") or "").strip()
-    if query_token:
-        return query_token
-
     authorization = (request.headers.get("Authorization") or "").strip()
     if authorization.lower().startswith("bearer "):
         return authorization[7:].strip()
@@ -56,12 +52,12 @@ def extract_bearer_token(request: Request) -> str:
     return (request.cookies.get(get_access_cookie_name()) or "").strip()
 
 
-def validate_request_token(request: Request) -> dict[str, Any]:
+def validate_request_token(request: Request, *, token: str | None = None) -> dict[str, Any]:
     if auth_disabled():
         return {"sub": "local-test", "username": "local-test"}
 
-    token = extract_bearer_token(request)
-    if not token:
+    raw_token = (token or extract_bearer_token(request)).strip()
+    if not raw_token:
         raise HTTPException(status_code=401, detail="缺少访问令牌")
 
     secret = get_jwt_secret()
@@ -70,7 +66,7 @@ def validate_request_token(request: Request) -> dict[str, Any]:
 
     try:
         payload = jwt.decode(
-            token,
+            raw_token,
             secret,
             algorithms=[get_jwt_algorithm()],
             options={"verify_aud": False},
