@@ -312,6 +312,19 @@ export function useAppAutomationNotifications() {
     { immediate: true },
   )
 
+  watch(
+    () => projectStore.currentProjectId,
+    () => {
+      if (route.query.tab !== 'notifications') {
+        return
+      }
+      detailVisible.value = false
+      taskContext.value = null
+      pagination.current = 1
+      void Promise.all([loadTaskContext(), loadData()])
+    },
+  )
+
   return {
     loading,
     retryingId,

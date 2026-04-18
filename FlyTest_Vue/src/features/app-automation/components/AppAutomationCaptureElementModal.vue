@@ -160,22 +160,18 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { useElementImageCategories } from '../composables/useElementImageCategories'
+import { useCaptureSelection } from '../composables/useCaptureSelection'
 import { AppAutomationService } from '../services/appAutomationService'
-import type { AppDevice, AppDeviceScreenshot, AppImageCategory } from '../types'
-
-type ElementMode = 'image' | 'pos' | 'region'
-
-type DisplayPoint = {
-  x: number
-  y: number
-}
-
-type DisplaySelection = {
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-}
+import type { AppDevice, AppDeviceScreenshot } from '../types'
+import {
+  type CaptureElementMode,
+  buildCapturedImageElementPayload,
+  buildCapturedPosElementPayload,
+  buildCapturedRegionElementPayload,
+  createDefaultCaptureElementFormState,
+  normalizeCapturedElementFileName,
+} from '../utils/captureElementPayload'
 
 const props = defineProps<{
   visible: boolean
@@ -192,139 +188,57 @@ const visibleProxy = computed({
   set: value => emit('update:visible', value),
 })
 
-const stageRef = ref<HTMLDivElement | null>(null)
-const imageRef = ref<HTMLImageElement | null>(null)
 const devices = ref<AppDevice[]>([])
-const imageCategories = ref<AppImageCategory[]>([])
 const selectedDeviceId = ref<number>()
 const devicesLoading = ref(false)
 const devicesRefreshing = ref(false)
-const categoriesLoading = ref(false)
-const creatingCategory = ref(false)
 const capturing = ref(false)
 const submitting = ref(false)
-const newCategoryName = ref('')
 const screenshotContent = ref('')
 const captureMeta = reactive<Pick<AppDeviceScreenshot, 'device_id' | 'timestamp'>>({
   device_id: '',
   timestamp: 0,
 })
-const imageSize = reactive({
-  naturalWidth: 0,
-  naturalHeight: 0,
-  clientWidth: 0,
-  clientHeight: 0,
+const form = reactive(createDefaultCaptureElementFormState())
+const {
+  imageCategories,
+  newCategoryName,
+  categoryLoading: categoriesLoading,
+  categorySaving,
+  categoryDeleting,
+  loadCategories,
+  createCategory: createImageCategory,
+  deleteCategory: deleteImageCategory,
+} = useElementImageCategories({
+  getProjectId: () => props.projectId || null,
+  getSelectedCategory: () => form.image_category,
+  setSelectedCategory: value => {
+    form.image_category = value
+  },
 })
-const form = reactive({
-  name: '',
-  element_type: 'image' as ElementMode,
-  image_category: 'common',
-  threshold: 0.7,
-  rgb: false,
-  tagsText: '',
-  description: '',
-})
-
-const selection = ref<DisplaySelection | null>(null)
-const point = ref<DisplayPoint | null>(null)
-const dragging = ref(false)
-const dragStart = ref<DisplayPoint | null>(null)
-
-const normalizePointer = (event: MouseEvent) => {
-  const stage = stageRef.value
-  if (!stage) {
-    return null
-  }
-  const rect = stage.getBoundingClientRect()
-  const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width))
-  const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height))
-  return { x, y }
-}
-
-const selectionStyle = computed(() => {
-  if (!selection.value) {
-    return {}
-  }
-  const x = Math.min(selection.value.x1, selection.value.x2)
-  const y = Math.min(selection.value.y1, selection.value.y2)
-  const width = Math.abs(selection.value.x2 - selection.value.x1)
-  const height = Math.abs(selection.value.y2 - selection.value.y1)
-  return {
-    left: `${x}px`,
-    top: `${y}px`,
-    width: `${width}px`,
-    height: `${height}px`,
-  }
-})
-
-const pointStyle = computed(() => {
-  if (!point.value) {
-    return {}
-  }
-  return {
-    left: `${point.value.x}px`,
-    top: `${point.value.y}px`,
-  }
-})
-
-const pointNatural = computed(() => {
-  if (!point.value || !imageSize.clientWidth || !imageSize.clientHeight) {
-    return null
-  }
-  const scaleX = imageSize.naturalWidth / imageSize.clientWidth
-  const scaleY = imageSize.naturalHeight / imageSize.clientHeight
-  return {
-    x: Math.round(point.value.x * scaleX),
-    y: Math.round(point.value.y * scaleY),
-  }
-})
-
-const selectionNatural = computed(() => {
-  if (!selection.value || !imageSize.clientWidth || !imageSize.clientHeight) {
-    return null
-  }
-  const scaleX = imageSize.naturalWidth / imageSize.clientWidth
-  const scaleY = imageSize.naturalHeight / imageSize.clientHeight
-  const x = Math.min(selection.value.x1, selection.value.x2)
-  const y = Math.min(selection.value.y1, selection.value.y2)
-  const width = Math.abs(selection.value.x2 - selection.value.x1)
-  const height = Math.abs(selection.value.y2 - selection.value.y1)
-  return {
-    x: Math.round(x * scaleX),
-    y: Math.round(y * scaleY),
-    width: Math.round(width * scaleX),
-    height: Math.round(height * scaleY),
-  }
-})
-
-const selectionLabel = computed(() => {
-  if (!selectionNatural.value) {
-    return ''
-  }
-  return `${selectionNatural.value.width} × ${selectionNatural.value.height}`
-})
-
-const pointLabel = computed(() => {
-  if (!pointNatural.value) {
-    return ''
-  }
-  return `${pointNatural.value.x}, ${pointNatural.value.y}`
-})
-
-const regionSummary = computed(() => {
-  if (!selectionNatural.value) {
-    return {
-      start: '-',
-      end: '-',
-      size: '-',
-    }
-  }
-  const { x, y, width, height } = selectionNatural.value
-  return {
-    start: `${x}, ${y}`,
-    end: `${x + width}, ${y + height}`,
-    size: `${width} × ${height}`,
-  }
+const creatingCategory = computed(() => categorySaving.value || categoryDeleting.value)
+const {
+  stageRef,
+  imageRef,
+  imageSize,
+  selection,
+  point,
+  pointNatural,
+  selectionNatural,
+  selectionStyle,
+  pointStyle,
+  selectionLabel,
+  pointLabel,
+  regionSummary,
+  clearInteractiveState,
+  resetSelectionState,
+  handleImageLoad,
+  handlePointerDown,
+  handlePointerMove,
+  handlePointerUp,
+} = useCaptureSelection({
+  elementType: computed(() => form.element_type as CaptureElementMode),
+  screenshotContent,
 })
 
 const canSubmit = computed(() => {
@@ -342,30 +256,13 @@ const canSubmit = computed(() => {
 
 const formatCaptureTime = (timestamp: number) => new Date(timestamp * 1000).toLocaleString('zh-CN')
 
-const clearInteractiveState = () => {
-  selection.value = null
-  point.value = null
-  dragging.value = false
-  dragStart.value = null
-}
-
 const resetState = () => {
-  form.name = ''
-  form.element_type = 'image'
-  form.image_category = 'common'
-  form.threshold = 0.7
-  form.rgb = false
-  form.tagsText = ''
-  form.description = ''
+  Object.assign(form, createDefaultCaptureElementFormState())
   newCategoryName.value = ''
   screenshotContent.value = ''
   captureMeta.device_id = ''
   captureMeta.timestamp = 0
-  imageSize.naturalWidth = 0
-  imageSize.naturalHeight = 0
-  imageSize.clientWidth = 0
-  imageSize.clientHeight = 0
-  clearInteractiveState()
+  resetSelectionState()
 }
 
 const closeModal = () => {
@@ -397,39 +294,8 @@ const refreshDevices = async () => {
   await loadDevices(true)
 }
 
-const loadCategories = async () => {
-  categoriesLoading.value = true
-  try {
-    const nextCategories = await AppAutomationService.getElementImageCategories()
-    imageCategories.value = nextCategories
-    if (!nextCategories.some(item => item.name === form.image_category)) {
-      form.image_category = nextCategories[0]?.name || 'common'
-    }
-  } catch (error: any) {
-    Message.error(error.message || '加载图片分类失败')
-  } finally {
-    categoriesLoading.value = false
-  }
-}
-
 const createCategory = async () => {
-  const name = newCategoryName.value.trim()
-  if (!name) {
-    Message.warning('请输入分类名称')
-    return
-  }
-  creatingCategory.value = true
-  try {
-    const category = await AppAutomationService.createElementImageCategory(name)
-    form.image_category = category.name
-    newCategoryName.value = ''
-    Message.success('图片分类已创建')
-    await loadCategories()
-  } catch (error: any) {
-    Message.error(error.message || '创建图片分类失败')
-  } finally {
-    creatingCategory.value = false
-  }
+  await createImageCategory()
 }
 
 const deleteCurrentCategory = async () => {
@@ -437,17 +303,7 @@ const deleteCurrentCategory = async () => {
     Message.warning('默认分类不可删除')
     return
   }
-  creatingCategory.value = true
-  try {
-    await AppAutomationService.deleteElementImageCategory(form.image_category)
-    Message.success('图片分类已删除')
-    form.image_category = 'common'
-    await loadCategories()
-  } catch (error: any) {
-    Message.error(error.message || '删除图片分类失败')
-  } finally {
-    creatingCategory.value = false
-  }
+  await deleteImageCategory(form.image_category)
 }
 
 const captureScreenshot = async () => {
@@ -468,77 +324,6 @@ const captureScreenshot = async () => {
   } finally {
     capturing.value = false
   }
-}
-
-const handleImageLoad = () => {
-  if (!imageRef.value) {
-    return
-  }
-  imageSize.naturalWidth = imageRef.value.naturalWidth || 0
-  imageSize.naturalHeight = imageRef.value.naturalHeight || 0
-  imageSize.clientWidth = imageRef.value.clientWidth || 0
-  imageSize.clientHeight = imageRef.value.clientHeight || 0
-}
-
-const handlePointerDown = (event: MouseEvent) => {
-  if (!screenshotContent.value) {
-    return
-  }
-  const pointerPosition = normalizePointer(event)
-  if (!pointerPosition) {
-    return
-  }
-  if (form.element_type === 'pos') {
-    point.value = pointerPosition
-    selection.value = null
-    return
-  }
-  dragging.value = true
-  dragStart.value = pointerPosition
-  selection.value = {
-    x1: pointerPosition.x,
-    y1: pointerPosition.y,
-    x2: pointerPosition.x,
-    y2: pointerPosition.y,
-  }
-  point.value = null
-}
-
-const handlePointerMove = (event: MouseEvent) => {
-  if (!dragging.value || !dragStart.value || form.element_type === 'pos') {
-    return
-  }
-  const pointerPosition = normalizePointer(event)
-  if (!pointerPosition) {
-    return
-  }
-  selection.value = {
-    x1: dragStart.value.x,
-    y1: dragStart.value.y,
-    x2: pointerPosition.x,
-    y2: pointerPosition.y,
-  }
-}
-
-const handlePointerUp = () => {
-  if (!dragging.value) {
-    return
-  }
-  dragging.value = false
-  dragStart.value = null
-  if (!selection.value) {
-    return
-  }
-  const width = Math.abs(selection.value.x2 - selection.value.x1)
-  const height = Math.abs(selection.value.y2 - selection.value.y1)
-  if (width < 4 || height < 4) {
-    selection.value = null
-  }
-}
-
-const normalizeFileName = (name: string) => {
-  const safeBase = name.trim().replace(/[^\u4e00-\u9fa5\w-]+/g, '_').replace(/^_+|_+$/g, '')
-  return `${safeBase || 'captured_element'}.png`
 }
 
 const buildImageBlob = async () => {
@@ -582,86 +367,41 @@ const buildImageBlob = async () => {
 }
 
 const buildPayload = async () => {
-  const tags = form.tagsText
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean)
-
   if (form.element_type === 'image') {
     const blob = await buildImageBlob()
-    const file = new File([blob], normalizeFileName(form.name), { type: 'image/png' })
+    const file = new File([blob], normalizeCapturedElementFileName(form.name), { type: 'image/png' })
     const uploadResult = await AppAutomationService.uploadElementAsset(file, props.projectId, form.image_category)
-    return {
-      project_id: props.projectId,
-      name: form.name.trim(),
-      element_type: 'image' as const,
-      selector_type: 'image',
-      selector_value: uploadResult.image_path,
-      description: form.description.trim(),
-      tags,
-      config: {
-        threshold: form.threshold,
-        rgb: form.rgb,
-        image_path: uploadResult.image_path,
-        image_category: uploadResult.image_category,
-        file_hash: uploadResult.file_hash,
-        capture_device_id: captureMeta.device_id,
-        capture_timestamp: captureMeta.timestamp,
-        crop_region: selectionNatural.value,
-      },
-      image_path: uploadResult.image_path,
-      is_active: true,
-    }
+    return buildCapturedImageElementPayload({
+      projectId: props.projectId,
+      form,
+      uploadResult,
+      captureMeta,
+      cropRegion: selectionNatural.value,
+    })
   }
 
   if (form.element_type === 'pos') {
     if (!pointNatural.value) {
       throw new Error('请在截图上单击选择坐标')
     }
-    return {
-      project_id: props.projectId,
-      name: form.name.trim(),
-      element_type: 'pos' as const,
-      selector_type: 'pos',
-      selector_value: `${pointNatural.value.x},${pointNatural.value.y}`,
-      description: form.description.trim(),
-      tags,
-      config: {
-        x: pointNatural.value.x,
-        y: pointNatural.value.y,
-        capture_device_id: captureMeta.device_id,
-        capture_timestamp: captureMeta.timestamp,
-      },
-      image_path: '',
-      is_active: true,
-    }
+    return buildCapturedPosElementPayload({
+      projectId: props.projectId,
+      form,
+      point: pointNatural.value,
+      captureMeta,
+    })
   }
 
   if (!selectionNatural.value || selectionNatural.value.width <= 0 || selectionNatural.value.height <= 0) {
     throw new Error('请先框选区域')
   }
 
-  return {
-    project_id: props.projectId,
-    name: form.name.trim(),
-    element_type: 'region' as const,
-    selector_type: 'region',
-    selector_value: `${selectionNatural.value.x},${selectionNatural.value.y},${selectionNatural.value.x + selectionNatural.value.width},${selectionNatural.value.y + selectionNatural.value.height}`,
-    description: form.description.trim(),
-    tags,
-    config: {
-      x1: selectionNatural.value.x,
-      y1: selectionNatural.value.y,
-      x2: selectionNatural.value.x + selectionNatural.value.width,
-      y2: selectionNatural.value.y + selectionNatural.value.height,
-      width: selectionNatural.value.width,
-      height: selectionNatural.value.height,
-      capture_device_id: captureMeta.device_id,
-      capture_timestamp: captureMeta.timestamp,
-    },
-    image_path: '',
-    is_active: true,
-  }
+  return buildCapturedRegionElementPayload({
+    projectId: props.projectId,
+    form,
+    region: selectionNatural.value,
+    captureMeta,
+  })
 }
 
 const submit = async () => {
@@ -695,16 +435,6 @@ watch(
   },
 )
 
-watch(
-  () => form.element_type,
-  value => {
-    if (value === 'pos') {
-      selection.value = null
-      return
-    }
-    point.value = null
-  },
-)
 </script>
 
 <style scoped>

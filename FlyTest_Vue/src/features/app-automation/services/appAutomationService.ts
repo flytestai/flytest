@@ -1,5 +1,5 @@
 import { request } from '@/utils/request'
-import { useAuthStore } from '@/store/authStore'
+import { encodeAppAutomationAssetPath } from '../utils/assetPath'
 import type {
   AppAdbDetectionResult,
   AppAdbDiagnostics,
@@ -30,42 +30,33 @@ import type {
 } from '../types'
 
 const APP_BASE = '/app-automation'
-const APP_API_ROOT = (() => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL
-  const useProxy = import.meta.env.VITE_USE_PROXY === 'true' || import.meta.env.VITE_USE_PROXY === true
-
-  if (useProxy) {
-    return '/api'
-  }
-
-  if (envUrl && (envUrl.startsWith('http://') || envUrl.startsWith('https://'))) {
-    return envUrl.replace(/\/$/, '')
-  }
-
-  return (envUrl || '/api').replace(/\/$/, '')
-})()
-
-function withAccessToken(url: string) {
-  let token = ''
-  try {
-    token = useAuthStore().getAccessToken || ''
-  } catch {
-    token = ''
-  }
-  if (!token) {
-    return url
-  }
-
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}token=${encodeURIComponent(token)}`
-}
-
 async function unwrap<T>(config: Record<string, unknown>): Promise<T> {
   const response = await request<T>(config as never)
   if (response.success && response.data !== undefined) {
     return response.data
   }
   throw new Error(response.error || response.message || '请求失败')
+}
+
+async function unwrapBinary(config: Record<string, unknown>): Promise<Blob> {
+  const response = await request<Blob>({
+    ...config,
+    responseType: 'blob',
+  } as never)
+  if (response.success && response.data instanceof Blob) {
+    return response.data
+  }
+  throw new Error(response.error || response.message || 'Request failed')
+}
+
+async function createBlobObjectUrl(config: Record<string, unknown>): Promise<string> {
+  const blob = await unwrapBinary(config)
+  return URL.createObjectURL(blob)
+}
+
+async function unwrapText(config: Record<string, unknown>): Promise<string> {
+  const blob = await unwrapBinary(config)
+  return blob.text()
 }
 
 export const AppAutomationService = {
@@ -198,38 +189,42 @@ export const AppAutomationService = {
     })
   },
 
-  getElementPreviewUrl(id: number) {
-    return withAccessToken(`${APP_API_ROOT}${APP_BASE}/elements/${id}/preview/`)
-  },
-
-  getElementAssetUrl(imagePath: string) {
-    const normalized = String(imagePath || '')
-      .replace(/^\/+/, '')
-      .split('/')
-      .map(segment => encodeURIComponent(segment))
-      .join('/')
-    return withAccessToken(`${APP_API_ROOT}${APP_BASE}/elements/assets/${normalized}`)
-  },
-
-  getElementImageCategories() {
-    return unwrap<AppImageCategory[]>({
-      url: `${APP_BASE}/elements/image-categories/`,
+  fetchElementPreviewBlobUrl(id: number) {
+    return createBlobObjectUrl({
+      url: `${APP_BASE}/elements/${id}/preview/`,
       method: 'GET',
     })
   },
 
-  createElementImageCategory(name: string) {
-    return unwrap<{ name: string }>({
-      url: `${APP_BASE}/elements/image-categories/create/`,
-      method: 'POST',
-      data: { name },
+  fetchElementAssetBlobUrl(imagePath: string) {
+    const normalized = encodeAppAutomationAssetPath(imagePath)
+    return createBlobObjectUrl({
+      url: `${APP_BASE}/elements/assets/${normalized}`,
+      method: 'GET',
     })
   },
 
-  deleteElementImageCategory(name: string) {
+  getElementImageCategories(projectId: number) {
+    return unwrap<AppImageCategory[]>({
+      url: `${APP_BASE}/elements/image-categories/`,
+      method: 'GET',
+      params: { project_id: projectId },
+    })
+  },
+
+  createElementImageCategory(name: string, projectId: number) {
+    return unwrap<{ name: string }>({
+      url: `${APP_BASE}/elements/image-categories/create/`,
+      method: 'POST',
+      data: { name, project_id: projectId },
+    })
+  },
+
+  deleteElementImageCategory(name: string, projectId: number) {
     return unwrap<void>({
       url: `${APP_BASE}/elements/image-categories/${encodeURIComponent(name)}/`,
       method: 'DELETE',
+      params: { project_id: projectId },
     })
   },
 
@@ -357,17 +352,19 @@ export const AppAutomationService = {
     })
   },
 
-  getExecutionReportUrl(id: number) {
-    return withAccessToken(`${APP_API_ROOT}${APP_BASE}/executions/${id}/report/`)
+  fetchExecutionReportText(id: number) {
+    return unwrapText({
+      url: `${APP_BASE}/executions/${id}/report/`,
+      method: 'GET',
+    })
   },
 
-  getExecutionReportAssetUrl(id: number, filePath: string) {
-    const normalized = String(filePath || '')
-      .replace(/^\/+/, '')
-      .split('/')
-      .map(segment => encodeURIComponent(segment))
-      .join('/')
-    return withAccessToken(`${APP_API_ROOT}${APP_BASE}/executions/${id}/report/${normalized}`)
+  fetchExecutionReportAssetBlobUrl(id: number, filePath: string) {
+    const normalized = encodeAppAutomationAssetPath(filePath)
+    return createBlobObjectUrl({
+      url: `${APP_BASE}/executions/${id}/report/${normalized}`,
+      method: 'GET',
+    })
   },
 
   stopExecution(id: number) {

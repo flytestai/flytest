@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
+from .access_control import apply_project_scope_filter, ensure_project_access, ensure_row_project_access
 from .database import connection, fetch_all, fetch_one, json_dumps, json_loads, utc_now
 from .reporting import write_execution_report
 from .schemas import (
@@ -74,6 +75,15 @@ def compute_next_run(
         except Exception:
             return None
     return None
+
+
+def compute_task_next_run(task: dict[str, Any]) -> str | None:
+    return compute_next_run(
+        str(task.get("trigger_type") or ""),
+        str(task.get("cron_expression") or ""),
+        int(task.get("interval_seconds") or 0) or None,
+        str(task.get("execute_at") or "").strip() or None,
+    )
 
 
 def serialize_component(row: dict[str, Any]) -> dict[str, Any]:
@@ -439,6 +449,7 @@ def get_suite_or_404(conn, suite_id: int) -> dict[str, Any]:
     row = fetch_one(conn, "SELECT * FROM test_suites WHERE id = ?", (suite_id,))
     if row is None:
         raise HTTPException(status_code=404, detail="测试套件不存在")
+    ensure_row_project_access(row)
     return serialize_suite(row, conn)
 
 
@@ -446,7 +457,28 @@ def get_task_or_404(conn, task_id: int) -> dict[str, Any]:
     row = fetch_one(conn, "SELECT * FROM scheduled_tasks WHERE id = ?", (task_id,))
     if row is None:
         raise HTTPException(status_code=404, detail="定时任务不存在")
+    ensure_row_project_access(row)
     return serialize_task(row)
+
+
+def ensure_test_cases_belong_to_project(conn, project_id: int, test_case_ids: list[int]) -> None:
+    if not test_case_ids:
+        return
+
+    placeholders = ", ".join("?" for _ in test_case_ids)
+    rows = fetch_all(
+        conn,
+        f"SELECT id, project_id FROM test_cases WHERE id IN ({placeholders})",
+        tuple(test_case_ids),
+    )
+    row_map = {int(row["id"]): row for row in rows}
+    for test_case_id in test_case_ids:
+        row = row_map.get(int(test_case_id))
+        if row is None:
+            raise HTTPException(status_code=404, detail="测试用例不存在")
+        ensure_row_project_access(row)
+        if int(row["project_id"]) != project_id:
+            raise HTTPException(status_code=400, detail="测试用例不属于当前项目")
 
 
 def create_notification_log(
@@ -523,6 +555,7 @@ def normalize_task_payload(task: dict[str, Any]) -> None:
 
 
 def validate_scheduled_task_payload(conn, payload: ScheduledTaskPayload) -> None:
+    ensure_project_access(payload.project_id)
     if payload.device_id is not None:
         device = fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (payload.device_id,))
         if device is None:
@@ -1316,9 +1349,7 @@ def delete_component_package(package_id: int) -> dict[str, Any]:
 def list_test_suites(project_id: int | None = Query(default=None), search: str | None = Query(default=None)) -> dict[str, Any]:
     query = "SELECT * FROM test_suites WHERE 1 = 1"
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id)
     if search:
         query += " AND (name LIKE ? OR description LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
@@ -1337,6 +1368,8 @@ def get_test_suite(suite_id: int) -> dict[str, Any]:
 @router.post("/test-suites/")
 def create_test_suite(payload: TestSuitePayload, created_by: str = Query(default="FlyTest")) -> dict[str, Any]:
     with connection() as conn:
+        ensure_project_access(payload.project_id)
+        ensure_test_cases_belong_to_project(conn, payload.project_id, payload.test_case_ids)
         now = utc_now()
         conn.execute(
             """
@@ -1361,6 +1394,8 @@ def create_test_suite(payload: TestSuitePayload, created_by: str = Query(default
 def update_test_suite(suite_id: int, payload: TestSuitePayload) -> dict[str, Any]:
     with connection() as conn:
         _ = get_suite_or_404(conn, suite_id)
+        ensure_project_access(payload.project_id)
+        ensure_test_cases_belong_to_project(conn, payload.project_id, payload.test_case_ids)
         conn.execute(
             "UPDATE test_suites SET project_id = ?, name = ?, description = ?, updated_at = ? WHERE id = ?",
             (payload.project_id, payload.name, payload.description, utc_now(), suite_id),
@@ -1399,7 +1434,8 @@ def get_suite_test_cases(suite_id: int) -> dict[str, Any]:
 @router.post("/test-suites/{suite_id}/add_test_case/")
 def add_test_case_to_suite(suite_id: int, test_case_id: int = Query(...), order: int | None = Query(default=None)) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_suite_or_404(conn, suite_id)
+        suite = get_suite_or_404(conn, suite_id)
+        ensure_test_cases_belong_to_project(conn, int(suite["project_id"]), [test_case_id])
         if order is None:
             existing = fetch_one(conn, "SELECT MAX(sort_order) AS max_order FROM test_suite_cases WHERE test_suite_id = ?", (suite_id,))
             order = (existing["max_order"] or 0) + 1
@@ -1436,9 +1472,19 @@ def update_suite_case_order(suite_id: int, test_case_orders: list[dict[str, int]
 @router.post("/test-suites/{suite_id}/run/")
 def run_test_suite(suite_id: int, payload: TestSuiteRunPayload) -> dict[str, Any]:
     with connection() as conn:
+        from .main import reserve_device_for_execution
+
         suite = get_suite_or_404(conn, suite_id)
         if not suite["suite_cases"]:
             raise HTTPException(status_code=400, detail="该测试套件没有可执行的用例")
+        device = fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (payload.device_id,))
+        if device is None:
+            raise HTTPException(status_code=404, detail="执行设备不存在")
+        reserve_device_for_execution(
+            conn,
+            payload.device_id,
+            locked_by=payload.triggered_by or "FlyTest",
+        )
         package_override = get_package_override_or_404(
             conn,
             suite["project_id"],
@@ -1495,16 +1541,19 @@ def get_suite_executions(suite_id: int) -> dict[str, Any]:
 def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, Any]:
     try:
         with connection() as conn:
+            from .main import reserve_device_for_execution
+
             task = get_task_or_404(conn, task_id)
             normalize_task_payload(task)
             triggered_at = utc_now()
-            next_run_time = compute_next_run(
-                task["trigger_type"],
-                task["cron_expression"],
-                task["interval_seconds"],
-                task["execute_at"],
-            )
+            next_run_time = compute_task_next_run(task)
             next_status = task["status"]
+            if task.get("device_id"):
+                reserve_device_for_execution(
+                    conn,
+                    int(task["device_id"]),
+                    locked_by=triggered_by,
+                )
 
             if task["task_type"] == "TEST_SUITE":
                 suite = get_suite_or_404(conn, task["test_suite_id"])
@@ -1622,7 +1671,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                 update_task_run_state(
                     conn,
                     task_id,
-                    next_run_time=existing.get("next_run_time"),
+                    next_run_time=compute_task_next_run(existing),
                     status=next_status,
                     failure_count=1,
                     error_message=str(exc.detail),
@@ -1655,7 +1704,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                 update_task_run_state(
                     conn,
                     task_id,
-                    next_run_time=existing.get("next_run_time"),
+                    next_run_time=compute_task_next_run(existing),
                     status=next_status,
                     failure_count=1,
                     error_message=str(exc),
@@ -1703,9 +1752,7 @@ def list_scheduled_tasks(
 ) -> dict[str, Any]:
     query = build_scheduled_task_query() + "\nWHERE 1 = 1"
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND st.project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id, column="st.project_id")
     if search:
         query += " AND (st.name LIKE ? OR st.description LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
@@ -1730,6 +1777,7 @@ def get_scheduled_task(task_id: int) -> dict[str, Any]:
         row = fetch_one(conn, build_scheduled_task_query() + "\nWHERE st.id = ?", (task_id,))
         if row is None:
             raise HTTPException(status_code=404, detail="定时任务不存在")
+    ensure_row_project_access(row)
     return success(serialize_task(row))
 
 
@@ -1881,9 +1929,7 @@ def list_notification_logs(
 
     query = "SELECT * FROM notification_logs WHERE 1 = 1"
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id)
     if search:
         query += " AND (task_name LIKE ? OR notification_content LIKE ? OR error_message LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
@@ -1916,6 +1962,7 @@ def retry_notification(log_id: int) -> dict[str, Any]:
         row = fetch_one(conn, "SELECT * FROM notification_logs WHERE id = ?", (log_id,))
         if row is None:
             raise HTTPException(status_code=404, detail="通知日志不存在")
+        ensure_row_project_access(row)
         current_retry_count = int(row.get("retry_count") or 0) + 1
         retried_at = utc_now()
         response_info = json_loads(row.get("response_info"), {})

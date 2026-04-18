@@ -240,8 +240,12 @@ def get_element_asset_root() -> Path:
     return root
 
 
+def normalize_asset_path(asset_path: str) -> str:
+    return (asset_path or "").replace("\\", "/").strip().lstrip("/")
+
+
 def resolve_element_asset_path(asset_path: str) -> Path:
-    cleaned = (asset_path or "").replace("\\", "/").strip().lstrip("/")
+    cleaned = normalize_asset_path(asset_path)
     if not cleaned:
         raise HTTPException(status_code=404, detail="元素资源不存在")
 
@@ -265,6 +269,64 @@ def build_element_image_path(element: dict[str, Any]) -> str:
     if isinstance(config, dict):
         return str(config.get("image_path") or "").strip()
     return ""
+
+
+def build_project_asset_dir(category_name: str, project_id: int) -> Path:
+    return get_element_asset_root() / category_name / f"project-{project_id}"
+
+
+def extract_project_id_from_asset_path(asset_path: str) -> int | None:
+    parts = [segment for segment in normalize_asset_path(asset_path).split("/") if segment]
+    for segment in parts:
+        if not segment.startswith("project-"):
+            continue
+        project_suffix = segment.removeprefix("project-")
+        if project_suffix.isdigit():
+            return int(project_suffix)
+    return None
+
+
+def extract_image_category_from_asset_path(asset_path: str) -> str:
+    parts = [segment for segment in normalize_asset_path(asset_path).split("/") if segment]
+    if parts and parts[0] == "elements":
+        parts = parts[1:]
+    if not parts:
+        return ""
+
+    category = parts[0]
+    if category.startswith("project-"):
+        return ""
+    return category
+
+
+def asset_is_visible_to_scoped_project(conn, asset_path: str) -> bool:
+    normalized_path = normalize_asset_path(asset_path)
+    query = "SELECT * FROM elements WHERE 1 = 1"
+    params: list[Any] = []
+    query, params = apply_project_scope_filter(query, params, None)
+    query += " AND (image_path = ? OR selector_value = ?)"
+    params.extend([normalized_path, normalized_path])
+    rows = fetch_all(conn, query, params)
+    return any(build_element_image_path(serialize_element(row)) == normalized_path for row in rows)
+
+
+def ensure_element_asset_access(conn, asset_path: str) -> None:
+    scoped_project_ids = resolve_scoped_project_ids(None)
+    if scoped_project_ids is None:
+        return
+    if not scoped_project_ids:
+        raise HTTPException(status_code=403, detail="当前用户无权访问该元素资源")
+
+    scoped_project_id = extract_project_id_from_asset_path(asset_path)
+    if scoped_project_id is not None:
+        if scoped_project_id in scoped_project_ids:
+            return
+        raise HTTPException(status_code=403, detail="当前用户无权访问该元素资源")
+
+    if asset_is_visible_to_scoped_project(conn, asset_path):
+        return
+
+    raise HTTPException(status_code=403, detail="当前用户无权访问该元素资源")
 
 
 def compute_file_hash(content: bytes) -> str:
@@ -293,14 +355,17 @@ def find_duplicate_element_asset(
     return None
 
 
-def list_image_categories() -> list[dict[str, Any]]:
+def list_image_categories(project_id: int) -> list[dict[str, Any]]:
     root = get_element_asset_root()
-    (root / "common").mkdir(parents=True, exist_ok=True)
+    build_project_asset_dir("common", project_id).mkdir(parents=True, exist_ok=True)
     categories: list[dict[str, Any]] = []
     for item in sorted(root.iterdir(), key=lambda path: path.name.lower()):
         if not item.is_dir():
             continue
-        file_count = sum(1 for file in item.iterdir() if file.is_file())
+        project_dir = build_project_asset_dir(item.name, project_id)
+        if not project_dir.exists() and item.name != "common":
+            continue
+        file_count = sum(1 for file in project_dir.rglob("*") if file.is_file()) if project_dir.exists() else 0
         categories.append({"name": item.name, "count": file_count, "path": item.name})
     return categories
 
@@ -318,6 +383,14 @@ def serialize_execution(row: dict[str, Any]) -> dict[str, Any]:
     passed_steps = int(row.get("passed_steps") or 0)
     row["pass_rate"] = round(passed_steps / total_steps * 100, 1) if total_steps else 0
     return row
+
+
+def ensure_package_belongs_to_project(package: dict[str, Any], project_id: int) -> None:
+    package_project_id = package.get("project_id")
+    if isinstance(package_project_id, str) and package_project_id.isdigit():
+        package_project_id = int(package_project_id)
+    if package_project_id != project_id:
+        raise HTTPException(status_code=400, detail="应用包不属于当前项目")
 
 
 def extract_steps(ui_flow: dict[str, Any]) -> list[dict[str, Any]]:
@@ -537,6 +610,26 @@ def reserve_device_for_execution(conn, device_id: int, *, locked_by: str) -> dic
     return get_device_or_404(conn, device_id)
 
 
+def claim_pending_execution(
+    conn,
+    execution_id: int,
+    *,
+    started_at: str,
+    logs: list[dict[str, Any]],
+    total_steps: int,
+) -> bool:
+    updated = conn.execute(
+        """
+        UPDATE executions
+        SET status = 'running', started_at = ?, updated_at = ?, logs = ?, progress = 3,
+            total_steps = ?, passed_steps = 0, failed_steps = 0, error_message = ''
+        WHERE id = ? AND status = 'pending'
+        """,
+        (started_at, started_at, json_dumps(logs), total_steps, execution_id),
+    )
+    return updated.rowcount == 1
+
+
 def _refresh_suite_stats_for_execution(conn, execution_id: int) -> None:
     execution = fetch_one(conn, "SELECT test_suite_id FROM executions WHERE id = ?", (execution_id,))
     suite_id = execution.get("test_suite_id") if execution else None
@@ -566,6 +659,10 @@ def run_execution(execution_id: int) -> None:
     try:
         with connection() as conn:
             execution = get_execution_or_404(conn, execution_id)
+            if execution["status"] == "stopped":
+                return
+            if execution["status"] != "pending":
+                return
             test_case = get_test_case_or_404(conn, execution["test_case_id"])
             device = get_device_or_404(conn, execution["device_id"])
             settings = get_settings(conn)
@@ -635,15 +732,17 @@ def run_execution(execution_id: int) -> None:
                 return
 
             started_at = utc_now()
-            conn.execute(
-                """
-                UPDATE executions
-                SET status = 'running', started_at = ?, updated_at = ?, logs = ?, progress = 3,
-                    total_steps = ?, passed_steps = 0, failed_steps = 0, error_message = ''
-                WHERE id = ?
-                """,
-                (started_at, started_at, json_dumps(logs), total_steps, execution_id),
-            )
+            if not claim_pending_execution(
+                conn,
+                execution_id,
+                started_at=started_at,
+                logs=logs,
+                total_steps=total_steps,
+            ):
+                current = get_execution_or_404(conn, execution_id)
+                if current["status"] == "stopped":
+                    return
+                return
             conn.execute(
                 """
                 UPDATE devices
@@ -816,31 +915,26 @@ def get_dashboard_statistics(project_id: int | None = Query(default=None)) -> di
         device_online = fetch_one(conn, "SELECT COUNT(*) AS count FROM devices WHERE status IN ('available', 'online')")["count"]
         device_locked = fetch_one(conn, "SELECT COUNT(*) AS count FROM devices WHERE status = 'locked'")["count"]
 
-        filters: list[str] = []
-        params: list[Any] = []
-        if project_id is not None:
-            filters.append("project_id = ?")
-            params.append(project_id)
-        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
-
-        package_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM packages {where_clause}", params)["count"]
-        element_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM elements {where_clause}", params)["count"]
-        test_case_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM test_cases {where_clause}", params)["count"]
-        execution_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM executions {where_clause}", params)["count"]
+        package_where, package_params = apply_project_scope_filter("WHERE 1 = 1", [], project_id)
+        package_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM packages {package_where}", package_params)["count"]
+        element_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM elements {package_where}", package_params)["count"]
+        test_case_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM test_cases {package_where}", package_params)["count"]
+        execution_where, execution_params = apply_project_scope_filter("WHERE 1 = 1", [], project_id)
+        execution_total = fetch_one(conn, f"SELECT COUNT(*) AS count FROM executions {execution_where}", execution_params)["count"]
         execution_passed = fetch_one(
             conn,
-            f"SELECT COUNT(*) AS count FROM executions {where_clause} {'AND' if where_clause else 'WHERE'} result = 'passed'",
-            params,
+            f"SELECT COUNT(*) AS count FROM executions {execution_where} AND result = 'passed'",
+            execution_params,
         )["count"]
         execution_failed = fetch_one(
             conn,
-            f"SELECT COUNT(*) AS count FROM executions {where_clause} {'AND' if where_clause else 'WHERE'} result = 'failed'",
-            params,
+            f"SELECT COUNT(*) AS count FROM executions {execution_where} AND result = 'failed'",
+            execution_params,
         )["count"]
         execution_running = fetch_one(
             conn,
-            f"SELECT COUNT(*) AS count FROM executions {where_clause} {'AND' if where_clause else 'WHERE'} status = 'running'",
-            params,
+            f"SELECT COUNT(*) AS count FROM executions {execution_where} AND status = 'running'",
+            execution_params,
         )["count"]
         denominator = max(execution_passed + execution_failed, 1)
         pass_rate = round(execution_passed / denominator * 100, 1) if execution_total else 0
@@ -850,14 +944,11 @@ def get_dashboard_statistics(project_id: int | None = Query(default=None)) -> di
             FROM executions e
             LEFT JOIN test_cases tc ON tc.id = e.test_case_id
             LEFT JOIN devices d ON d.id = e.device_id
+            WHERE 1 = 1
         """
-        recent_where_clause = ""
-        if project_id is not None:
-            recent_where_clause = "WHERE e.project_id = ?"
-        if recent_where_clause:
-            recent_query += f" {recent_where_clause}"
+        recent_query, recent_params = apply_project_scope_filter(recent_query, [], project_id, column="e.project_id")
         recent_query += " ORDER BY e.created_at DESC LIMIT 6"
-        recent_executions = [serialize_execution(item) for item in fetch_all(conn, recent_query, params)]
+        recent_executions = [serialize_execution(item) for item in fetch_all(conn, recent_query, recent_params)]
 
     return success(
         {
@@ -1015,9 +1106,7 @@ def delete_device(device_id: int) -> dict[str, Any]:
 def list_packages(project_id: int | None = Query(default=None), search: str | None = Query(default=None)) -> dict[str, Any]:
     query = "SELECT * FROM packages WHERE 1 = 1"
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id)
     if search:
         query += " AND (name LIKE ? OR package_name LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
@@ -1030,6 +1119,7 @@ def list_packages(project_id: int | None = Query(default=None), search: str | No
 @app.post("/packages/")
 def create_package(payload: PackagePayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_project_access(payload.project_id)
         now = utc_now()
         conn.execute(
             """
@@ -1055,6 +1145,7 @@ def create_package(payload: PackagePayload) -> dict[str, Any]:
 def update_package(package_id: int, payload: PackagePayload) -> dict[str, Any]:
     with connection() as conn:
         _ = get_package_or_404(conn, package_id)
+        ensure_project_access(payload.project_id)
         conn.execute(
             """
             UPDATE packages
@@ -1091,9 +1182,7 @@ def list_elements(
 ) -> dict[str, Any]:
     query = "SELECT * FROM elements WHERE 1 = 1"
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id)
     if search:
         query += " AND (name LIKE ? OR selector_value LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
@@ -1107,14 +1196,16 @@ def list_elements(
 
 
 @app.get("/elements/image-categories/")
-def get_element_image_categories() -> dict[str, Any]:
-    return success(list_image_categories())
+def get_element_image_categories(project_id: int = Query(...)) -> dict[str, Any]:
+    ensure_project_access(project_id)
+    return success(list_image_categories(project_id))
 
 
 @app.post("/elements/image-categories/create/")
 def create_element_image_category(payload: ImageCategoryPayload) -> dict[str, Any]:
+    ensure_project_access(payload.project_id)
     category_name = normalize_category_name(payload.name)
-    category_path = get_element_asset_root() / category_name
+    category_path = build_project_asset_dir(category_name, payload.project_id)
     if category_path.exists():
         raise HTTPException(status_code=400, detail="图片分类已存在")
     category_path.mkdir(parents=True, exist_ok=True)
@@ -1122,17 +1213,29 @@ def create_element_image_category(payload: ImageCategoryPayload) -> dict[str, An
 
 
 @app.delete("/elements/image-categories/{category_name}/")
-def delete_element_image_category(category_name: str) -> dict[str, Any]:
+def delete_element_image_category(category_name: str, project_id: int = Query(...)) -> dict[str, Any]:
     name = normalize_category_name(category_name)
     if name == "common":
         raise HTTPException(status_code=400, detail="默认分类不可删除")
 
-    category_path = get_element_asset_root() / name
+    ensure_project_access(project_id)
+
+    category_root = get_element_asset_root() / name
+    category_path = build_project_asset_dir(name, project_id)
     if not category_path.exists():
         raise HTTPException(status_code=404, detail="图片分类不存在")
-    if any(category_path.iterdir()):
+    if any(path.is_file() for path in category_path.rglob("*")):
         raise HTTPException(status_code=400, detail="分类不为空，无法删除")
+    nested_dirs = sorted(
+        [path for path in category_path.rglob("*") if path.is_dir()],
+        key=lambda path: len(path.parts),
+        reverse=True,
+    )
+    for nested_dir in nested_dirs:
+        nested_dir.rmdir()
     category_path.rmdir()
+    if category_root.exists() and not any(category_root.iterdir()):
+        category_root.rmdir()
     return success(None, "图片分类已删除")
 
 
@@ -1141,6 +1244,8 @@ def get_element_asset(asset_path: str) -> FileResponse:
     file_path = resolve_element_asset_path(asset_path)
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="元素资源不存在")
+    with connection() as conn:
+        ensure_element_asset_access(conn, asset_path)
     return FileResponse(str(file_path), media_type=get_report_content_type(file_path))
 
 
@@ -1152,12 +1257,15 @@ def preview_element(element_id: int) -> FileResponse:
     file_path = resolve_element_asset_path(image_path)
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="元素图片不存在")
+    with connection() as conn:
+        ensure_element_asset_access(conn, image_path)
     return FileResponse(str(file_path), media_type=get_report_content_type(file_path))
 
 
 @app.post("/elements/")
 def create_element(payload: ElementPayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_project_access(payload.project_id)
         now = utc_now()
         conn.execute(
             """
@@ -1189,6 +1297,7 @@ def create_element(payload: ElementPayload) -> dict[str, Any]:
 def update_element(element_id: int, payload: ElementPayload) -> dict[str, Any]:
     with connection() as conn:
         _ = get_element_or_404(conn, element_id)
+        ensure_project_access(payload.project_id)
         conn.execute(
             """
             UPDATE elements
@@ -1225,19 +1334,29 @@ async def upload_element_asset(
     if not content:
         raise HTTPException(status_code=400, detail="未接收到图片文件")
 
+    ensure_project_access(project_id)
     category_name = normalize_category_name(category)
     file_hash = compute_file_hash(content)
 
     with connection() as conn:
-        duplicate = find_duplicate_element_asset(conn, file_hash, exclude_element_id=element_id)
+        if element_id is not None:
+            element = get_element_or_404(conn, element_id)
+            if int(element["project_id"]) != project_id:
+                raise HTTPException(status_code=400, detail="元素不属于当前项目")
+        duplicate = find_duplicate_element_asset(
+            conn,
+            file_hash,
+            project_id=project_id,
+            exclude_element_id=element_id,
+        )
         if duplicate is not None:
             image_path = build_element_image_path(duplicate)
             duplicate_config = duplicate.get("config", {})
             duplicate_category = ""
             if isinstance(duplicate_config, dict):
                 duplicate_category = str(duplicate_config.get("image_category") or "")
-            if not duplicate_category and "/" in image_path:
-                duplicate_category = image_path.split("/", 1)[0]
+            if not duplicate_category:
+                duplicate_category = extract_image_category_from_asset_path(image_path)
             return success(
                 {
                     "project_id": project_id,
@@ -1254,7 +1373,7 @@ async def upload_element_asset(
                 "检测到重复图片，已复用现有资源",
             )
 
-    target_dir = get_element_asset_root() / category_name
+    target_dir = build_project_asset_dir(category_name, project_id)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     suffix = Path(file.filename or "element.png").suffix or ".png"
@@ -1295,9 +1414,7 @@ def list_test_cases(project_id: int | None = Query(default=None), search: str | 
         WHERE 1 = 1
     """
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND tc.project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id, column="tc.project_id")
     if search:
         query += " AND (tc.name LIKE ? OR tc.description LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
@@ -1316,8 +1433,10 @@ def get_test_case_detail(test_case_id: int) -> dict[str, Any]:
 @app.post("/test-cases/")
 def create_test_case(payload: TestCasePayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_project_access(payload.project_id)
         if payload.package_id is not None:
-            _ = get_package_or_404(conn, payload.package_id)
+            package = get_package_or_404(conn, payload.package_id)
+            ensure_package_belongs_to_project(package, payload.project_id)
         now = utc_now()
         conn.execute(
             """
@@ -1348,8 +1467,10 @@ def create_test_case(payload: TestCasePayload) -> dict[str, Any]:
 def update_test_case(test_case_id: int, payload: TestCasePayload) -> dict[str, Any]:
     with connection() as conn:
         _ = get_test_case_or_404(conn, test_case_id)
+        ensure_project_access(payload.project_id)
         if payload.package_id is not None:
-            _ = get_package_or_404(conn, payload.package_id)
+            package = get_package_or_404(conn, payload.package_id)
+            ensure_package_belongs_to_project(package, payload.project_id)
         conn.execute(
             """
             UPDATE test_cases
@@ -1385,6 +1506,10 @@ def delete_test_case(test_case_id: int) -> dict[str, Any]:
 @app.post("/ai/scene-plan/")
 def generate_scene_plan(payload: ScenePlanPayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_project_access(payload.project_id)
+        if payload.package_id is not None:
+            package = get_package_or_404(conn, payload.package_id)
+            ensure_package_belongs_to_project(package, payload.project_id)
         plan = build_scene_plan(conn, payload.model_dump())
     return success(plan, "APP AI 场景规划已生成")
 
@@ -1392,6 +1517,10 @@ def generate_scene_plan(payload: ScenePlanPayload) -> dict[str, Any]:
 @app.post("/ai/step-suggestion/")
 def generate_step_suggestion(payload: StepSuggestionPayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_project_access(payload.project_id)
+        if payload.package_id is not None:
+            package = get_package_or_404(conn, payload.package_id)
+            ensure_package_belongs_to_project(package, payload.project_id)
         suggestion = build_step_suggestion(conn, payload.model_dump())
     return success(suggestion, "APP AI 步骤补全已生成")
 
@@ -1400,7 +1529,11 @@ def generate_step_suggestion(payload: StepSuggestionPayload) -> dict[str, Any]:
 def execute_test_case(test_case_id: int, payload: ExecuteTestCasePayload) -> dict[str, Any]:
     with connection() as conn:
         test_case = get_test_case_or_404(conn, test_case_id)
-        _ = get_device_or_404(conn, payload.device_id)
+        reserve_device_for_execution(
+            conn,
+            payload.device_id,
+            locked_by=payload.triggered_by or "FlyTest",
+        )
         now = utc_now()
         conn.execute(
             """
@@ -1443,9 +1576,7 @@ def list_executions(
         WHERE 1 = 1
     """
     params: list[Any] = []
-    if project_id is not None:
-        query += " AND e.project_id = ?"
-        params.append(project_id)
+    query, params = apply_project_scope_filter(query, params, project_id, column="e.project_id")
     if status:
         query += " AND e.status = ?"
         params.append(status)
@@ -1500,10 +1631,17 @@ def stop_execution(execution_id: int) -> dict[str, Any]:
         logs = append_log(execution["logs"], "收到停止指令", "warning")
         now = utc_now()
         conn.execute(
-            "UPDATE executions SET status = 'stopped', finished_at = COALESCE(finished_at, ?), updated_at = ?, logs = ? WHERE id = ?",
+            """
+            UPDATE executions
+            SET status = 'stopped', result = 'stopped', finished_at = COALESCE(finished_at, ?), updated_at = ?, logs = ?
+            WHERE id = ?
+            """,
             (now, now, json_dumps(logs), execution_id),
         )
+        if execution["status"] == "pending" and execution.get("device_id"):
+            finish_device_lock(conn, execution["device_id"])
         write_execution_report(conn, execution_id)
+        _refresh_suite_stats_for_execution(conn, execution_id)
         return success(get_execution_or_404(conn, execution_id), "执行已停止")
 
 

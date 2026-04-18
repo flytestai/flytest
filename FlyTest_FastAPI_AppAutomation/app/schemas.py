@@ -40,6 +40,7 @@ class ElementPayload(BaseModel):
 
 
 class ImageCategoryPayload(BaseModel):
+    project_id: int
     name: str = Field(..., min_length=1, max_length=80)
 
 

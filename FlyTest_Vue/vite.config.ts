@@ -40,35 +40,33 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) {
+          const normalizedId = id.replace(/\\/g, '/')
+
+          if (!normalizedId.includes('node_modules')) {
             return
           }
 
-          if (id.includes('monaco-editor') || id.includes('@guolao/vue-monaco-editor')) {
+          if (normalizedId.includes('monaco-editor') || normalizedId.includes('@guolao/vue-monaco-editor')) {
             return 'monaco'
           }
 
-          if (id.includes('vue-router') || id.includes('pinia') || id.includes('@vueuse/core')) {
+          if (normalizedId.includes('vue-router') || normalizedId.includes('pinia') || normalizedId.includes('@vueuse/core')) {
             return 'vue-ecosystem'
           }
 
-          if (id.includes('@arco-design/web-vue') || id.includes('/vue/')) {
-            return 'ui-framework'
-          }
-
-          if (id.includes('axios')) {
+          if (normalizedId.includes('axios')) {
             return 'network'
           }
 
-          if (id.includes('marked') || id.includes('dompurify')) {
+          if (normalizedId.includes('marked') || normalizedId.includes('dompurify')) {
             return 'content'
           }
 
-          if (id.includes('vuedraggable')) {
+          if (normalizedId.includes('vuedraggable')) {
             return 'dragdrop'
           }
 
-          if (id.includes('wired-elements')) {
+          if (normalizedId.includes('wired-elements')) {
             return 'ui-extras'
           }
         },

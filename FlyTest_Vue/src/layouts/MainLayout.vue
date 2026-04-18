@@ -542,7 +542,6 @@ import {
   IconMoonFill,
   IconUserGroup,
 } from '@arco-design/web-vue/es/icon';
-import '@arco-design/web-vue/dist/arco.css'; // 寮曞叆 Arco Design 鏍峰紡
 
 const ALayoutHeader = ALayout.Header;
 const ALayoutSider = ALayout.Sider;

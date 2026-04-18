@@ -87,9 +87,6 @@ def _iter_django_roots() -> list[str]:
         os.environ.get("APP_AUTOMATION_DJANGO_BASE_URL", ""),
         os.environ.get("FLYTEST_BACKEND_URL", ""),
         os.environ.get("DJANGO_BASE_URL", ""),
-        "http://backend:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
     ]
     roots: list[str] = []
     seen: set[str] = set()
@@ -100,6 +97,10 @@ def _iter_django_roots() -> list[str]:
         seen.add(root)
         roots.append(root)
     return roots
+
+
+def remote_access_control_enabled() -> bool:
+    return bool(_iter_django_roots())
 
 
 def _fetch_django_json(path: str) -> Any:
@@ -157,6 +158,11 @@ def _load_user_permissions() -> set[str]:
     if cached is not None:
         return cached
 
+    if not remote_access_control_enabled():
+        permissions: set[str] = set()
+        _request_permissions_var.set(permissions)
+        return permissions
+
     user_id = _get_current_user_id()
     if user_id is None:
         raise HTTPException(status_code=403, detail="当前认证上下文缺少用户标识")
@@ -186,6 +192,11 @@ def _load_accessible_project_ids() -> list[int]:
     cached = _request_projects_var.get()
     if cached is not None:
         return cached
+
+    if not remote_access_control_enabled():
+        project_ids: list[int] = []
+        _request_projects_var.set(project_ids)
+        return project_ids
 
     payload = _fetch_django_json("/api/projects/")
     data = _extract_response_data(payload)
@@ -244,7 +255,7 @@ def get_required_permission_for_path(path: str) -> str | None:
 
 
 def enforce_request_module_permission(request: Request) -> None:
-    if auth_disabled() or not has_request_context():
+    if auth_disabled() or not has_request_context() or not remote_access_control_enabled():
         return
 
     required_permission = get_required_permission_for_path(request.url.path)
@@ -257,7 +268,7 @@ def enforce_request_module_permission(request: Request) -> None:
 
 
 def ensure_project_access(project_id: int) -> None:
-    if auth_disabled() or not has_request_context():
+    if auth_disabled() or not has_request_context() or not remote_access_control_enabled():
         return
 
     if project_id not in _load_accessible_project_ids():
@@ -279,7 +290,7 @@ def resolve_scoped_project_ids(requested_project_id: int | None) -> list[int] | 
         ensure_project_access(requested_project_id)
         return [requested_project_id]
 
-    if auth_disabled() or not has_request_context():
+    if auth_disabled() or not has_request_context() or not remote_access_control_enabled():
         return None
 
     return _load_accessible_project_ids()

@@ -5,6 +5,7 @@ import tempfile
 import time
 import unittest
 import gc
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -77,6 +78,20 @@ class InlineThread(FakeThread):
         return None
 
 
+class FakeUrlopenResponse:
+    def __init__(self, payload):
+        self.payload = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+    def read(self):
+        return self.payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return None
+
+
 class AppApiSmokeTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -137,6 +152,37 @@ class AppApiSmokeTests(unittest.TestCase):
                 "activity_name": ".LaunchActivity",
                 "platform": "android",
                 "description": "smoke package",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()["data"]
+
+    def create_test_case(self, name: str = "test-case", *, package_id: int | None = None, steps=None):
+        if package_id is None:
+            with database.connection() as conn:
+                existing_package = database.fetch_one(
+                    conn,
+                    "SELECT id FROM packages WHERE project_id = ? AND package_name = ?",
+                    (1001, "com.tencent.wework"),
+                )
+            package = {"id": existing_package["id"]} if existing_package else self.create_package()
+        else:
+            package = {"id": package_id}
+        response = self.client.post(
+            "/test-cases/",
+            json={
+                "project_id": 1001,
+                "name": name,
+                "description": "test case fixture",
+                "package_id": package["id"],
+                "ui_flow": {
+                    "steps": steps
+                    or [{"name": "save screenshot", "type": "snapshot", "config": {"name": "done"}}]
+                },
+                "variables": [],
+                "tags": ["smoke"],
+                "timeout": 60,
+                "retry_count": 0,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -375,6 +421,308 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(export_payload["filename"], "export-pack.json")
         self.assertGreaterEqual(export_payload["component_count"], 1)
         self.assertGreaterEqual(export_payload["custom_component_count"], 1)
+
+    def test_execute_test_case_rejects_locked_device_before_creating_execution(self):
+        test_case = self.create_test_case(name="locked-device-case")
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("existing-run", now, now, device_id),
+            )
+
+        with patch.object(self.main_module, "start_execution_thread") as mocked_start:
+            response = self.client.post(
+                f"/test-cases/{test_case['id']}/execute/",
+                json={"device_id": device_id, "trigger_mode": "manual", "triggered_by": "smoke"},
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(mocked_start.called)
+
+        with database.connection() as conn:
+            executions = database.fetch_all(
+                conn,
+                "SELECT id FROM executions WHERE test_case_id = ?",
+                (test_case["id"],),
+            )
+
+        self.assertEqual(executions, [])
+
+    def test_run_test_suite_rejects_locked_device(self):
+        test_case = self.create_test_case(name="suite-device-lock-case")
+        suite_response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "locked-suite",
+                "description": "suite fixture",
+                "test_case_ids": [test_case["id"]],
+            },
+        )
+        self.assertEqual(suite_response.status_code, 200)
+        suite_id = suite_response.json()["data"]["id"]
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("existing-run", now, now, device_id),
+            )
+
+        response = self.client.post(
+            f"/test-suites/{suite_id}/run/",
+            json={"device_id": device_id, "triggered_by": "smoke", "package_name": ""},
+        )
+
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            executions = database.fetch_all(
+                conn,
+                "SELECT id FROM executions WHERE test_suite_id = ?",
+                (suite_id,),
+            )
+
+        self.assertEqual(executions, [])
+
+    def test_stop_pending_execution_releases_device_and_blocks_late_start(self):
+        fixture = self.create_execution_fixture(case_name="pending-stop-case")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("smoke", now, now, fixture["device_id"]),
+            )
+
+        response = self.client.post(f"/executions/{fixture['execution_id']}/stop/")
+        self.assertEqual(response.status_code, 200)
+
+        with patch.object(self.main_module, "AppFlowExecutor") as mocked_executor:
+            self.main_module.run_execution(fixture["execution_id"])
+
+        self.assertFalse(mocked_executor.called)
+
+        with database.connection() as conn:
+            execution = database.fetch_one(
+                conn,
+                "SELECT status, result, started_at FROM executions WHERE id = ?",
+                (fixture["execution_id"],),
+            )
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (fixture["device_id"],),
+            )
+
+        self.assertEqual(execution["status"], "stopped")
+        self.assertEqual(execution["result"], "stopped")
+        self.assertIsNone(execution["started_at"])
+        self.assertEqual(device["status"], "available")
+        self.assertEqual(device["locked_by"], "")
+
+    def test_run_now_failure_reschedules_interval_task_after_lock_conflict(self):
+        fixture = self.create_execution_fixture(case_name="scheduled-lock-case")
+
+        create_response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 1001,
+                "name": "scheduled-lock-task",
+                "description": "scheduled trigger",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": fixture["device_id"],
+                "package_id": fixture["package_id"],
+                "test_suite_id": None,
+                "test_case_id": fixture["test_case_id"],
+                "notify_on_success": False,
+                "notify_on_failure": False,
+                "notification_type": "",
+                "notify_emails": [],
+                "status": "ACTIVE",
+                "created_by": "tester",
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+        task_payload = create_response.json()["data"]
+        task_id = task_payload["id"]
+        original_next_run = task_payload["next_run_time"]
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("existing-run", now, now, fixture["device_id"]),
+            )
+
+        response = self.client.post(f"/scheduled-tasks/{task_id}/run_now/", params={"triggered_by": "smoke"})
+        self.assertEqual(response.status_code, 409)
+
+        task_response = self.client.get(f"/scheduled-tasks/{task_id}/")
+        self.assertEqual(task_response.status_code, 200)
+        task_payload = task_response.json()["data"]
+
+        self.assertEqual(task_payload["failed_runs"], 1)
+        self.assertEqual(task_payload["last_result"]["status"], "failed")
+        self.assertEqual(task_payload["status"], "ACTIVE")
+        self.assertGreater(
+            datetime.fromisoformat(task_payload["next_run_time"]),
+            datetime.fromisoformat(original_next_run),
+        )
+
+    def test_upload_element_asset_reuses_duplicate_image_within_project(self):
+        upload_response = self.client.post(
+            "/elements/upload/",
+            params={"project_id": 1001, "category": "common"},
+            files={"file": ("duplicate.png", b"duplicate-image-content", "image/png")},
+        )
+        self.assertEqual(upload_response.status_code, 200)
+        upload_payload = upload_response.json()["data"]
+        self.assertFalse(upload_payload["duplicate"])
+        self.assertTrue(upload_payload["image_path"].startswith("elements/common/project-1001/"))
+
+        element_response = self.client.post(
+            "/elements/",
+            json={
+                "project_id": 1001,
+                "name": "duplicate-image-element",
+                "element_type": "image",
+                "selector_type": "image",
+                "selector_value": upload_payload["image_path"],
+                "description": "duplicate image element",
+                "tags": [],
+                "config": {
+                    "file_hash": upload_payload["file_hash"],
+                    "image_category": upload_payload["image_category"],
+                    "image_path": upload_payload["image_path"],
+                },
+                "image_path": upload_payload["image_path"],
+                "is_active": True,
+            },
+        )
+        self.assertEqual(element_response.status_code, 200)
+        element_payload = element_response.json()["data"]
+
+        duplicate_response = self.client.post(
+            "/elements/upload/",
+            params={"project_id": 1001, "category": "common"},
+            files={"file": ("duplicate.png", b"duplicate-image-content", "image/png")},
+        )
+        self.assertEqual(duplicate_response.status_code, 200)
+        duplicate_payload = duplicate_response.json()["data"]
+        self.assertTrue(duplicate_payload["duplicate"])
+        self.assertEqual(duplicate_payload["image_path"], upload_payload["image_path"])
+        self.assertEqual(duplicate_payload["existing_element"]["id"], element_payload["id"])
+
+    def test_upload_element_asset_recovers_category_from_nested_asset_path(self):
+        upload_response = self.client.post(
+            "/elements/upload/",
+            params={"project_id": 1001, "category": "common"},
+            files={"file": ("legacy-duplicate.png", b"legacy-duplicate-image", "image/png")},
+        )
+        self.assertEqual(upload_response.status_code, 200)
+        upload_payload = upload_response.json()["data"]
+
+        element_response = self.client.post(
+            "/elements/",
+            json={
+                "project_id": 1001,
+                "name": "legacy-duplicate-image-element",
+                "element_type": "image",
+                "selector_type": "image",
+                "selector_value": upload_payload["image_path"],
+                "description": "legacy duplicate image element",
+                "tags": [],
+                "config": {
+                    "file_hash": upload_payload["file_hash"],
+                    "image_path": upload_payload["image_path"],
+                },
+                "image_path": upload_payload["image_path"],
+                "is_active": True,
+            },
+        )
+        self.assertEqual(element_response.status_code, 200)
+
+        duplicate_response = self.client.post(
+            "/elements/upload/",
+            params={"project_id": 1001, "category": "common"},
+            files={"file": ("legacy-duplicate.png", b"legacy-duplicate-image", "image/png")},
+        )
+        self.assertEqual(duplicate_response.status_code, 200)
+
+        duplicate_payload = duplicate_response.json()["data"]
+        self.assertTrue(duplicate_payload["duplicate"])
+        self.assertEqual(duplicate_payload["image_category"], "common")
+
+    def test_create_test_case_rejects_cross_project_package(self):
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO packages (project_id, name, package_name, activity_name, platform, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (2002, "cross-project-package", "com.example.cross", "", "android", "", now, now),
+            )
+            package_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        response = self.client.post(
+            "/test-cases/",
+            json={
+                "project_id": 1001,
+                "name": "cross-project-case",
+                "description": "should fail",
+                "package_id": package_id,
+                "ui_flow": {"steps": []},
+                "variables": [],
+                "tags": [],
+                "timeout": 60,
+                "retry_count": 0,
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+    def test_add_test_case_to_suite_rejects_cross_project_case(self):
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO test_suites (
+                    project_id, name, description, execution_status, execution_result, passed_count, failed_count,
+                    last_run_at, created_by, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (1001, "suite-1001", "", "not_run", "", 0, 0, None, "tester", now, now),
+            )
+            suite_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            conn.execute(
+                """
+                INSERT INTO test_cases (
+                    project_id, name, description, package_id, ui_flow, variables, tags,
+                    timeout, retry_count, last_result, last_run_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (2002, "other-project-case", "", None, "{}", "[]", "[]", 60, 0, "", None, now, now),
+            )
+            test_case_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        response = self.client.post(
+            f"/test-suites/{suite_id}/add_test_case/",
+            params={"test_case_id": test_case_id},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
 
     def test_health_endpoint_reports_scheduler_metadata(self):
         response = self.client.get("/health")
@@ -1300,6 +1648,7 @@ class AppApiAuthTests(unittest.TestCase):
             {
                 "APP_AUTOMATION_AUTH_DISABLED": "0",
                 "APP_AUTOMATION_JWT_SECRET": self.secret,
+                "APP_AUTOMATION_DJANGO_BASE_URL": "http://permissions.local",
             },
             clear=False,
         )
@@ -1317,9 +1666,35 @@ class AppApiAuthTests(unittest.TestCase):
 
         database.init_storage()
 
+        import app.access_control as access_control
         import app.main as main_module
 
+        self.mock_permissions = [
+            {"codename": codename, "content_type": {"app_label": "app_automation"}}
+            for codename in [
+                "view_appautomationoverview",
+                "view_appautomationdevice",
+                "view_appautomationpackage",
+                "view_appautomationelement",
+                "view_appautomationscenebuilder",
+                "view_appautomationtestcase",
+                "view_appautomationsuite",
+                "view_appautomationexecution",
+                "view_appautomationscheduledtask",
+                "view_appautomationnotification",
+                "view_appautomationreport",
+                "view_appautomationsettings",
+            ]
+        ]
+        self.mock_projects = [{"id": 1001, "name": "project-1001"}]
+        self.access_control_module = importlib.reload(access_control)
         self.main_module = importlib.reload(main_module)
+        self.urlopen_patcher = patch.object(
+            self.access_control_module.urllib_request,
+            "urlopen",
+            side_effect=self.fake_django_urlopen,
+        )
+        self.urlopen_patcher.start()
         self.client_cm = TestClient(self.main_module.app)
         self.client = self.client_cm.__enter__()
 
@@ -1332,6 +1707,10 @@ class AppApiAuthTests(unittest.TestCase):
             del self.client_cm
         if hasattr(self, "main_module"):
             del self.main_module
+        if hasattr(self, "access_control_module"):
+            del self.access_control_module
+        if hasattr(self, "urlopen_patcher"):
+            self.urlopen_patcher.stop()
         if hasattr(self, "env_patcher"):
             self.env_patcher.stop()
         for patcher in reversed(getattr(self, "patches", [])):
@@ -1350,6 +1729,14 @@ class AppApiAuthTests(unittest.TestCase):
     def build_auth_header(self):
         token = jwt.encode({"user_id": 1, "username": "tester"}, self.secret, algorithm="HS256")
         return {"Authorization": f"Bearer {token}"}
+
+    def fake_django_urlopen(self, request, timeout=5):
+        url = getattr(request, "full_url", str(request))
+        if "/api/accounts/users/1/permissions/" in url:
+            return FakeUrlopenResponse({"data": self.mock_permissions})
+        if "/api/projects/" in url:
+            return FakeUrlopenResponse({"data": self.mock_projects})
+        raise AssertionError(f"Unexpected Django access-control URL: {url}")
 
     def test_public_health_remains_available(self):
         response = self.client.get("/health")
@@ -1389,6 +1776,245 @@ class AppApiAuthTests(unittest.TestCase):
         payload = response.json()["data"]
         self.assertEqual(payload["default_timeout"], 180)
         self.assertEqual(payload["notes"], "authorized")
+
+    def test_read_route_rejects_query_token(self):
+        token = jwt.encode({"user_id": 1, "username": "query-user"}, self.secret, algorithm="HS256")
+
+        response = self.client.get("/settings/current/", params={"token": token})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("detail", response.json())
+
+    def test_mutating_route_rejects_query_token(self):
+        token = jwt.encode({"user_id": 1, "username": "query-user"}, self.secret, algorithm="HS256")
+
+        response = self.client.post(
+            "/settings/save/",
+            params={"token": token},
+            json={
+                "adb_path": "adb",
+                "default_timeout": 120,
+                "workspace_root": "",
+                "auto_discover_on_open": True,
+                "notes": "query-token-should-fail",
+            },
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("detail", response.json())
+
+    def test_project_scoped_list_filters_packages(self):
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.executemany(
+                """
+                INSERT INTO packages (project_id, name, package_name, activity_name, platform, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (1001, "visible-package", "com.example.visible", "", "android", "", now, now),
+                    (2002, "hidden-package", "com.example.hidden", "", "android", "", now, now),
+                ],
+            )
+
+        response = self.client.get("/packages/", headers=self.build_auth_header())
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["data"]
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["project_id"], 1001)
+        self.assertEqual(payload[0]["package_name"], "com.example.visible")
+
+    def test_project_scoped_create_rejects_inaccessible_project(self):
+        response = self.client.post(
+            "/packages/",
+            headers=self.build_auth_header(),
+            json={
+                "project_id": 2002,
+                "name": "forbidden-package",
+                "package_name": "com.example.forbidden",
+                "activity_name": "",
+                "platform": "android",
+                "description": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("detail", response.json())
+
+    def test_project_scoped_asset_url_allows_uploaded_asset_preview(self):
+        upload_response = self.client.post(
+            "/elements/upload/",
+            headers=self.build_auth_header(),
+            params={"project_id": 1001, "category": "common"},
+            files={"file": ("preview.png", b"preview-image", "image/png")},
+        )
+
+        self.assertEqual(upload_response.status_code, 200)
+        image_path = upload_response.json()["data"]["image_path"]
+        self.assertTrue(image_path.startswith("elements/common/project-1001/"))
+
+        asset_response = self.client.get(f"/elements/assets/{image_path}", headers=self.build_auth_header())
+
+        self.assertEqual(asset_response.status_code, 200)
+        self.assertEqual(asset_response.content, b"preview-image")
+
+    def test_legacy_asset_url_allows_accessible_element_reference(self):
+        asset_path = "elements/common/legacy.png"
+        file_path = database.ELEMENT_UPLOADS_DIR / "common" / "legacy.png"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(b"legacy-image")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO elements (
+                    project_id, name, element_type, selector_type, selector_value, description,
+                    tags, config, image_path, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (1001, "legacy-image", "image", "image", asset_path, "", "[]", "{}", asset_path, 1, now, now),
+            )
+
+        asset_response = self.client.get(f"/elements/assets/{asset_path}", headers=self.build_auth_header())
+
+        self.assertEqual(asset_response.status_code, 200)
+        self.assertEqual(asset_response.content, b"legacy-image")
+
+    def test_project_scoped_asset_url_rejects_inaccessible_project_file(self):
+        file_path = database.ELEMENT_UPLOADS_DIR / "common" / "project-2002" / "secret.png"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(b"secret-image")
+
+        response = self.client.get("/elements/assets/elements/common/project-2002/secret.png", headers=self.build_auth_header())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("detail", response.json())
+
+    def test_preview_element_rejects_cross_project_asset_reference(self):
+        asset_path = "elements/common/project-2002/secret.png"
+        file_path = database.ELEMENT_UPLOADS_DIR / "common" / "project-2002" / "secret.png"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(b"secret-image")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO elements (
+                    project_id, name, element_type, selector_type, selector_value, description,
+                    tags, config, image_path, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (1001, "cross-project-preview", "image", "image", asset_path, "", "[]", "{}", asset_path, 1, now, now),
+            )
+            element_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        response = self.client.get(f"/elements/{element_id}/preview/", headers=self.build_auth_header())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("detail", response.json())
+
+    def test_image_categories_are_scoped_by_project(self):
+        self.mock_projects = [
+            {"id": 1001, "name": "project-1001"},
+            {"id": 2002, "name": "project-2002"},
+        ]
+        headers = self.build_auth_header()
+
+        create_1001 = self.client.post(
+            "/elements/image-categories/create/",
+            headers=headers,
+            json={"project_id": 1001, "name": "shared"},
+        )
+        create_2002 = self.client.post(
+            "/elements/image-categories/create/",
+            headers=headers,
+            json={"project_id": 2002, "name": "shared"},
+        )
+        self.assertEqual(create_1001.status_code, 200)
+        self.assertEqual(create_2002.status_code, 200)
+
+        upload_1001 = self.client.post(
+            "/elements/upload/",
+            headers=headers,
+            params={"project_id": 1001, "category": "shared"},
+            files={"file": ("shared-1001.png", b"project-1001", "image/png")},
+        )
+        upload_2002 = self.client.post(
+            "/elements/upload/",
+            headers=headers,
+            params={"project_id": 2002, "category": "shared"},
+            files={"file": ("shared-2002.png", b"project-2002", "image/png")},
+        )
+        self.assertEqual(upload_1001.status_code, 200)
+        self.assertEqual(upload_2002.status_code, 200)
+
+        response_1001 = self.client.get(
+            "/elements/image-categories/",
+            headers=headers,
+            params={"project_id": 1001},
+        )
+        response_2002 = self.client.get(
+            "/elements/image-categories/",
+            headers=headers,
+            params={"project_id": 2002},
+        )
+        self.assertEqual(response_1001.status_code, 200)
+        self.assertEqual(response_2002.status_code, 200)
+
+        categories_1001 = {item["name"]: item["count"] for item in response_1001.json()["data"]}
+        categories_2002 = {item["name"]: item["count"] for item in response_2002.json()["data"]}
+
+        self.assertEqual(categories_1001.get("shared"), 1)
+        self.assertEqual(categories_2002.get("shared"), 1)
+        self.assertIn("common", categories_1001)
+        self.assertIn("common", categories_2002)
+
+    def test_delete_image_category_only_removes_current_project_directory(self):
+        self.mock_projects = [
+            {"id": 1001, "name": "project-1001"},
+            {"id": 2002, "name": "project-2002"},
+        ]
+        headers = self.build_auth_header()
+
+        for project_id in (1001, 2002):
+            response = self.client.post(
+                "/elements/image-categories/create/",
+                headers=headers,
+                json={"project_id": project_id, "name": "shared"},
+            )
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.delete(
+            "/elements/image-categories/shared/",
+            headers=headers,
+            params={"project_id": 1001},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        with database.connection() as conn:
+            project_1001_dir = database.ELEMENT_UPLOADS_DIR / "shared" / "project-1001"
+            project_2002_dir = database.ELEMENT_UPLOADS_DIR / "shared" / "project-2002"
+            self.assertFalse(project_1001_dir.exists())
+            self.assertTrue(project_2002_dir.exists())
+
+        response_1001 = self.client.get(
+            "/elements/image-categories/",
+            headers=headers,
+            params={"project_id": 1001},
+        )
+        response_2002 = self.client.get(
+            "/elements/image-categories/",
+            headers=headers,
+            params={"project_id": 2002},
+        )
+        categories_1001 = {item["name"]: item["count"] for item in response_1001.json()["data"]}
+        categories_2002 = {item["name"]: item["count"] for item in response_2002.json()["data"]}
+
+        self.assertNotIn("shared", categories_1001)
+        self.assertEqual(categories_2002.get("shared"), 0)
 
     def test_mutating_route_accepts_access_cookie(self):
         token = jwt.encode({"user_id": 1, "username": "cookie-user"}, self.secret, algorithm="HS256")
