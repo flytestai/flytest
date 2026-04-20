@@ -306,6 +306,9 @@ export function useAppAutomationNotifications() {
       if (tab !== 'notifications') {
         return
       }
+      if (!currentTaskId.value) {
+        taskContext.value = null
+      }
       pagination.current = 1
       void Promise.all([loadTaskContext(), loadData()])
     },
@@ -321,6 +324,10 @@ export function useAppAutomationNotifications() {
       detailVisible.value = false
       taskContext.value = null
       pagination.current = 1
+      if (currentTaskId.value) {
+        void clearTaskContext()
+        return
+      }
       void Promise.all([loadTaskContext(), loadData()])
     },
   )

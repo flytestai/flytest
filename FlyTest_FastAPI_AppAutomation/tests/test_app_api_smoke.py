@@ -1954,13 +1954,17 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()["data"]
 
-        self.assertEqual(payload["status"], "success")
-        self.assertEqual(payload["error_message"], "")
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["error_message"], "network timeout")
         self.assertTrue(payload["is_retried"])
         self.assertEqual(payload["retry_count"], 1)
-        self.assertEqual(payload["response_info"]["retry_status"], "success")
+        self.assertEqual(payload["response_info"]["retry_status"], "not_sent")
         self.assertEqual(payload["response_info"]["retry_count"], 1)
         self.assertTrue(payload["response_info"]["retried_at"])
+        self.assertEqual(
+            payload["response_info"]["detail"],
+            "Retry requested, but notification resend is not implemented.",
+        )
 
     def test_notification_logs_support_date_range_filter(self):
         with database.connection() as conn:

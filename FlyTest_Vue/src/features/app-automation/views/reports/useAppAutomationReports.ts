@@ -430,6 +430,11 @@ export function useAppAutomationReports() {
       if (suite && (!suiteDetailVisible.value || selectedSuite.value?.id !== suiteId)) {
         await openSuiteDetail(suite, { syncRoute: false })
       }
+    } else {
+      suiteDetailVisible.value = false
+      if (!suiteExecutionsVisible.value) {
+        selectedSuite.value = null
+      }
     }
 
     if (
@@ -437,6 +442,9 @@ export function useAppAutomationReports() {
       (!executionDetailVisible.value || currentExecution.value?.id !== executionId)
     ) {
       await openExecutionDetail(executionId, { syncRoute: false })
+    } else if (executionId <= 0) {
+      executionDetailVisible.value = false
+      currentExecution.value = null
     }
   }
 

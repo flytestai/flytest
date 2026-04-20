@@ -2037,21 +2037,30 @@ def retry_notification(log_id: int) -> dict[str, Any]:
         current_retry_count = int(row.get("retry_count") or 0) + 1
         retried_at = utc_now()
         response_info = json_loads(row.get("response_info"), {})
+        current_status = str(row.get("status") or "failed")
+        current_error_message = str(row.get("error_message") or "")
         response_info.update(
             {
                 "delivery_status": "simulated",
-                "retry_status": "success",
+                "retry_status": "not_sent",
                 "retry_count": current_retry_count,
                 "retried_at": retried_at,
+                "detail": "Retry requested, but notification resend is not implemented.",
             }
         )
         conn.execute(
             """
             UPDATE notification_logs
-            SET retry_count = ?, is_retried = 1, status = 'success', error_message = '', response_info = ?, sent_at = ?
+            SET retry_count = ?, is_retried = 1, status = ?, error_message = ?, response_info = ?
             WHERE id = ?
             """,
-            (current_retry_count, json_dumps(response_info), retried_at, log_id),
+            (
+                current_retry_count,
+                current_status,
+                current_error_message,
+                json_dumps(response_info),
+                log_id,
+            ),
         )
         updated = fetch_one(conn, "SELECT * FROM notification_logs WHERE id = ?", (log_id,))
     return success(serialize_notification(updated or {}), "通知已重试")
