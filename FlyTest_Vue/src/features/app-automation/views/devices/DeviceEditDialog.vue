@@ -14,8 +14,10 @@
           <a-option value="available">可用</a-option>
           <a-option value="online">在线</a-option>
           <a-option value="locked">锁定</a-option>
+          <a-option value="stopping" disabled>正在停止</a-option>
           <a-option value="offline">离线</a-option>
         </a-select>
+        <div class="status-hint">“正在停止”由系统自动维护，用于等待执行线程完成收尾。</div>
       </a-form-item>
       <a-form-item field="location" label="位置">
         <a-input v-model="editForm.location" placeholder="例如 QA 机房 / 本地模拟器" />
@@ -37,3 +39,12 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
 
 const emit = defineEmits<DeviceEditDialogEmits>()
 </script>
+
+<style scoped>
+.status-hint {
+  margin-top: 8px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+</style>

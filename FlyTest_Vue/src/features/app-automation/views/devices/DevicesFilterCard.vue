@@ -12,6 +12,7 @@
         <a-option value="available">可用</a-option>
         <a-option value="online">在线</a-option>
         <a-option value="locked">锁定</a-option>
+        <a-option value="stopping">正在停止</a-option>
         <a-option value="offline">离线</a-option>
       </a-select>
       <div class="filter-actions">

@@ -13,6 +13,10 @@
       <strong>{{ stats.locked }}</strong>
     </a-card>
     <a-card class="stat-card">
+      <span class="stat-label">正在停止</span>
+      <strong>{{ stats.stopping }}</strong>
+    </a-card>
+    <a-card class="stat-card">
       <span class="stat-label">离线设备</span>
       <strong>{{ stats.offline }}</strong>
     </a-card>
@@ -28,7 +32,7 @@ defineProps<DevicesStatsGridProps>()
 <style scoped>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
 

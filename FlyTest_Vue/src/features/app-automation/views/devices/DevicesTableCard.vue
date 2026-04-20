@@ -43,13 +43,19 @@
                 截图
               </a-button>
               <a-button
-                v-if="record.status !== 'locked'"
+                v-if="canLock(record)"
                 type="text"
                 @click="emit('lock', record.id)"
               >
                 锁定
               </a-button>
-              <a-button v-else type="text" @click="emit('unlock', record.id)">释放</a-button>
+              <a-button
+                v-else-if="canUnlock(record)"
+                type="text"
+                @click="emit('unlock', record.id)"
+              >
+                释放
+              </a-button>
               <a-button
                 v-if="canReconnect(record)"
                 type="text"

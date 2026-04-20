@@ -55,8 +55,9 @@ export function useAppAutomationDevices() {
       ['available', 'online'].includes(item.status),
     ).length
     const locked = devices.value.filter(item => item.status === 'locked').length
+    const stopping = devices.value.filter(item => item.status === 'stopping').length
     const offline = devices.value.filter(item => item.status === 'offline').length
-    return { total, available, locked, offline }
+    return { total, available, locked, stopping, offline }
   })
 
   const lastUpdatedText = computed(() => {
@@ -78,6 +79,7 @@ export function useAppAutomationDevices() {
     if (status === 'available') return '可用'
     if (status === 'online') return '在线'
     if (status === 'locked') return '锁定'
+    if (status === 'stopping') return '正在停止'
     if (status === 'offline') return '离线'
     return status || '-'
   }
@@ -86,6 +88,7 @@ export function useAppAutomationDevices() {
     if (status === 'available') return 'green'
     if (status === 'online') return 'arcoblue'
     if (status === 'locked') return 'orange'
+    if (status === 'stopping') return 'orangered'
     if (status === 'offline') return 'gray'
     return 'gray'
   }
@@ -105,6 +108,11 @@ export function useAppAutomationDevices() {
     return '-'
   }
 
+  const canLock = (record: AppDevice) =>
+    ['available', 'online'].includes(record.status)
+
+  const canUnlock = (record: AppDevice) => record.status === 'locked'
+
   const canReconnect = (record: AppDevice) =>
     record.status === 'offline' &&
     Boolean(record.ip_address) &&
@@ -112,6 +120,7 @@ export function useAppAutomationDevices() {
 
   const canDisconnect = (record: AppDevice) =>
     record.status !== 'offline' &&
+    record.status !== 'stopping' &&
     Boolean(record.ip_address) &&
     record.connection_type !== 'emulator'
 
@@ -444,6 +453,8 @@ export function useAppAutomationDevices() {
     getStatusColor,
     getConnectionLabel,
     formatEndpoint,
+    canLock,
+    canUnlock,
     canReconnect,
     canDisconnect,
     loadData: loadDevices,

@@ -516,7 +516,7 @@ export function useAppAutomationScheduledTasks() {
 
     try {
       if (form.id) {
-        const payload = buildPayload(false)
+        const payload = buildPayload()
         await AppAutomationService.updateScheduledTask(form.id, payload)
         Message.success('定时任务已更新')
       } else {

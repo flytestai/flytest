@@ -122,7 +122,7 @@ def resolve_update_task_status(current_status: str, requested_status: str) -> st
         raise HTTPException(status_code=409, detail="Task status is not editable")
     if normalized_requested not in MUTABLE_TASK_STATUSES:
         raise HTTPException(status_code=400, detail="Editable tasks must remain ACTIVE or PAUSED")
-    return normalized_current
+    return normalized_requested
 
 
 def serialize_component(row: dict[str, Any]) -> dict[str, Any]:
@@ -1584,9 +1584,12 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
 
             task = get_task_or_404(conn, task_id)
             normalize_task_payload(task)
+            current_status = str(task.get("status") or "ACTIVE").upper()
+            if current_status != "ACTIVE":
+                raise HTTPException(status_code=409, detail="Only ACTIVE tasks can be triggered manually")
             triggered_at = utc_now()
             next_run_time = compute_task_next_run(task)
-            next_status = task["status"]
+            next_status = current_status
             if task.get("device_id"):
                 reserve_device_for_execution(
                     conn,
@@ -1706,6 +1709,9 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
         with connection() as conn:
             existing = fetch_one(conn, "SELECT * FROM scheduled_tasks WHERE id = ?", (task_id,))
             if existing is not None:
+                existing_status = str(existing.get("status") or "ACTIVE").upper()
+                if existing_status != "ACTIVE" and str(exc.detail) == "Only ACTIVE tasks can be triggered manually":
+                    raise
                 next_status = "FAILED" if existing["trigger_type"] == "ONCE" else existing["status"]
                 update_task_run_state(
                     conn,

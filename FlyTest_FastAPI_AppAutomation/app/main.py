@@ -659,6 +659,8 @@ def reserve_device_for_execution(conn, device_id: int, *, locked_by: str) -> dic
     device_name = str(device.get("name") or device.get("device_id") or device_id)
     if device["status"] == "offline":
         raise HTTPException(status_code=409, detail=f"设备 {device_name} 当前离线，无法执行")
+    if device["status"] == "stopping":
+        raise HTTPException(status_code=409, detail=f"设备 {device_name} 正在停止上一个执行，请稍后再试")
     if device["status"] == "locked":
         holder = str(device.get("locked_by") or "").strip()
         detail = f"设备 {device_name} 当前正被占用，无法执行"
@@ -671,7 +673,7 @@ def reserve_device_for_execution(conn, device_id: int, *, locked_by: str) -> dic
         """
         UPDATE devices
         SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ?
-        WHERE id = ? AND status NOT IN ('locked', 'offline')
+        WHERE id = ? AND status NOT IN ('locked', 'offline', 'stopping')
         """,
         (locked_by.strip(), now, now, device_id),
     )
@@ -679,6 +681,8 @@ def reserve_device_for_execution(conn, device_id: int, *, locked_by: str) -> dic
         fresh_device = get_device_or_404(conn, device_id)
         if fresh_device["status"] == "offline":
             raise HTTPException(status_code=409, detail=f"设备 {device_name} 当前离线，无法执行")
+        if fresh_device["status"] == "stopping":
+            raise HTTPException(status_code=409, detail=f"设备 {device_name} 正在停止上一个执行，请稍后再试")
         holder = str(fresh_device.get("locked_by") or "").strip()
         detail = f"设备 {device_name} 当前正被占用，无法执行"
         if holder:
@@ -1727,6 +1731,15 @@ def stop_execution(execution_id: int) -> dict[str, Any]:
         )
         if execution["status"] == "pending" and execution.get("device_id"):
             finish_device_lock(conn, execution["device_id"])
+        elif execution["status"] == "running" and execution.get("device_id"):
+            conn.execute(
+                """
+                UPDATE devices
+                SET status = 'stopping', updated_at = ?
+                WHERE id = ? AND status = 'locked'
+                """,
+                (now, execution["device_id"]),
+            )
         write_execution_report(conn, execution_id)
         _refresh_suite_stats_for_execution(conn, execution_id)
         return success(get_execution_or_404(conn, execution_id), "执行已停止")

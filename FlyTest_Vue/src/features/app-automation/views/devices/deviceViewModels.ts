@@ -21,6 +21,7 @@ export interface DeviceStats {
   total: number
   available: number
   locked: number
+  stopping: number
   offline: number
 }
 
@@ -47,6 +48,8 @@ export interface DevicesTableCardProps {
   getStatusColor: (status: string) => string
   getConnectionLabel: (connectionType: string) => string
   formatEndpoint: (record: AppDevice) => string
+  canLock: (record: AppDevice) => boolean
+  canUnlock: (record: AppDevice) => boolean
   canReconnect: (record: AppDevice) => boolean
   canDisconnect: (record: AppDevice) => boolean
 }
