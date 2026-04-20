@@ -1432,8 +1432,16 @@ def create_test_suite(payload: TestSuitePayload, created_by: str = Query(default
 @router.put("/test-suites/{suite_id}/")
 def update_test_suite(suite_id: int, payload: TestSuitePayload) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_suite_or_404(conn, suite_id)
+        suite = get_suite_or_404(conn, suite_id)
         ensure_project_access(payload.project_id)
+        current_project_id = int(suite["project_id"])
+        if payload.project_id != current_project_id:
+            referenced_execution = fetch_one(conn, "SELECT id FROM executions WHERE test_suite_id = ? LIMIT 1", (suite_id,))
+            if referenced_execution is not None:
+                raise HTTPException(status_code=409, detail="suite cannot move projects while referenced by executions")
+            referenced_task = fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE test_suite_id = ? LIMIT 1", (suite_id,))
+            if referenced_task is not None:
+                raise HTTPException(status_code=409, detail="suite cannot move projects while referenced by scheduled tasks")
         ensure_test_cases_belong_to_project(conn, payload.project_id, payload.test_case_ids)
         conn.execute(
             "UPDATE test_suites SET project_id = ?, name = ?, description = ?, updated_at = ? WHERE id = ?",

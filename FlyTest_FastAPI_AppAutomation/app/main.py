@@ -1269,8 +1269,19 @@ def create_package(payload: PackagePayload) -> dict[str, Any]:
 @app.put("/packages/{package_id}/")
 def update_package(package_id: int, payload: PackagePayload) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_package_or_404(conn, package_id)
+        package = get_package_or_404(conn, package_id)
         ensure_project_access(payload.project_id)
+        current_project_id = int(package["project_id"])
+        if payload.project_id != current_project_id:
+            referenced_case = fetch_one(conn, "SELECT id FROM test_cases WHERE package_id = ? LIMIT 1", (package_id,))
+            if referenced_case is not None:
+                raise HTTPException(status_code=409, detail="package cannot move projects while referenced by test cases")
+            referenced_execution = fetch_one(conn, "SELECT id FROM executions WHERE package_id = ? LIMIT 1", (package_id,))
+            if referenced_execution is not None:
+                raise HTTPException(status_code=409, detail="package cannot move projects while referenced by executions")
+            referenced_task = fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE package_id = ? LIMIT 1", (package_id,))
+            if referenced_task is not None:
+                raise HTTPException(status_code=409, detail="package cannot move projects while referenced by scheduled tasks")
         conn.execute(
             """
             UPDATE packages
@@ -1610,8 +1621,23 @@ def create_test_case(payload: TestCasePayload) -> dict[str, Any]:
 @app.put("/test-cases/{test_case_id}/")
 def update_test_case(test_case_id: int, payload: TestCasePayload) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_test_case_or_404(conn, test_case_id)
+        test_case = get_test_case_or_404(conn, test_case_id)
         ensure_project_access(payload.project_id)
+        current_project_id = int(test_case["project_id"])
+        if payload.project_id != current_project_id:
+            suite_membership = fetch_one(
+                conn,
+                "SELECT test_suite_id FROM test_suite_cases WHERE test_case_id = ? LIMIT 1",
+                (test_case_id,),
+            )
+            if suite_membership is not None:
+                raise HTTPException(status_code=409, detail="test case cannot move projects while assigned to suites")
+            referenced_execution = fetch_one(conn, "SELECT id FROM executions WHERE test_case_id = ? LIMIT 1", (test_case_id,))
+            if referenced_execution is not None:
+                raise HTTPException(status_code=409, detail="test case cannot move projects while referenced by executions")
+            referenced_task = fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE test_case_id = ? LIMIT 1", (test_case_id,))
+            if referenced_task is not None:
+                raise HTTPException(status_code=409, detail="test case cannot move projects while referenced by scheduled tasks")
         if payload.package_id is not None:
             package = get_package_or_404(conn, payload.package_id)
             ensure_package_belongs_to_project(package, payload.project_id)

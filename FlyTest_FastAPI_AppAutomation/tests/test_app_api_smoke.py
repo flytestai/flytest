@@ -557,6 +557,87 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertIsNotNone(test_case_row)
 
+    def test_update_package_rejects_project_change_when_referenced(self):
+        test_case = self.create_test_case(name="package-project-move-case")
+
+        with database.connection() as conn:
+            package_row = database.fetch_one(
+                conn,
+                "SELECT id, project_id, name, package_name, activity_name, platform, description FROM packages WHERE id = ?",
+                (test_case["package_id"],),
+            )
+
+        response = self.client.put(
+            f"/packages/{package_row['id']}/",
+            json={
+                "project_id": 2002,
+                "name": package_row["name"],
+                "package_name": package_row["package_name"],
+                "activity_name": package_row["activity_name"],
+                "platform": package_row["platform"],
+                "description": package_row["description"],
+            },
+        )
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            updated = database.fetch_one(conn, "SELECT project_id FROM packages WHERE id = ?", (package_row["id"],))
+
+        self.assertEqual(updated["project_id"], 1001)
+
+    def test_update_test_case_rejects_project_change_when_assigned_to_suite(self):
+        test_case = self.create_test_case(name="test-case-project-move-case", package_id=None)
+        suite_response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "project-move-suite",
+                "description": "suite fixture",
+                "test_case_ids": [test_case["id"]],
+            },
+        )
+        self.assertEqual(suite_response.status_code, 200)
+
+        response = self.client.put(
+            f"/test-cases/{test_case['id']}/",
+            json={
+                "project_id": 2002,
+                "name": test_case["name"],
+                "description": test_case["description"],
+                "package_id": None,
+                "ui_flow": test_case["ui_flow"],
+                "variables": test_case["variables"],
+                "tags": test_case["tags"],
+                "timeout": test_case["timeout"],
+                "retry_count": test_case["retry_count"],
+            },
+        )
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            updated = database.fetch_one(conn, "SELECT project_id FROM test_cases WHERE id = ?", (test_case["id"],))
+
+        self.assertEqual(updated["project_id"], 1001)
+
+    def test_update_suite_rejects_project_change_when_referenced(self):
+        fixture = self.create_execution_fixture(case_name="suite-project-move-case", suite_name="suite-project-move")
+
+        response = self.client.put(
+            f"/test-suites/{fixture['suite_id']}/",
+            json={
+                "project_id": 2002,
+                "name": "suite-project-move",
+                "description": "suite fixture",
+                "test_case_ids": [],
+            },
+        )
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            updated = database.fetch_one(conn, "SELECT project_id FROM test_suites WHERE id = ?", (fixture["suite_id"],))
+
+        self.assertEqual(updated["project_id"], 1001)
+
     def test_device_discovery_preserves_stopping_status(self):
         device_id = self.create_device_record()
 
