@@ -1,6 +1,6 @@
 import { Message, Modal } from '@arco-design/web-vue'
 import type { FileItem } from '@arco-design/web-vue/es/upload/interfaces'
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { AppAutomationService } from '../../services/appAutomationService'
 import type { AppComponentPackage } from '../../types'
 import type { SceneBuilderComponentPackageExportFormModel } from './sceneBuilderDialogModels'
@@ -22,6 +22,11 @@ export const useSceneBuilderComponentPackages = ({
   const componentPackageFile = ref<File | null>(null)
   const componentPackageOverwrite = ref(true)
   const componentPackageIncludeDisabled = ref(false)
+  const resetComponentPackageImportState = () => {
+    componentPackageFileList.value = []
+    componentPackageFile.value = null
+    componentPackageOverwrite.value = true
+  }
 
   const componentPackageExportForm = reactive<SceneBuilderComponentPackageExportFormModel>({
     name: 'app-component-pack',
@@ -75,8 +80,7 @@ export const useSceneBuilderComponentPackages = ({
         componentPackageFile.value,
         componentPackageOverwrite.value,
       )
-      componentPackageFile.value = null
-      componentPackageFileList.value = []
+      resetComponentPackageImportState()
       await Promise.all([reloadData(), loadComponentPackageRecords()])
 
       const counts = result.counts
@@ -101,6 +105,15 @@ export const useSceneBuilderComponentPackages = ({
       },
     })
   }
+
+  watch(
+    () => componentPackageVisible.value,
+    value => {
+      if (!value && !componentPackageUploading.value) {
+        resetComponentPackageImportState()
+      }
+    },
+  )
 
   const downloadTextFile = (content: string, filename: string, contentType: string) => {
     const blob = new Blob([content], { type: contentType || 'application/octet-stream' })

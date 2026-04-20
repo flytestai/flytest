@@ -301,15 +301,20 @@ export function useAppAutomationTestCases() {
         }
 
         const submittedCases = [...selectedCases.value]
-        const results = await Promise.allSettled(
-          submittedCases.map(item =>
-            AppAutomationService.executeTestCase(item.id, {
+        const results: PromiseSettledResult<AppExecution>[] = []
+        for (const item of submittedCases) {
+          try {
+            const execution = await AppAutomationService.executeTestCase(item.id, {
               device_id: executeForm.device_id as number,
               trigger_mode: 'manual',
               triggered_by: authStore.currentUser?.username || 'FlyTest',
-            }),
-          ),
-        )
+            })
+            results.push({ status: 'fulfilled', value: execution })
+          } catch (error) {
+            results.push({ status: 'rejected', reason: error })
+            break
+          }
+        }
 
         const executions = results
           .filter((item): item is PromiseFulfilledResult<AppExecution> => item.status === 'fulfilled')
@@ -330,6 +335,14 @@ export function useAppAutomationTestCases() {
             (item): item is { record: AppTestCase; message: string } =>
               Boolean(item?.record),
           )
+        if (results.length < submittedCases.length) {
+          failedCases.push(
+            ...submittedCases.slice(results.length).map(record => ({
+              record,
+              message: '前序用例启动失败后未继续提交',
+            })),
+          )
+        }
 
         if (!executions.length) {
           const failedSummary = failedCases

@@ -56,6 +56,7 @@ from .execution_runtime import AppFlowExecutor, StepExecutionError, StopRequeste
 from .extended_routes import router as extended_router
 from .reporting import ensure_reports_root, get_report_content_type, resolve_report_file, write_execution_report
 from .scheduler import app_scheduler
+from .scene_validation import validate_scene_steps_payload
 from .schemas import (
     DeviceConnectPayload,
     DeviceUpdatePayload,
@@ -935,6 +936,17 @@ def _refresh_suite_stats_for_execution(conn, execution_id: int) -> None:
         refresh_suite_stats(conn, suite_id)
 
 
+def _execution_is_marked_stopped(execution: dict[str, Any] | None) -> bool:
+    return bool(execution and str(execution.get("status") or "").strip() == "stopped")
+
+
+def _finalize_stopped_execution(conn, execution_id: int, execution: dict[str, Any] | None) -> None:
+    if execution and execution.get("device_id"):
+        finish_device_lock(conn, execution["device_id"])
+    write_execution_report(conn, execution_id)
+    _refresh_suite_stats_for_execution(conn, execution_id)
+
+
 def _update_test_case_last_run(conn, test_case_id: int | None, result: str, finished_at: str) -> None:
     if not test_case_id:
         return
@@ -1086,6 +1098,9 @@ def run_execution(execution_id: int) -> None:
         finished_at = utc_now()
         with connection() as conn:
             current = get_execution_or_404(conn, execution_id)
+            if _execution_is_marked_stopped(current):
+                _finalize_stopped_execution(conn, execution_id, current)
+                return
             duration = max(0.0, (datetime.fromisoformat(finished_at) - started_time).total_seconds()) if started_time else 0.0
             logs = append_log(current["logs"], "执行完成，结果通过")
             summary = f"APP 自动化真实执行完成，共执行 {result['passed_steps']}/{result['total_steps']} 个步骤。"
@@ -1124,11 +1139,8 @@ def run_execution(execution_id: int) -> None:
                 "SELECT status, device_id, test_case_id, logs FROM executions WHERE id = ?",
                 (execution_id,),
             )
-            if execution and execution.get("status") == "stopped":
-                if execution.get("device_id"):
-                    finish_device_lock(conn, execution["device_id"])
-                write_execution_report(conn, execution_id)
-                _refresh_suite_stats_for_execution(conn, execution_id)
+            if _execution_is_marked_stopped(execution):
+                _finalize_stopped_execution(conn, execution_id, execution)
                 return
             logs = append_log(json_loads(execution.get("logs") if execution else "[]", []), "执行已停止", "warning")
             now = utc_now()
@@ -1152,11 +1164,8 @@ def run_execution(execution_id: int) -> None:
                 "SELECT status, device_id, test_case_id, logs FROM executions WHERE id = ?",
                 (execution_id,),
             )
-            if execution and execution.get("status") == "stopped":
-                if execution.get("device_id"):
-                    finish_device_lock(conn, execution["device_id"])
-                write_execution_report(conn, execution_id)
-                _refresh_suite_stats_for_execution(conn, execution_id)
+            if _execution_is_marked_stopped(execution):
+                _finalize_stopped_execution(conn, execution_id, execution)
                 return
             logs = append_log(
                 json_loads(execution.get("logs") if execution else "[]", []),
@@ -1193,11 +1202,8 @@ def run_execution(execution_id: int) -> None:
                 "SELECT status, device_id, test_case_id, logs FROM executions WHERE id = ?",
                 (execution_id,),
             )
-            if execution and execution.get("status") == "stopped":
-                if execution.get("device_id"):
-                    finish_device_lock(conn, execution["device_id"])
-                write_execution_report(conn, execution_id)
-                _refresh_suite_stats_for_execution(conn, execution_id)
+            if _execution_is_marked_stopped(execution):
+                _finalize_stopped_execution(conn, execution_id, execution)
                 return
             logs = append_log(json_loads(execution.get("logs") if execution else "[]", []), f"执行异常: {exc}", "error")
             now = utc_now()
@@ -1890,6 +1896,12 @@ def create_test_case(payload: TestCasePayload) -> dict[str, Any]:
         if payload.package_id is not None:
             package = get_package_or_404(conn, payload.package_id)
             ensure_package_belongs_to_project(package, payload.project_id)
+        validate_scene_steps_payload(
+            conn,
+            extract_steps(payload.ui_flow),
+            allow_custom_steps=True,
+            path="ui_flow.steps",
+        )
         now = utc_now()
         conn.execute(
             """
@@ -1939,6 +1951,12 @@ def update_test_case(test_case_id: int, payload: TestCasePayload) -> dict[str, A
         if payload.package_id is not None:
             package = get_package_or_404(conn, payload.package_id)
             ensure_package_belongs_to_project(package, payload.project_id)
+        validate_scene_steps_payload(
+            conn,
+            extract_steps(payload.ui_flow),
+            allow_custom_steps=True,
+            path="ui_flow.steps",
+        )
         conn.execute(
             """
             UPDATE test_cases

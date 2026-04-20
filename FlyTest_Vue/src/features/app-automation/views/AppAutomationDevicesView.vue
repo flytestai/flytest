@@ -26,6 +26,8 @@
       :get-status-color="getStatusColor"
       :get-connection-label="getConnectionLabel"
       :format-endpoint="formatEndpoint"
+      :can-lock="canLock"
+      :can-unlock="canUnlock"
       :can-reconnect="canReconnect"
       :can-disconnect="canDisconnect"
       @open-detail="openDetail"
@@ -104,6 +106,8 @@ const {
   getStatusColor,
   getConnectionLabel,
   formatEndpoint,
+  canLock,
+  canUnlock,
   canReconnect,
   canDisconnect,
   handleSearch,

@@ -434,12 +434,14 @@ export function useAppAutomationReports() {
       if (suite && (!suiteDetailVisible.value || selectedSuite.value?.id !== suiteId)) {
         await openSuiteDetail(suite, { syncRoute: false })
       } else if (!suite) {
+        suiteExecutionsVisible.value = false
         suiteDetailVisible.value = false
         if (!suiteExecutionsVisible.value) {
           selectedSuite.value = null
         }
       }
     } else {
+      suiteExecutionsVisible.value = false
       suiteDetailVisible.value = false
       if (!suiteExecutionsVisible.value) {
         selectedSuite.value = null

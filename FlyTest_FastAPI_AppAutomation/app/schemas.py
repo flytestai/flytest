@@ -127,7 +127,7 @@ class ScheduledTaskPayload(BaseModel):
     cron_expression: str = Field(default="", max_length=100)
     interval_seconds: int | None = Field(default=None, ge=60, le=86400)
     execute_at: str | None = None
-    device_id: int | None = None
+    device_id: int
     package_id: int | None = None
     test_suite_id: int | None = None
     test_case_id: int | None = None

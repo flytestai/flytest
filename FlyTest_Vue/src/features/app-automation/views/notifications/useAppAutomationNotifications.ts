@@ -282,6 +282,9 @@ export function useAppAutomationNotifications() {
       if (tab === 'notifications') {
         return
       }
+      if (route.query.taskId) {
+        void clearTaskContext()
+      }
       detailVisible.value = false
     },
   )

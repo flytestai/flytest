@@ -440,6 +440,12 @@ export function useAppAutomationExecutions() {
         }
         return
       }
+      if (route.query.executionId || route.query.suiteId) {
+        void replaceAppAutomationQuery(route, router, {
+          executionId: undefined,
+          suiteId: undefined,
+        })
+      }
       detailVisible.value = false
     },
   )

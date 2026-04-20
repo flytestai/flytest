@@ -14,6 +14,7 @@ from .access_control import apply_project_scope_filter, ensure_project_access, e
 from .database import connection, fetch_all, fetch_one, json_dumps, json_loads, utc_now
 from .execution_runtime import SUPPORTED_BUILTIN_ACTIONS
 from .reporting import write_execution_report
+from .scene_validation import validate_scene_steps_payload
 from .schemas import (
     ComponentPackagePayload,
     ComponentPayload,
@@ -211,6 +212,14 @@ def ensure_custom_component_steps_are_safe(
     current_component_type: str = "",
     extra_known_custom_types: set[str] | None = None,
 ) -> None:
+    validate_scene_steps_payload(
+        conn,
+        steps,
+        allow_custom_steps=False,
+        path="steps",
+    )
+    if not steps:
+        raise HTTPException(status_code=400, detail="custom components must contain at least one executable step")
     known_custom_types = {
         str(row.get("type") or "").strip().lower()
         for row in fetch_all(conn, "SELECT type FROM custom_components")
@@ -250,6 +259,38 @@ def custom_component_is_referenced_by_custom_components(
         if _flow_references_custom_component(steps, normalized_type):
             return True
     return False
+
+
+def custom_component_is_referenced_anywhere(
+    conn,
+    component_type: str,
+    *,
+    exclude_custom_id: int | None = None,
+) -> bool:
+    return custom_component_is_referenced_by_test_cases(
+        conn,
+        component_type,
+    ) or custom_component_is_referenced_by_custom_components(
+        conn,
+        component_type,
+        exclude_custom_id=exclude_custom_id,
+    )
+
+
+def custom_component_definition_changes_runtime_behavior(
+    existing: dict[str, Any],
+    payload: CustomComponentPayload,
+) -> bool:
+    existing_schema = json_loads(existing.get("schema_json"), {})
+    existing_default_config = json_loads(existing.get("default_config"), {})
+    existing_steps = json_loads(existing.get("steps_json"), [])
+    existing_enabled = bool(existing.get("enabled"))
+    return (
+        existing_schema != payload.schema_definition
+        or existing_default_config != payload.default_config
+        or existing_steps != payload.steps
+        or existing_enabled != payload.enabled
+    )
 
 
 def serialize_component_package(row: dict[str, Any]) -> dict[str, Any]:
@@ -401,7 +442,11 @@ def _install_component_package(conn, manifest: dict[str, Any], *, overwrite: boo
             errors.append("自定义组件缺少 name 或 type")
             continue
 
-        existing = fetch_one(conn, "SELECT id FROM custom_components WHERE type = ?", (normalized["type"],))
+        existing = fetch_one(
+            conn,
+            "SELECT id, type, schema_json, default_config, steps_json, enabled FROM custom_components WHERE type = ?",
+            (normalized["type"],),
+        )
         if existing is None:
             ensure_custom_component_steps_are_safe(
                 conn,
@@ -436,10 +481,22 @@ def _install_component_package(conn, manifest: dict[str, Any], *, overwrite: boo
             custom_skipped += 1
             continue
 
-        if custom_component_is_referenced_by_test_cases(conn, normalized["type"]) or custom_component_is_referenced_by_custom_components(
+        if custom_component_is_referenced_anywhere(
             conn,
             normalized["type"],
             exclude_custom_id=int(existing["id"]),
+        ) and custom_component_definition_changes_runtime_behavior(
+            existing,
+            CustomComponentPayload(
+                name=normalized["name"],
+                type=normalized["type"],
+                description=normalized["description"],
+                schema=normalized["schema"],
+                default_config=normalized["default_config"],
+                steps=normalized["steps"],
+                enabled=normalized["enabled"],
+                sort_order=normalized["sort_order"],
+            ),
         ):
             raise HTTPException(
                 status_code=409,
@@ -752,10 +809,12 @@ def normalize_task_payload(task: dict[str, Any]) -> None:
 
 def validate_scheduled_task_payload(conn, payload: ScheduledTaskPayload) -> None:
     ensure_project_access(payload.project_id)
-    if payload.device_id is not None:
-        device = fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (payload.device_id,))
-        if device is None:
-            raise HTTPException(status_code=404, detail="执行设备不存在")
+    if payload.device_id is None:
+        raise HTTPException(status_code=400, detail="定时任务缺少执行设备配置")
+
+    device = fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (payload.device_id,))
+    if device is None:
+        raise HTTPException(status_code=404, detail="执行设备不存在")
 
     if payload.package_id is not None:
         _ = get_package_override_or_404(conn, payload.project_id, package_id=payload.package_id)
@@ -1419,19 +1478,30 @@ def create_custom_component(payload: CustomComponentPayload) -> dict[str, Any]:
 @router.put("/custom-components/{custom_id}/")
 def update_custom_component(custom_id: int, payload: CustomComponentPayload) -> dict[str, Any]:
     with connection() as conn:
-        existing = fetch_one(conn, "SELECT id, type FROM custom_components WHERE id = ?", (custom_id,))
+        existing = fetch_one(
+            conn,
+            "SELECT id, type, schema_json, default_config, steps_json, enabled FROM custom_components WHERE id = ?",
+            (custom_id,),
+        )
         if existing is None:
             raise HTTPException(status_code=404, detail="custom component not found")
         existing_type = str(existing.get("type") or "").strip()
         next_type = payload.type.strip()
         ensure_custom_component_type_available(conn, next_type, exclude_custom_id=custom_id)
-        if next_type != existing_type and (
-            custom_component_is_referenced_by_test_cases(conn, existing_type)
-            or custom_component_is_referenced_by_custom_components(conn, existing_type, exclude_custom_id=custom_id)
-        ):
+        is_referenced = custom_component_is_referenced_anywhere(
+            conn,
+            existing_type,
+            exclude_custom_id=custom_id,
+        )
+        if next_type != existing_type and is_referenced:
             raise HTTPException(
                 status_code=409,
                 detail="custom component type cannot change while referenced by automation flows",
+            )
+        if is_referenced and custom_component_definition_changes_runtime_behavior(existing, payload):
+            raise HTTPException(
+                status_code=409,
+                detail="custom component runtime definition cannot change while referenced by automation flows",
             )
         ensure_custom_component_steps_are_safe(conn, payload.steps, current_component_type=next_type)
         try:

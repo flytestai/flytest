@@ -702,6 +702,9 @@ export function useAppAutomationScheduledTasks() {
         }
         return
       }
+      if (route.query.taskId) {
+        void replaceAppAutomationQuery(route, router, { taskId: undefined })
+      }
       visible.value = false
       detailVisible.value = false
     },
