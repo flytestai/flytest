@@ -788,6 +788,7 @@ export function useAppAutomationScheduledTasks() {
     () => projectStore.currentProjectId,
     () => {
       pagination.current = 1
+      visible.value = false
       detailVisible.value = false
       clearLoadedData()
       if (route.query.tab === 'scheduled-tasks' && projectStore.currentProjectId) {

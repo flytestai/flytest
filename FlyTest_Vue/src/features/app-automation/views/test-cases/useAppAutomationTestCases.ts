@@ -300,8 +300,9 @@ export function useAppAutomationTestCases() {
           return
         }
 
+        const submittedCases = [...selectedCases.value]
         const results = await Promise.allSettled(
-          selectedCases.value.map(item =>
+          submittedCases.map(item =>
             AppAutomationService.executeTestCase(item.id, {
               device_id: executeForm.device_id as number,
               trigger_mode: 'manual',
@@ -313,19 +314,49 @@ export function useAppAutomationTestCases() {
         const executions = results
           .filter((item): item is PromiseFulfilledResult<AppExecution> => item.status === 'fulfilled')
           .map(item => item.value)
+        const failedCases = results
+          .map((item, index) =>
+            item.status === 'rejected'
+              ? {
+                  record: submittedCases[index],
+                  message:
+                    (item.reason as { message?: string; error?: string } | undefined)?.message ||
+                    (item.reason as { message?: string; error?: string } | undefined)?.error ||
+                    '????',
+                }
+              : null,
+          )
+          .filter(
+            (item): item is { record: AppTestCase; message: string } =>
+              Boolean(item?.record),
+          )
 
-        executeVisible.value = false
         if (!executions.length) {
-          Message.error('批量执行提交失败')
+          const failedSummary = failedCases
+            .slice(0, 3)
+            .map(item => `${item.record.name}: ${item.message}`)
+            .join('?')
+          Message.error(
+            failedSummary ? `?????????${failedSummary}` : '????????',
+          )
           return
         }
 
-        if (executions.length === selectedCases.value.length) {
-          Message.success(`已提交 ${executions.length} 个测试用例执行`)
+        executeVisible.value = false
+        if (failedCases.length === 0) {
+          Message.success(`??? ${executions.length} ???????`)
+          clearSelection()
         } else {
-          Message.warning(`已提交 ${executions.length}/${selectedCases.value.length} 个测试用例执行`)
+          selectedCaseIds.value = failedCases.map(item => item.record.id)
+          const failedNames = failedCases
+            .slice(0, 3)
+            .map(item => item.record.name)
+            .join('?')
+          const suffix = failedCases.length > 3 ? ' ??????' : ' ?????'
+          Message.warning(
+            `??? ${executions.length}/${submittedCases.length} ?????????${failedNames}${suffix}`,
+          )
         }
-        clearSelection()
         await openExecutionWorkspace(executions[0].id)
         return
       }

@@ -181,6 +181,7 @@ class AppFlowExecutor:
 
         self._element_cache: dict[str, dict[str, Any] | None] = {}
         self._custom_component_cache: dict[str, dict[str, Any] | None] = {}
+        self._custom_component_stack: list[str] = []
         self._ocr_helper = None
 
         self.global_context: dict[str, Any] = {}
@@ -217,7 +218,9 @@ class AppFlowExecutor:
             if children is None:
                 total += 1
                 continue
-            child_count = self.count_total_steps(children)
+            component_type = str(step.get("component_type") or step.get("type") or step.get("action") or "").strip()
+            with self._pushed_custom_component(component_type):
+                child_count = self.count_total_steps(children)
             total += child_count or 1
         return total
 
@@ -291,7 +294,8 @@ class AppFlowExecutor:
 
         if child_steps is not None:
             component_name = str(step.get("name") or step.get("type") or step.get("component_type") or "custom")
-            with self._pushed_scope(self._extract_component_context(step)):
+            component_type = str(step.get("component_type") or step.get("type") or step.get("action") or "").strip()
+            with self._pushed_custom_component(component_type), self._pushed_scope(self._extract_component_context(step)):
                 if not child_steps:
                     raise ValueError(f"Custom component '{component_name}' has no executable child steps")
                 for child_step in child_steps:
@@ -1944,6 +1948,21 @@ class AppFlowExecutor:
             yield
         finally:
             self.local_scopes.pop()
+
+    @contextmanager
+    def _pushed_custom_component(self, component_type: str) -> Iterator[None]:
+        normalized_type = str(component_type or "").strip()
+        if not normalized_type:
+            yield
+            return
+        if normalized_type in self._custom_component_stack:
+            chain = " -> ".join([*self._custom_component_stack, normalized_type])
+            raise ValueError(f"Recursive custom component reference detected: {chain}")
+        self._custom_component_stack.append(normalized_type)
+        try:
+            yield
+        finally:
+            self._custom_component_stack.pop()
 
     def _resolve_variable(self, name: str) -> Any:
         clean_name = str(name or "").strip()

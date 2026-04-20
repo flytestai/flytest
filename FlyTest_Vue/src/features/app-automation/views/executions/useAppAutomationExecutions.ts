@@ -270,6 +270,9 @@ export function useAppAutomationExecutions() {
       (!detailVisible.value || currentExecution.value?.id !== executionId)
     ) {
       await loadExecutionDetail(executionId, { open: true, syncRoute: false })
+    } else if (executionId <= 0) {
+      detailVisible.value = false
+      currentExecution.value = null
     }
   }
 
@@ -316,6 +319,10 @@ export function useAppAutomationExecutions() {
         })
       }
     } catch (error: any) {
+      if (currentExecution.value?.id === id || options.open) {
+        detailVisible.value = false
+        currentExecution.value = null
+      }
       if (!options.silent) {
         Message.error(error.message || '加载执行详情失败')
       }

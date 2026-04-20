@@ -384,6 +384,10 @@ export function useAppAutomationReports() {
         })
       }
     } catch (error: any) {
+      if (currentExecution.value?.id === id || options.syncRoute === false) {
+        executionDetailVisible.value = false
+        currentExecution.value = null
+      }
       Message.error(error.message || '加载执行详情失败')
     }
   }
@@ -429,6 +433,11 @@ export function useAppAutomationReports() {
       const suite = suites.value.find(item => item.id === suiteId)
       if (suite && (!suiteDetailVisible.value || selectedSuite.value?.id !== suiteId)) {
         await openSuiteDetail(suite, { syncRoute: false })
+      } else if (!suite) {
+        suiteDetailVisible.value = false
+        if (!suiteExecutionsVisible.value) {
+          selectedSuite.value = null
+        }
       }
     } else {
       suiteDetailVisible.value = false

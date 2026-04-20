@@ -223,6 +223,7 @@ export function useAppAutomationPackages() {
   watch(
     () => projectStore.currentProjectId,
     () => {
+      visible.value = false
       resetForm()
       resetFilters()
       void loadPackages()

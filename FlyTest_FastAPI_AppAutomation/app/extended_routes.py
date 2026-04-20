@@ -12,6 +12,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from .access_control import apply_project_scope_filter, ensure_project_access, ensure_row_project_access
 from .database import connection, fetch_all, fetch_one, json_dumps, json_loads, utc_now
+from .execution_runtime import SUPPORTED_BUILTIN_ACTIONS
 from .reporting import write_execution_report
 from .schemas import (
     ComponentPackagePayload,
@@ -180,6 +181,70 @@ def custom_component_is_referenced_by_test_cases(conn, component_type: str) -> b
     return False
 
 
+def _get_nested_custom_component_reference(value: Any, *, known_custom_types: set[str]) -> str | None:
+    if isinstance(value, dict):
+        kind = str(value.get("kind") or "").strip().lower()
+        candidate = str(
+            value.get("component_type") or value.get("type") or value.get("action") or ""
+        ).strip().lower()
+        if kind == "custom":
+            return candidate or "custom"
+        if candidate and candidate not in SUPPORTED_BUILTIN_ACTIONS and candidate in known_custom_types:
+            return candidate
+        for item in value.values():
+            nested = _get_nested_custom_component_reference(item, known_custom_types=known_custom_types)
+            if nested:
+                return nested
+        return None
+    if isinstance(value, list):
+        for item in value:
+            nested = _get_nested_custom_component_reference(item, known_custom_types=known_custom_types)
+            if nested:
+                return nested
+    return None
+
+
+def ensure_custom_component_steps_are_safe(
+    conn,
+    steps: list[dict[str, Any]],
+    *,
+    current_component_type: str = "",
+) -> None:
+    known_custom_types = {
+        str(row.get("type") or "").strip().lower()
+        for row in fetch_all(conn, "SELECT type FROM custom_components")
+        if str(row.get("type") or "").strip()
+    }
+    normalized_current_type = str(current_component_type or "").strip().lower()
+    if normalized_current_type:
+        known_custom_types.add(normalized_current_type)
+    nested_reference = _get_nested_custom_component_reference(steps, known_custom_types=known_custom_types)
+    if nested_reference:
+        raise HTTPException(
+            status_code=400,
+            detail="custom components cannot contain nested custom components",
+        )
+
+
+def custom_component_is_referenced_by_custom_components(
+    conn,
+    component_type: str,
+    *,
+    exclude_custom_id: int | None = None,
+) -> bool:
+    normalized_type = str(component_type or "").strip()
+    if not normalized_type:
+        return False
+    rows = fetch_all(conn, "SELECT id, steps_json FROM custom_components")
+    for row in rows:
+        if exclude_custom_id is not None and int(row["id"]) == exclude_custom_id:
+            continue
+        steps = json_loads(row.get("steps_json"), [])
+        if _flow_references_custom_component(steps, normalized_type):
+            return True
+    return False
+
+
 def serialize_component_package(row: dict[str, Any]) -> dict[str, Any]:
     row["manifest"] = json_loads(row.pop("manifest_json", None), {})
     return row
@@ -326,6 +391,11 @@ def _install_component_package(conn, manifest: dict[str, Any], *, overwrite: boo
 
         existing = fetch_one(conn, "SELECT id FROM custom_components WHERE type = ?", (normalized["type"],))
         if existing is None:
+            ensure_custom_component_steps_are_safe(
+                conn,
+                normalized["steps"],
+                current_component_type=normalized["type"],
+            )
             conn.execute(
                 """
                 INSERT INTO custom_components (
@@ -352,6 +422,22 @@ def _install_component_package(conn, manifest: dict[str, Any], *, overwrite: boo
         if not overwrite:
             custom_skipped += 1
             continue
+
+        if custom_component_is_referenced_by_test_cases(conn, normalized["type"]) or custom_component_is_referenced_by_custom_components(
+            conn,
+            normalized["type"],
+            exclude_custom_id=int(existing["id"]),
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=f"custom component '{normalized['type']}' cannot be overwritten while referenced by automation flows",
+            )
+
+        ensure_custom_component_steps_are_safe(
+            conn,
+            normalized["steps"],
+            current_component_type=normalized["type"],
+        )
 
         conn.execute(
             """
@@ -1275,6 +1361,7 @@ def list_custom_components() -> dict[str, Any]:
 def create_custom_component(payload: CustomComponentPayload) -> dict[str, Any]:
     with connection() as conn:
         ensure_custom_component_type_available(conn, payload.type)
+        ensure_custom_component_steps_are_safe(conn, payload.steps, current_component_type=payload.type)
         now = utc_now()
         try:
             conn.execute(
@@ -1309,9 +1396,20 @@ def create_custom_component(payload: CustomComponentPayload) -> dict[str, Any]:
 def update_custom_component(custom_id: int, payload: CustomComponentPayload) -> dict[str, Any]:
     with connection() as conn:
         existing = fetch_one(conn, "SELECT id, type FROM custom_components WHERE id = ?", (custom_id,))
-        ensure_custom_component_type_available(conn, payload.type, exclude_custom_id=custom_id)
         if existing is None:
-            raise HTTPException(status_code=404, detail="自定义组件不存在")
+            raise HTTPException(status_code=404, detail="custom component not found")
+        existing_type = str(existing.get("type") or "").strip()
+        next_type = payload.type.strip()
+        ensure_custom_component_type_available(conn, next_type, exclude_custom_id=custom_id)
+        if next_type != existing_type and (
+            custom_component_is_referenced_by_test_cases(conn, existing_type)
+            or custom_component_is_referenced_by_custom_components(conn, existing_type, exclude_custom_id=custom_id)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="custom component type cannot change while referenced by automation flows",
+            )
+        ensure_custom_component_steps_are_safe(conn, payload.steps, current_component_type=next_type)
         try:
             conn.execute(
             """
@@ -1338,7 +1436,7 @@ def update_custom_component(custom_id: int, payload: CustomComponentPayload) -> 
                 raise HTTPException(status_code=409, detail="custom component type already exists") from exc
             raise
         row = fetch_one(conn, "SELECT * FROM custom_components WHERE id = ?", (custom_id,))
-    return success(serialize_custom_component(row or {}), "自定义组件已更新")
+    return success(serialize_custom_component(row or {}), "custom component updated")
 
 
 @router.delete("/custom-components/{custom_id}/")
@@ -1347,8 +1445,11 @@ def delete_custom_component(custom_id: int) -> dict[str, Any]:
         existing = fetch_one(conn, "SELECT id, type FROM custom_components WHERE id = ?", (custom_id,))
         if existing is None:
             raise HTTPException(status_code=404, detail="自定义组件不存在")
-        if custom_component_is_referenced_by_test_cases(conn, str(existing.get("type") or "").strip()):
+        existing_type = str(existing.get("type") or "").strip()
+        if custom_component_is_referenced_by_test_cases(conn, existing_type):
             raise HTTPException(status_code=409, detail="custom component is referenced by test cases")
+        if custom_component_is_referenced_by_custom_components(conn, existing_type, exclude_custom_id=custom_id):
+            raise HTTPException(status_code=409, detail="custom component is referenced by other custom components")
         conn.execute("DELETE FROM custom_components WHERE id = ?", (custom_id,))
     return success(None, "自定义组件已删除")
 

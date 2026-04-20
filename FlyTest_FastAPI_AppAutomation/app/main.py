@@ -284,6 +284,22 @@ def build_element_image_path(element: dict[str, Any]) -> str:
     return ""
 
 
+def build_element_image_path_from_payload(payload: ElementPayload) -> str:
+    image_path = payload.image_path.strip()
+    if image_path:
+        return image_path
+
+    config_image_path = str(payload.config.get("image_path") or "").strip()
+    if config_image_path:
+        return config_image_path
+
+    element_type = payload.element_type.strip().lower()
+    selector_type = payload.selector_type.strip().lower()
+    if element_type == "image" or selector_type == "image":
+        return payload.selector_value.strip()
+    return ""
+
+
 def build_project_asset_dir(category_name: str, project_id: int) -> Path:
     return get_element_asset_root() / category_name / f"project-{project_id}"
 
@@ -1550,18 +1566,32 @@ def update_element(element_id: int, payload: ElementPayload) -> dict[str, Any]:
         ensure_project_access(payload.project_id)
         normalized_name = payload.name.strip()
         current_project_id = int(element["project_id"])
-        if payload.project_id != current_project_id:
-            if element_is_referenced_by_test_cases(
-                conn,
-                element_id=element_id,
-                project_id=current_project_id,
-                element_name=str(element.get("name") or ""),
-                selector_value=str(element.get("selector_value") or ""),
-                image_path=build_element_image_path(element),
-            ):
+        existing_name = str(element.get("name") or "").strip()
+        existing_selector_value = str(element.get("selector_value") or "").strip()
+        existing_image_path = build_element_image_path(element)
+        next_selector_value = payload.selector_value.strip()
+        next_image_path = build_element_image_path_from_payload(payload)
+        if element_is_referenced_by_test_cases(
+            conn,
+            element_id=element_id,
+            project_id=current_project_id,
+            element_name=existing_name,
+            selector_value=existing_selector_value,
+            image_path=existing_image_path,
+        ):
+            if payload.project_id != current_project_id:
                 raise HTTPException(
                     status_code=409,
                     detail="element cannot move projects while referenced by test cases",
+                )
+            if (
+                normalized_name != existing_name
+                or next_selector_value != existing_selector_value
+                or next_image_path != existing_image_path
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="element identifiers cannot change while referenced by test cases",
                 )
         ensure_element_assets_belong_to_project(
             conn,
@@ -1681,7 +1711,16 @@ async def upload_element_asset(
 @app.delete("/elements/{element_id}/")
 def delete_element(element_id: int) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_element_or_404(conn, element_id)
+        element = get_element_or_404(conn, element_id)
+        if element_is_referenced_by_test_cases(
+            conn,
+            element_id=element_id,
+            project_id=int(element["project_id"]),
+            element_name=str(element.get("name") or ""),
+            selector_value=str(element.get("selector_value") or ""),
+            image_path=build_element_image_path(element),
+        ):
+            raise HTTPException(status_code=409, detail="element is referenced by test cases")
         conn.execute("DELETE FROM elements WHERE id = ?", (element_id,))
         return success(None, "元素已删除")
 
