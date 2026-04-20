@@ -40,7 +40,14 @@
               <a-button type="text" @click="emit('open-history', record)">历史</a-button>
               <a-button type="text" @click="emit('duplicate-suite', record)">复制</a-button>
               <a-button type="text" @click="emit('open-edit', record)">编辑</a-button>
-              <a-button type="text" status="danger" @click="emit('remove', record.id)">删除</a-button>
+              <a-button
+                type="text"
+                status="danger"
+                :disabled="record.execution_status === 'running'"
+                @click="emit('remove', record.id)"
+              >
+                删除
+              </a-button>
             </a-space>
           </template>
         </a-table-column>

@@ -1258,7 +1258,9 @@ def lock_device(device_id: int, user_name: str = Query(default="FlyTest")) -> di
 @app.post("/devices/{device_id}/unlock/")
 def unlock_device(device_id: int) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_device_or_404(conn, device_id)
+        device = get_device_or_404(conn, device_id)
+        if device["status"] == "stopping":
+            raise HTTPException(status_code=409, detail="device is stopping an execution and cannot be unlocked")
         finish_device_lock(conn, device_id)
         return success(get_device_or_404(conn, device_id), "设备已释放")
 
@@ -1907,6 +1909,8 @@ def generate_step_suggestion(payload: StepSuggestionPayload) -> dict[str, Any]:
 
 @app.post("/test-cases/{test_case_id}/execute/")
 def execute_test_case(test_case_id: int, payload: ExecuteTestCasePayload) -> dict[str, Any]:
+    reserved_device_id: int | None = None
+    execution_id: int | None = None
     with connection() as conn:
         test_case = get_test_case_or_404(conn, test_case_id)
         reserve_device_for_execution(
@@ -1914,6 +1918,7 @@ def execute_test_case(test_case_id: int, payload: ExecuteTestCasePayload) -> dic
             payload.device_id,
             locked_by=payload.triggered_by or "FlyTest",
         )
+        reserved_device_id = payload.device_id
         now = utc_now()
         conn.execute(
             """
@@ -1937,7 +1942,15 @@ def execute_test_case(test_case_id: int, payload: ExecuteTestCasePayload) -> dic
         execution_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         execution = get_execution_or_404(conn, execution_id)
 
-    start_execution_thread(execution_id)
+    try:
+        start_execution_thread(execution_id)
+    except Exception as exc:
+        with connection() as conn:
+            if execution_id is not None:
+                conn.execute("DELETE FROM executions WHERE id = ?", (execution_id,))
+            if reserved_device_id is not None:
+                finish_device_lock(conn, reserved_device_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     return success(execution, "执行任务已启动", 201)
 
 
@@ -2029,11 +2042,14 @@ def stop_execution(execution_id: int) -> dict[str, Any]:
                 """,
                 (now, execution["device_id"]),
             )
-            threading.Thread(
-                target=_release_stopped_execution_device_after_grace,
-                args=(execution_id, int(execution["device_id"])),
-                daemon=True,
-            ).start()
+            try:
+                threading.Thread(
+                    target=_release_stopped_execution_device_after_grace,
+                    args=(execution_id, int(execution["device_id"])),
+                    daemon=True,
+                ).start()
+            except Exception:
+                finish_device_lock(conn, int(execution["device_id"]))
         write_execution_report(conn, execution_id)
         _refresh_suite_stats_for_execution(conn, execution_id)
         return success(get_execution_or_404(conn, execution_id), "执行已停止")
@@ -2043,9 +2059,14 @@ def stop_execution(execution_id: int) -> dict[str, Any]:
 def delete_execution(execution_id: int) -> dict[str, Any]:
     with connection() as conn:
         execution = get_execution_or_404(conn, execution_id)
+        suite_id = execution.get("test_suite_id")
         if execution["status"] in {"pending", "running"}:
             raise HTTPException(status_code=409, detail="执行仍在收尾中，请等待完成后再删除")
         conn.execute("DELETE FROM executions WHERE id = ?", (execution_id,))
+        if suite_id:
+            from .extended_routes import refresh_suite_stats
+
+            refresh_suite_stats(conn, int(suite_id))
         return success(None, "执行记录已删除")
 
 

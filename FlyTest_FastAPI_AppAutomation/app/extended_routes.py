@@ -1244,6 +1244,16 @@ def refresh_suite_stats(conn, suite_id: int) -> None:
         (suite_id,),
     )
     if not rows:
+        now = utc_now()
+        conn.execute(
+            """
+            UPDATE test_suites
+            SET execution_status = 'not_run', execution_result = '', passed_count = 0, failed_count = 0,
+                last_run_at = NULL, updated_at = ?
+            WHERE id = ?
+            """,
+            (now, suite_id),
+        )
         return
 
     passed = len([item for item in rows if item.get("result") == "passed"])
@@ -1656,10 +1666,11 @@ def update_test_suite(suite_id: int, payload: TestSuitePayload) -> dict[str, Any
 def delete_test_suite(suite_id: int) -> dict[str, Any]:
     with connection() as conn:
         _ = get_suite_or_404(conn, suite_id)
-        now = utc_now()
+        referenced_execution = fetch_one(conn, "SELECT id FROM executions WHERE test_suite_id = ? LIMIT 1", (suite_id,))
+        if referenced_execution is not None:
+            raise HTTPException(status_code=409, detail="test suite is referenced by executions")
         task_ids = [item["id"] for item in fetch_all(conn, "SELECT id FROM scheduled_tasks WHERE test_suite_id = ?", (suite_id,))]
         _delete_scheduled_tasks(conn, task_ids)
-        conn.execute("UPDATE executions SET test_suite_id = NULL, updated_at = ? WHERE test_suite_id = ?", (now, suite_id))
         conn.execute("DELETE FROM test_suite_cases WHERE test_suite_id = ?", (suite_id,))
         conn.execute("DELETE FROM test_suites WHERE id = ?", (suite_id,))
     return success(None, "测试套件已删除")
@@ -1737,11 +1748,15 @@ def update_suite_case_order(suite_id: int, test_case_orders: list[dict[str, int]
 def run_test_suite(suite_id: int, payload: TestSuiteRunPayload) -> dict[str, Any]:
     execution_ids: list[int] = []
     reserved_device_id: int | None = None
+    previous_suite_status = "not_run"
+    previous_suite_result = ""
     try:
         with connection() as conn:
             from .main import reserve_device_for_execution
 
             suite = get_suite_or_404(conn, suite_id)
+            previous_suite_status = str(suite.get("execution_status") or "not_run")
+            previous_suite_result = str(suite.get("execution_result") or "")
             if not suite["suite_cases"]:
                 raise HTTPException(status_code=400, detail="test suite has no executable test cases")
             device = fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (payload.device_id,))
@@ -1775,6 +1790,12 @@ def run_test_suite(suite_id: int, payload: TestSuiteRunPayload) -> dict[str, Any
                         package_id=package_override["id"] if package_override else None,
                     )
                 )
+            Thread(target=run_suite_background, args=(suite_id, execution_ids), daemon=True).start()
+            return success(
+                {"suite_id": suite_id, "execution_ids": execution_ids, "test_case_count": len(execution_ids)},
+                f"suite execution submitted with {len(execution_ids)} test cases",
+                201,
+            )
     except Exception:
         with connection() as conn:
             if execution_ids:
@@ -1784,16 +1805,10 @@ def run_test_suite(suite_id: int, payload: TestSuiteRunPayload) -> dict[str, Any
 
                 finish_device_lock(conn, reserved_device_id)
             conn.execute(
-                "UPDATE test_suites SET execution_status = 'not_run', execution_result = '', updated_at = ? WHERE id = ?",
-                (utc_now(), suite_id),
+                "UPDATE test_suites SET execution_status = ?, execution_result = ?, updated_at = ? WHERE id = ?",
+                (previous_suite_status, previous_suite_result, utc_now(), suite_id),
             )
         raise
-    Thread(target=run_suite_background, args=(suite_id, execution_ids), daemon=True).start()
-    return success(
-        {"suite_id": suite_id, "execution_ids": execution_ids, "test_case_count": len(execution_ids)},
-        f"suite execution submitted with {len(execution_ids)} test cases",
-        201,
-    )
 
 
 @router.get("/test-suites/{suite_id}/executions/")
@@ -1820,6 +1835,10 @@ def get_suite_executions(suite_id: int) -> dict[str, Any]:
 
 def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, Any]:
     reserved_device_id: int | None = None
+    created_execution_ids: list[int] = []
+    affected_suite_id: int | None = None
+    previous_suite_status = "not_run"
+    previous_suite_result = ""
     try:
         with connection() as conn:
             from .main import reserve_device_for_execution
@@ -1848,20 +1867,23 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                         locked_by=triggered_by,
                     )
                     reserved_device_id = int(task["device_id"])
+                affected_suite_id = suite["id"]
+                previous_suite_status = str(suite.get("execution_status") or "not_run")
+                previous_suite_result = str(suite.get("execution_result") or "")
                 execution_ids: list[int] = []
                 for item in suite["suite_cases"]:
-                    execution_ids.append(
-                        create_execution(
-                            conn,
-                            task["project_id"],
-                            item["test_case"]["id"],
-                            task["device_id"],
-                            triggered_by,
-                            suite["id"],
-                            trigger_mode="scheduled",
-                            package_id=package_override["id"] if package_override else None,
-                        )
+                    execution_id = create_execution(
+                        conn,
+                        task["project_id"],
+                        item["test_case"]["id"],
+                        task["device_id"],
+                        triggered_by,
+                        suite["id"],
+                        trigger_mode="scheduled",
+                        package_id=package_override["id"] if package_override else None,
                     )
+                    execution_ids.append(execution_id)
+                    created_execution_ids.append(execution_id)
                 conn.execute(
                     "UPDATE test_suites SET execution_status = 'running', execution_result = '', updated_at = ? WHERE id = ?",
                     (triggered_at, suite["id"]),
@@ -1906,6 +1928,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                     trigger_mode="scheduled",
                     package_id=package_override["id"] if package_override else None,
                 )
+                created_execution_ids.append(execution_id)
                 Thread(
                     target=_run_case_task_in_background,
                     args=(task_id, execution_id),
@@ -1956,6 +1979,16 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
         return serialize_task(row or {}) | {"trigger_payload": payload}
     except HTTPException as exc:
         with connection() as conn:
+            if created_execution_ids:
+                conn.executemany(
+                    "DELETE FROM executions WHERE id = ?",
+                    [(execution_id,) for execution_id in created_execution_ids],
+                )
+            if affected_suite_id is not None:
+                conn.execute(
+                    "UPDATE test_suites SET execution_status = ?, execution_result = ?, updated_at = ? WHERE id = ?",
+                    (previous_suite_status, previous_suite_result, utc_now(), affected_suite_id),
+                )
             if reserved_device_id is not None:
                 from .main import finish_device_lock
 
@@ -1997,6 +2030,16 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
         raise
     except Exception as exc:
         with connection() as conn:
+            if created_execution_ids:
+                conn.executemany(
+                    "DELETE FROM executions WHERE id = ?",
+                    [(execution_id,) for execution_id in created_execution_ids],
+                )
+            if affected_suite_id is not None:
+                conn.execute(
+                    "UPDATE test_suites SET execution_status = ?, execution_result = ?, updated_at = ? WHERE id = ?",
+                    (previous_suite_status, previous_suite_result, utc_now(), affected_suite_id),
+                )
             if reserved_device_id is not None:
                 from .main import finish_device_lock
 
@@ -2139,6 +2182,18 @@ def create_scheduled_task(payload: ScheduledTaskPayload) -> dict[str, Any]:
 def update_scheduled_task(task_id: int, payload: ScheduledTaskPayload) -> dict[str, Any]:
     with connection() as conn:
         current_task = get_task_or_404(conn, task_id)
+        current_project_id = int(current_task.get("project_id") or 0)
+        if payload.project_id != current_project_id:
+            referenced_notification = fetch_one(
+                conn,
+                "SELECT id FROM notification_logs WHERE task_id = ? LIMIT 1",
+                (task_id,),
+            )
+            if referenced_notification is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="scheduled task cannot move projects while referenced by notification logs",
+                )
         validate_scheduled_task_payload(conn, payload)
         status = resolve_update_task_status(current_task.get("status", "ACTIVE"), payload.status)
         next_run_time = None if status in TERMINAL_TASK_STATUSES else compute_next_run_or_raise(

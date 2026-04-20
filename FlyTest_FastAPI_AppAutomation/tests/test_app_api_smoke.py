@@ -1209,6 +1209,29 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(device["status"], "locked")
         self.assertEqual(device["locked_by"], "existing-run")
 
+    def test_unlock_rejects_stopping_device(self):
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'stopping', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("smoke", now, now, device_id),
+            )
+
+        response = self.client.post(f"/devices/{device_id}/unlock/")
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (device_id,),
+            )
+
+        self.assertEqual(device["status"], "stopping")
+        self.assertEqual(device["locked_by"], "smoke")
+
     def test_update_device_rejects_status_change_while_locked(self):
         device_id = self.create_device_record()
 
@@ -1457,6 +1480,173 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertEqual(device["status"], "available")
         self.assertEqual(device["locked_by"], "")
+        self.assertEqual(executions, [])
+
+    def test_run_now_case_thread_start_failure_releases_device_and_cleans_up_execution(self):
+        test_case = self.create_test_case(name="scheduled-thread-start-case")
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            package = database.fetch_one(
+                conn,
+                "SELECT id FROM packages WHERE project_id = ? AND package_name = ?",
+                (1001, "com.tencent.wework"),
+            )
+
+        create_response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 1001,
+                "name": "scheduled-thread-start-case-task",
+                "description": "scheduled trigger",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": device_id,
+                "package_id": package["id"],
+                "test_suite_id": None,
+                "test_case_id": test_case["id"],
+                "notify_on_success": False,
+                "notify_on_failure": False,
+                "notification_type": "",
+                "notify_emails": [],
+                "status": "ACTIVE",
+                "created_by": "tester",
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+        task_id = create_response.json()["data"]["id"]
+
+        with patch("app.extended_routes.Thread") as thread_cls:
+            thread_cls.return_value.start.side_effect = RuntimeError("thread start boom")
+            response = self.client.post(f"/scheduled-tasks/{task_id}/run_now/", params={"triggered_by": "smoke"})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["detail"], "thread start boom")
+
+        with database.connection() as conn:
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (device_id,),
+            )
+            executions = database.fetch_all(
+                conn,
+                "SELECT id FROM executions WHERE test_case_id = ? AND trigger_mode = 'scheduled'",
+                (test_case["id"],),
+            )
+
+        self.assertEqual(device["status"], "available")
+        self.assertEqual(device["locked_by"], "")
+        self.assertEqual(executions, [])
+
+    def test_execute_test_case_thread_start_failure_releases_device_and_cleans_up_execution(self):
+        test_case = self.create_test_case(name="manual-thread-start-case")
+        device_id = self.create_device_record()
+
+        with patch.object(self.main_module, "start_execution_thread", side_effect=RuntimeError("thread start boom")):
+            response = self.client.post(
+                f"/test-cases/{test_case['id']}/execute/",
+                json={"device_id": device_id, "trigger_mode": "manual", "triggered_by": "smoke"},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["detail"], "thread start boom")
+
+        with database.connection() as conn:
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (device_id,),
+            )
+            executions = database.fetch_all(
+                conn,
+                "SELECT id FROM executions WHERE test_case_id = ?",
+                (test_case["id"],),
+            )
+
+        self.assertEqual(device["status"], "available")
+        self.assertEqual(device["locked_by"], "")
+        self.assertEqual(executions, [])
+
+    def test_run_now_suite_thread_start_failure_releases_device_cleans_up_executions_and_resets_suite_state(self):
+        test_case = self.create_test_case(name="scheduled-suite-thread-start-case")
+        suite_response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "scheduled-suite-thread-start",
+                "description": "suite fixture",
+                "test_case_ids": [test_case["id"]],
+            },
+        )
+        self.assertEqual(suite_response.status_code, 200)
+        suite_id = suite_response.json()["data"]["id"]
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            package = database.fetch_one(
+                conn,
+                "SELECT id FROM packages WHERE project_id = ? AND package_name = ?",
+                (1001, "com.tencent.wework"),
+            )
+
+        create_response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 1001,
+                "name": "scheduled-suite-thread-start-task",
+                "description": "scheduled trigger",
+                "task_type": "TEST_SUITE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": device_id,
+                "package_id": package["id"],
+                "test_suite_id": suite_id,
+                "test_case_id": None,
+                "notify_on_success": False,
+                "notify_on_failure": False,
+                "notification_type": "",
+                "notify_emails": [],
+                "status": "ACTIVE",
+                "created_by": "tester",
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+        task_id = create_response.json()["data"]["id"]
+
+        with patch("app.extended_routes.Thread") as thread_cls:
+            thread_cls.return_value.start.side_effect = RuntimeError("thread start boom")
+            response = self.client.post(f"/scheduled-tasks/{task_id}/run_now/", params={"triggered_by": "smoke"})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["detail"], "thread start boom")
+
+        with database.connection() as conn:
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (device_id,),
+            )
+            suite = database.fetch_one(
+                conn,
+                "SELECT execution_status, execution_result FROM test_suites WHERE id = ?",
+                (suite_id,),
+            )
+            executions = database.fetch_all(
+                conn,
+                "SELECT id FROM executions WHERE test_suite_id = ? AND trigger_mode = 'scheduled'",
+                (suite_id,),
+            )
+
+        self.assertEqual(device["status"], "available")
+        self.assertEqual(device["locked_by"], "")
+        self.assertEqual(suite["execution_status"], "not_run")
+        self.assertEqual(suite["execution_result"], "")
         self.assertEqual(executions, [])
 
     def test_upload_element_asset_reuses_duplicate_image_within_project(self):
@@ -2230,8 +2420,110 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertIsNotNone(device)
 
-    def test_delete_test_suite_cleans_related_tasks_and_keeps_execution_history(self):
+    def test_delete_test_suite_rejects_execution_history_and_keeps_related_records(self):
         fixture = self.create_execution_fixture(case_name="suite-delete-case", suite_name="suite-delete")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO scheduled_tasks (
+                    project_id, name, description, task_type, trigger_type, cron_expression, interval_seconds, execute_at,
+                    device_id, package_id, test_suite_id, test_case_id, notify_on_success, notify_on_failure,
+                    notification_type, notify_emails, status, last_run_time, next_run_time, total_runs, successful_runs,
+                    failed_runs, last_result, error_message, created_by, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 0, 0, 0, '{}', '', ?, ?, ?)
+                """,
+                (
+                    1001,
+                    "suite-cleanup-task",
+                    "cleanup",
+                    "TEST_SUITE",
+                    "INTERVAL",
+                    "",
+                    3600,
+                    None,
+                    fixture["device_id"],
+                    fixture["package_id"],
+                    fixture["suite_id"],
+                    None,
+                    0,
+                    1,
+                    "email",
+                    json.dumps(["qa@example.com"], ensure_ascii=False),
+                    "ACTIVE",
+                    now,
+                    "tester",
+                    now,
+                    now,
+                ),
+            )
+            task_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            conn.execute(
+                """
+                INSERT INTO notification_logs (
+                    task_id, task_name, task_type, notification_type, actual_notification_type,
+                    sender_name, sender_email, recipient_info, webhook_bot_info, notification_content,
+                    status, error_message, response_info, created_at, sent_at, retry_count, is_retried
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    task_id,
+                    "suite-cleanup-task",
+                    "TEST_SUITE",
+                    "task_execution",
+                    "email",
+                    "FlyTest",
+                    "noreply@flytest.local",
+                    json.dumps([{"email": "qa@example.com"}], ensure_ascii=False),
+                    "{}",
+                    "suite cleanup notification",
+                    "failed",
+                    "fixture",
+                    "{}",
+                    now,
+                    now,
+                    0,
+                    0,
+                ),
+            )
+            log_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        response = self.client.delete(f"/test-suites/{fixture['suite_id']}/")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["detail"], "test suite is referenced by executions")
+
+        with database.connection() as conn:
+            suite = database.fetch_one(conn, "SELECT id FROM test_suites WHERE id = ?", (fixture["suite_id"],))
+            task = database.fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE id = ?", (task_id,))
+            execution = database.fetch_one(
+                conn,
+                "SELECT id, test_suite_id FROM executions WHERE id = ?",
+                (fixture["execution_id"],),
+            )
+            notification = database.fetch_one(conn, "SELECT task_id FROM notification_logs WHERE id = ?", (log_id,))
+
+        self.assertIsNotNone(suite)
+        self.assertIsNotNone(task)
+        self.assertEqual(execution["test_suite_id"], fixture["suite_id"])
+        self.assertEqual(notification["task_id"], task_id)
+
+    def test_delete_test_suite_cleans_related_tasks_after_execution_history_is_removed(self):
+        fixture = self.create_execution_fixture(case_name="suite-delete-clean-case", suite_name="suite-delete-clean")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                UPDATE executions
+                SET status = 'failed', result = 'failed', finished_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, now, fixture["execution_id"]),
+            )
+
+        delete_execution_response = self.client.delete(f"/executions/{fixture['execution_id']}/")
+        self.assertEqual(delete_execution_response.status_code, 200)
 
         with database.connection() as conn:
             now = database.utc_now()
@@ -2305,17 +2597,50 @@ class AppApiSmokeTests(unittest.TestCase):
         with database.connection() as conn:
             suite = database.fetch_one(conn, "SELECT id FROM test_suites WHERE id = ?", (fixture["suite_id"],))
             task = database.fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE id = ?", (task_id,))
-            execution = database.fetch_one(
-                conn,
-                "SELECT id, test_suite_id FROM executions WHERE id = ?",
-                (fixture["execution_id"],),
-            )
             notification = database.fetch_one(conn, "SELECT task_id FROM notification_logs WHERE id = ?", (log_id,))
 
         self.assertIsNone(suite)
         self.assertIsNone(task)
-        self.assertIsNone(execution["test_suite_id"])
         self.assertIsNone(notification["task_id"])
+
+    def test_delete_execution_refreshes_suite_stats_when_last_history_is_removed(self):
+        fixture = self.create_execution_fixture(case_name="suite-stat-delete-case", suite_name="suite-stat-delete")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                UPDATE executions
+                SET status = 'failed', result = 'failed', finished_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, now, fixture["execution_id"]),
+            )
+            conn.execute(
+                """
+                UPDATE test_suites
+                SET execution_status = 'completed', execution_result = 'failed', passed_count = 0, failed_count = 1,
+                    last_run_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, now, fixture["suite_id"]),
+            )
+
+        response = self.client.delete(f"/executions/{fixture['execution_id']}/")
+        self.assertEqual(response.status_code, 200)
+
+        with database.connection() as conn:
+            suite = database.fetch_one(
+                conn,
+                "SELECT execution_status, execution_result, passed_count, failed_count, last_run_at FROM test_suites WHERE id = ?",
+                (fixture["suite_id"],),
+            )
+
+        self.assertEqual(suite["execution_status"], "not_run")
+        self.assertEqual(suite["execution_result"], "")
+        self.assertEqual(suite["passed_count"], 0)
+        self.assertEqual(suite["failed_count"], 0)
+        self.assertIsNone(suite["last_run_at"])
 
     def test_run_now_returns_trigger_payload_and_notification_context(self):
         import app.extended_routes as extended_routes
@@ -2595,6 +2920,108 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertEqual(row["created_by"], "creator-user")
 
+    def test_update_scheduled_task_rejects_project_change_when_notification_history_exists(self):
+        fixture = self.create_execution_fixture(case_name="scheduled-project-move-task")
+
+        create_response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 1001,
+                "name": "scheduled-project-move-task",
+                "description": "before edit",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": fixture["device_id"],
+                "package_id": fixture["package_id"],
+                "test_suite_id": None,
+                "test_case_id": fixture["test_case_id"],
+                "notify_on_success": False,
+                "notify_on_failure": True,
+                "notification_type": "email",
+                "notify_emails": ["qa@example.com"],
+                "status": "ACTIVE",
+                "created_by": "creator-user",
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+        task_id = create_response.json()["data"]["id"]
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                """
+                INSERT INTO notification_logs (
+                    project_id, task_id, task_name, task_type, notification_type, actual_notification_type,
+                    sender_name, sender_email, recipient_info, webhook_bot_info, notification_content,
+                    status, error_message, response_info, created_at, sent_at, retry_count, is_retried
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    1001,
+                    task_id,
+                    "scheduled-project-move-task",
+                    "TEST_CASE",
+                    "task_execution",
+                    "email",
+                    "FlyTest",
+                    "noreply@flytest.local",
+                    json.dumps([{"email": "qa@example.com"}], ensure_ascii=False),
+                    "{}",
+                    "task failed",
+                    "failed",
+                    "fixture",
+                    "{}",
+                    now,
+                    now,
+                    0,
+                    0,
+                ),
+            )
+
+        update_response = self.client.put(
+            f"/scheduled-tasks/{task_id}/",
+            json={
+                "project_id": 2002,
+                "name": "scheduled-project-move-task",
+                "description": "after edit",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 7200,
+                "execute_at": None,
+                "device_id": fixture["device_id"],
+                "package_id": None,
+                "test_suite_id": None,
+                "test_case_id": fixture["test_case_id"],
+                "notify_on_success": False,
+                "notify_on_failure": True,
+                "notification_type": "email",
+                "notify_emails": ["qa@example.com"],
+                "status": "ACTIVE",
+                "created_by": "editor-user",
+            },
+        )
+
+        self.assertEqual(update_response.status_code, 409)
+        self.assertEqual(
+            update_response.json()["detail"],
+            "scheduled task cannot move projects while referenced by notification logs",
+        )
+
+        with database.connection() as conn:
+            row = database.fetch_one(
+                conn,
+                "SELECT project_id, description, interval_seconds FROM scheduled_tasks WHERE id = ?",
+                (task_id,),
+            )
+
+        self.assertEqual(row["project_id"], 1001)
+        self.assertEqual(row["description"], "before edit")
+        self.assertEqual(row["interval_seconds"], 3600)
+
     def test_update_scheduled_task_allows_mutable_status_change(self):
         fixture = self.create_execution_fixture(case_name="scheduled-status-change-task")
 
@@ -2863,6 +3290,43 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(execution["result"], "stopped")
         self.assertEqual(device["status"], "stopping")
         self.assertEqual(device["locked_by"], "smoke")
+
+    def test_stop_running_execution_releases_device_if_grace_thread_start_fails(self):
+        fixture = self.create_execution_fixture(case_name="running-stop-thread-fail-case")
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE executions SET status = 'running', started_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, fixture["execution_id"]),
+            )
+            conn.execute(
+                "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("smoke", now, now, fixture["device_id"]),
+            )
+
+        with patch.object(self.main_module.threading, "Thread") as mocked_thread:
+            mocked_thread.return_value.start.side_effect = RuntimeError("grace thread boom")
+            response = self.client.post(f"/executions/{fixture['execution_id']}/stop/")
+
+        self.assertEqual(response.status_code, 200)
+
+        with database.connection() as conn:
+            execution = database.fetch_one(
+                conn,
+                "SELECT status, result FROM executions WHERE id = ?",
+                (fixture["execution_id"],),
+            )
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (fixture["device_id"],),
+            )
+
+        self.assertEqual(execution["status"], "stopped")
+        self.assertEqual(execution["result"], "stopped")
+        self.assertEqual(device["status"], "available")
+        self.assertEqual(device["locked_by"], "")
 
     def test_retry_notification_updates_response_info(self):
         with database.connection() as conn:
