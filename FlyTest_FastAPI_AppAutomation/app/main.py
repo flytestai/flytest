@@ -582,8 +582,8 @@ def upsert_device(conn, payload: dict[str, Any], preserve_lock: bool = True) -> 
         return get_device_or_404(conn, created_device_id)
 
     next_status = payload.get("status", existing["status"])
-    if preserve_lock and existing.get("status") == "locked":
-        next_status = "locked"
+    if preserve_lock and existing.get("status") in {"locked", "stopping"}:
+        next_status = existing["status"]
 
     conn.execute(
         """
@@ -1122,12 +1122,7 @@ def connect_device(payload: DeviceConnectPayload) -> dict[str, Any]:
 @app.post("/devices/{device_id}/lock/")
 def lock_device(device_id: int, user_name: str = Query(default="FlyTest")) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_device_or_404(conn, device_id)
-        now = utc_now()
-        conn.execute(
-            "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
-            (user_name, now, now, device_id),
-        )
+        device = reserve_device_for_execution(conn, device_id, locked_by=user_name)
         return success(get_device_or_404(conn, device_id), "设备已锁定")
 
 
@@ -1209,6 +1204,12 @@ def update_device(device_id: int, payload: DeviceUpdatePayload) -> dict[str, Any
 def delete_device(device_id: int) -> dict[str, Any]:
     with connection() as conn:
         _ = get_device_or_404(conn, device_id)
+        active_execution = fetch_one(conn, "SELECT id FROM executions WHERE device_id = ? LIMIT 1", (device_id,))
+        if active_execution is not None:
+            raise HTTPException(status_code=409, detail="device is referenced by executions")
+        scheduled_task = fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE device_id = ? LIMIT 1", (device_id,))
+        if scheduled_task is not None:
+            raise HTTPException(status_code=409, detail="device is referenced by scheduled tasks")
         conn.execute("DELETE FROM devices WHERE id = ?", (device_id,))
         return success(None, "设备已删除")
 

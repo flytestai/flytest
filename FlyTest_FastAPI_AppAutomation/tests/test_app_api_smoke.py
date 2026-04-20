@@ -489,6 +489,56 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertEqual(executions, [])
 
+    def test_device_discovery_preserves_stopping_status(self):
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'stopping', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("smoke", now, now, device_id),
+            )
+            self.main_module.upsert_device(
+                conn,
+                {
+                    "device_id": "emulator-5554",
+                    "name": "Pixel_6",
+                    "status": "available",
+                    "android_version": "14",
+                    "connection_type": "emulator",
+                    "ip_address": "",
+                    "port": 5555,
+                    "device_specs": {},
+                },
+            )
+            device = database.fetch_one(conn, "SELECT status, locked_by FROM devices WHERE id = ?", (device_id,))
+
+        self.assertEqual(device["status"], "stopping")
+        self.assertEqual(device["locked_by"], "smoke")
+
+    def test_manual_lock_rejects_already_locked_device(self):
+        device_id = self.create_device_record()
+
+        with database.connection() as conn:
+            now = database.utc_now()
+            conn.execute(
+                "UPDATE devices SET status = 'locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+                ("existing-run", now, now, device_id),
+            )
+
+        response = self.client.post(f"/devices/{device_id}/lock/", params={"user_name": "smoke"})
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            device = database.fetch_one(
+                conn,
+                "SELECT status, locked_by FROM devices WHERE id = ?",
+                (device_id,),
+            )
+
+        self.assertEqual(device["status"], "locked")
+        self.assertEqual(device["locked_by"], "existing-run")
+
     def test_stop_pending_execution_releases_device_and_blocks_late_start(self):
         fixture = self.create_execution_fixture(case_name="pending-stop-case")
 
@@ -1182,6 +1232,56 @@ class AppApiSmokeTests(unittest.TestCase):
             execution = database.fetch_one(conn, "SELECT id FROM executions WHERE id = ?", (fixture["execution_id"],))
 
         self.assertIsNone(execution)
+
+    def test_delete_device_rejects_referenced_execution(self):
+        fixture = self.create_execution_fixture(case_name="device-delete-execution-case")
+
+        response = self.client.delete(f"/devices/{fixture['device_id']}/")
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            device = database.fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (fixture["device_id"],))
+
+        self.assertIsNotNone(device)
+
+    def test_delete_device_rejects_referenced_scheduled_task(self):
+        fixture = self.create_execution_fixture(case_name="device-delete-task-case")
+
+        create_response = self.client.post(
+            "/scheduled-tasks/",
+            json={
+                "project_id": 1001,
+                "name": "device-delete-task",
+                "description": "scheduled trigger",
+                "task_type": "TEST_CASE",
+                "trigger_type": "INTERVAL",
+                "cron_expression": "",
+                "interval_seconds": 3600,
+                "execute_at": None,
+                "device_id": fixture["device_id"],
+                "package_id": fixture["package_id"],
+                "test_suite_id": None,
+                "test_case_id": fixture["test_case_id"],
+                "notify_on_success": False,
+                "notify_on_failure": False,
+                "notification_type": "",
+                "notify_emails": [],
+                "status": "ACTIVE",
+                "created_by": "tester",
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+
+        with database.connection() as conn:
+            conn.execute("DELETE FROM executions WHERE id = ?", (fixture["execution_id"],))
+
+        response = self.client.delete(f"/devices/{fixture['device_id']}/")
+        self.assertEqual(response.status_code, 409)
+
+        with database.connection() as conn:
+            device = database.fetch_one(conn, "SELECT id FROM devices WHERE id = ?", (fixture["device_id"],))
+
+        self.assertIsNotNone(device)
 
     def test_delete_test_suite_cleans_related_tasks_and_keeps_execution_history(self):
         fixture = self.create_execution_fixture(case_name="suite-delete-case", suite_name="suite-delete")
