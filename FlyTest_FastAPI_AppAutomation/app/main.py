@@ -4,6 +4,7 @@ import base64
 import hashlib
 import importlib.util
 import re
+import sqlite3
 import sys
 import threading
 import time
@@ -470,6 +471,25 @@ def ensure_package_belongs_to_project(package: dict[str, Any], project_id: int) 
         raise HTTPException(status_code=400, detail="应用包不属于当前项目")
 
 
+def ensure_package_name_available(
+    conn,
+    *,
+    project_id: int,
+    package_name: str,
+    exclude_package_id: int | None = None,
+) -> None:
+    existing = fetch_one(
+        conn,
+        "SELECT id FROM packages WHERE project_id = ? AND package_name = ?",
+        (project_id, package_name),
+    )
+    if existing is None:
+        return
+    if exclude_package_id is not None and int(existing["id"]) == exclude_package_id:
+        return
+    raise HTTPException(status_code=409, detail="package_name already exists in this project")
+
+
 def extract_steps(ui_flow: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(ui_flow, list):
         return [item for item in ui_flow if isinstance(item, dict)]
@@ -513,6 +533,25 @@ def element_is_referenced_by_test_cases(
         if _flow_references_element_value(ui_flow, candidates):
             return True
     return False
+
+
+def ensure_element_name_available(
+    conn,
+    *,
+    project_id: int,
+    name: str,
+    exclude_element_id: int | None = None,
+) -> None:
+    existing = fetch_one(
+        conn,
+        "SELECT id FROM elements WHERE project_id = ? AND name = ?",
+        (project_id, name),
+    )
+    if existing is None:
+        return
+    if exclude_element_id is not None and int(existing["id"]) == exclude_element_id:
+        return
+    raise HTTPException(status_code=409, detail="element name already exists in this project")
 
 
 def append_log(
@@ -1280,23 +1319,30 @@ def list_packages(project_id: int | None = Query(default=None), search: str | No
 def create_package(payload: PackagePayload) -> dict[str, Any]:
     with connection() as conn:
         ensure_project_access(payload.project_id)
+        normalized_package_name = payload.package_name.strip()
+        ensure_package_name_available(conn, project_id=payload.project_id, package_name=normalized_package_name)
         now = utc_now()
-        conn.execute(
-            """
-            INSERT INTO packages (project_id, name, package_name, activity_name, platform, description, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                payload.project_id,
-                payload.name.strip(),
-                payload.package_name.strip(),
-                payload.activity_name.strip(),
-                payload.platform.strip() or "android",
-                payload.description.strip(),
-                now,
-                now,
-            ),
-        )
+        try:
+            conn.execute(
+                """
+                INSERT INTO packages (project_id, name, package_name, activity_name, platform, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload.project_id,
+                    payload.name.strip(),
+                    normalized_package_name,
+                    payload.activity_name.strip(),
+                    payload.platform.strip() or "android",
+                    payload.description.strip(),
+                    now,
+                    now,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "packages.project_id, packages.package_name" in str(exc):
+                raise HTTPException(status_code=409, detail="package_name already exists in this project") from exc
+            raise
         package_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         return success(get_package_or_404(conn, package_id), "应用包已创建", 201)
 
@@ -1306,6 +1352,7 @@ def update_package(package_id: int, payload: PackagePayload) -> dict[str, Any]:
     with connection() as conn:
         package = get_package_or_404(conn, package_id)
         ensure_project_access(payload.project_id)
+        normalized_package_name = payload.package_name.strip()
         current_project_id = int(package["project_id"])
         if payload.project_id != current_project_id:
             referenced_case = fetch_one(conn, "SELECT id FROM test_cases WHERE package_id = ? LIMIT 1", (package_id,))
@@ -1317,23 +1364,34 @@ def update_package(package_id: int, payload: PackagePayload) -> dict[str, Any]:
             referenced_task = fetch_one(conn, "SELECT id FROM scheduled_tasks WHERE package_id = ? LIMIT 1", (package_id,))
             if referenced_task is not None:
                 raise HTTPException(status_code=409, detail="package cannot move projects while referenced by scheduled tasks")
-        conn.execute(
-            """
-            UPDATE packages
-            SET project_id = ?, name = ?, package_name = ?, activity_name = ?, platform = ?, description = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (
-                payload.project_id,
-                payload.name.strip(),
-                payload.package_name.strip(),
-                payload.activity_name.strip(),
-                payload.platform.strip() or "android",
-                payload.description.strip(),
-                utc_now(),
-                package_id,
-            ),
+        ensure_package_name_available(
+            conn,
+            project_id=payload.project_id,
+            package_name=normalized_package_name,
+            exclude_package_id=package_id,
         )
+        try:
+            conn.execute(
+                """
+                UPDATE packages
+                SET project_id = ?, name = ?, package_name = ?, activity_name = ?, platform = ?, description = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    payload.project_id,
+                    payload.name.strip(),
+                    normalized_package_name,
+                    payload.activity_name.strip(),
+                    payload.platform.strip() or "android",
+                    payload.description.strip(),
+                    utc_now(),
+                    package_id,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "packages.project_id, packages.package_name" in str(exc):
+                raise HTTPException(status_code=409, detail="package_name already exists in this project") from exc
+            raise
         return success(get_package_or_404(conn, package_id), "应用包已更新")
 
 
@@ -1446,34 +1504,41 @@ def preview_element(element_id: int) -> FileResponse:
 def create_element(payload: ElementPayload) -> dict[str, Any]:
     with connection() as conn:
         ensure_project_access(payload.project_id)
+        normalized_name = payload.name.strip()
+        ensure_element_name_available(conn, project_id=payload.project_id, name=normalized_name)
         ensure_element_assets_belong_to_project(
             conn,
             project_id=payload.project_id,
             asset_paths=_collect_element_asset_references(payload),
         )
         now = utc_now()
-        conn.execute(
-            """
-            INSERT INTO elements (
-                project_id, name, element_type, selector_type, selector_value, description,
-                tags, config, image_path, is_active, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                payload.project_id,
-                payload.name.strip(),
-                payload.element_type.strip(),
-                payload.selector_type.strip(),
-                payload.selector_value.strip(),
-                payload.description.strip(),
-                json_dumps(payload.tags),
-                json_dumps(payload.config),
-                payload.image_path.strip(),
-                1 if payload.is_active else 0,
-                now,
-                now,
-            ),
-        )
+        try:
+            conn.execute(
+                """
+                INSERT INTO elements (
+                    project_id, name, element_type, selector_type, selector_value, description,
+                    tags, config, image_path, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload.project_id,
+                    normalized_name,
+                    payload.element_type.strip(),
+                    payload.selector_type.strip(),
+                    payload.selector_value.strip(),
+                    payload.description.strip(),
+                    json_dumps(payload.tags),
+                    json_dumps(payload.config),
+                    payload.image_path.strip(),
+                    1 if payload.is_active else 0,
+                    now,
+                    now,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "elements.project_id, elements.name" in str(exc):
+                raise HTTPException(status_code=409, detail="element name already exists in this project") from exc
+            raise
         element_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         return success(get_element_or_404(conn, element_id), "元素已创建", 201)
 
@@ -1483,6 +1548,7 @@ def update_element(element_id: int, payload: ElementPayload) -> dict[str, Any]:
     with connection() as conn:
         element = get_element_or_404(conn, element_id)
         ensure_project_access(payload.project_id)
+        normalized_name = payload.name.strip()
         current_project_id = int(element["project_id"])
         if payload.project_id != current_project_id:
             if element_is_referenced_by_test_cases(
@@ -1502,28 +1568,39 @@ def update_element(element_id: int, payload: ElementPayload) -> dict[str, Any]:
             project_id=payload.project_id,
             asset_paths=_collect_element_asset_references(payload),
         )
-        conn.execute(
-            """
-            UPDATE elements
-            SET project_id = ?, name = ?, element_type = ?, selector_type = ?, selector_value = ?,
-                description = ?, tags = ?, config = ?, image_path = ?, is_active = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (
-                payload.project_id,
-                payload.name.strip(),
-                payload.element_type.strip(),
-                payload.selector_type.strip(),
-                payload.selector_value.strip(),
-                payload.description.strip(),
-                json_dumps(payload.tags),
-                json_dumps(payload.config),
-                payload.image_path.strip(),
-                1 if payload.is_active else 0,
-                utc_now(),
-                element_id,
-            ),
+        ensure_element_name_available(
+            conn,
+            project_id=payload.project_id,
+            name=normalized_name,
+            exclude_element_id=element_id,
         )
+        try:
+            conn.execute(
+                """
+                UPDATE elements
+                SET project_id = ?, name = ?, element_type = ?, selector_type = ?, selector_value = ?,
+                    description = ?, tags = ?, config = ?, image_path = ?, is_active = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    payload.project_id,
+                    normalized_name,
+                    payload.element_type.strip(),
+                    payload.selector_type.strip(),
+                    payload.selector_value.strip(),
+                    payload.description.strip(),
+                    json_dumps(payload.tags),
+                    json_dumps(payload.config),
+                    payload.image_path.strip(),
+                    1 if payload.is_active else 0,
+                    utc_now(),
+                    element_id,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "elements.project_id, elements.name" in str(exc):
+                raise HTTPException(status_code=409, detail="element name already exists in this project") from exc
+            raise
         return success(get_element_or_404(conn, element_id), "元素已更新")
 
 

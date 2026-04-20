@@ -483,6 +483,15 @@ export function useAppAutomationSceneBuilder() {
     clearRecord(subStepSelections)
   }
 
+  const closeTransientPanels = () => {
+    executeVisible.value = false
+    aiPlanVisible.value = false
+    aiStepVisible.value = false
+    componentPackageVisible.value = false
+    componentPackageExportVisible.value = false
+    customComponentVisible.value = false
+  }
+
   const openExecuteDialog = () => openWorkflowExecuteDialog(executeVisible)
 
   const executeCurrentDraft = () => runWorkflowExecuteCurrentDraft(executeVisible)
@@ -498,12 +507,15 @@ export function useAppAutomationSceneBuilder() {
         return
       }
       clearStepSelectionState()
-      executeVisible.value = false
-      aiPlanVisible.value = false
-      aiStepVisible.value = false
-      componentPackageVisible.value = false
-      componentPackageExportVisible.value = false
-      customComponentVisible.value = false
+      closeTransientPanels()
+    },
+  )
+
+  watch(
+    () => projectStore.currentProjectId,
+    () => {
+      clearStepSelectionState()
+      closeTransientPanels()
     },
   )
 

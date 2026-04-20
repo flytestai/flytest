@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import time
 from datetime import datetime, timedelta, timezone
 from threading import Thread
@@ -138,6 +139,45 @@ def serialize_custom_component(row: dict[str, Any]) -> dict[str, Any]:
     row["steps"] = json_loads(row.pop("steps_json", None), [])
     row["enabled"] = bool(row.get("enabled"))
     return row
+
+
+def ensure_component_type_available(conn, component_type: str) -> None:
+    existing = fetch_one(conn, "SELECT id FROM components WHERE type = ?", (component_type,))
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="component type already exists")
+
+
+def ensure_custom_component_type_available(
+    conn,
+    component_type: str,
+    *,
+    exclude_custom_id: int | None = None,
+) -> None:
+    existing = fetch_one(conn, "SELECT id FROM custom_components WHERE type = ?", (component_type,))
+    if existing is None:
+        return
+    if exclude_custom_id is not None and int(existing["id"]) == exclude_custom_id:
+        return
+    raise HTTPException(status_code=409, detail="custom component type already exists")
+
+
+def _flow_references_custom_component(value: Any, component_type: str) -> bool:
+    if isinstance(value, dict):
+        return any(_flow_references_custom_component(item, component_type) for item in value.values())
+    if isinstance(value, list):
+        return any(_flow_references_custom_component(item, component_type) for item in value)
+    if value in (None, ""):
+        return False
+    return str(value).strip() == component_type
+
+
+def custom_component_is_referenced_by_test_cases(conn, component_type: str) -> bool:
+    rows = fetch_all(conn, "SELECT ui_flow FROM test_cases")
+    for row in rows:
+        ui_flow = json_loads(row.get("ui_flow"), {})
+        if _flow_references_custom_component(ui_flow, component_type):
+            return True
+    return False
 
 
 def serialize_component_package(row: dict[str, Any]) -> dict[str, Any]:
@@ -518,6 +558,23 @@ def ensure_test_cases_belong_to_project(conn, project_id: int, test_case_ids: li
         ensure_row_project_access(row)
         if int(row["project_id"]) != project_id:
             raise HTTPException(status_code=400, detail="测试用例不属于当前项目")
+
+
+def ensure_unique_test_case_ids(test_case_ids: list[int]) -> None:
+    seen: set[int] = set()
+    duplicates: list[int] = []
+    for test_case_id in test_case_ids:
+        normalized = int(test_case_id)
+        if normalized in seen:
+            if normalized not in duplicates:
+                duplicates.append(normalized)
+            continue
+        seen.add(normalized)
+    if duplicates:
+        raise HTTPException(
+            status_code=409,
+            detail=f"测试套件中存在重复的测试用例: {', '.join(str(item) for item in duplicates)}",
+        )
 
 
 def create_notification_log(
@@ -1177,25 +1234,31 @@ def list_components() -> dict[str, Any]:
 @router.post("/components/")
 def create_component(payload: ComponentPayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_component_type_available(conn, payload.type)
         now = utc_now()
-        conn.execute(
-            """
-            INSERT INTO components (name, type, category, description, schema_json, default_config, enabled, sort_order, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                payload.name,
-                payload.type,
-                payload.category,
-                payload.description,
-                json_dumps(payload.schema_definition),
-                json_dumps(payload.default_config),
-                1 if payload.enabled else 0,
-                payload.sort_order,
-                now,
-                now,
-            ),
-        )
+        try:
+            conn.execute(
+                """
+                INSERT INTO components (name, type, category, description, schema_json, default_config, enabled, sort_order, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload.name,
+                    payload.type,
+                    payload.category,
+                    payload.description,
+                    json_dumps(payload.schema_definition),
+                    json_dumps(payload.default_config),
+                    1 if payload.enabled else 0,
+                    payload.sort_order,
+                    now,
+                    now,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "components.type" in str(exc):
+                raise HTTPException(status_code=409, detail="component type already exists") from exc
+            raise
         component_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         row = fetch_one(conn, "SELECT * FROM components WHERE id = ?", (component_id,))
     return success(serialize_component(row or {}), "组件已创建", 201)
@@ -1211,26 +1274,32 @@ def list_custom_components() -> dict[str, Any]:
 @router.post("/custom-components/")
 def create_custom_component(payload: CustomComponentPayload) -> dict[str, Any]:
     with connection() as conn:
+        ensure_custom_component_type_available(conn, payload.type)
         now = utc_now()
-        conn.execute(
-            """
-            INSERT INTO custom_components (
-                name, type, description, schema_json, default_config, steps_json, enabled, sort_order, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                payload.name,
-                payload.type,
-                payload.description,
-                json_dumps(payload.schema_definition),
-                json_dumps(payload.default_config),
-                json_dumps(payload.steps),
-                1 if payload.enabled else 0,
-                payload.sort_order,
-                now,
-                now,
-            ),
-        )
+        try:
+            conn.execute(
+                """
+                INSERT INTO custom_components (
+                    name, type, description, schema_json, default_config, steps_json, enabled, sort_order, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    payload.name,
+                    payload.type,
+                    payload.description,
+                    json_dumps(payload.schema_definition),
+                    json_dumps(payload.default_config),
+                    json_dumps(payload.steps),
+                    1 if payload.enabled else 0,
+                    payload.sort_order,
+                    now,
+                    now,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "custom_components.type" in str(exc):
+                raise HTTPException(status_code=409, detail="custom component type already exists") from exc
+            raise
         custom_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         row = fetch_one(conn, "SELECT * FROM custom_components WHERE id = ?", (custom_id,))
     return success(serialize_custom_component(row or {}), "自定义组件已创建", 201)
@@ -1239,10 +1308,12 @@ def create_custom_component(payload: CustomComponentPayload) -> dict[str, Any]:
 @router.put("/custom-components/{custom_id}/")
 def update_custom_component(custom_id: int, payload: CustomComponentPayload) -> dict[str, Any]:
     with connection() as conn:
-        existing = fetch_one(conn, "SELECT id FROM custom_components WHERE id = ?", (custom_id,))
+        existing = fetch_one(conn, "SELECT id, type FROM custom_components WHERE id = ?", (custom_id,))
+        ensure_custom_component_type_available(conn, payload.type, exclude_custom_id=custom_id)
         if existing is None:
             raise HTTPException(status_code=404, detail="自定义组件不存在")
-        conn.execute(
+        try:
+            conn.execute(
             """
             UPDATE custom_components
             SET name = ?, type = ?, description = ?, schema_json = ?, default_config = ?, steps_json = ?,
@@ -1261,7 +1332,11 @@ def update_custom_component(custom_id: int, payload: CustomComponentPayload) -> 
                 utc_now(),
                 custom_id,
             ),
-        )
+            )
+        except sqlite3.IntegrityError as exc:
+            if "custom_components.type" in str(exc):
+                raise HTTPException(status_code=409, detail="custom component type already exists") from exc
+            raise
         row = fetch_one(conn, "SELECT * FROM custom_components WHERE id = ?", (custom_id,))
     return success(serialize_custom_component(row or {}), "自定义组件已更新")
 
@@ -1269,9 +1344,11 @@ def update_custom_component(custom_id: int, payload: CustomComponentPayload) -> 
 @router.delete("/custom-components/{custom_id}/")
 def delete_custom_component(custom_id: int) -> dict[str, Any]:
     with connection() as conn:
-        existing = fetch_one(conn, "SELECT id FROM custom_components WHERE id = ?", (custom_id,))
+        existing = fetch_one(conn, "SELECT id, type FROM custom_components WHERE id = ?", (custom_id,))
         if existing is None:
             raise HTTPException(status_code=404, detail="自定义组件不存在")
+        if custom_component_is_referenced_by_test_cases(conn, str(existing.get("type") or "").strip()):
+            raise HTTPException(status_code=409, detail="custom component is referenced by test cases")
         conn.execute("DELETE FROM custom_components WHERE id = ?", (custom_id,))
     return success(None, "自定义组件已删除")
 
@@ -1408,6 +1485,7 @@ def get_test_suite(suite_id: int) -> dict[str, Any]:
 def create_test_suite(payload: TestSuitePayload, created_by: str = Query(default="FlyTest")) -> dict[str, Any]:
     with connection() as conn:
         ensure_project_access(payload.project_id)
+        ensure_unique_test_case_ids(payload.test_case_ids)
         ensure_test_cases_belong_to_project(conn, payload.project_id, payload.test_case_ids)
         now = utc_now()
         conn.execute(
@@ -1422,7 +1500,7 @@ def create_test_suite(payload: TestSuitePayload, created_by: str = Query(default
         suite_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         for index, test_case_id in enumerate(payload.test_case_ids):
             conn.execute(
-                "INSERT OR IGNORE INTO test_suite_cases (test_suite_id, test_case_id, sort_order, created_at) VALUES (?, ?, ?, ?)",
+                "INSERT INTO test_suite_cases (test_suite_id, test_case_id, sort_order, created_at) VALUES (?, ?, ?, ?)",
                 (suite_id, test_case_id, index, now),
             )
         suite = get_suite_or_404(conn, suite_id)
@@ -1434,6 +1512,7 @@ def update_test_suite(suite_id: int, payload: TestSuitePayload) -> dict[str, Any
     with connection() as conn:
         suite = get_suite_or_404(conn, suite_id)
         ensure_project_access(payload.project_id)
+        ensure_unique_test_case_ids(payload.test_case_ids)
         current_project_id = int(suite["project_id"])
         if payload.project_id != current_project_id:
             referenced_execution = fetch_one(conn, "SELECT id FROM executions WHERE test_suite_id = ? LIMIT 1", (suite_id,))
@@ -1483,11 +1562,18 @@ def add_test_case_to_suite(suite_id: int, test_case_id: int = Query(...), order:
     with connection() as conn:
         suite = get_suite_or_404(conn, suite_id)
         ensure_test_cases_belong_to_project(conn, int(suite["project_id"]), [test_case_id])
+        existing_case = fetch_one(
+            conn,
+            "SELECT id FROM test_suite_cases WHERE test_suite_id = ? AND test_case_id = ?",
+            (suite_id, test_case_id),
+        )
+        if existing_case is not None:
+            raise HTTPException(status_code=409, detail="测试用例已在当前套件中")
         if order is None:
             existing = fetch_one(conn, "SELECT MAX(sort_order) AS max_order FROM test_suite_cases WHERE test_suite_id = ?", (suite_id,))
             order = (existing["max_order"] or 0) + 1
         conn.execute(
-            "INSERT OR IGNORE INTO test_suite_cases (test_suite_id, test_case_id, sort_order, created_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO test_suite_cases (test_suite_id, test_case_id, sort_order, created_at) VALUES (?, ?, ?, ?)",
             (suite_id, test_case_id, order, utc_now()),
         )
         suite = get_suite_or_404(conn, suite_id)
@@ -1507,6 +1593,22 @@ def remove_test_case_from_suite(suite_id: int, test_case_id: int = Query(...)) -
 def update_suite_case_order(suite_id: int, test_case_orders: list[dict[str, int]]) -> dict[str, Any]:
     with connection() as conn:
         _ = get_suite_or_404(conn, suite_id)
+        requested_ids: list[int] = []
+        seen_ids: set[int] = set()
+        for item in test_case_orders:
+            test_case_id = int(item["test_case_id"])
+            if test_case_id in seen_ids:
+                raise HTTPException(status_code=409, detail="顺序更新中包含重复的测试用例")
+            seen_ids.add(test_case_id)
+            requested_ids.append(test_case_id)
+        existing_rows = fetch_all(
+            conn,
+            "SELECT test_case_id FROM test_suite_cases WHERE test_suite_id = ?",
+            (suite_id,),
+        )
+        existing_ids = {int(row["test_case_id"]) for row in existing_rows}
+        if set(requested_ids) != existing_ids:
+            raise HTTPException(status_code=400, detail="顺序更新必须包含套件中的全部测试用例且不能包含无关用例")
         for item in test_case_orders:
             conn.execute(
                 "UPDATE test_suite_cases SET sort_order = ? WHERE test_suite_id = ? AND test_case_id = ?",

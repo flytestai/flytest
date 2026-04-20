@@ -401,6 +401,8 @@ export function useAppAutomationTestCases() {
   watch(
     () => projectStore.currentProjectId,
     () => {
+      visible.value = false
+      executeVisible.value = false
       resetForm()
       resetExecuteState()
       packageFilter.value = ''

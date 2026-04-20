@@ -490,6 +490,11 @@ export function useAppAutomationSuites() {
   watch(
     () => projectStore.currentProjectId,
     () => {
+      visible.value = false
+      runVisible.value = false
+      detailVisible.value = false
+      historyVisible.value = false
+      executionDetailVisible.value = false
       resetForm()
       resetRunState()
       filters.status = ''

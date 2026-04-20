@@ -422,6 +422,139 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertGreaterEqual(export_payload["component_count"], 1)
         self.assertGreaterEqual(export_payload["custom_component_count"], 1)
 
+    def test_create_component_rejects_duplicate_type(self):
+        payload = {
+            "name": "Touch",
+            "type": "duplicate_touch",
+            "category": "interaction",
+            "description": "touch action",
+            "schema": {},
+            "default_config": {},
+            "enabled": True,
+            "sort_order": 1,
+        }
+
+        first_response = self.client.post("/components/", json=payload)
+        self.assertEqual(first_response.status_code, 200)
+
+        response = self.client.post("/components/", json=payload)
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+    def test_create_custom_component_rejects_duplicate_type(self):
+        payload = {
+            "name": "Login Flow",
+            "type": "duplicate_login_flow",
+            "description": "shared login flow",
+            "schema": {},
+            "default_config": {},
+            "steps": [{"name": "tap login", "type": "touch", "config": {"selector": "login"}}],
+            "enabled": True,
+            "sort_order": 1,
+        }
+
+        first_response = self.client.post("/custom-components/", json=payload)
+        self.assertEqual(first_response.status_code, 200)
+
+        response = self.client.post("/custom-components/", json=payload)
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+    def test_update_custom_component_rejects_duplicate_type(self):
+        first_response = self.client.post(
+            "/custom-components/",
+            json={
+                "name": "Login Flow",
+                "type": "login_flow_one",
+                "description": "shared login flow",
+                "schema": {},
+                "default_config": {},
+                "steps": [{"name": "tap login", "type": "touch", "config": {"selector": "login"}}],
+                "enabled": True,
+                "sort_order": 1,
+            },
+        )
+        self.assertEqual(first_response.status_code, 200)
+        second_response = self.client.post(
+            "/custom-components/",
+            json={
+                "name": "Search Flow",
+                "type": "search_flow_two",
+                "description": "shared search flow",
+                "schema": {},
+                "default_config": {},
+                "steps": [{"name": "tap search", "type": "touch", "config": {"selector": "search"}}],
+                "enabled": True,
+                "sort_order": 2,
+            },
+        )
+        self.assertEqual(second_response.status_code, 200)
+        second_component = second_response.json()["data"]
+
+        response = self.client.put(
+            f"/custom-components/{second_component['id']}/",
+            json={
+                "name": second_component["name"],
+                "type": "login_flow_one",
+                "description": second_component["description"],
+                "schema": second_component["schema"],
+                "default_config": second_component["default_config"],
+                "steps": second_component["steps"],
+                "enabled": second_component["enabled"],
+                "sort_order": second_component["sort_order"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+    def test_delete_custom_component_rejects_test_case_reference(self):
+        component_response = self.client.post(
+            "/custom-components/",
+            json={
+                "name": "Login Flow",
+                "type": "login_flow_delete_guard",
+                "description": "shared login flow",
+                "schema": {},
+                "default_config": {},
+                "steps": [{"name": "tap login", "type": "touch", "config": {"selector": "login"}}],
+                "enabled": True,
+                "sort_order": 1,
+            },
+        )
+        self.assertEqual(component_response.status_code, 200)
+        component = component_response.json()["data"]
+        package = self.create_package()
+        case_response = self.client.post(
+            "/test-cases/",
+            json={
+                "project_id": 1001,
+                "name": "custom-component-case",
+                "description": "uses custom component",
+                "package_id": package["id"],
+                "ui_flow": {
+                    "steps": [
+                        {
+                            "name": "use login flow",
+                            "kind": "custom",
+                            "type": component["type"],
+                            "component_type": component["type"],
+                            "config": {},
+                        }
+                    ]
+                },
+                "variables": [],
+                "tags": [],
+                "timeout": 60,
+                "retry_count": 0,
+            },
+        )
+        self.assertEqual(case_response.status_code, 200)
+
+        response = self.client.delete(f"/custom-components/{component['id']}/")
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
     def test_execute_test_case_rejects_locked_device_before_creating_execution(self):
         test_case = self.create_test_case(name="locked-device-case")
         device_id = self.create_device_record()
@@ -541,6 +674,55 @@ class AppApiSmokeTests(unittest.TestCase):
             )
 
         self.assertIsNotNone(package_row)
+
+    def test_create_package_rejects_duplicate_package_name(self):
+        self.create_package()
+
+        response = self.client.post(
+            "/packages/",
+            json={
+                "project_id": 1001,
+                "name": "企业微信副本",
+                "package_name": "com.tencent.wework",
+                "activity_name": ".LaunchActivity",
+                "platform": "android",
+                "description": "duplicate package",
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+    def test_update_package_rejects_duplicate_package_name(self):
+        package = self.create_package()
+        other_response = self.client.post(
+            "/packages/",
+            json={
+                "project_id": 1001,
+                "name": "飞书",
+                "package_name": "com.feishu.app",
+                "activity_name": ".MainActivity",
+                "platform": "android",
+                "description": "other package",
+            },
+        )
+        self.assertEqual(other_response.status_code, 200)
+        other_package = other_response.json()["data"]
+
+        response = self.client.put(
+            f"/packages/{other_package['id']}/",
+            json={
+                "project_id": 1001,
+                "name": other_package["name"],
+                "package_name": package["package_name"],
+                "activity_name": other_package["activity_name"],
+                "platform": other_package["platform"],
+                "description": other_package["description"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
 
     def test_delete_test_case_rejects_execution_reference(self):
         fixture = self.create_execution_fixture(case_name="test-case-delete-execution-case")
@@ -1052,6 +1234,51 @@ class AppApiSmokeTests(unittest.TestCase):
         self.assertEqual(updated["project_id"], 1001)
         self.assertIn("detail", response.json())
 
+    def test_create_element_rejects_duplicate_name(self):
+        self.create_element("duplicate-button", "button", "A")
+
+        response = self.client.post(
+            "/elements/",
+            json={
+                "project_id": 1001,
+                "name": "duplicate-button",
+                "element_type": "button",
+                "selector_type": "text",
+                "selector_value": "B",
+                "description": "duplicate element",
+                "tags": [],
+                "config": {},
+                "image_path": "",
+                "is_active": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+    def test_update_element_rejects_duplicate_name(self):
+        first = self.create_element("first-button", "button", "A")
+        second = self.create_element("second-button", "button", "B")
+
+        response = self.client.put(
+            f"/elements/{second['id']}/",
+            json={
+                "project_id": 1001,
+                "name": first["name"],
+                "element_type": second["element_type"],
+                "selector_type": second["selector_type"],
+                "selector_value": second["selector_value"],
+                "description": second["description"],
+                "tags": second["tags"],
+                "config": second["config"],
+                "image_path": second["image_path"],
+                "is_active": second["is_active"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
     def test_add_test_case_to_suite_rejects_cross_project_case(self):
         with database.connection() as conn:
             now = database.utc_now()
@@ -1083,6 +1310,110 @@ class AppApiSmokeTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("detail", response.json())
+
+    def test_create_test_suite_rejects_duplicate_test_case_ids(self):
+        test_case = self.create_test_case(name="duplicate-suite-case", package_id=None)
+
+        response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "duplicate-suite",
+                "description": "duplicate members",
+                "test_case_ids": [test_case["id"], test_case["id"]],
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+        with database.connection() as conn:
+            suite = database.fetch_one(conn, "SELECT id FROM test_suites WHERE name = ?", ("duplicate-suite",))
+
+        self.assertIsNone(suite)
+
+    def test_update_test_suite_rejects_duplicate_test_case_ids(self):
+        first_case = self.create_test_case(name="suite-update-case-a", package_id=None)
+        second_case = self.create_test_case(name="suite-update-case-b", package_id=None)
+        suite_response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "suite-update-duplicate",
+                "description": "suite fixture",
+                "test_case_ids": [first_case["id"], second_case["id"]],
+            },
+        )
+        self.assertEqual(suite_response.status_code, 200)
+        suite_id = suite_response.json()["data"]["id"]
+
+        response = self.client.put(
+            f"/test-suites/{suite_id}/",
+            json={
+                "project_id": 1001,
+                "name": "suite-update-duplicate",
+                "description": "suite fixture",
+                "test_case_ids": [first_case["id"], first_case["id"]],
+            },
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+        suite_response = self.client.get(f"/test-suites/{suite_id}/")
+        self.assertEqual(suite_response.status_code, 200)
+        suite_case_ids = [item["test_case_id"] for item in suite_response.json()["data"]["suite_cases"]]
+        self.assertEqual(suite_case_ids, [first_case["id"], second_case["id"]])
+
+    def test_add_test_case_to_suite_rejects_duplicate_member(self):
+        test_case = self.create_test_case(name="suite-member-duplicate", package_id=None)
+        suite_response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "suite-member-duplicate",
+                "description": "suite fixture",
+                "test_case_ids": [test_case["id"]],
+            },
+        )
+        self.assertEqual(suite_response.status_code, 200)
+        suite_id = suite_response.json()["data"]["id"]
+
+        response = self.client.post(
+            f"/test-suites/{suite_id}/add_test_case/",
+            params={"test_case_id": test_case["id"]},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("detail", response.json())
+
+    def test_update_suite_case_order_rejects_partial_member_list(self):
+        first_case = self.create_test_case(name="suite-order-case-a", package_id=None)
+        second_case = self.create_test_case(name="suite-order-case-b", package_id=None)
+        suite_response = self.client.post(
+            "/test-suites/",
+            json={
+                "project_id": 1001,
+                "name": "suite-order-partial",
+                "description": "suite fixture",
+                "test_case_ids": [first_case["id"], second_case["id"]],
+            },
+        )
+        self.assertEqual(suite_response.status_code, 200)
+        suite_id = suite_response.json()["data"]["id"]
+
+        response = self.client.post(
+            f"/test-suites/{suite_id}/update_test_case_order/",
+            json=[{"test_case_id": first_case["id"], "order": 10}],
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("detail", response.json())
+
+        suite_response = self.client.get(f"/test-suites/{suite_id}/")
+        self.assertEqual(suite_response.status_code, 200)
+        suite_case_ids = [item["test_case_id"] for item in suite_response.json()["data"]["suite_cases"]]
+        self.assertEqual(suite_case_ids, [first_case["id"], second_case["id"]])
 
     def test_health_endpoint_reports_scheduler_metadata(self):
         response = self.client.get("/health")
