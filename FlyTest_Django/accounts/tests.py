@@ -145,6 +145,21 @@ class AuthCookieFlowTests(TestCase):
         self.assertTrue(response.cookies[settings.JWT_ACCESS_COOKIE_NAME]["httponly"])
         self.assertTrue(response.cookies[settings.JWT_REFRESH_COOKIE_NAME]["httponly"])
 
+    def test_login_with_remember_me_sets_refresh_cookie_for_30_days(self):
+        response = self.client.post(
+            "/api/token/",
+            {
+                "username": "13800000090",
+                "password": "testpass123",
+                "remember_me": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        refresh_cookie = response.cookies[settings.JWT_REFRESH_COOKIE_NAME]
+        self.assertEqual(int(refresh_cookie["max-age"]), settings.JWT_REMEMBER_ME_DAYS * 24 * 60 * 60)
+
     def test_refresh_works_with_refresh_cookie_only(self):
         login_response = self.client.post(
             "/api/token/",

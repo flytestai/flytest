@@ -5,6 +5,7 @@ from django.db.utils import OperationalError
 from django.db.models import Q
 from django.conf import settings
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import Throttled
@@ -1124,6 +1125,15 @@ class MyTokenObtainPairView(BaseTokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
     throttle_classes = [LoginRateThrottle]
 
+    @staticmethod
+    def _remember_me_enabled(request) -> bool:
+        value = request.data.get("remember_me")
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return False
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
     def post(self, request, *args, **kwargs):
         """
         当数据库尚未就绪时，返回可识别的友好错误，避免直接暴露 500 调试堆栈。
@@ -1134,10 +1144,17 @@ class MyTokenObtainPairView(BaseTokenObtainPairView):
                 access_token = response.data.get("access")
                 refresh_token = response.data.get("refresh")
                 if access_token and refresh_token:
+                    remember_me = self._remember_me_enabled(request)
+                    refresh_max_age = (
+                        timedelta(days=settings.JWT_REMEMBER_ME_DAYS)
+                        if remember_me
+                        else None
+                    )
                     set_auth_cookies(
                         response,
                         access_token=access_token,
                         refresh_token=refresh_token,
+                        refresh_max_age=refresh_max_age,
                     )
             return response
         except OperationalError:

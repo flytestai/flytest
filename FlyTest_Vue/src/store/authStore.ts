@@ -206,12 +206,12 @@ export const useAuthStore = defineStore('auth', {
       return bootstrapPromise
     },
 
-    async login(username: string, password: string): Promise<boolean> {
+    async login(username: string, password: string, rememberMe = false): Promise<boolean> {
       this.isLoading = true
       this.loginError = null
 
       try {
-        const response: AuthServiceLoginResponse = await loginService(username, password)
+        const response: AuthServiceLoginResponse = await loginService(username, password, rememberMe)
         if (!response.success || !response.data) {
           this.resetAuthState()
           this.loginError = response.error || '登录失败，请检查您的凭据。'

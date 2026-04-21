@@ -326,7 +326,7 @@ const handleLogin = async () => {
     return
   }
 
-  const success = await authStore.login(username.value, password.value)
+  const success = await authStore.login(username.value, password.value, rememberMe.value)
   if (success) {
     Message.success('登录成功')
     if (rememberMe.value) {

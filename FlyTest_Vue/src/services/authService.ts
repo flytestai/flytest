@@ -68,7 +68,7 @@ export interface AuthServiceRegisterResponse {
  * @param password 密码
  * @returns 返回一个 Promise，解析为包含认证结果的对象
  */
-export const login = async (username: string, password: string): Promise<AuthServiceLoginResponse> => {
+export const login = async (username: string, password: string, rememberMe = false): Promise<AuthServiceLoginResponse> => {
   const API_URL = '/token/'; // 使用相对路径，由 axiosInstance 的 baseURL 处理
 
   try {
@@ -78,6 +78,7 @@ export const login = async (username: string, password: string): Promise<AuthSer
       data: {
         username,
         password,
+        remember_me: rememberMe,
       },
       headers: {
         'Content-Type': 'application/json',
