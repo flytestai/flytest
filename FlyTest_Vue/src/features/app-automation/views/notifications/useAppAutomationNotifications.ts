@@ -172,6 +172,11 @@ export function useAppAutomationNotifications() {
   }
 
   const loadTaskContext = async () => {
+    if (!projectStore.currentProjectId) {
+      taskContext.value = null
+      return
+    }
+
     if (!currentTaskId.value) {
       taskContext.value = null
       return
@@ -185,6 +190,12 @@ export function useAppAutomationNotifications() {
   }
 
   const loadData = async () => {
+    if (!projectStore.currentProjectId) {
+      logs.value = []
+      currentLog.value = null
+      return
+    }
+
     loading.value = true
     try {
       logs.value = await AppAutomationService.getNotificationLogs({

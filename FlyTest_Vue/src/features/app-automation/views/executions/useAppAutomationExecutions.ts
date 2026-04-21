@@ -278,7 +278,8 @@ export function useAppAutomationExecutions() {
 
   const loadExecutions = async (options: { silent?: boolean } = {}) => {
     if (!projectStore.currentProjectId) {
-      executions.value = []
+      clearLoadedData()
+      detailVisible.value = false
       return
     }
 
@@ -302,6 +303,13 @@ export function useAppAutomationExecutions() {
     id: number,
     options: { silent?: boolean; open?: boolean; syncRoute?: boolean } = {},
   ) => {
+    if (!projectStore.currentProjectId) {
+      currentExecution.value = null
+      detailVisible.value = false
+      detailLoading.value = false
+      return
+    }
+
     if (!options.silent) {
       detailLoading.value = true
     }

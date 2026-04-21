@@ -355,6 +355,12 @@ export function useAppAutomationSuites() {
   }
 
   const openDetail = async (record: AppTestSuite) => {
+    if (!projectStore.currentProjectId) {
+      selectedSuite.value = null
+      detailVisible.value = false
+      return
+    }
+
     try {
       selectedSuite.value = await AppAutomationService.getTestSuite(record.id)
       detailVisible.value = true
@@ -364,6 +370,14 @@ export function useAppAutomationSuites() {
   }
 
   const openHistory = async (record: AppTestSuite) => {
+    if (!projectStore.currentProjectId) {
+      selectedSuite.value = null
+      history.value = []
+      historyVisible.value = false
+      historyLoading.value = false
+      return
+    }
+
     selectedSuite.value = record
     historyVisible.value = true
     historyLoading.value = true
@@ -378,6 +392,12 @@ export function useAppAutomationSuites() {
   }
 
   const openExecutionDetail = async (executionId: number) => {
+    if (!projectStore.currentProjectId) {
+      currentExecution.value = null
+      executionDetailVisible.value = false
+      return
+    }
+
     try {
       currentExecution.value = await AppAutomationService.getExecutionDetail(executionId)
       executionDetailVisible.value = true

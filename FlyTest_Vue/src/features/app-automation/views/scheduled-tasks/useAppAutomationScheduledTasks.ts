@@ -380,6 +380,15 @@ export function useAppAutomationScheduledTasks() {
   }
 
   const loadTaskDetail = async (taskId: number, options: { syncRoute?: boolean } = {}) => {
+    if (!projectStore.currentProjectId) {
+      currentTask.value = null
+      taskNotifications.value = []
+      detailVisible.value = false
+      detailLoading.value = false
+      taskNotificationsLoading.value = false
+      return
+    }
+
     detailLoading.value = true
     taskNotificationsLoading.value = true
 

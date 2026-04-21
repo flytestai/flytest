@@ -341,6 +341,12 @@ export function useAppAutomationReports() {
     suite: AppTestSuite,
     options: { syncRoute?: boolean } = {},
   ) => {
+    if (!projectStore.currentProjectId) {
+      selectedSuite.value = null
+      suiteDetailVisible.value = false
+      return
+    }
+
     selectedSuite.value = suite
     suiteDetailVisible.value = true
     activeTab.value = 'suite'
@@ -356,6 +362,14 @@ export function useAppAutomationReports() {
   }
 
   const openSuiteExecutions = async (suite: AppTestSuite) => {
+    if (!projectStore.currentProjectId) {
+      selectedSuite.value = null
+      suiteExecutions.value = []
+      suiteExecutionsVisible.value = false
+      suiteExecutionsLoading.value = false
+      return
+    }
+
     selectedSuite.value = suite
     suiteExecutionsVisible.value = true
     suiteExecutionsLoading.value = true
@@ -370,6 +384,12 @@ export function useAppAutomationReports() {
   }
 
   const openExecutionDetail = async (id: number, options: { syncRoute?: boolean } = {}) => {
+    if (!projectStore.currentProjectId) {
+      currentExecution.value = null
+      executionDetailVisible.value = false
+      return
+    }
+
     try {
       currentExecution.value = await AppAutomationService.getExecutionDetail(id)
       executionDetailVisible.value = true
@@ -401,6 +421,10 @@ export function useAppAutomationReports() {
   }
 
   const openSuiteReport = async (suite: AppTestSuite) => {
+    if (!projectStore.currentProjectId) {
+      return
+    }
+
     try {
       const records = await AppAutomationService.getTestSuiteExecutions(suite.id)
       const target = records.find(item => canOpenReport(item))
