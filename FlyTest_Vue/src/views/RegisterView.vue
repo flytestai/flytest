@@ -1,26 +1,21 @@
 <template>
   <div class="register-container">
-    <!-- 背景装饰 -->
     <div class="background-decoration">
       <div class="decoration-circle circle-1"></div>
       <div class="decoration-circle circle-2"></div>
       <div class="decoration-circle circle-3"></div>
     </div>
 
-    <!-- 注册卡片 -->
     <div class="register-card">
-      <!-- 品牌标识区域 -->
       <div class="brand-section">
         <div class="brand-logo">
           <img :src="brandLogoUrl" alt="FlyTest Logo" class="logo-icon" />
         </div>
-        <h1 class="brand-title">注册新账户</h1>
-        <p class="brand-subtitle">欢迎加入FlyTest</p>
+        <h1 class="brand-title">注册新账号</h1>
+        <p class="brand-subtitle">欢迎加入 FlyTest</p>
       </div>
 
-      <!-- 注册表单 -->
-      <form @submit.prevent="handleSubmit" class="register-form">
-        <!-- 用户名输入框 -->
+      <form class="register-form" @submit.prevent="handleSubmit">
         <div class="input-group">
           <div class="input-wrapper">
             <div class="input-icon">
@@ -29,36 +24,38 @@
               </svg>
             </div>
             <input
+              id="realName"
+              v-model.trim="formState.realName"
               type="text"
-              id="username"
-              v-model="formState.username"
               required
               class="form-input"
-              placeholder="请输入用户名"
+              maxlength="20"
+              placeholder="请输入姓名（仅支持中文）"
             />
           </div>
         </div>
 
-        <!-- 邮箱输入框 -->
         <div class="input-group">
           <div class="input-wrapper">
             <div class="input-icon">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0-1.243 1.007-2.25 2.25-2.25h15a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0119.5 19.5h-15a2.25 2.25 0 01-2.25-2.25V6.75z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h7.5M8.25 12h7.5m-7.5 5.25h4.5" />
               </svg>
             </div>
             <input
-              type="email"
-              id="email"
-              v-model="formState.email"
+              id="phoneNumber"
+              v-model.trim="formState.phoneNumber"
+              type="tel"
               required
               class="form-input"
-              placeholder="请输入邮箱地址"
+              inputmode="numeric"
+              maxlength="11"
+              placeholder="请输入手机号"
             />
           </div>
         </div>
 
-        <!-- 密码输入框 -->
         <div class="input-group">
           <div class="input-wrapper">
             <div class="input-icon">
@@ -86,7 +83,6 @@
           </div>
         </div>
 
-        <!-- 确认密码输入框 -->
         <div class="input-group">
           <div class="input-wrapper">
             <div class="input-icon">
@@ -114,13 +110,7 @@
           </div>
         </div>
 
-        <!-- 注册按钮 -->
-        <button
-          type="submit"
-          class="register-button"
-          :class="{'loading': isLoading}"
-          :disabled="isLoading"
-        >
+        <button type="submit" class="register-button" :class="{ loading: isLoading }" :disabled="isLoading">
           <span v-if="!isLoading">注册</span>
           <span v-else class="loading-content">
             <svg class="loading-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -131,7 +121,6 @@
           </span>
         </button>
 
-        <!-- 错误消息 -->
         <div v-if="registerError" class="error-message">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="error-icon">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
@@ -139,11 +128,14 @@
           {{ registerError }}
         </div>
 
-        <!-- 登录链接 -->
+        <div class="register-tip">
+          系统会自动分配唯一用户名，注册后请使用手机号登录。
+        </div>
+
         <div class="login-link">
           <p>
-            已经有账户了?
-            <router-link to="/login" class="link">点此登录</router-link>
+            已有账号？
+            <router-link to="/login" class="link">点击登录</router-link>
           </p>
         </div>
       </form>
@@ -152,18 +144,21 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/store/authStore';
 import { Message } from '@arco-design/web-vue';
+import { useAuthStore } from '@/store/authStore';
 import { brandLogoUrl } from '@/utils/assetUrl';
+
+const CHINA_MOBILE_REGEX = /^1[3-9]\d{9}$/;
+const CHINESE_REAL_NAME_REGEX = /^[\u4e00-\u9fff·]{2,20}$/;
 
 const router = useRouter();
 const authStore = useAuthStore();
 
 const formState = reactive({
-  username: '',
-  email: '',
+  realName: '',
+  phoneNumber: '',
   password: '',
   confirmPassword: '',
 });
@@ -174,7 +169,6 @@ const showConfirmPassword = ref(false);
 const isLoading = computed(() => authStore.getIsLoading);
 const registerError = computed(() => authStore.getRegisterError);
 
-// 切换密码可见性
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value;
 };
@@ -183,44 +177,49 @@ const toggleConfirmPasswordVisibility = () => {
   showConfirmPassword.value = !showConfirmPassword.value;
 };
 
-// 验证密码确认
-const validatePasswordConfirm = () => {
-  return formState.password === formState.confirmPassword;
+const validateForm = () => {
+  if (!formState.realName || !formState.phoneNumber || !formState.password || !formState.confirmPassword) {
+    Message.warning('请填写所有必填项');
+    return false;
+  }
+
+  if (!CHINESE_REAL_NAME_REGEX.test(formState.realName)) {
+    Message.warning('姓名仅支持2到20位中文');
+    return false;
+  }
+
+  if (!CHINA_MOBILE_REGEX.test(formState.phoneNumber)) {
+    Message.warning('请输入正确的11位手机号');
+    return false;
+  }
+
+  if (formState.password !== formState.confirmPassword) {
+    Message.warning('两次输入的密码不一致');
+    return false;
+  }
+
+  return true;
 };
 
-// 处理注册逻辑
 const handleSubmit = async () => {
-  if (!formState.username || !formState.email || !formState.password || !formState.confirmPassword) {
-    Message.warning('请填写所有必填字段');
-    return;
-  }
-
-  if (!validatePasswordConfirm()) {
-    Message.warning('两次输入的密码不一致');
-    return;
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(formState.email)) {
-    Message.warning('请输入有效的邮箱地址');
+  if (!validateForm()) {
     return;
   }
 
   try {
-    const success = await authStore.register(formState.username, formState.email, formState.password);
+    const success = await authStore.register(formState.realName, formState.phoneNumber, formState.password);
     if (success) {
-      Message.success('注册成功，请等待管理员审核后再登录。');
+      Message.success('注册成功，请等待管理员审核后再登录');
       router.push('/login');
     }
-  } catch (e) {
-    console.error('Exception during authStore.register call:', e);
-    Message.error('注册过程中发生意外错误。');
+  } catch (error) {
+    console.error('Exception during authStore.register call:', error);
+    Message.error('注册过程中发生意外错误');
   }
 };
 </script>
 
 <style scoped>
-/* 主容器 */
 .register-container {
   height: 100vh;
   display: flex;
@@ -233,13 +232,9 @@ const handleSubmit = async () => {
   box-sizing: border-box;
 }
 
-/* 背景装饰 */
 .background-decoration {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
   z-index: 1;
 }
@@ -256,7 +251,6 @@ const handleSubmit = async () => {
   height: 200px;
   top: 10%;
   left: 10%;
-  animation-delay: 0s;
 }
 
 .circle-2 {
@@ -277,7 +271,7 @@ const handleSubmit = async () => {
 
 @keyframes float {
   0%, 100% {
-    transform: translateY(0px) scale(1);
+    transform: translateY(0) scale(1);
     opacity: 0.7;
   }
   50% {
@@ -286,33 +280,19 @@ const handleSubmit = async () => {
   }
 }
 
-/* 注册卡片 */
 .register-card {
   background: #ffffff;
   border-radius: 20px;
-  box-shadow:
-    0 25px 50px rgba(0, 0, 0, 0.08),
-    0 15px 25px rgba(0, 0, 0, 0.04),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08), 0 15px 25px rgba(0, 0, 0, 0.04);
   padding: 40px 45px;
   width: 100%;
   max-width: 480px;
   position: relative;
   z-index: 2;
-  backdrop-filter: blur(20px);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.register-card:hover {
-  transform: translateY(-8px);
-  box-shadow:
-    0 35px 70px rgba(0, 0, 0, 0.12),
-    0 20px 35px rgba(0, 0, 0, 0.06),
-    0 0 0 1px rgba(255, 255, 255, 0.15);
-}
-
-/* 品牌标识区域 */
 .brand-section {
   text-align: center;
   margin-bottom: 32px;
@@ -325,11 +305,6 @@ const handleSubmit = async () => {
   width: 70px;
   height: 70px;
   margin-bottom: 20px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.brand-logo:hover {
-  transform: translateY(-3px) scale(1.05);
 }
 
 .logo-icon {
@@ -344,7 +319,6 @@ const handleSubmit = async () => {
   font-weight: 700;
   color: #333333;
   margin: 0 0 6px 0;
-  letter-spacing: -0.5px;
 }
 
 .brand-subtitle {
@@ -354,18 +328,10 @@ const handleSubmit = async () => {
   font-weight: 500;
 }
 
-/* 注册表单 */
 .register-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-/* 输入组 */
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
 }
 
 .input-wrapper {
@@ -379,7 +345,6 @@ const handleSubmit = async () => {
   left: 18px;
   z-index: 1;
   color: #9ca3af;
-  transition: color 0.3s ease;
 }
 
 .input-icon svg {
@@ -405,12 +370,6 @@ const handleSubmit = async () => {
   border-color: var(--theme-accent);
   background: #ffffff;
   box-shadow: 0 0 0 4px rgba(var(--theme-accent-rgb), 0.08);
-  transform: translateY(-1px);
-}
-
-.form-input:focus + .input-icon,
-.input-wrapper:focus-within .input-icon {
-  color: var(--theme-accent);
 }
 
 .password-toggle {
@@ -418,12 +377,7 @@ const handleSubmit = async () => {
   right: 18px;
   cursor: pointer;
   color: #9ca3af;
-  transition: color 0.3s ease;
   z-index: 1;
-}
-
-.password-toggle:hover {
-  color: var(--theme-accent);
 }
 
 .password-toggle svg {
@@ -431,7 +385,6 @@ const handleSubmit = async () => {
   height: 20px;
 }
 
-/* 注册按钮 */
 .register-button {
   width: 100%;
   padding: 12px 24px;
@@ -442,30 +395,12 @@ const handleSubmit = async () => {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 6px 16px rgba(var(--theme-accent-rgb), 0.25);
-  position: relative;
-  overflow: hidden;
   min-height: 48px;
-  letter-spacing: 0.2px;
-}
-
-.register-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(var(--theme-accent-rgb), 0.35);
-  background: var(--theme-accent-hover);
-}
-
-.register-button:active:not(:disabled) {
-  transform: translateY(1px) scale(0.98);
-  transition: all 0.1s ease;
-  background: var(--theme-accent-active);
 }
 
 .register-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-  transform: none;
 }
 
 .loading-content {
@@ -481,12 +416,6 @@ const handleSubmit = async () => {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* 错误消息 */
 .error-message {
   display: flex;
   align-items: center;
@@ -497,7 +426,6 @@ const handleSubmit = async () => {
   border-radius: 8px;
   color: #dc2626;
   font-size: 15px;
-  margin-top: 8px;
 }
 
 .error-icon {
@@ -506,10 +434,17 @@ const handleSubmit = async () => {
   flex-shrink: 0;
 }
 
-/* 登录链接 */
+.register-tip {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(var(--theme-accent-rgb), 0.08);
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .login-link {
   text-align: center;
-  margin-top: 20px;
 }
 
 .login-link p {
@@ -522,135 +457,15 @@ const handleSubmit = async () => {
   color: var(--theme-accent);
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.2s ease;
 }
 
-.login-link .link:hover {
-  color: var(--theme-accent-active);
-  text-decoration: underline;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .register-container {
-    padding: 16px;
-    height: 100vh;
-    overflow-y: auto;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
   }
-
-  .register-card {
-    margin: 0;
-    padding: 24px 20px;
-    max-width: none;
-    min-height: auto;
+  to {
+    transform: rotate(360deg);
   }
-
-  .brand-section {
-    margin-bottom: 20px;
-  }
-
-  .brand-logo {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    margin-bottom: 12px;
-  }
-
-  .logo-icon {
-    width: 26px;
-    height: 26px;
-  }
-
-  .brand-title {
-    font-size: 22px;
-  }
-
-  .brand-subtitle {
-    font-size: 13px;
-  }
-
-  .register-form {
-    gap: 16px;
-  }
-
-  .form-input {
-    padding: 12px 14px 12px 42px;
-    font-size: 16px;
-    min-height: 44px;
-  }
-
-  .input-icon {
-    left: 14px;
-  }
-
-  .password-toggle {
-    right: 14px;
-  }
-
-  .register-button {
-    padding: 12px 18px;
-    min-height: 44px;
-  }
-
-  .login-link {
-    margin-top: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .register-container {
-    padding: 12px;
-    height: 100vh;
-    overflow-y: auto;
-  }
-
-  .register-card {
-    margin: 0;
-    padding: 20px 16px;
-  }
-
-  .brand-section {
-    margin-bottom: 16px;
-  }
-
-  .brand-title {
-    font-size: 20px;
-  }
-
-  .register-form {
-    gap: 14px;
-  }
-
-  .login-link {
-    margin-top: 12px;
-  }
-}
-
-/* 高度不足时的处理 */
-@media (max-height: 700px) {
-  .register-container {
-    height: 100vh;
-    overflow-y: auto;
-    align-items: flex-start;
-    padding-top: 20px;
-  }
-
-  .register-card {
-    margin: 0 auto;
-  }
-
-  .brand-section {
-    margin-bottom: 16px;
-  }
-
-  .register-form {
-    gap: 16px;
-  }
-}
-
-/* 动画效果 */
-.register-card {
-  animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideUp {
@@ -664,54 +479,28 @@ const handleSubmit = async () => {
   }
 }
 
-/* 输入框聚焦动画 */
-.form-input:focus {
-  animation: inputFocus 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes inputFocus {
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 160, 233, 0.3);
-    transform: translateY(0);
+@media (max-width: 768px) {
+  .register-container {
+    padding: 16px;
+    overflow-y: auto;
   }
-  50% {
-    box-shadow: 0 0 0 2px rgba(0, 160, 233, 0.15);
+
+  .register-card {
+    padding: 24px 20px;
+    max-width: none;
   }
-  100% {
-    box-shadow: 0 0 0 4px rgba(0, 160, 233, 0.08);
-    transform: translateY(-1px);
+
+  .form-input {
+    padding: 12px 14px 12px 42px;
+    min-height: 44px;
   }
-}
 
-/* 品牌logo旋转效果 */
-@keyframes logoRotate {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.1); }
-  100% { transform: rotate(360deg) scale(1); }
-}
+  .input-icon {
+    left: 14px;
+  }
 
-.brand-logo:active {
-  animation: logoRotate 0.6s ease-in-out;
-}
-
-/* 微妙的脉冲效果 */
-.register-button:not(:disabled) {
-  position: relative;
-  overflow: hidden;
-}
-
-.register-button:not(:disabled)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
-}
-
-.register-button:hover:not(:disabled)::before {
-  left: 100%;
+  .password-toggle {
+    right: 14px;
+  }
 }
 </style>

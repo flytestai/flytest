@@ -257,12 +257,12 @@ export const useAuthStore = defineStore('auth', {
       this.hydrateFromStorage()
     },
 
-    async register(username: string, email: string, password: string): Promise<boolean> {
+    async register(realName: string, phoneNumber: string, password: string): Promise<boolean> {
       this.isLoading = true
       this.registerError = null
 
       try {
-        const response: AuthServiceRegisterResponse = await registerService(username, email, password)
+        const response: AuthServiceRegisterResponse = await registerService(realName, phoneNumber, password)
         if (response.success && response.data) {
           this.logout()
           return true

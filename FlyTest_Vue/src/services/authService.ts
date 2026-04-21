@@ -35,6 +35,8 @@ interface ApiRegisterResponseData {
   id: number;
   username: string;
   email: string;
+  phone_number?: string;
+  real_name?: string;
 }
 
 interface ApiRegisterResponse {
@@ -140,12 +142,12 @@ export const login = async (username: string, password: string): Promise<AuthSer
 
 /**
  * 调用用户注册接口
- * @param username 用户名
- * @param email 邮箱
+ * @param realName 姓名
+ * @param phoneNumber 手机号
  * @param password 密码
  * @returns 返回一个 Promise，解析为包含注册结果的对象
  */
-export const register = async (username: string, email: string, password: string): Promise<AuthServiceRegisterResponse> => {
+export const register = async (realName: string, phoneNumber: string, password: string): Promise<AuthServiceRegisterResponse> => {
   const API_URL = '/accounts/register/'; // 使用相对路径，由 axiosInstance 的 baseURL 处理
 
   try {
@@ -153,8 +155,8 @@ export const register = async (username: string, email: string, password: string
       url: API_URL,
       method: 'POST',
       data: {
-        username,
-        email,
+        real_name: realName,
+        phone_number: phoneNumber,
         password,
       },
       headers: {
@@ -188,10 +190,10 @@ export const register = async (username: string, email: string, password: string
           errorMessage = responseData.message;
         } else if (responseData && typeof responseData.detail === 'string') {
           errorMessage = responseData.detail;
-        } else if (responseData && responseData.username && Array.isArray(responseData.username) && responseData.username.length > 0) {
-          errorMessage = `用户名错误: ${responseData.username.join(', ')}`;
-        } else if (responseData && responseData.email && Array.isArray(responseData.email) && responseData.email.length > 0) {
-          errorMessage = `邮箱错误: ${responseData.email.join(', ')}`;
+        } else if (responseData && responseData.phone_number && Array.isArray(responseData.phone_number) && responseData.phone_number.length > 0) {
+          errorMessage = `手机号错误: ${responseData.phone_number.join(', ')}`;
+        } else if (responseData && responseData.real_name && Array.isArray(responseData.real_name) && responseData.real_name.length > 0) {
+          errorMessage = `姓名错误: ${responseData.real_name.join(', ')}`;
         } else if (responseData && responseData.password && Array.isArray(responseData.password) && responseData.password.length > 0) {
           errorMessage = `密码错误: ${responseData.password.join(', ')}`;
         }

@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.conf import settings
 from django.db.utils import OperationalError
 from django.test import SimpleTestCase, TestCase
@@ -184,6 +185,7 @@ class AuthCookieFlowTests(TestCase):
 
 class UserRegistrationApprovalTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
         self.admin = User.objects.create_user(
             username="approval-admin",
@@ -196,19 +198,121 @@ class UserRegistrationApprovalTests(TestCase):
         response = self.client.post(
             "/api/accounts/register/",
             {
-                "username": "pending-user",
-                "email": "pending-user@example.com",
+                "phone_number": "13800000000",
+                "real_name": "张三",
                 "password": "Testpass123!",
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        user = User.objects.get(username="pending-user")
+        user = User.objects.get(username="1")
         self.assertFalse(user.is_staff)
+        self.assertEqual(user.profile.phone_number, "13800000000")
+        self.assertEqual(user.profile.real_name, "张三")
         approval = user.approval_record
         self.assertEqual(approval.status, UserApproval.STATUS_PENDING)
         self.assertFalse(is_user_approved(user))
+
+    def test_register_auto_assigns_incrementing_numeric_username(self):
+        first_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000001",
+                "real_name": "张三",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+        second_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000002",
+                "real_name": "李四",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username="1").exists())
+        self.assertTrue(User.objects.filter(username="2").exists())
+
+    def test_register_rejects_invalid_phone_number(self):
+        response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "123456",
+                "real_name": "张三",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone_number", response.data)
+
+    def test_register_rejects_duplicate_phone_number(self):
+        self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000003",
+                "real_name": "张三",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000003",
+                "real_name": "李四",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone_number", response.data)
+
+    def test_register_rejects_non_chinese_real_name(self):
+        response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000004",
+                "real_name": "Tom",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("real_name", response.data)
+
+    def test_login_supports_phone_number_after_registration(self):
+        register_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000005",
+                "real_name": "王五",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+
+        user = User.objects.get(username="1")
+        ensure_user_approval_record(user, status=UserApproval.STATUS_APPROVED)
+
+        response = self.client.post(
+            "/api/token/",
+            {"username": "13800000005", "password": "Testpass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_pending_user_permissions_endpoint_returns_empty_list(self):
         user = User.objects.create_user(

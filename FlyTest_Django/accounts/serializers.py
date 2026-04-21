@@ -1,5 +1,8 @@
+import re
+
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from django.utils.translation import gettext_lazy as _
@@ -223,6 +226,53 @@ PERMISSION_NAME_TRANSLATIONS = {
     "Can view 向量数据库索引": "查看向量数据库索引",
 }
 
+CHINA_MOBILE_REGEX = re.compile(r"^1[3-9]\d{9}$")
+CHINESE_REAL_NAME_REGEX = re.compile(r"^[\u4e00-\u9fff·]{2,20}$")
+
+
+def normalize_phone_number(value):
+    return (value or "").strip()
+
+
+def validate_phone_number_value(value, *, exclude_user_id=None, allow_blank=False):
+    phone_number = normalize_phone_number(value)
+    if not phone_number:
+        if allow_blank:
+            return ""
+        raise serializers.ValidationError("请输入手机号。")
+
+    if not CHINA_MOBILE_REGEX.fullmatch(phone_number):
+        raise serializers.ValidationError("请输入正确的11位手机号。")
+
+    phone_exists = User.objects.filter(profile__phone_number=phone_number)
+    if exclude_user_id is not None:
+        phone_exists = phone_exists.exclude(id=exclude_user_id)
+    if phone_exists.exists():
+        raise serializers.ValidationError("该手机号已被注册。")
+
+    return phone_number
+
+
+def validate_real_name_value(value, *, allow_blank=False):
+    real_name = (value or "").strip()
+    if not real_name:
+        if allow_blank:
+            return ""
+        raise serializers.ValidationError("请输入姓名。")
+
+    if not CHINESE_REAL_NAME_REGEX.fullmatch(real_name):
+        raise serializers.ValidationError("姓名仅支持2到20位中文。")
+
+    return real_name
+
+
+def generate_next_numeric_username():
+    max_numeric_username = 0
+    for username in User.objects.values_list("username", flat=True):
+        if username and username.isdigit():
+            max_numeric_username = max(max_numeric_username, int(username))
+    return str(max_numeric_username + 1)
+
 
 class UserApprovalMixin(serializers.Serializer):
     approval_status = serializers.SerializerMethodField()
@@ -267,10 +317,13 @@ class UserProfileMixin(serializers.Serializer):
 
 
 class UserSerializer(UserApprovalMixin, UserProfileMixin, serializers.ModelSerializer):
+    username = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField(
         write_only=True, required=True, style={"input_type": "password"}
     )
-    email = serializers.EmailField(required=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=30)
+    real_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
     class Meta:
         model = User
@@ -292,30 +345,67 @@ class UserSerializer(UserApprovalMixin, UserProfileMixin, serializers.ModelSeria
             "approval_reviewed_by",
         )  # 添加管理员相关字段
 
+    def validate_phone_number(self, value):
+        exclude_user_id = self.instance.id if self.instance else None
+        allow_blank = not bool(self.context.get("registration_mode"))
+        return validate_phone_number_value(
+            value,
+            exclude_user_id=exclude_user_id,
+            allow_blank=allow_blank,
+        )
+
+    def validate_real_name(self, value):
+        allow_blank = not bool(self.context.get("registration_mode"))
+        return validate_real_name_value(value, allow_blank=allow_blank)
+
+    def validate(self, attrs):
+        registration_mode = bool(self.context.get("registration_mode"))
+        if registration_mode:
+            attrs["phone_number"] = validate_phone_number_value(
+                attrs.get("phone_number"),
+                allow_blank=False,
+            )
+            attrs["real_name"] = validate_real_name_value(
+                attrs.get("real_name"),
+                allow_blank=False,
+            )
+            attrs["username"] = generate_next_numeric_username()
+            attrs["email"] = (attrs.get("email") or "").strip()
+
+        return attrs
+
     def create(self, validated_data):
         registration_mode = bool(self.context.get("registration_mode"))
-        # 信号处理器会自动处理管理员权限分配，这里只需要正常创建用户
-        # 统一走 create_user，确保密码会被哈希而不是明文入库。
-        user = User.objects.create_user(
-            username=validated_data["username"],
-            email=validated_data["email"],
-            password=validated_data["password"],
-            first_name=validated_data.get("first_name", ""),
-            last_name=validated_data.get("last_name", ""),
-            is_staff=False if registration_mode else validated_data.get("is_staff", False),
-            is_active=validated_data.get("is_active", True),
-        )
+        username = validated_data.get("username") or generate_next_numeric_username()
 
-        ensure_user_approval_record(
-            user,
-            status=UserApproval.STATUS_PENDING if registration_mode else UserApproval.STATUS_APPROVED,
-        )
-        profile = ensure_user_profile(user)
-        profile.phone_number = validated_data.get("phone_number", "")
-        profile.real_name = validated_data.get("real_name", "")
-        profile.save(update_fields=["phone_number", "real_name", "updated_at"])
+        for _ in range(5):
+            try:
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        username=username,
+                        email=(validated_data.get("email") or "").strip(),
+                        password=validated_data["password"],
+                        first_name=validated_data.get("first_name", ""),
+                        last_name=validated_data.get("last_name", ""),
+                        is_staff=False if registration_mode else validated_data.get("is_staff", False),
+                        is_active=validated_data.get("is_active", True),
+                    )
 
-        return user
+                    ensure_user_approval_record(
+                        user,
+                        status=UserApproval.STATUS_PENDING if registration_mode else UserApproval.STATUS_APPROVED,
+                    )
+                    profile = ensure_user_profile(user)
+                    profile.phone_number = validated_data.get("phone_number", "")
+                    profile.real_name = validated_data.get("real_name", "")
+                    profile.save(update_fields=["phone_number", "real_name", "updated_at"])
+                    return user
+            except IntegrityError:
+                if not registration_mode:
+                    raise
+                username = generate_next_numeric_username()
+
+        raise serializers.ValidationError({"username": "系统分配用户名失败，请稍后重试。"})
 
 
 class UserDetailSerializer(UserApprovalMixin, UserProfileMixin, serializers.ModelSerializer):
@@ -388,6 +478,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "email": {"required": False},
             # groups 字段保持 PrimaryKeyRelatedField 默认行为
         }
+
+    def validate_phone_number(self, value):
+        return validate_phone_number_value(
+            value,
+            exclude_user_id=self.instance.id if self.instance else None,
+            allow_blank=True,
+        )
+
+    def validate_real_name(self, value):
+        return validate_real_name_value(value, allow_blank=True)
 
     def update(self, instance, validated_data):
         # 信号处理器会自动处理管理员权限分配，这里只需要正常更新用户
@@ -986,6 +1086,16 @@ class CurrentUserProfileSerializer(serializers.Serializer):
     phone_number = serializers.CharField(required=False, allow_blank=True, max_length=30)
     real_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
+    def validate_phone_number(self, value):
+        return validate_phone_number_value(
+            value,
+            exclude_user_id=self.instance.id if self.instance else None,
+            allow_blank=True,
+        )
+
+    def validate_real_name(self, value):
+        return validate_real_name_value(value, allow_blank=True)
+
     def update(self, instance, validated_data):
         if "email" in validated_data:
             instance.email = validated_data["email"]
@@ -1043,6 +1153,13 @@ class MyTokenObtainPairSerializer(BaseTokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        username = (attrs.get("username") or "").strip()
+        if CHINA_MOBILE_REGEX.fullmatch(username):
+            matched_user = User.objects.filter(profile__phone_number=username).first()
+            if matched_user:
+                attrs = attrs.copy()
+                attrs["username"] = matched_user.username
+
         # 先走父类认证校验，再附加用户信息以减少前端二次请求。
         data = super().validate(attrs)
 

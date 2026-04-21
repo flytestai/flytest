@@ -46,7 +46,7 @@
         </span>
         <span class="launcher-copy">
           <strong>账号登录</strong>
-          <span>点击展开登录框</span>
+          <span>支持手机号或用户名登录</span>
         </span>
       </button>
     </div>
@@ -70,7 +70,7 @@
 
           <div class="card-header">
             <h2 id="login-title">欢迎回来</h2>
-            <p id="login-description">请登录您的账户</p>
+            <p id="login-description">请输入手机号或用户名登录</p>
           </div>
 
           <form class="login-form" @submit.prevent="handleLogin">
@@ -84,7 +84,7 @@
                 type="text"
                 required
                 autocomplete="username"
-                placeholder="请输入用户名"
+                placeholder="请输入手机号或用户名"
                 class="form-input"
               />
             </div>
@@ -316,7 +316,7 @@ const handleDialogKeydown = (event: KeyboardEvent) => {
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
-    Message.warning('请输入用户名和密码')
+    Message.warning('请输入手机号或用户名以及密码')
     return
   }
 
