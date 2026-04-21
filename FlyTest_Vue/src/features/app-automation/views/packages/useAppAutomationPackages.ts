@@ -97,6 +97,7 @@ export function useAppAutomationPackages() {
   const loadPackages = async () => {
     if (!projectStore.currentProjectId) {
       packages.value = []
+      loading.value = false
       return
     }
     loading.value = true

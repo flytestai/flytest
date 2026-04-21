@@ -216,6 +216,7 @@ export function useAppAutomationElements() {
       elements.value = []
       selectedElementIds.value = []
       clearPreviewCache()
+      loading.value = false
       return
     }
 

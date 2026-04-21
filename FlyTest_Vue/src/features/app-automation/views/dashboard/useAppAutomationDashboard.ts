@@ -358,6 +358,9 @@ export const useAppAutomationDashboard = () => {
   const loadDashboardState = async (options: { includeAi?: boolean; silent?: boolean } = {}) => {
     if (!currentProjectId.value) {
       resetDashboardState()
+      if (!options.silent) {
+        loading.value = false
+      }
       return
     }
 

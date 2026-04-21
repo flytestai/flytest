@@ -193,6 +193,9 @@ export function useAppAutomationNotifications() {
     if (!projectStore.currentProjectId) {
       logs.value = []
       currentLog.value = null
+      taskContext.value = null
+      detailVisible.value = false
+      loading.value = false
       return
     }
 

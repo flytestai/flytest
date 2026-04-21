@@ -149,6 +149,7 @@ export function useAppAutomationTestCases() {
       packages.value = []
       devices.value = []
       recentExecutionList.value = []
+      loading.value = false
       return
     }
 

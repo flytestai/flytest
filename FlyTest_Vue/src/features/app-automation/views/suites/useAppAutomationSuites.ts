@@ -225,6 +225,7 @@ export function useAppAutomationSuites() {
       history.value = []
       selectedSuite.value = null
       currentExecution.value = null
+      loading.value = false
       return
     }
 

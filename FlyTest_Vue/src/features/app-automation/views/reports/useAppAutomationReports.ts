@@ -293,6 +293,7 @@ export function useAppAutomationReports() {
   const loadData = async () => {
     if (!projectStore.currentProjectId) {
       clearLoadedData()
+      loading.value = false
       return
     }
 

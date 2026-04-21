@@ -344,6 +344,11 @@ export function useAppAutomationScheduledTasks() {
   const loadData = async () => {
     if (!projectStore.currentProjectId) {
       clearLoadedData()
+      visible.value = false
+      detailVisible.value = false
+      loading.value = false
+      detailLoading.value = false
+      taskNotificationsLoading.value = false
       return
     }
 

@@ -280,6 +280,9 @@ export function useAppAutomationExecutions() {
     if (!projectStore.currentProjectId) {
       clearLoadedData()
       detailVisible.value = false
+      if (!options.silent) {
+        loading.value = false
+      }
       return
     }
 
@@ -344,6 +347,7 @@ export function useAppAutomationExecutions() {
   const loadData = async () => {
     if (!projectStore.currentProjectId) {
       clearLoadedData()
+      loading.value = false
       return
     }
 

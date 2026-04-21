@@ -1173,10 +1173,16 @@ def _run_suite_task_in_background(
 
 
 def simulate_case_execution(execution_id: int) -> None:
+    from .main import _execution_is_marked_stopped, _finalize_stopped_execution, finish_device_lock
+
     try:
         with connection() as conn:
             execution = fetch_one(conn, "SELECT * FROM executions WHERE id = ?", (execution_id,))
             if execution is None:
+                return
+            if str(execution.get("status") or "").strip() == "stopped":
+                return
+            if str(execution.get("status") or "").strip() != "pending":
                 return
             test_case = fetch_one(conn, "SELECT * FROM test_cases WHERE id = ?", (execution["test_case_id"],))
             device = fetch_one(conn, "SELECT * FROM devices WHERE id = ?", (execution["device_id"],))
@@ -1225,10 +1231,7 @@ def simulate_case_execution(execution_id: int) -> None:
                     write_execution_report(conn, execution_id)
                     execution = fetch_one(conn, "SELECT device_id, test_suite_id FROM executions WHERE id = ?", (execution_id,))
                     if execution:
-                        conn.execute(
-                            "UPDATE devices SET status = 'available', locked_by = '', locked_at = NULL, updated_at = ? WHERE id = ?",
-                            (now, execution["device_id"]),
-                        )
+                        finish_device_lock(conn, execution["device_id"])
                         if execution.get("test_suite_id"):
                             refresh_suite_stats(conn, execution["test_suite_id"])
                     return
@@ -1253,7 +1256,10 @@ def simulate_case_execution(execution_id: int) -> None:
 
         finished_at = utc_now()
         with connection() as conn:
-            row = fetch_one(conn, "SELECT logs FROM executions WHERE id = ?", (execution_id,))
+            row = fetch_one(conn, "SELECT status, device_id, test_case_id, test_suite_id, logs FROM executions WHERE id = ?", (execution_id,))
+            if _execution_is_marked_stopped(row):
+                _finalize_stopped_execution(conn, execution_id, row)
+                return
             logs = json_loads(row.get("logs") if row else "[]", [])
             logs.append({"timestamp": finished_at, "level": "info", "message": "执行完成"})
             conn.execute(
@@ -1274,21 +1280,24 @@ def simulate_case_execution(execution_id: int) -> None:
                 ),
             )
             write_execution_report(conn, execution_id)
-            execution = fetch_one(conn, "SELECT test_case_id, test_suite_id, device_id FROM executions WHERE id = ?", (execution_id,))
             conn.execute(
                 "UPDATE test_cases SET last_result = 'passed', last_run_at = ?, updated_at = ? WHERE id = ?",
-                (finished_at, finished_at, execution["test_case_id"]),
+                (finished_at, finished_at, row["test_case_id"]),
             )
-            conn.execute(
-                "UPDATE devices SET status = 'available', locked_by = '', locked_at = NULL, updated_at = ? WHERE id = ?",
-                (finished_at, execution["device_id"]),
-            )
-            if execution.get("test_suite_id"):
-                refresh_suite_stats(conn, execution["test_suite_id"])
+            finish_device_lock(conn, row["device_id"])
+            if row.get("test_suite_id"):
+                refresh_suite_stats(conn, row["test_suite_id"])
     except Exception as exc:
         with connection() as conn:
-            execution = fetch_one(conn, "SELECT device_id, test_suite_id, logs FROM executions WHERE id = ?", (execution_id,))
+            execution = fetch_one(
+                conn,
+                "SELECT status, device_id, test_suite_id, logs FROM executions WHERE id = ?",
+                (execution_id,),
+            )
             if execution is None:
+                return
+            if _execution_is_marked_stopped(execution):
+                _finalize_stopped_execution(conn, execution_id, execution)
                 return
             logs = json_loads(execution.get("logs"), [])
             logs.append({"timestamp": utc_now(), "level": "error", "message": str(exc)})
@@ -1303,10 +1312,7 @@ def simulate_case_execution(execution_id: int) -> None:
                 (str(exc), now, json_dumps(logs), now, execution_id),
             )
             write_execution_report(conn, execution_id)
-            conn.execute(
-                "UPDATE devices SET status = 'available', locked_by = '', locked_at = NULL, updated_at = ? WHERE id = ?",
-                (now, execution["device_id"]),
-            )
+            finish_device_lock(conn, execution["device_id"])
             if execution.get("test_suite_id"):
                 refresh_suite_stats(conn, execution["test_suite_id"])
 
