@@ -6,7 +6,9 @@ UI自动化执行器 - WebSocket客户端
 import asyncio
 import json
 import logging
+import time
 from typing import Optional, Callable, Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlsplit, urlunsplit, parse_qsl, urlencode
 from urllib.request import Request, urlopen
 import websockets
@@ -32,6 +34,7 @@ class WebSocketClient:
         self.max_reconnect_attempts = 0  # 0表示无限重试
         self._message_handler: Optional[Callable] = None
         self._stop_event = asyncio.Event()
+        self._next_token_fetch_at = 0.0
     
     def set_message_handler(self, handler: Callable[[SocketDataModel], Any]):
         """设置消息处理器"""
@@ -49,10 +52,29 @@ class WebSocketClient:
         scheme = 'https' if parsed.scheme in ('https', 'wss') else 'http'
         return f'{scheme}://{parsed.netloc}'
 
+    def _has_api_credentials(self) -> bool:
+        if not self.config:
+            return False
+        return bool(
+            getattr(self.config, 'api_url', None)
+            and getattr(self.config, 'api_username', None)
+            and getattr(self.config, 'api_password', None)
+        )
+
+    def _clear_cached_tokens(self) -> None:
+        if not self.config:
+            return
+        setattr(self.config, 'access_token', None)
+        setattr(self.config, 'refresh_token', None)
+
     def _get_access_token(self) -> Optional[str]:
         token = getattr(self.config, 'access_token', None) if self.config else None
         if token:
             return token
+
+        now = time.monotonic()
+        if now < self._next_token_fetch_at:
+            return None
 
         api_url = getattr(self.config, 'api_url', None) if self.config else None
         username = getattr(self.config, 'api_username', None) if self.config else None
@@ -66,21 +88,51 @@ class WebSocketClient:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urlopen(request, timeout=15) as response:
-            token_payload = json.loads(response.read().decode('utf-8'))
+        try:
+            with urlopen(request, timeout=15) as response:
+                token_payload = json.loads(response.read().decode('utf-8'))
+        except HTTPError as exc:
+            retry_after = 5.0
+            retry_after_header = exc.headers.get('Retry-After') if exc.headers else None
+            if retry_after_header:
+                try:
+                    retry_after = max(float(retry_after_header), 1.0)
+                except ValueError:
+                    retry_after = 5.0
+            self._next_token_fetch_at = time.monotonic() + retry_after
+            if exc.code == 429:
+                logger.warning(f"鑾峰彇 Token 瑙﹀彂闄愭祦锛?{retry_after:.0f} 绉掑悗鍐嶈瘯")
+                return None
+            logger.error(f"鑾峰彇 Token 澶辫触: HTTP {exc.code}")
+            return None
+        except URLError as exc:
+            self._next_token_fetch_at = time.monotonic() + 5.0
+            logger.error(f"鑾峰彇 Token 璇锋眰澶辫触: {exc}")
+            return None
 
         token = token_payload.get('access')
+        if not token and isinstance(token_payload.get('data'), dict):
+            token = token_payload['data'].get('access')
+        if not token:
+            self._next_token_fetch_at = time.monotonic() + 5.0
+            logger.warning("Token 鍝嶅簲涓湭鎵惧埌 access 瀛楁锛?5 绉掑悗鍐嶈瘯")
+            return None
+        self._next_token_fetch_at = 0.0
         if token and self.config is not None:
             setattr(self.config, 'access_token', token)
-            if token_payload.get('refresh'):
-                setattr(self.config, 'refresh_token', token_payload.get('refresh'))
+            refresh_token = token_payload.get('refresh')
+            if not refresh_token and isinstance(token_payload.get('data'), dict):
+                refresh_token = token_payload['data'].get('refresh')
+            if refresh_token:
+                setattr(self.config, 'refresh_token', refresh_token)
         return token
 
-    def _build_connect_url(self) -> str:
+    def _build_connect_url(self, access_token: Optional[str] = None) -> str:
         split_result = urlsplit(self.url)
         query = dict(parse_qsl(split_result.query, keep_blank_values=True))
         query['actuator_id'] = self.actuator_id
-        access_token = self._get_access_token()
+        if access_token is None:
+            access_token = self._get_access_token()
         if access_token:
             query['token'] = access_token
         return urlunsplit((
@@ -95,7 +147,12 @@ class WebSocketClient:
         """建立WebSocket连接"""
         try:
             # 连接URL带上actuator_id
-            connect_url = self._build_connect_url()
+            access_token = self._get_access_token()
+            if self._has_api_credentials() and not access_token:
+                logger.warning("鏈兘鑾峰彇鍒版湁鏁?Token锛屾殏涓嶅彂璧?WebSocket 杩炴帴")
+                self.connected = False
+                return False
+            connect_url = self._build_connect_url(access_token=access_token)
             origin = self._build_origin()
             self.websocket = await websockets.connect(
                 connect_url,
@@ -111,6 +168,10 @@ class WebSocketClient:
             await self._send_actuator_info()
             return True
         except Exception as e:
+            message = str(e)
+            if any(code in message for code in ('401', '403', '4401')):
+                self._clear_cached_tokens()
+                self._next_token_fetch_at = 0.0
             logger.error(f"连接失败: {e}")
             self.connected = False
             return False

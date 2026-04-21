@@ -59,13 +59,15 @@ RUNNING_TESTS = any(arg in {"test", "pytest"} or "pytest" in arg for arg in sys.
 RUNNING_DEV_SERVER = any(arg == "runserver" for arg in sys.argv)
 LOCAL_HTTP_RUNTIME = DEBUG or RUNNING_TESTS or RUNNING_DEV_SERVER
 
+DEV_FALLBACK_SECRET_KEY = "local-dev-secret-key-local-dev-secret-key-123456"
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if SECRET_KEY:
     SECRET_KEY = SECRET_KEY.strip()
     if RUNNING_TESTS and len(SECRET_KEY) < 32:
         SECRET_KEY = (SECRET_KEY + token_urlsafe(32))[:64]
 elif DEBUG or RUNNING_TESTS or RUNNING_DEV_SERVER:
-    SECRET_KEY = token_urlsafe(64)
+    SECRET_KEY = DEV_FALLBACK_SECRET_KEY
 else:
     raise RuntimeError("DJANGO_SECRET_KEY 未配置，生产环境禁止使用默认密钥启动。")
 

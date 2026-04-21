@@ -2172,6 +2172,13 @@ def delete_execution(execution_id: int) -> dict[str, Any]:
         suite_id = execution.get("test_suite_id")
         if execution["status"] in {"pending", "running"}:
             raise HTTPException(status_code=409, detail="执行仍在收尾中，请等待完成后再删除")
+        if execution["status"] == "stopped" and execution.get("device_id"):
+            device = fetch_one(conn, "SELECT status FROM devices WHERE id = ?", (execution["device_id"],))
+            if device is not None and str(device.get("status") or "").strip() == "stopping":
+                raise HTTPException(
+                    status_code=409,
+                    detail="stopped execution is still releasing its device; please wait before deleting",
+                )
         conn.execute("DELETE FROM executions WHERE id = ?", (execution_id,))
         if suite_id:
             from .extended_routes import refresh_suite_stats

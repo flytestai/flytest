@@ -74,6 +74,7 @@ FlyTest_Django/chat_history.sqlite-shm
 FlyTest_Django/chat_history.sqlite-wal
 .gemini/settings.json
 FlyTest_Actuator/browsers/
+FlyTest_Actuator/.venv/
 FlyTest_Django/celerybeat-schedule
 runtime-logs/
 service_logs/

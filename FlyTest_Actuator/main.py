@@ -181,6 +181,70 @@ def setup_logging(level: str = 'INFO', log_file: str | None = None):
     )
 
 
+def _is_process_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform == 'win32':
+        try:
+            import ctypes
+
+            process = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+            if process:
+                ctypes.windll.kernel32.CloseHandle(process)
+                return True
+            return False
+        except Exception:
+            return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def acquire_actuator_lock(actuator_id: str) -> tuple[int, Path]:
+    safe_name = ''.join(ch if ch.isalnum() or ch in '._-' else '-' for ch in actuator_id).strip('-.')
+    safe_name = safe_name or f"actuator-{os.getpid()}"
+    lock_dir = _base_path / 'data' / 'locks'
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = lock_dir / f'{safe_name}.lock'
+
+    while True:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode('utf-8'))
+            os.fsync(fd)
+            return fd, lock_path
+        except FileExistsError:
+            try:
+                existing_pid = int(lock_path.read_text(encoding='utf-8').strip() or '0')
+            except (OSError, ValueError):
+                existing_pid = 0
+            if existing_pid and _is_process_alive(existing_pid):
+                raise RuntimeError(f"actuator '{actuator_id}' is already running (pid={existing_pid})")
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                continue
+
+
+def release_actuator_lock(lock_fd: int | None, lock_path: Path | None) -> None:
+    if lock_fd is not None:
+        try:
+            os.close(lock_fd)
+        except OSError:
+            pass
+    if lock_path is not None:
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def parse_args():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(description='UI自动化执行器')
@@ -308,6 +372,11 @@ async def main():
     
     # 生成执行器ID
     actuator_id = config.actuator_id or f"actuator-{os.getpid()}"
+    try:
+        lock_fd, lock_path = acquire_actuator_lock(actuator_id)
+    except RuntimeError as exc:
+        logger.error(str(exc))
+        sys.exit(1)
     
     logger.info("=" * 50)
     logger.info("UI自动化执行器启动")
@@ -355,6 +424,7 @@ async def main():
         logger.error(f"执行器异常: {e}", exc_info=True)
     finally:
         await ws_client.disconnect()
+        release_actuator_lock(lock_fd, lock_path)
         logger.info("执行器已停止")
 
 

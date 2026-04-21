@@ -32,6 +32,7 @@ class TaskConsumer:
         self.api_username = api_username
         self.api_password = api_password
         self._api_token: Optional[str] = None
+        self._next_token_fetch_at = 0.0
         self.config = config
         
         # 从配置创建执行器
@@ -67,6 +68,10 @@ class TaskConsumer:
             max_age_days=7
         )
 
+    def _clear_cached_api_token(self) -> None:
+        self._api_token = None
+        self._next_token_fetch_at = 0.0
+
     def _cleanup_expired_files(self, screenshot_dir: str, trace_dir: str, max_age_days: int = 7):
         """清理超过指定天数的本地临时文件"""
         import os
@@ -99,6 +104,8 @@ class TaskConsumer:
         """获取API认证token"""
         if self._api_token:
             return self._api_token
+        if time.monotonic() < self._next_token_fetch_at:
+            return None
         
         url = f"{self.api_base_url}/api/token/"
         try:
@@ -115,10 +122,23 @@ class TaskConsumer:
                         self._api_token = data.get('access')
                     logger.info("获取API Token成功")
                     return self._api_token
+                elif response.status_code == 429:
+                    retry_after = 5.0
+                    retry_after_header = response.headers.get('Retry-After')
+                    if retry_after_header:
+                        try:
+                            retry_after = max(float(retry_after_header), 1.0)
+                        except ValueError:
+                            retry_after = 5.0
+                    self._next_token_fetch_at = time.monotonic() + retry_after
+                    logger.warning(f"鑾峰彇 API Token 瑙﹀彂闄愭祦锛?{retry_after:.0f} 绉掑悗鍐嶈瘯")
+                    return None
                 else:
+                    self._next_token_fetch_at = time.monotonic() + 5.0
                     logger.error(f"获取Token失败: {response.status_code}")
                     return None
         except Exception as e:
+            self._next_token_fetch_at = time.monotonic() + 5.0
             logger.error(f"获取Token请求失败: {e}")
             return None
     
@@ -138,9 +158,9 @@ class TaskConsumer:
                     if data.get('status') == 'success' and 'data' in data:
                         return data['data']
                     return data
-                elif response.status_code == 401:
-                    # Token过期，重新获取
-                    self._api_token = None
+                elif response.status_code in {401, 403}:
+                    # Token invalid or expired, fetch again.
+                    self._clear_cached_api_token()
                     return await self._api_get(path)
                 else:
                     logger.error(f"API请求失败: {response.status_code} - {path}")
