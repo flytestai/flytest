@@ -13,6 +13,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 
 from accounts.serializers import ContentTypeSerializer
 from accounts.models import UserApproval, ensure_user_approval_record, ensure_user_profile, is_user_approved
+from accounts.throttles import RegisterRateThrottle
 from accounts.views import MyTokenObtainPairView, PermissionViewSet
 
 
@@ -352,6 +353,54 @@ class UserRegistrationApprovalTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("username", response.data)
+
+    @patch.dict(RegisterRateThrottle.THROTTLE_RATES, {"register": "1/hour"}, clear=False)
+    def test_failed_register_attempts_do_not_consume_throttle_quota(self):
+        invalid_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "123456",
+                "real_name": "张三",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(invalid_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        valid_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000110",
+                "real_name": "张三",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(valid_response.status_code, status.HTTP_201_CREATED)
+
+    @patch.dict(RegisterRateThrottle.THROTTLE_RATES, {"register": "1/hour"}, clear=False)
+    def test_only_successful_registers_are_throttled(self):
+        first_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000111",
+                "real_name": "张三",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+
+        second_response = self.client.post(
+            "/api/accounts/register/",
+            {
+                "phone_number": "13800000112",
+                "real_name": "李四",
+                "password": "Testpass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(second_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
     def test_pending_user_permissions_endpoint_returns_empty_list(self):
         user = User.objects.create_user(

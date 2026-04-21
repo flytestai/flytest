@@ -292,7 +292,10 @@ REST_FRAMEWORK.setdefault("DEFAULT_THROTTLE_RATES", {})
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"].update(
     {
         "login": os.environ.get("DJANGO_LOGIN_THROTTLE_RATE", "10/minute"),
-        "register": os.environ.get("DJANGO_REGISTER_THROTTLE_RATE", "5/hour"),
+        "register": os.environ.get(
+            "DJANGO_REGISTER_THROTTLE_RATE",
+            "30/hour" if LOCAL_HTTP_RUNTIME else "5/hour",
+        ),
     }
 )
 

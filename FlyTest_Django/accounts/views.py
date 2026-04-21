@@ -7,6 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import Throttled
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
@@ -59,6 +60,11 @@ class UserCreateAPIView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [RegisterRateThrottle]
 
+    def get_throttles(self):
+        throttles = super().get_throttles()
+        self._request_throttles = throttles
+        return throttles
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["registration_mode"] = True
@@ -67,6 +73,18 @@ class UserCreateAPIView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         # 直接复用通用创建流程，保持注册接口与统一序列化逻辑一致。
         return super().create(request, *args, **kwargs)
+
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == status.HTTP_201_CREATED:
+            for throttle in getattr(self, "_request_throttles", []):
+                if hasattr(throttle, "record_success"):
+                    throttle.record_success()
+        return response
+
+    def throttled(self, request, wait):
+        raise Throttled(wait=wait, detail="注册尝试过于频繁，请稍后再试。")
 
 
 class CurrentUserAPIView(APIView):
