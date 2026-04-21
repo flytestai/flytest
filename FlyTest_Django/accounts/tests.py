@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -198,6 +199,11 @@ class UserRegistrationApprovalTests(TestCase):
             is_staff=True,
         )
 
+    def _rendered_payload(self, response):
+        if hasattr(response, "render"):
+            response.render()
+        return json.loads(response.content.decode("utf-8"))
+
     def test_register_creates_pending_user_without_staff_privileges(self):
         response = self.client.post(
             "/api/accounts/register/",
@@ -256,6 +262,9 @@ class UserRegistrationApprovalTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("phone_number", response.data)
+        payload = self._rendered_payload(response)
+        self.assertEqual(payload["message"], "请填写真实的手机号。")
+        self.assertEqual(payload["errors"]["phone_number"][0], "请填写真实的手机号。")
 
     def test_register_rejects_duplicate_phone_number(self):
         self.client.post(
@@ -280,6 +289,9 @@ class UserRegistrationApprovalTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("phone_number", response.data)
+        payload = self._rendered_payload(response)
+        self.assertEqual(payload["message"], "该手机号已被注册。")
+        self.assertEqual(payload["errors"]["phone_number"][0], "该手机号已被注册。")
 
     def test_register_rejects_non_chinese_real_name(self):
         response = self.client.post(
@@ -294,6 +306,9 @@ class UserRegistrationApprovalTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("real_name", response.data)
+        payload = self._rendered_payload(response)
+        self.assertEqual(payload["message"], "姓名仅支持2到20位中文。")
+        self.assertEqual(payload["errors"]["real_name"][0], "姓名仅支持2到20位中文。")
 
     def test_login_supports_phone_number_after_registration(self):
         register_response = self.client.post(

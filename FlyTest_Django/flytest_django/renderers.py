@@ -25,6 +25,27 @@ class UnifiedResponseRenderer(JSONRenderer):
     # 指定字符集。
     charset = "utf-8"
 
+    @staticmethod
+    def _extract_error_message(errors):
+        if isinstance(errors, list):
+            for item in errors:
+                message = UnifiedResponseRenderer._extract_error_message(item)
+                if message:
+                    return message
+            return ""
+
+        if isinstance(errors, dict):
+            for value in errors.values():
+                message = UnifiedResponseRenderer._extract_error_message(value)
+                if message:
+                    return message
+            return ""
+
+        if errors is None:
+            return ""
+
+        return str(errors).strip()
+
     # 执行统一响应渲染。
     def render(self, data, accepted_media_type=None, renderer_context=None):
         # 断言渲染上下文存在。
@@ -100,8 +121,10 @@ class UnifiedResponseRenderer(JSONRenderer):
 
                 # 字段校验错误或列表错误。
                 elif isinstance(data, (dict, list)):
-                    unified_response["message"] = "请求参数有误或处理失败"
                     unified_response["errors"] = data
+                    unified_response["message"] = (
+                        self._extract_error_message(data) or "请求参数有误或处理失败"
+                    )
 
                 # 未知错误类型。
                 else:

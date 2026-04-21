@@ -13,6 +13,37 @@ type RequestConfig = {
   [key: string]: any;
 };
 
+function extractErrorMessage(payload: any): string {
+  if (!payload) {
+    return '';
+  }
+
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const message = extractErrorMessage(item);
+      if (message) {
+        return message;
+      }
+    }
+    return '';
+  }
+
+  if (typeof payload === 'object') {
+    for (const value of Object.values(payload)) {
+      const message = extractErrorMessage(value);
+      if (message) {
+        return message;
+      }
+    }
+  }
+
+  return '';
+}
+
 // 获取智能的API基础URL
 function getApiBaseUrl() {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -171,6 +202,8 @@ service.interceptors.response.use(
             loginErrorMessage = responseData.detail;
           } else if (responseData.errors?.detail) {
             loginErrorMessage = responseData.errors.detail;
+          } else if (responseData.errors) {
+            loginErrorMessage = extractErrorMessage(responseData.errors) || loginErrorMessage;
           }
         }
         return Promise.reject({
@@ -284,6 +317,8 @@ service.interceptors.response.use(
           } else if (response.data.errors && response.data.errors.message) {
             // 然后检查是否有errors.message字段
             message = response.data.errors.message;
+          } else if (response.data.errors) {
+            message = extractErrorMessage(response.data.errors) || response.data.message || message;
           } else if (response.data.detail) {
             message = response.data.detail;
           } else if (response.data.message) {
