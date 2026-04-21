@@ -279,7 +279,8 @@ export function useAppAutomationTestCases() {
       return
     }
 
-    executeMode.value = 'batch'
+    executeMode.value = 'single'
+    currentExecutionCaseId.value = selectedCaseIds.value[0] || null
     executeForm.device_id = availableDevices.value[0]?.id
     executeVisible.value = true
   }

@@ -819,6 +819,26 @@ def validate_scheduled_task_payload(conn, payload: ScheduledTaskPayload) -> None
     if payload.package_id is not None:
         _ = get_package_override_or_404(conn, payload.project_id, package_id=payload.package_id)
 
+    notifications_enabled = bool(payload.notify_on_success or payload.notify_on_failure)
+    normalized_notification_type = str(payload.notification_type or "").strip().lower()
+    if normalized_notification_type not in {"", "email", "webhook", "both"}:
+        raise HTTPException(status_code=400, detail="unsupported notification type")
+    if notifications_enabled and not normalized_notification_type:
+        raise HTTPException(status_code=400, detail="notification type is required when notifications are enabled")
+    if not notifications_enabled and normalized_notification_type:
+        raise HTTPException(
+            status_code=400,
+            detail="notification type requires success or failure notifications to be enabled",
+        )
+    if normalized_notification_type in {"email", "both"}:
+        normalized_emails = [
+            str(item or "").strip()
+            for item in (payload.notify_emails or [])
+            if str(item or "").strip()
+        ]
+        if not normalized_emails:
+            raise HTTPException(status_code=400, detail="at least one notification email is required")
+
     if payload.task_type == "TEST_SUITE":
         if payload.test_suite_id is None:
             raise HTTPException(status_code=400, detail="定时任务缺少测试套件配置")
@@ -1918,6 +1938,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
     row: dict[str, Any] | None = None
     task: dict[str, Any] | None = None
     payload: dict[str, Any] = {}
+    task_run_state_updated = False
     background_target = None
     background_args: tuple[Any, ...] = ()
     background_kwargs: dict[str, Any] = {}
@@ -2029,6 +2050,7 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                 status=next_status,
                 last_result=last_result,
             )
+            task_run_state_updated = True
             row = fetch_one(conn, "SELECT * FROM scheduled_tasks WHERE id = ?", (task_id,))
 
         if background_target is not None:
@@ -2092,6 +2114,8 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                     failure_count=1,
                     error_message=str(exc.detail),
                     last_result={"task_id": task_id, "status": "failed"},
+                    total_run_increment=0 if task_run_state_updated else 1,
+                    update_last_run_time=not task_run_state_updated,
                 )
                 if existing.get("notification_type") and existing.get("notify_on_failure"):
                     create_notification_log(
@@ -2140,6 +2164,8 @@ def trigger_task_run(task_id: int, triggered_by: str = "FlyTest") -> dict[str, A
                     failure_count=1,
                     error_message=str(exc),
                     last_result={"task_id": task_id, "status": "failed"},
+                    total_run_increment=0 if task_run_state_updated else 1,
+                    update_last_run_time=not task_run_state_updated,
                 )
                 if existing.get("notification_type") and existing.get("notify_on_failure"):
                     create_notification_log(

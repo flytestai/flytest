@@ -1,7 +1,7 @@
 <template>
   <a-modal
     v-model:visible="visibleModel"
-    :title="mode === 'batch' ? '批量执行测试用例' : '执行测试用例'"
+    :title="mode === 'batch' ? '转到套件执行' : '执行测试用例'"
     @ok="emit('execute')"
   >
     <a-form :model="executeForm" layout="vertical">

@@ -2,7 +2,9 @@
   <div v-if="selectedCount" class="batch-bar">
     <span>已选择 <strong>{{ selectedCount }}</strong> 个用例</span>
     <a-space wrap>
-      <a-button type="primary" size="small" @click="emit('open-batch-execute')">批量执行</a-button>
+      <a-button type="primary" size="small" @click="emit('open-batch-execute')">
+        {{ selectedCount > 1 ? '转到套件执行' : '执行所选' }}
+      </a-button>
       <a-button size="small" @click="emit('clear-selection')">取消选择</a-button>
     </a-space>
   </div>

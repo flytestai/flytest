@@ -7,11 +7,11 @@
       </button>
       <button class="quick-item" type="button" @click="emit('open-tab', 'elements')">
         <strong>元素管理</strong>
-        <span>维护图片、OCR 与定位资产</span>
+        <span>维护图片、OCR 与定位资源</span>
       </button>
       <button class="quick-item" type="button" @click="emit('open-tab', 'test-cases')">
         <strong>测试用例</strong>
-        <span>快速进入用例列表与批量执行</span>
+        <span>快速进入用例列表，单条执行或转到测试套件编排</span>
       </button>
       <button class="quick-item" type="button" @click="emit('open-tab', 'scene-builder')">
         <strong>场景编排</strong>
