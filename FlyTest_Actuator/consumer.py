@@ -6,6 +6,7 @@ import asyncio
 import logging
 import time
 from typing import Optional, Any
+from urllib.parse import urlparse
 import httpx
 
 from models import (
@@ -72,6 +73,16 @@ class TaskConsumer:
         self._api_token = None
         self._next_token_fetch_at = 0.0
 
+    @staticmethod
+    def _should_bypass_proxy(raw_url: str) -> bool:
+        parsed = urlparse(raw_url)
+        hostname = (parsed.hostname or '').lower()
+        return hostname in {'127.0.0.1', 'localhost', '::1'}
+
+    def _create_http_client(self, base_url: str | None = None) -> httpx.AsyncClient:
+        trust_env = not self._should_bypass_proxy(base_url or self.api_base_url)
+        return httpx.AsyncClient(trust_env=trust_env)
+
     def _cleanup_expired_files(self, screenshot_dir: str, trace_dir: str, max_age_days: int = 7):
         """清理超过指定天数的本地临时文件"""
         import os
@@ -109,7 +120,7 @@ class TaskConsumer:
         
         url = f"{self.api_base_url}/api/token/"
         try:
-            async with httpx.AsyncClient() as client:
+            async with self._create_http_client(url) as client:
                 response = await client.post(url, json={
                     "username": self.api_username,
                     "password": self.api_password
@@ -150,7 +161,7 @@ class TaskConsumer:
         
         url = f"{self.api_base_url}{path}"
         try:
-            async with httpx.AsyncClient() as client:
+            async with self._create_http_client(url) as client:
                 response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
                 if response.status_code == 200:
                     data = response.json()
@@ -231,7 +242,7 @@ class TaskConsumer:
 
         url = f"{self.api_base_url}/api/ui-automation/traces/upload/"
         try:
-            async with httpx.AsyncClient() as client:
+            async with self._create_http_client(url) as client:
                 with open(trace_path, 'rb') as f:
                     files = {'file': (os.path.basename(trace_path), f, 'application/zip')}
                     response = await client.post(

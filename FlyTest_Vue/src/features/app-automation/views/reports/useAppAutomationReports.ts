@@ -345,11 +345,11 @@ export function useAppAutomationReports() {
     suiteDetailVisible.value = true
     activeTab.value = 'suite'
 
-      if (options.syncRoute !== false) {
-        await replaceAppAutomationQuery(route, router, {
-          tab: 'reports',
-          reportMode: 'suite',
-          suiteId: String(suite.id),
+    if (options.syncRoute !== false) {
+      await replaceAppAutomationQuery(route, router, {
+        tab: 'reports',
+        reportMode: 'suite',
+        suiteId: String(suite.id),
         executionId: undefined,
       })
     }

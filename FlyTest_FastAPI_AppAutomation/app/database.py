@@ -297,7 +297,6 @@ def init_storage() -> None:
                 FOREIGN KEY(task_id) REFERENCES scheduled_tasks(id)
             );
 
-            CREATE INDEX IF NOT EXISTS idx_notification_logs_project ON notification_logs(project_id);
             CREATE INDEX IF NOT EXISTS idx_notification_logs_status ON notification_logs(status);
             CREATE INDEX IF NOT EXISTS idx_notification_logs_created_at ON notification_logs(created_at DESC);
             """
@@ -331,6 +330,7 @@ def init_storage() -> None:
             WHERE project_id IS NULL AND task_id IS NOT NULL
             """
         )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_notification_logs_project ON notification_logs(project_id)")
 
         existing = conn.execute("SELECT id FROM settings WHERE id = 1").fetchone()
         if existing is None:
