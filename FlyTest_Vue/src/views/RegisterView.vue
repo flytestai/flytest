@@ -128,10 +128,6 @@
           {{ registerError }}
         </div>
 
-        <div class="register-tip">
-          系统会自动分配唯一用户名，注册后请使用手机号登录。
-        </div>
-
         <div class="login-link">
           <p>
             已有账号？
@@ -189,7 +185,7 @@ const validateForm = () => {
   }
 
   if (!CHINA_MOBILE_REGEX.test(formState.phoneNumber)) {
-    Message.warning('请输入正确的11位手机号');
+    Message.warning('请填写真实的手机号');
     return false;
   }
 

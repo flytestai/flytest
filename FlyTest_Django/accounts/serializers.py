@@ -239,10 +239,10 @@ def validate_phone_number_value(value, *, exclude_user_id=None, allow_blank=Fals
     if not phone_number:
         if allow_blank:
             return ""
-        raise serializers.ValidationError("请输入手机号。")
+        raise serializers.ValidationError("请填写真实的手机号。")
 
     if not CHINA_MOBILE_REGEX.fullmatch(phone_number):
-        raise serializers.ValidationError("请输入正确的11位手机号。")
+        raise serializers.ValidationError("请填写真实的手机号。")
 
     phone_exists = User.objects.filter(profile__phone_number=phone_number)
     if exclude_user_id is not None:
@@ -1154,11 +1154,13 @@ class MyTokenObtainPairSerializer(BaseTokenObtainPairSerializer):
 
     def validate(self, attrs):
         username = (attrs.get("username") or "").strip()
-        if CHINA_MOBILE_REGEX.fullmatch(username):
-            matched_user = User.objects.filter(profile__phone_number=username).first()
-            if matched_user:
-                attrs = attrs.copy()
-                attrs["username"] = matched_user.username
+        if not CHINA_MOBILE_REGEX.fullmatch(username):
+            raise serializers.ValidationError({"username": "请输入手机号。"})
+
+        matched_user = User.objects.filter(profile__phone_number=username).first()
+        if matched_user:
+            attrs = attrs.copy()
+            attrs["username"] = matched_user.username
 
         # 先走父类认证校验，再附加用户信息以减少前端二次请求。
         data = super().validate(attrs)

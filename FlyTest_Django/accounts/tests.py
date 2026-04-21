@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
 from accounts.serializers import ContentTypeSerializer
-from accounts.models import UserApproval, ensure_user_approval_record, is_user_approved
+from accounts.models import UserApproval, ensure_user_approval_record, ensure_user_profile, is_user_approved
 from accounts.views import MyTokenObtainPairView, PermissionViewSet
 
 
@@ -115,11 +115,15 @@ class AuthCookieFlowTests(TestCase):
     def _create_user(self):
         from django.contrib.auth.models import User
 
-        return User.objects.create_user(
+        user = User.objects.create_user(
             username="cookie-user",
             email="cookie-user@example.com",
             password="testpass123",
         )
+        profile = ensure_user_profile(user)
+        profile.phone_number = "13800000090"
+        profile.save(update_fields=["phone_number", "updated_at"])
+        return user
 
     def _payload(self, response):
         if isinstance(response.data, dict) and "data" in response.data:
@@ -129,7 +133,7 @@ class AuthCookieFlowTests(TestCase):
     def test_login_sets_http_only_auth_cookies(self):
         response = self.client.post(
             "/api/token/",
-            {"username": "cookie-user", "password": "testpass123"},
+            {"username": "13800000090", "password": "testpass123"},
             format="json",
         )
 
@@ -142,7 +146,7 @@ class AuthCookieFlowTests(TestCase):
     def test_refresh_works_with_refresh_cookie_only(self):
         login_response = self.client.post(
             "/api/token/",
-            {"username": "cookie-user", "password": "testpass123"},
+            {"username": "13800000090", "password": "testpass123"},
             format="json",
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
@@ -157,7 +161,7 @@ class AuthCookieFlowTests(TestCase):
     def test_current_user_endpoint_accepts_cookie_auth(self):
         login_response = self.client.post(
             "/api/token/",
-            {"username": "cookie-user", "password": "testpass123"},
+            {"username": "13800000090", "password": "testpass123"},
             format="json",
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
@@ -171,7 +175,7 @@ class AuthCookieFlowTests(TestCase):
     def test_logout_clears_auth_cookies(self):
         login_response = self.client.post(
             "/api/token/",
-            {"username": "cookie-user", "password": "testpass123"},
+            {"username": "13800000090", "password": "testpass123"},
             format="json",
         )
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
@@ -314,6 +318,26 @@ class UserRegistrationApprovalTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_login_rejects_non_phone_username(self):
+        user = User.objects.create_user(
+            username="phone-only-user",
+            email="phone-only@example.com",
+            password="Testpass123!",
+        )
+        profile = ensure_user_profile(user)
+        profile.phone_number = "13800000006"
+        profile.save(update_fields=["phone_number", "updated_at"])
+        ensure_user_approval_record(user, status=UserApproval.STATUS_APPROVED)
+
+        response = self.client.post(
+            "/api/token/",
+            {"username": "phone-only-user", "password": "Testpass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", response.data)
+
     def test_pending_user_permissions_endpoint_returns_empty_list(self):
         user = User.objects.create_user(
             username="pending-perm-user",
@@ -449,6 +473,9 @@ class CurrentUserProfileTests(TestCase):
             email="profile-user@example.com",
             password="Testpass123!",
         )
+        profile = ensure_user_profile(self.user)
+        profile.phone_number = "13800000091"
+        profile.save(update_fields=["phone_number", "updated_at"])
         self.client.force_authenticate(user=self.user)
 
     def _payload(self, response):
@@ -531,7 +558,7 @@ class CurrentUserProfileTests(TestCase):
         self.client.force_authenticate(user=None)
         token_response = self.client.post(
             "/api/token/",
-            {"username": "profile-user", "password": "Testpass123!"},
+            {"username": "13800000091", "password": "Testpass123!"},
             format="json",
         )
         payload = self._payload(token_response)

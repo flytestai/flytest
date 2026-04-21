@@ -123,6 +123,8 @@ export const login = async (username: string, password: string): Promise<AuthSer
           errorMessage = responseData.message;
         } else if (responseData && typeof responseData.detail === 'string') { // Django REST framework 常见错误格式
           errorMessage = responseData.detail;
+        } else if (responseData && responseData.username && Array.isArray(responseData.username) && responseData.username.length > 0) {
+          errorMessage = responseData.username.join(', ');
         } else {
           errorMessage = `认证失败：服务器错误 (${statusCode})。`;
         }
@@ -191,11 +193,13 @@ export const register = async (realName: string, phoneNumber: string, password: 
         } else if (responseData && typeof responseData.detail === 'string') {
           errorMessage = responseData.detail;
         } else if (responseData && responseData.phone_number && Array.isArray(responseData.phone_number) && responseData.phone_number.length > 0) {
-          errorMessage = `手机号错误: ${responseData.phone_number.join(', ')}`;
+          errorMessage = responseData.phone_number.join(', ');
         } else if (responseData && responseData.real_name && Array.isArray(responseData.real_name) && responseData.real_name.length > 0) {
-          errorMessage = `姓名错误: ${responseData.real_name.join(', ')}`;
+          errorMessage = responseData.real_name.join(', ');
         } else if (responseData && responseData.password && Array.isArray(responseData.password) && responseData.password.length > 0) {
-          errorMessage = `密码错误: ${responseData.password.join(', ')}`;
+          errorMessage = responseData.password.join(', ');
+        } else if (statusCode === 400) {
+          errorMessage = '请填写真实的手机号';
         }
          else {
           errorMessage = `注册失败：服务器错误 (${statusCode})。`;
