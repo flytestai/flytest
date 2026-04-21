@@ -2,7 +2,7 @@
   <div class="personal-center">
     <div class="page-header">
       <h2>个人中心</h2>
-      <p>维护个人资料、所属组织与账号安全信息。</p>
+      <p>维护姓名、登录手机号、联系邮箱与账号安全信息。</p>
     </div>
 
     <div class="center-layout">
@@ -23,19 +23,19 @@
             <template v-if="!isEditingProfile">
               <div class="profile-readonly">
                 <div class="readonly-item">
-                  <span class="readonly-label">用户名</span>
+                  <span class="readonly-label">系统用户名</span>
                   <span class="readonly-value">{{ profileForm.username || '-' }}</span>
                 </div>
                 <div class="readonly-item">
-                  <span class="readonly-label">真实姓名</span>
+                  <span class="readonly-label">姓名</span>
                   <span class="readonly-value">{{ profileForm.real_name || '-' }}</span>
                 </div>
                 <div class="readonly-item">
-                  <span class="readonly-label">邮箱</span>
+                  <span class="readonly-label">联系邮箱（选填）</span>
                   <span class="readonly-value">{{ profileForm.email || '-' }}</span>
                 </div>
                 <div class="readonly-item">
-                  <span class="readonly-label">手机号</span>
+                  <span class="readonly-label">登录手机号</span>
                   <span class="readonly-value">{{ profileForm.phone_number || '-' }}</span>
                 </div>
                 <div class="readonly-item">
@@ -55,20 +55,20 @@
             </template>
 
             <a-form v-else :model="profileForm" layout="vertical" @submit.prevent>
-              <a-form-item label="用户名">
+              <a-form-item label="系统用户名">
                 <div class="static-field">{{ profileForm.username || '-' }}</div>
               </a-form-item>
 
-              <a-form-item label="真实姓名">
-                <a-input v-model="profileForm.real_name" placeholder="请输入真实姓名" />
+              <a-form-item label="姓名">
+                <a-input v-model="profileForm.real_name" placeholder="请输入姓名（仅支持中文）" />
               </a-form-item>
 
-              <a-form-item label="邮箱">
-                <a-input v-model="profileForm.email" placeholder="请输入邮箱" />
+              <a-form-item label="联系邮箱（选填）">
+                <a-input v-model="profileForm.email" placeholder="请输入联系邮箱" />
               </a-form-item>
 
-              <a-form-item label="手机号">
-                <a-input v-model="profileForm.phone_number" placeholder="请输入手机号" />
+              <a-form-item label="登录手机号">
+                <a-input v-model="profileForm.phone_number" placeholder="请输入11位手机号" />
               </a-form-item>
 
               <a-form-item label="所属组织">
@@ -176,6 +176,9 @@ const passwordForm = reactive({
   confirm_password: '',
 })
 
+const CHINA_MOBILE_REGEX = /^1[3-9]\d{9}$/
+const CHINESE_REAL_NAME_REGEX = /^[\u4e00-\u9fff·]{2,20}$/
+
 const applyProfileData = (payload: Partial<ProfileData> | null | undefined) => {
   profileForm.username = payload?.username || authStore.currentUser?.username || ''
   profileForm.email = payload?.email || authStore.currentUser?.email || ''
@@ -213,6 +216,16 @@ const handleSectionChange = (key: string) => {
 }
 
 const handleSaveProfile = async () => {
+  if (profileForm.real_name && !CHINESE_REAL_NAME_REGEX.test(profileForm.real_name)) {
+    Message.warning('姓名仅支持2到20位中文')
+    return
+  }
+
+  if (profileForm.phone_number && !CHINA_MOBILE_REGEX.test(profileForm.phone_number)) {
+    Message.warning('请输入正确的11位手机号')
+    return
+  }
+
   profileLoading.value = true
   try {
     const response = await updateCurrentProfile({

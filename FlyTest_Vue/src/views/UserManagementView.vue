@@ -16,7 +16,7 @@
     <div class="page-header">
       <div class="search-box">
         <a-input-search
-          placeholder="搜索用户名/邮箱"
+          placeholder="搜索系统用户名/姓名/手机号/邮箱"
           allow-clear
           style="width: 300px"
           @search="onSearch"
@@ -108,13 +108,13 @@
       <a-form ref="addUserFormRef" :model="addUserForm" :rules="addUserRules" layout="vertical" :auto-label-width="false">
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item field="username" label="用户名" required>
-              <a-input v-model="addUserForm.username" placeholder="请输入用户名" />
+            <a-form-item field="username" label="系统用户名" required>
+              <a-input v-model="addUserForm.username" placeholder="请输入系统用户名" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item field="email" label="邮箱" required>
-              <a-input v-model="addUserForm.email" placeholder="请输入邮箱" />
+            <a-form-item field="email" label="联系邮箱" required>
+              <a-input v-model="addUserForm.email" placeholder="请输入联系邮箱" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -147,13 +147,13 @@
 
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item field="real_name" label="真实姓名">
-              <a-input v-model="addUserForm.real_name" placeholder="请输入真实姓名" />
+            <a-form-item field="real_name" label="姓名">
+              <a-input v-model="addUserForm.real_name" placeholder="请输入姓名（仅支持中文）" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item field="phone_number" label="手机号">
-              <a-input v-model="addUserForm.phone_number" placeholder="请输入手机号" />
+            <a-form-item field="phone_number" label="登录手机号">
+              <a-input v-model="addUserForm.phone_number" placeholder="请输入11位手机号" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -187,13 +187,13 @@
           <a-form ref="editUserFormRef" :model="editUserForm" :rules="editUserRules" layout="vertical" :auto-label-width="false">
             <a-row :gutter="16">
               <a-col :span="12">
-                <a-form-item field="username" label="用户名">
-                  <a-input v-model="editUserForm.username" placeholder="请输入用户名" disabled />
+                <a-form-item field="username" label="系统用户名">
+                  <a-input v-model="editUserForm.username" placeholder="系统用户名由系统分配或管理员维护" disabled />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item field="email" label="邮箱">
-                  <a-input v-model="editUserForm.email" placeholder="请输入邮箱" />
+                <a-form-item field="email" label="联系邮箱">
+                  <a-input v-model="editUserForm.email" placeholder="请输入联系邮箱" />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -213,13 +213,13 @@
 
             <a-row :gutter="16">
               <a-col :span="12">
-                <a-form-item field="real_name" label="真实姓名">
-                  <a-input v-model="editUserForm.real_name" placeholder="请输入真实姓名" />
+                <a-form-item field="real_name" label="姓名">
+                  <a-input v-model="editUserForm.real_name" placeholder="请输入姓名（仅支持中文）" />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
-                <a-form-item field="phone_number" label="手机号">
-                  <a-input v-model="editUserForm.phone_number" placeholder="请输入手机号" />
+                <a-form-item field="phone_number" label="登录手机号">
+                  <a-input v-model="editUserForm.phone_number" placeholder="请输入11位手机号" />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -310,17 +310,17 @@ const columns = [
     align: 'center',
   },
   {
-    title: '用户名',
+    title: '系统用户名',
     dataIndex: 'username',
     align: 'center',
   },
   {
-    title: '邮箱',
+    title: '联系邮箱',
     dataIndex: 'email',
     align: 'center',
   },
   {
-    title: '真实姓名',
+    title: '姓名',
     dataIndex: 'name',
     align: 'center',
     render: ({ record }: { record: User }) => {
@@ -330,7 +330,7 @@ const columns = [
     },
   },
   {
-    title: '手机号',
+    title: '登录手机号',
     dataIndex: 'phone_number',
     align: 'center',
     render: ({ record }: { record: User }) => record.phone_number || '-',
@@ -528,6 +528,28 @@ const addUserRules = {
         }
       }
     }
+  ],
+  real_name: [
+    {
+      validator: (value: string, callback: (error?: string) => void) => {
+        if (value && !/^[\u4e00-\u9fff·]{2,20}$/.test(value)) {
+          callback('姓名仅支持2到20位中文');
+        } else {
+          callback();
+        }
+      }
+    }
+  ],
+  phone_number: [
+    {
+      validator: (value: string, callback: (error?: string) => void) => {
+        if (value && !/^1[3-9]\d{9}$/.test(value)) {
+          callback('请输入正确的11位手机号');
+        } else {
+          callback();
+        }
+      }
+    }
   ]
 };
 
@@ -624,6 +646,28 @@ const editUserForm = reactive<UpdateUserRequest & { confirmPassword: string, id:
 const editUserRules = {
   email: [
     { type: 'email', message: '请输入有效的邮箱地址' }
+  ],
+  real_name: [
+    {
+      validator: (value: string, callback: (error?: string) => void) => {
+        if (value && !/^[\u4e00-\u9fff·]{2,20}$/.test(value)) {
+          callback('姓名仅支持2到20位中文');
+        } else {
+          callback();
+        }
+      }
+    }
+  ],
+  phone_number: [
+    {
+      validator: (value: string, callback: (error?: string) => void) => {
+        if (value && !/^1[3-9]\d{9}$/.test(value)) {
+          callback('请输入正确的11位手机号');
+        } else {
+          callback();
+        }
+      }
+    }
   ],
   confirmPassword: [
     {
