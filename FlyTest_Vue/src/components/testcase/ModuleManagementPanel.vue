@@ -134,15 +134,25 @@ const fetchTestCaseModules = async () => {
 const buildModuleTree = (modules: TestCaseModule[], parentId: number | null = null): TreeNodeData[] => {
   return modules
     .filter(module => module.parent === parentId || module.parent_id === parentId)
-    .map(module => ({
-      ...module,
-      id: module.id, // 确保 id 作为 key
-      key: module.id, // for a-tree
-      title: module.name, // for a-tree
-      children: buildModuleTree(modules, module.id),
-      test_case_count: module.test_case_count || 0,
-    }));
-};
+    .map(module => {
+      const children = buildModuleTree(modules, module.id)
+      const directCount = Number((module as any).testcase_count || module.test_case_count || 0)
+      const childrenCount = children.reduce(
+        (total, child) => total + Number((child as any).test_case_count || 0),
+        0
+      )
+
+      return {
+        ...module,
+        id: module.id, // ?? id ?? key
+        key: module.id, // for a-tree
+        title: module.name, // for a-tree
+        children,
+        test_case_count: directCount + childrenCount,
+      }
+    })
+}
+
 
 // 模块树数据
 const moduleTreeData = computed(() => {

@@ -103,8 +103,8 @@
       <template #selection="{ record }">
         <div data-checkbox>
           <a-checkbox
-            :model-value="selectedTestCaseIds.includes(record.id)"
-            @change="(checked: boolean) => handleCheckboxChange(record.id, checked)"
+            :model-value="record?.id ? selectedTestCaseIds.includes(record.id) : false"
+            @change="(checked: boolean) => record?.id && handleCheckboxChange(record.id, checked)"
             @click.stop
           />
         </div>
@@ -128,13 +128,13 @@
         </a-tooltip>
       </template>
       <template #level="{ record }">
-        <a-tag :color="getLevelColor(record.level)">{{ record.level }}</a-tag>
+        <a-tag v-if="record" :color="getLevelColor(record.level)">{{ record.level }}</a-tag>
       </template>
       <template #testType="{ record }">
-        <a-tag>{{ getTestTypeLabel(record.test_type) }}</a-tag>
+        <a-tag v-if="record">{{ getTestTypeLabel(record.test_type) }}</a-tag>
       </template>
       <template #reviewStatus="{ record }">
-        <a-dropdown trigger="click" @select="(value: string) => handleReviewStatusChange(record, value)">
+        <a-dropdown v-if="record" trigger="click" @select="(value: string) => handleReviewStatusChange(record, value)">
           <a-tag
             :color="getReviewStatusColor(record.review_status)"
             style="cursor: pointer;"
@@ -150,11 +150,11 @@
         </a-dropdown>
       </template>
       <template #module="{ record }">
-        <span v-if="record.module_detail">{{ record.module_detail }}</span>
+        <span v-if="record?.module_detail">{{ record.module_detail }}</span>
         <span v-else class="text-gray">未分配</span>
       </template>
       <template #operations="{ record }">
-        <a-space :size="4">
+        <a-space v-if="record" :size="4">
           <a-button type="primary" size="mini" @click.stop="handleViewTestCase(record)">查看</a-button>
           <a-button type="primary" size="mini" @click.stop="handleEditTestCase(record)">编辑</a-button>
           <a-button type="outline" size="mini" @click.stop="handleExecuteTestCase(record)">执行</a-button>
@@ -316,10 +316,11 @@ const highlightGeneratedCases = (ids?: number[]) => {
   }, 12000);
 };
 
-const isHighlightedGeneratedCase = (id: number) => highlightedGeneratedCaseIds.value.includes(id);
+const isHighlightedGeneratedCase = (id?: number | null) =>
+  typeof id === 'number' && highlightedGeneratedCaseIds.value.includes(id);
 
-const getRowClassName = ({ record }: { record: TestCase }) =>
-  isHighlightedGeneratedCase(record.id) ? 'generated-case-row' : '';
+const getRowClassName = ({ record }: { record?: TestCase }) =>
+  isHighlightedGeneratedCase(record?.id) ? 'generated-case-row' : '';
 
 // 处理单个复选框变化
 const handleCheckboxChange = (id: number, checked: boolean) => {

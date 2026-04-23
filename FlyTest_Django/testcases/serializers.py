@@ -218,7 +218,7 @@ class TestCaseListSerializer(serializers.ModelSerializer):
     ??????????????????????????
     """
 
-    creator_detail = UserDetailSerializer(source="creator", read_only=True)
+    creator_detail = serializers.SerializerMethodField()
     module_id = serializers.PrimaryKeyRelatedField(source="module", read_only=True)
     module_detail = serializers.StringRelatedField(source="module", read_only=True)
 
@@ -240,6 +240,15 @@ class TestCaseListSerializer(serializers.ModelSerializer):
             "test_type",
         ]
         read_only_fields = fields
+
+    def get_creator_detail(self, obj):
+        creator = getattr(obj, "creator", None)
+        if creator is None:
+            return None
+        return {
+            "id": creator.id,
+            "username": creator.username,
+        }
 
 
 class TestCaseModuleSerializer(serializers.ModelSerializer):
@@ -288,8 +297,10 @@ class TestCaseModuleSerializer(serializers.ModelSerializer):
         """
         计算模块下的用例数量（包含所有子模块的用例）
         """
-        all_module_ids = obj.get_all_descendant_ids()
-        return TestCase.objects.filter(module_id__in=all_module_ids).count()
+        annotated_count = getattr(obj, "testcase_count", None)
+        if annotated_count is not None:
+            return int(annotated_count)
+        return TestCase.objects.filter(module_id=obj.id).count()
 
     def validate(self, attrs):
         """验证模块数据"""

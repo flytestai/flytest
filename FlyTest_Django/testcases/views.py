@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from django.db import transaction, close_old_connections
+from django.db.models import Count
 from django.http import HttpResponse
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -2233,8 +2234,10 @@ class TestCaseModuleViewSet(viewsets.ModelViewSet):
         if project_pk:
             project = get_object_or_404(Project, pk=project_pk)
             # IsProjectMemberForTestCaseModule 已检查项目成员权限
-            return TestCaseModule.objects.filter(project=project).select_related(
-                "creator", "parent"
+            return (
+                TestCaseModule.objects.filter(project=project)
+                .select_related("creator", "parent")
+                .annotate(testcase_count=Count("testcases", distinct=True))
             )
         return TestCaseModule.objects.none()
 
