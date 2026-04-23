@@ -62,18 +62,16 @@
           </template>
           <span class="io-btn-text">导入</span>
         </a-button>
-        <a-button
-          v-if="selectedTestCaseIds.length > 0"
-          type="primary"
-          status="danger"
-          @click="handleBatchDelete"
-        >
-          批量删除 ({{ selectedTestCaseIds.length }})
-        </a-button>
       </div>
       <div class="action-buttons">
-        <a-button type="primary" @click="handleGenerateTestCases">生成用例</a-button>
-        <a-button type="primary" @click="handleAddTestCase">添加用例</a-button>
+        <template v-if="hasSelection">
+          <a-button type="primary" status="danger" @click="handleBatchDelete">批量删除</a-button>
+          <a-button type="primary" @click="openAssignModal(selectedTestCaseIds)">批量分配</a-button>
+        </template>
+        <template v-else>
+          <a-button type="primary" @click="handleGenerateTestCases">生成用例</a-button>
+          <a-button type="primary" @click="handleAddTestCase">添加用例</a-button>
+        </template>
       </div>
     </div>
 
@@ -129,7 +127,18 @@
         </a-tooltip>
       </template>
       <template #level="{ record }">
-        <a-tag v-if="record" :color="getLevelColor(record.level)">{{ record.level }}</a-tag>
+        <a-dropdown v-if="record" trigger="click" @select="(value: string) => handlePriorityChange(record, value)">
+          <a-tag :color="getLevelColor(record.level)" style="cursor: pointer;">
+            {{ record.level }}
+            <icon-down style="margin-left: 4px; font-size: 10px;" />
+          </a-tag>
+          <template #content>
+            <a-doption value="P0">P0</a-doption>
+            <a-doption value="P1">P1</a-doption>
+            <a-doption value="P2">P2</a-doption>
+            <a-doption value="P3">P3</a-doption>
+          </template>
+        </a-dropdown>
       </template>
       <template #testType="{ record }">
         <a-tag v-if="record">{{ getTestTypeLabel(record.test_type) }}</a-tag>
@@ -158,6 +167,7 @@
         <a-space v-if="record" :size="4">
           <a-button type="primary" size="mini" @click.stop="handleViewTestCase(record)">查看</a-button>
           <a-button type="primary" size="mini" @click.stop="handleEditTestCase(record)">编辑</a-button>
+          <a-button type="outline" size="mini" @click.stop="openAssignModal([record.id])">分配</a-button>
           <a-button type="outline" size="mini" @click.stop="handleExecuteTestCase(record)">执行</a-button>
           <a-button type="primary" status="danger" size="mini" @click.stop="handleDeleteTestCase(record)">删除</a-button>
         </a-space>
@@ -178,25 +188,63 @@
       :selected-ids="selectedTestCaseIds"
       :module-tree="moduleTree"
     />
+
+    <a-modal
+      v-model:visible="assignmentModalVisible"
+      title="分配测试用例"
+      :confirm-loading="assignmentSubmitting"
+      @ok="submitAssignment"
+      @cancel="closeAssignModal"
+    >
+      <a-form :model="assignmentForm" layout="vertical">
+        <a-form-item field="suiteId" label="测试套件" required>
+          <a-select v-model="assignmentForm.suiteId" :loading="assignmentLoading" placeholder="请选择测试套件" allow-search>
+            <a-option v-for="suite in testSuites" :key="suite.id" :value="suite.id">
+              {{ suite.name }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item field="assigneeId" label="执行人" required>
+          <a-select v-model="assignmentForm.assigneeId" :loading="assignmentLoading" placeholder="请选择执行人" allow-search>
+            <a-option v-for="member in projectMembers" :key="member.id" :value="member.user">
+              {{ member.user_detail.username }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, watch, toRefs, nextTick } from 'vue';
+import axios from 'axios';
 import { Message, Modal } from '@arco-design/web-vue';
 import { IconFolder, IconDownload, IconUpload, IconDown } from '@arco-design/web-vue/es/icon';
+import { useAuthStore } from '@/store/authStore';
+import { API_BASE_URL } from '@/config/api';
 import ImportModal from '@/features/testcase-templates/components/ImportModal.vue';
 import ExportModal from '@/features/testcase-templates/components/ExportModal.vue';
 import {
   getTestCaseList,
   deleteTestCase as deleteTestCaseService,
   batchDeleteTestCases,
+  updateTestCase,
   updateTestCaseReviewStatus,
   type TestCase,
   type ReviewStatus,
 } from '@/services/testcaseService';
+import { getProjectMembers, type ProjectMember } from '@/services/projectService';
+import { getTestSuiteList, type TestSuite } from '@/services/testSuiteService';
 import { formatDate, getLevelColor, getReviewStatusLabel, getReviewStatusColor, getTestTypeLabel, REVIEW_STATUS_OPTIONS, TEST_TYPE_OPTIONS } from '@/utils/formatters';
 import type { TreeNodeData } from '@arco-design/web-vue';
+
+type TestCaseListItem = TestCase & {
+  assignee_detail?: {
+    id: number;
+    username: string;
+  } | null;
+};
 
 const props = defineProps<{
   currentProjectId: number | null;
@@ -226,13 +274,22 @@ const localSearchKeyword = ref('');
 const selectedLevel = ref<string>('');
 const selectedTestType = ref<string>('');
 const highlightedGeneratedCaseIds = ref<number[]>([]);
-// 榛樿閫変腑闄?涓嶅彲鐢?涔嬪鐨勬墍鏈夌姸鎬?
-const DEFAULT_REVIEW_STATUSES: ReviewStatus[] = ['pending_review', 'approved', 'needs_optimization', 'optimization_pending_review'];
-const selectedReviewStatuses = ref<ReviewStatus[]>([...DEFAULT_REVIEW_STATUSES]);
-const testCaseData = ref<TestCase[]>([]);
+const selectedReviewStatuses = ref<ReviewStatus[]>([]);
+const testCaseData = ref<TestCaseListItem[]>([]);
 const selectedTestCaseIds = ref<number[]>([]);
 const importModalRef = ref<InstanceType<typeof ImportModal> | null>(null);
 const exportModalRef = ref<InstanceType<typeof ExportModal> | null>(null);
+const assignmentModalVisible = ref(false);
+const assignmentLoading = ref(false);
+const assignmentSubmitting = ref(false);
+const assignmentTargetIds = ref<number[]>([]);
+const projectMembers = ref<ProjectMember[]>([]);
+const testSuites = ref<TestSuite[]>([]);
+const assignmentForm = reactive({
+  suiteId: undefined as number | undefined,
+  assigneeId: undefined as number | undefined,
+});
+const hasSelection = computed(() => selectedTestCaseIds.value.length > 0);
 
 // 鍝嶅簲寮忓睆骞曞搴︽娴?
 const isSmallScreen = ref(window.innerWidth < 1222);
@@ -252,7 +309,7 @@ const tableScroll = computed(() => ({
 const paginationConfig = reactive({
   total: 0,
   current: 1,
-  pageSize: 10,
+  pageSize: 50,
   showTotal: true,
   showJumper: true,
   showPageSize: true,
@@ -386,6 +443,13 @@ const columns = [
     align: 'center',
   },
   {
+    title: '执行人',
+    dataIndex: 'assignee_detail',
+    render: ({ record }: { record: TestCaseListItem }) => record.assignee_detail?.username || '-',
+    width: 120,
+    align: 'center',
+  },
+  {
     title: '创建时间',
     dataIndex: 'created_at',
     render: ({ record }: { record: TestCase }) => formatDate(record.created_at),
@@ -404,6 +468,150 @@ const columns = [
     cellClass: 'resize-tail-column',
   },
 ];
+
+const loadAssignmentOptions = async () => {
+  if (!currentProjectId.value) {
+    return;
+  }
+  assignmentLoading.value = true;
+  try {
+    const [membersResponse, suitesResponse] = await Promise.all([
+      getProjectMembers(currentProjectId.value),
+      getTestSuiteList(currentProjectId.value),
+    ]);
+
+    if (!membersResponse.success || !membersResponse.data) {
+      throw new Error(membersResponse.error || '获取项目成员失败');
+    }
+    if (!suitesResponse.success || !suitesResponse.data) {
+      throw new Error(suitesResponse.error || '获取测试套件失败');
+    }
+
+    projectMembers.value = membersResponse.data;
+    testSuites.value = suitesResponse.data;
+  } finally {
+    assignmentLoading.value = false;
+  }
+};
+
+const assignTestCasesRequest = async (projectId: number, payload: { ids: number[]; suite_id: number; assignee_id: number }) => {
+  const authStore = useAuthStore();
+  const accessToken = authStore.getAccessToken;
+  if (!accessToken) {
+    return {
+      success: false,
+      error: '未登录或会话已过期',
+    };
+  }
+
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/projects/${projectId}/testcases/batch-assign/`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (response.data && (response.data.success || response.data.status === 'success')) {
+      return {
+        success: true,
+        message: response.data.message || '测试用例分配成功',
+      };
+    }
+
+    return {
+      success: false,
+      error: response.data?.error || response.data?.message || '测试用例分配失败',
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.response?.data?.message || error.message || '测试用例分配失败',
+    };
+  }
+};
+
+const openAssignModal = async (ids: number[]) => {
+  if (!currentProjectId.value) {
+    Message.warning('请先选择一个项目');
+    return;
+  }
+  const normalizedIds = Array.from(new Set(ids.filter((id) => typeof id === 'number' && id > 0)));
+  if (normalizedIds.length === 0) {
+    Message.warning('请先选择要分配的测试用例');
+    return;
+  }
+  assignmentTargetIds.value = normalizedIds;
+  assignmentForm.suiteId = undefined;
+  assignmentForm.assigneeId = undefined;
+  assignmentModalVisible.value = true;
+  try {
+    await loadAssignmentOptions();
+  } catch (error) {
+    assignmentModalVisible.value = false;
+    Message.error(error instanceof Error ? error.message : '加载分配选项失败');
+  }
+};
+
+const closeAssignModal = () => {
+  assignmentModalVisible.value = false;
+  assignmentTargetIds.value = [];
+};
+
+const submitAssignment = async () => {
+  if (!currentProjectId.value) {
+    return;
+  }
+  if (!assignmentForm.suiteId) {
+    Message.warning('请选择测试套件');
+    return;
+  }
+  if (!assignmentForm.assigneeId) {
+    Message.warning('请选择执行人');
+    return;
+  }
+
+  assignmentSubmitting.value = true;
+  try {
+    const response = await assignTestCasesRequest(currentProjectId.value, {
+      ids: assignmentTargetIds.value,
+      suite_id: assignmentForm.suiteId,
+      assignee_id: assignmentForm.assigneeId,
+    });
+    if (!response.success) {
+      Message.error(response.error || '测试用例分配失败');
+      return;
+    }
+    Message.success(response.message || '测试用例分配成功');
+    selectedTestCaseIds.value = [];
+    closeAssignModal();
+    await fetchTestCases();
+  } finally {
+    assignmentSubmitting.value = false;
+  }
+};
+
+const handlePriorityChange = async (record: TestCase, newLevel: string) => {
+  if (!currentProjectId.value || !newLevel || newLevel === record.level) {
+    return;
+  }
+  const response = await updateTestCase(currentProjectId.value, record.id, { level: newLevel });
+  if (!response.success || !response.data) {
+    Message.error(response.error || '更新优先级失败');
+    return;
+  }
+  const index = testCaseData.value.findIndex((item) => item.id === record.id);
+  if (index !== -1) {
+    testCaseData.value[index].level = response.data.level;
+  }
+  Message.success('优先级更新成功');
+};
+
 const fetchTestCases = async () => {
   if (!currentProjectId.value) {
     testCaseData.value = [];
@@ -500,7 +708,7 @@ const handleReviewStatusChange = async (record: TestCase, newStatus: string) => 
       Message.error(response.error || '状态更新失败');
     }
   } catch (error) {
-    Message.error('鐘舵€佹洿鏂版椂鍙戠敓閿欒');
+    Message.error('状态更新时发生错误');
   }
 };
 
@@ -660,7 +868,7 @@ watch(currentProjectId, () => {
   localSearchKeyword.value = '';
   selectedLevel.value = ''; // 椤圭洰鍒囨崲鏃舵竻绌轰紭鍏堢骇绛涢€?
   selectedTestType.value = ''; // 椤圭洰鍒囨崲鏃舵竻绌烘祴璇曠被鍨嬬瓫閫?
-  selectedReviewStatuses.value = [...DEFAULT_REVIEW_STATUSES]; // 椤圭洰鍒囨崲鏃堕噸缃鏍哥姸鎬佺瓫閫?
+  selectedReviewStatuses.value = [];
   fetchTestCases();
 });
 
@@ -690,7 +898,7 @@ defineExpose({
     localSearchKeyword.value = '';
     selectedLevel.value = '';
     selectedTestType.value = '';
-    selectedReviewStatuses.value = [...DEFAULT_REVIEW_STATUSES];
+    selectedReviewStatuses.value = [];
     localSelectedModuleId.value = null;
     await fetchTestCases();
     highlightGeneratedCases(generatedIds);
@@ -934,5 +1142,3 @@ defineExpose({
 
 /* 绉婚櫎閲嶅鐨勬牱寮忓畾涔?*/
 </style>
-
-
