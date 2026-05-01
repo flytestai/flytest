@@ -698,6 +698,41 @@ class TestSuiteExecutionTests(TestCase):
         returned_ids = [item["id"] for item in payload_items]
         self.assertEqual(returned_ids, [matched_bug.id])
 
+    def test_bug_detail_includes_primary_assignee_in_assignee_fields(self):
+        admin_user = User.objects.create_superuser(
+            username="bugdetailassigneeadmin",
+            email="bugdetailassigneeadmin@example.com",
+            password="password",
+        )
+        primary_assignee = User.objects.create_user(
+            username="detailprimaryassignee",
+            email="detailprimaryassignee@example.com",
+            password="password",
+        )
+        ProjectMember.objects.create(project=self.project, user=admin_user, role="admin")
+        ProjectMember.objects.create(project=self.project, user=primary_assignee, role="member")
+        self.suite.testcases.add(self.testcase)
+
+        bug = TestBug.objects.create(
+            project=self.project,
+            suite=self.suite,
+            testcase=self.testcase,
+            title="Bug detail keeps primary assignee",
+            opened_by=admin_user,
+            assigned_to=primary_assignee,
+            status=TestBug.STATUS_ASSIGNED,
+        )
+        bug.assigned_users.clear()
+
+        self.api_client.force_authenticate(user=admin_user)
+
+        response = self.api_client.get(f"/api/projects/{self.project.id}/test-bugs/{bug.id}/")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["assigned_to"], primary_assignee.id)
+        self.assertEqual(response.data["assigned_to_ids"], [primary_assignee.id])
+        self.assertEqual(response.data["assigned_to_names"], [primary_assignee.username])
+
     def test_create_bug_rejects_related_testcases_outside_suite(self):
         admin_user = User.objects.create_superuser(
             username="buginvalidadmin",

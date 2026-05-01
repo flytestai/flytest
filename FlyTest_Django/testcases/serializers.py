@@ -20,6 +20,23 @@ from accounts.serializers import UserDetailSerializer  # 用于显示创建者�
 from django.db import transaction
 
 
+def _get_bug_assignee_users(obj):
+    assignees = []
+    seen_user_ids = set()
+
+    if getattr(obj, "assigned_to_id", None) and getattr(obj, "assigned_to", None):
+        assignees.append(obj.assigned_to)
+        seen_user_ids.add(obj.assigned_to_id)
+
+    for user in obj.assigned_users.all():
+        if user.id in seen_user_ids:
+            continue
+        assignees.append(user)
+        seen_user_ids.add(user.id)
+
+    return assignees
+
+
 class TestCaseStepSerializer(serializers.ModelSerializer):
     """
     用例步骤序列化器
@@ -728,8 +745,7 @@ class TestBugSerializer(serializers.ModelSerializer):
         return obj.get_effective_status_display()
 
     def get_assigned_to_names(self, obj):
-        assigned_users = list(obj.assigned_users.all())
-        return [user.username for user in assigned_users]
+        return [user.username for user in _get_bug_assignee_users(obj)]
 
     def get_testcase_names(self, obj):
         testcase_names = []
@@ -752,7 +768,7 @@ class TestBugSerializer(serializers.ModelSerializer):
         return testcase_ids
 
     def get_assigned_to_ids_read(self, obj):
-        return list(obj.assigned_users.values_list("id", flat=True))
+        return [user.id for user in _get_bug_assignee_users(obj)]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -997,10 +1013,10 @@ class TestBugListSerializer(serializers.ModelSerializer):
         return obj.get_effective_status_display()
 
     def get_assigned_to_names(self, obj):
-        return [user.username for user in obj.assigned_users.all()]
+        return [user.username for user in _get_bug_assignee_users(obj)]
 
     def get_assigned_to_ids(self, obj):
-        return list(obj.assigned_users.values_list("id", flat=True))
+        return [user.id for user in _get_bug_assignee_users(obj)]
 
     def get_testcase_ids(self, obj):
         testcase_ids = []
