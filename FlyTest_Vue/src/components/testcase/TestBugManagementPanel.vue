@@ -698,8 +698,8 @@
     >
       <a-form :model="actionForm" layout="vertical">
         <template v-if="actionType === 'assign'">
-          <a-form-item field="assigned_to" label="???" required>
-            <a-select v-model="actionForm.assigned_to" multiple allow-clear placeholder="???????">
+          <a-form-item field="assigned_to" label="指派给" required>
+            <a-select v-model="actionForm.assigned_to" multiple allow-clear placeholder="请选择指派人员">
               <a-option v-for="member in projectMembers" :key="member.user" :value="member.user">
                 {{ member.user_detail.username }}
               </a-option>
@@ -707,29 +707,29 @@
           </a-form-item>
         </template>
         <template v-else-if="actionType === 'fix' || actionType === 'resolve' || actionType === 'close'">
-          <a-form-item field="resolution" label="????" required>
-            <a-select v-model="actionForm.resolution" placeholder="???????">
+          <a-form-item field="resolution" label="解决方案" required>
+            <a-select v-model="actionForm.resolution" placeholder="请选择解决方案">
               <a-option v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
                 {{ item.label }}
               </a-option>
             </a-select>
           </a-form-item>
-          <a-form-item field="solution" label="????">
+          <a-form-item field="solution" label="处理备注">
             <a-textarea
               v-model="actionForm.solution"
               :auto-size="{ minRows: 4, maxRows: 8 }"
-              placeholder="???????"
+              placeholder="请输入处理备注"
             />
           </a-form-item>
         </template>
         <template v-else-if="actionType === 'delete'">
-          <div class="action-confirm-tip">?????? BUG ??????????</div>
+          <div class="action-confirm-tip">确定删除当前 BUG 吗？删除后不可恢复。</div>
         </template>
         <template v-else-if="actionType === 'activate'">
-          <div class="action-confirm-tip">??????BUG ?????????</div>
+          <div class="action-confirm-tip">重新激活后，BUG 会回到待处理流程。</div>
         </template>
         <template v-else>
-          <div class="action-confirm-tip">?????????</div>
+          <div class="action-confirm-tip">确认继续当前操作。</div>
         </template>
       </a-form>
     </a-modal>
@@ -956,18 +956,18 @@ const DEFAULT_VISIBLE_COLUMNS: BugTableColumnKey[] = [
 ];
 const tableColumnOptions: Array<{ key: BugTableColumnKey; label: string }> = [
   { key: 'id', label: 'ID' },
-  { key: 'title', label: 'BUG??' },
-  { key: 'status', label: '??' },
-  { key: 'related_testcases', label: '????' },
-  { key: 'bug_type', label: 'BUG??' },
-  { key: 'severity', label: '????' },
-  { key: 'priority', label: '???' },
-  { key: 'resolution', label: '????' },
-  { key: 'assigned_to', label: '???' },
-  { key: 'opened_by', label: '???' },
-  { key: 'opened_at', label: '????' },
-  { key: 'resolved_at', label: '????' },
-  { key: 'actions', label: '??' },
+  { key: 'title', label: 'BUG标题' },
+  { key: 'status', label: '状态' },
+  { key: 'related_testcases', label: '关联用例' },
+  { key: 'bug_type', label: 'BUG类型' },
+  { key: 'severity', label: '严重程度' },
+  { key: 'priority', label: '优先级' },
+  { key: 'resolution', label: '解决方案' },
+  { key: 'assigned_to', label: '指派给' },
+  { key: 'opened_by', label: '创建人' },
+  { key: 'opened_at', label: '创建时间' },
+  { key: 'resolved_at', label: '解决时间' },
+  { key: 'actions', label: '操作' },
 ];
 
 const getBugColumnStorageKey = (projectId?: number | null) =>
@@ -1091,29 +1091,29 @@ const createEmptyPendingAttachmentState = () => ({
 const pendingAttachmentFiles = reactive(createEmptyPendingAttachmentState());
 
 const statusCards = computed(() => [
-  { key: 'all' as const, label: '??', count: bugList.value.length },
-  { key: 'unassigned' as const, label: '???', count: bugList.value.filter((item) => item.status === 'unassigned').length },
-  { key: 'assigned' as const, label: '???', count: bugList.value.filter((item) => item.status === 'assigned').length },
-  { key: 'pending_retest' as const, label: '???', count: bugList.value.filter((item) => item.status === 'pending_retest').length },
-  { key: 'closed' as const, label: '???', count: bugList.value.filter((item) => item.status === 'closed').length },
-  { key: 'expired' as const, label: '???', count: bugList.value.filter((item) => item.status === 'expired').length },
+  { key: 'all' as const, label: '全部', count: bugList.value.length },
+  { key: 'unassigned' as const, label: '未指派', count: bugList.value.filter((item) => item.status === 'unassigned').length },
+  { key: 'assigned' as const, label: '未确认', count: bugList.value.filter((item) => item.status === 'assigned').length },
+  { key: 'pending_retest' as const, label: '待复测', count: bugList.value.filter((item) => item.status === 'pending_retest').length },
+  { key: 'closed' as const, label: '已关闭', count: bugList.value.filter((item) => item.status === 'closed').length },
+  { key: 'expired' as const, label: '已过期', count: bugList.value.filter((item) => item.status === 'expired').length },
 ]);
 
 const quickViews = [
-  { key: 'all' as const, label: '????' },
-  { key: 'assigned_to_me' as const, label: '????' },
-  { key: 'opened_by_me' as const, label: '????' },
-  { key: 'unassigned' as const, label: '???' },
-  { key: 'unresolved' as const, label: '???' },
+  { key: 'all' as const, label: '全部视图' },
+  { key: 'assigned_to_me' as const, label: '指派给我' },
+  { key: 'opened_by_me' as const, label: '我创建的' },
+  { key: 'unassigned' as const, label: '未指派' },
+  { key: 'unresolved' as const, label: '未解决' },
 ];
 
 const bugSortOptions = [
-  { value: 'priority_desc' as const, label: '???????' },
-  { value: 'severity_desc' as const, label: '????????' },
-  { value: 'opened_at_desc' as const, label: '??????' },
-  { value: 'opened_at_asc' as const, label: '??????' },
-  { value: 'resolved_at_desc' as const, label: '??????' },
-  { value: 'activated_desc' as const, label: '??????' },
+  { value: 'priority_desc' as const, label: '优先级从高到低' },
+  { value: 'severity_desc' as const, label: '严重程度从高到低' },
+  { value: 'opened_at_desc' as const, label: '创建时间最新' },
+  { value: 'opened_at_asc' as const, label: '创建时间最早' },
+  { value: 'resolved_at_desc' as const, label: '解决时间最新' },
+  { value: 'activated_desc' as const, label: '激活次数最多' },
 ];
 
 const getBugTimeValue = (value?: string | null) => {
@@ -1734,7 +1734,7 @@ const handleImportFilterViews = async (event: Event) => {
     const parsed = JSON.parse(text);
     const importedViews = Array.isArray(parsed?.views) ? parsed.views : Array.isArray(parsed) ? parsed : [];
     if (!importedViews.length) {
-      Message.warning('??????????????');
+      Message.warning('导入文件中没有可用的常用视图');
       return;
     }
 
@@ -1762,7 +1762,7 @@ const handleImportFilterViews = async (event: Event) => {
       .filter((item) => item.name);
 
     if (!normalizedViews.length) {
-      Message.warning('??????????????');
+      Message.warning('导入文件中没有有效的常用视图');
       return;
     }
 
@@ -1772,10 +1772,10 @@ const handleImportFilterViews = async (event: Event) => {
     const shouldOverwrite = conflictViews.length
       ? await new Promise<boolean>((resolve) => {
           Modal.warning({
-            title: '???????',
-            content: `?? ${conflictViews.length} ????? ID ??????????????????`,
-            okText: '????',
-            cancelText: '?????',
+            title: '检测到冲突视图',
+            content: `发现 ${conflictViews.length} 个同名或同 ID 视图，是否使用导入内容覆盖现有视图？`,
+            okText: '覆盖导入',
+            cancelText: '仅导入新增',
             onOk: () => resolve(true),
             onCancel: () => resolve(false),
           });
@@ -1813,11 +1813,11 @@ const handleImportFilterViews = async (event: Event) => {
     persistSavedFilterViews();
     Message.success(
       skippedCount > 0
-        ? `??? ${importedCount} ???????? ${skippedCount} ?????`
-        : `??? ${importedCount} ?????`
+        ? `已导入 ${importedCount} 个常用视图，跳过 ${skippedCount} 个重复视图`
+        : `已导入 ${importedCount} 个常用视图`
     );
   } catch (error) {
-    Message.error('?????????????????? JSON');
+    Message.error('导入失败，请检查文件格式是否为有效的 JSON');
   } finally {
     if (input) {
       input.value = '';
@@ -1829,7 +1829,7 @@ const submitSaveFilterView = () => {
   const name = saveFilterViewName.value.trim();
   const isEditing = Boolean(editingFilterViewId.value);
   if (!name) {
-    Message.warning('?????????');
+    Message.warning('请输入常用视图名称');
     return;
   }
   const previousView = editingFilterViewId.value
@@ -1862,7 +1862,7 @@ const submitSaveFilterView = () => {
   sortSavedFilterViews();
   persistSavedFilterViews();
   resetSaveFilterViewState();
-  Message.success(isEditing ? '???????' : '???????');
+  Message.success(isEditing ? '常用视图已更新' : '常用视图已保存');
 };
 
 const removeSavedFilterView = (id: string) => {
@@ -1901,7 +1901,7 @@ const togglePinFilterView = (id: string) => {
   );
   sortSavedFilterViews();
   persistSavedFilterViews();
-  Message.success('???????????');
+  Message.success('常用视图置顶状态已更新');
 };
 
 const restoreLastSelection = () => {
@@ -1909,11 +1909,11 @@ const restoreLastSelection = () => {
     return;
   }
   selectedBugIds.value = lastSelectionSnapshot.value.filter((id) => bugList.value.some((bug) => bug.id === id));
-  Message.success(`??? ${selectedBugIds.value.length} ? BUG ?????`);
+  Message.success(`已恢复 ${selectedBugIds.value.length} 条 BUG 的勾选状态`);
 };
 
 const getStatusViewLabel = (value: StatusView) => {
-  if (value === 'all') return '??';
+  if (value === 'all') return '全部';
   return TEST_BUG_STATUS_OPTIONS.find((item) => item.value === value)?.label || value;
 };
 
