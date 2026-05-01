@@ -882,6 +882,114 @@ class TestSuiteExecutionTests(TestCase):
         bug.refresh_from_db()
         self.assertEqual(bug.get_effective_status(), TestBug.STATUS_ASSIGNED)
 
+    def test_batch_assign_bugs_supports_multiple_assignees(self):
+        admin_user = User.objects.create_superuser(
+            username="bugbatchassignadmin",
+            email="bugbatchassignadmin@example.com",
+            password="password",
+        )
+        first_assignee = User.objects.create_user(username="bugbatchuser1", password="password")
+        second_assignee = User.objects.create_user(username="bugbatchuser2", password="password")
+        second_testcase = TestCaseModel.objects.create(
+            project=self.project,
+            module=self.module,
+            name="Batch Test Case 2",
+            creator=self.user,
+        )
+        ProjectMember.objects.create(project=self.project, user=admin_user, role="admin")
+        ProjectMember.objects.create(project=self.project, user=first_assignee, role="member")
+        ProjectMember.objects.create(project=self.project, user=second_assignee, role="member")
+        self.suite.testcases.add(self.testcase, second_testcase)
+        bug_one = TestBug.objects.create(
+            project=self.project,
+            suite=self.suite,
+            testcase=self.testcase,
+            title="批量指派BUG1",
+            opened_by=admin_user,
+        )
+        bug_two = TestBug.objects.create(
+            project=self.project,
+            suite=self.suite,
+            testcase=second_testcase,
+            title="批量指派BUG2",
+            opened_by=admin_user,
+        )
+
+        self.api_client.force_authenticate(user=admin_user)
+        response = self.api_client.post(
+            f"/api/projects/{self.project.id}/test-bugs/batch-assign/",
+            {
+                "ids": [bug_one.id, bug_two.id],
+                "assigned_to_ids": [first_assignee.id, second_assignee.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        bug_one.refresh_from_db()
+        bug_two.refresh_from_db()
+        self.assertEqual(set(response.data["updated_ids"]), {bug_one.id, bug_two.id})
+        for bug in (bug_one, bug_two):
+            self.assertEqual(bug.get_effective_status(), TestBug.STATUS_ASSIGNED)
+            self.assertEqual(bug.assigned_to_id, first_assignee.id)
+            self.assertEqual(
+                list(bug.assigned_users.order_by("id").values_list("id", flat=True)),
+                [first_assignee.id, second_assignee.id],
+            )
+            self.assertIsNotNone(bug.assigned_at)
+
+    def test_batch_update_resolution_syncs_bug_status(self):
+        admin_user = User.objects.create_superuser(
+            username="bugbatchresolutionadmin",
+            email="bugbatchresolutionadmin@example.com",
+            password="password",
+        )
+        second_testcase = TestCaseModel.objects.create(
+            project=self.project,
+            module=self.module,
+            name="Resolution Test Case 2",
+            creator=self.user,
+        )
+        ProjectMember.objects.create(project=self.project, user=admin_user, role="admin")
+        self.suite.testcases.add(self.testcase, second_testcase)
+        bug_one = TestBug.objects.create(
+            project=self.project,
+            suite=self.suite,
+            testcase=self.testcase,
+            title="批量解决方案BUG1",
+            opened_by=admin_user,
+            status=TestBug.STATUS_CONFIRMED,
+        )
+        bug_two = TestBug.objects.create(
+            project=self.project,
+            suite=self.suite,
+            testcase=second_testcase,
+            title="批量解决方案BUG2",
+            opened_by=admin_user,
+            status=TestBug.STATUS_ASSIGNED,
+        )
+
+        self.api_client.force_authenticate(user=admin_user)
+        response = self.api_client.post(
+            f"/api/projects/{self.project.id}/test-bugs/batch-update-resolution/",
+            {
+                "ids": [bug_one.id, bug_two.id],
+                "resolution": "fixed",
+                "solution": "批量完成修复",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        bug_one.refresh_from_db()
+        bug_two.refresh_from_db()
+        self.assertEqual(set(response.data["updated_ids"]), {bug_one.id, bug_two.id})
+        for bug in (bug_one, bug_two):
+            self.assertEqual(bug.resolution, "fixed")
+            self.assertEqual(bug.solution, "批量完成修复")
+            self.assertEqual(bug.get_effective_status(), TestBug.STATUS_FIXED)
+            self.assertIsNotNone(bug.resolved_at)
+
     def test_repair_test_bug_workflow_command_normalizes_legacy_data(self):
         admin_user = User.objects.create_superuser(
             username="bugcommandadmin",
