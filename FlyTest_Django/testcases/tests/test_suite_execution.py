@@ -732,6 +732,10 @@ class TestSuiteExecutionTests(TestCase):
         self.assertEqual(response.data["assigned_to"], primary_assignee.id)
         self.assertEqual(response.data["assigned_to_ids"], [primary_assignee.id])
         self.assertEqual(response.data["assigned_to_names"], [primary_assignee.username])
+        self.assertEqual(
+            [item["id"] for item in response.data["assigned_to_details"]],
+            [primary_assignee.id],
+        )
 
     def test_create_bug_rejects_related_testcases_outside_suite(self):
         admin_user = User.objects.create_superuser(

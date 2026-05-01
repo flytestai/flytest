@@ -644,7 +644,7 @@ class TestBugSerializer(serializers.ModelSerializer):
     )
     creator_detail = UserDetailSerializer(source="opened_by", read_only=True)
     assigned_to_detail = UserDetailSerializer(source="assigned_to", read_only=True)
-    assigned_to_details = UserDetailSerializer(source="assigned_users", many=True, read_only=True)
+    assigned_to_details = serializers.SerializerMethodField()
     assigned_to_names = serializers.SerializerMethodField()
     assigned_to_ids_read = serializers.SerializerMethodField()
     resolved_by_detail = UserDetailSerializer(source="resolved_by", read_only=True)
@@ -746,6 +746,9 @@ class TestBugSerializer(serializers.ModelSerializer):
 
     def get_assigned_to_names(self, obj):
         return [user.username for user in _get_bug_assignee_users(obj)]
+
+    def get_assigned_to_details(self, obj):
+        return UserDetailSerializer(_get_bug_assignee_users(obj), many=True).data
 
     def get_testcase_names(self, obj):
         testcase_names = []
