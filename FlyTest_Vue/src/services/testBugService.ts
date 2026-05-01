@@ -158,6 +158,23 @@ export interface TestBugAttachmentUploadResponse {
 
 const SESSION_EXPIRED_MESSAGE = '未登录或会话已过期';
 
+const BUG_ACTION_LABELS: Record<string, string> = {
+  assign: '指派',
+  confirm: '确认',
+  fix: '修复',
+  resolve: '提交复测',
+  activate: '激活',
+  close: '关闭',
+  'change-status': '修改状态',
+  'batch-assign': '批量指派',
+  'batch-change-status': '批量修改状态',
+  'batch-update-priority': '批量修改优先级',
+  'batch-update-severity': '批量修改严重程度',
+  'batch-update-bug-type': '批量修改 BUG 类型',
+  'batch-update-resolution': '批量修改解决方案',
+  'batch-delete': '批量删除',
+};
+
 const getHeaders = () => {
   const authStore = useAuthStore();
   const accessToken = authStore.getAccessToken;
@@ -310,7 +327,10 @@ const postAction = async (
     );
     return { success: true, data: unwrapPayload(response.data) };
   } catch (error: any) {
-    return { success: false, error: getErrorMessage(error, `${action} 操作失败`) };
+    return {
+      success: false,
+      error: getErrorMessage(error, `${BUG_ACTION_LABELS[action] || 'BUG操作'}失败`),
+    };
   }
 };
 
@@ -335,7 +355,10 @@ const postBatchAction = async (
       updated_ids: data?.updated_ids,
     };
   } catch (error: any) {
-    return { success: false, error: getErrorMessage(error, `${action} 操作失败`) };
+    return {
+      success: false,
+      error: getErrorMessage(error, `${BUG_ACTION_LABELS[action] || '批量操作'}失败`),
+    };
   }
 };
 
