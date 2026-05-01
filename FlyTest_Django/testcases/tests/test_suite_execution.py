@@ -502,6 +502,96 @@ class TestSuiteExecutionTests(TestCase):
         self.assertEqual(response.data["status"], TestBug.STATUS_UNASSIGNED)
         self.assertEqual(response.data["status_display"], "未指派")
 
+    def test_can_create_suite_bug_with_multiple_related_testcases(self):
+        admin_user = User.objects.create_superuser(
+            username="bugmultiadmin",
+            email="bugmultiadmin@example.com",
+            password="password",
+        )
+        second_testcase = TestCaseModel.objects.create(
+            project=self.project,
+            module=self.module,
+            name="Test Case 2",
+            creator=self.user,
+        )
+        ProjectMember.objects.create(project=self.project, user=admin_user, role="admin")
+        self.suite.testcases.add(self.testcase, second_testcase)
+        self.api_client.force_authenticate(user=admin_user)
+
+        response = self.api_client.post(
+            f"/api/projects/{self.project.id}/test-bugs/",
+            {
+                "suite": self.suite.id,
+                "testcase_ids": [self.testcase.id, second_testcase.id],
+                "title": "登录流程多用例关联",
+                "steps": "1. 打开页面\n2. 输入错误密码",
+                "expected_result": "提示密码错误",
+                "actual_result": "页面白屏",
+                "bug_type": "codeerror",
+                "severity": "2",
+                "priority": "1",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201, response.data)
+        bug = TestBug.objects.get()
+        self.assertEqual(bug.testcase_id, self.testcase.id)
+        self.assertEqual(
+            list(bug.related_testcases.order_by("id").values_list("id", flat=True)),
+            [self.testcase.id, second_testcase.id],
+        )
+        self.assertEqual(response.data["testcase_ids"], [self.testcase.id, second_testcase.id])
+        self.assertEqual(response.data["testcase_names"], ["Test Case 1", "Test Case 2"])
+
+    def test_can_update_bug_related_testcases(self):
+        admin_user = User.objects.create_superuser(
+            username="bugupdateadmin",
+            email="bugupdateadmin@example.com",
+            password="password",
+        )
+        second_testcase = TestCaseModel.objects.create(
+            project=self.project,
+            module=self.module,
+            name="Test Case 2",
+            creator=self.user,
+        )
+        third_testcase = TestCaseModel.objects.create(
+            project=self.project,
+            module=self.module,
+            name="Test Case 3",
+            creator=self.user,
+        )
+        ProjectMember.objects.create(project=self.project, user=admin_user, role="admin")
+        self.suite.testcases.add(self.testcase, second_testcase, third_testcase)
+        bug = TestBug.objects.create(
+            project=self.project,
+            suite=self.suite,
+            testcase=self.testcase,
+            title="待更新的BUG",
+            opened_by=admin_user,
+        )
+        bug.related_testcases.set([self.testcase, second_testcase])
+        self.api_client.force_authenticate(user=admin_user)
+
+        response = self.api_client.patch(
+            f"/api/projects/{self.project.id}/test-bugs/{bug.id}/",
+            {
+                "testcase_ids": [third_testcase.id, second_testcase.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        bug.refresh_from_db()
+        self.assertEqual(bug.testcase_id, third_testcase.id)
+        self.assertEqual(
+            list(bug.related_testcases.order_by("id").values_list("id", flat=True)),
+            [second_testcase.id, third_testcase.id],
+        )
+        self.assertEqual(response.data["testcase_ids"], [third_testcase.id, second_testcase.id])
+        self.assertEqual(response.data["testcase_names"], ["Test Case 3", "Test Case 2"])
+
     def test_can_resolve_suite_bug(self):
         admin_user = User.objects.create_superuser(
             username="bugresolveadmin",

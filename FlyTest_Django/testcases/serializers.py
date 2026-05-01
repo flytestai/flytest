@@ -613,6 +613,12 @@ class TestSuiteSerializer(serializers.ModelSerializer):
 
 
 class TestBugSerializer(serializers.ModelSerializer):
+    testcase_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        write_only=True,
+        allow_empty=True,
+    )
     assigned_to_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1),
         required=False,
@@ -629,6 +635,8 @@ class TestBugSerializer(serializers.ModelSerializer):
     activated_by_detail = UserDetailSerializer(source="activated_by", read_only=True)
     suite_name = serializers.CharField(source="suite.name", read_only=True)
     testcase_name = serializers.CharField(source="testcase.name", read_only=True)
+    testcase_names = serializers.SerializerMethodField()
+    testcase_ids_read = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
     bug_type_display = serializers.CharField(source="get_bug_type_display", read_only=True)
@@ -645,6 +653,9 @@ class TestBugSerializer(serializers.ModelSerializer):
             "suite_name",
             "testcase",
             "testcase_name",
+            "testcase_ids",
+            "testcase_ids_read",
+            "testcase_names",
             "title",
             "steps",
             "expected_result",
@@ -720,13 +731,80 @@ class TestBugSerializer(serializers.ModelSerializer):
         assigned_users = list(obj.assigned_users.all())
         return [user.username for user in assigned_users]
 
+    def get_testcase_names(self, obj):
+        testcase_names = []
+        if obj.testcase_id and obj.testcase:
+            testcase_names.append(obj.testcase.name)
+        related_names = list(
+            obj.related_testcases.exclude(id=obj.testcase_id).order_by("id").values_list("name", flat=True)
+        )
+        testcase_names.extend(related_names)
+        return testcase_names
+
+    def get_testcase_ids_read(self, obj):
+        testcase_ids = []
+        if obj.testcase_id:
+            testcase_ids.append(obj.testcase_id)
+        related_ids = list(
+            obj.related_testcases.exclude(id=obj.testcase_id).order_by("id").values_list("id", flat=True)
+        )
+        testcase_ids.extend(related_ids)
+        return testcase_ids
+
     def get_assigned_to_ids_read(self, obj):
         return list(obj.assigned_users.values_list("id", flat=True))
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        data["testcase_ids"] = data.pop("testcase_ids_read", [])
         data["assigned_to_ids"] = data.pop("assigned_to_ids_read", [])
         return data
+
+    def _get_validated_related_testcases(self, attrs, suite, project_obj):
+        testcase_ids = attrs.pop("testcase_ids", serializers.empty)
+        testcase = attrs.get("testcase", serializers.empty)
+
+        if testcase_ids is serializers.empty:
+            if testcase is serializers.empty:
+                return None
+            if testcase is None:
+                attrs["testcase"] = None
+                return []
+            return [testcase]
+
+        normalized_ids = []
+        for testcase_id in testcase_ids:
+            if testcase_id not in normalized_ids:
+                normalized_ids.append(testcase_id)
+
+        if not normalized_ids:
+            attrs["testcase"] = None
+            return []
+
+        if project_obj is None:
+            raise serializers.ValidationError({"testcase_ids": "当前项目不存在"})
+        if suite is None:
+            raise serializers.ValidationError({"suite": "请选择所属测试套件"})
+
+        testcases = list(
+            TestCase.objects.filter(
+                id__in=normalized_ids,
+                project=project_obj,
+            )
+        )
+        testcase_map = {testcase.id: testcase for testcase in testcases}
+        invalid_ids = [testcase_id for testcase_id in normalized_ids if testcase_id not in testcase_map]
+        if invalid_ids:
+            raise serializers.ValidationError({"testcase_ids": "关联测试用例必须属于当前项目"})
+
+        suite_testcase_ids = set(suite.testcases.values_list("id", flat=True))
+        missing_suite_ids = [testcase_id for testcase_id in normalized_ids if testcase_id not in suite_testcase_ids]
+        if missing_suite_ids:
+            raise serializers.ValidationError({"testcase_ids": "只能关联当前套件中的测试用例"})
+
+        related_testcases = [testcase_map[testcase_id] for testcase_id in normalized_ids]
+        attrs["testcase"] = related_testcases[0] if related_testcases else None
+        return related_testcases
 
     def _get_validated_assigned_users(self, attrs):
         assigned_to_ids = attrs.pop("assigned_to_ids", None)
@@ -770,11 +848,11 @@ class TestBugSerializer(serializers.ModelSerializer):
         project = self.context.get("project")
         suite = attrs.get("suite", getattr(instance, "suite", None))
         testcase = attrs.get("testcase", getattr(instance, "testcase", None))
+        project_obj = project or getattr(instance, "project", None)
 
         if suite is None:
             raise serializers.ValidationError({"suite": "请选择所属测试套件"})
 
-        project_obj = project or getattr(instance, "project", None)
         if project_obj and suite.project_id != project_obj.id:
             raise serializers.ValidationError({"suite": "测试套件必须属于当前项目"})
 
@@ -784,18 +862,33 @@ class TestBugSerializer(serializers.ModelSerializer):
             if testcase.id not in suite.testcases.values_list("id", flat=True):
                 raise serializers.ValidationError({"testcase": "只能关联当前套件中的测试用例"})
 
+        self._get_validated_related_testcases(dict(attrs), suite, project_obj)
         return attrs
 
     def create(self, validated_data):
+        related_testcases = self._get_validated_related_testcases(
+            validated_data,
+            validated_data.get("suite"),
+            self.context.get("project"),
+        )
         assigned_users = self._get_validated_assigned_users(validated_data)
         bug = super().create(validated_data)
+        if related_testcases is not None:
+            bug.related_testcases.set(related_testcases)
         if assigned_users is not None:
             bug.assigned_users.set(assigned_users)
         return bug
 
     def update(self, instance, validated_data):
+        related_testcases = self._get_validated_related_testcases(
+            validated_data,
+            validated_data.get("suite", instance.suite),
+            self.context.get("project") or getattr(instance, "project", None),
+        )
         assigned_users = self._get_validated_assigned_users(validated_data)
         bug = super().update(instance, validated_data)
+        if related_testcases is not None:
+            bug.related_testcases.set(related_testcases)
         if assigned_users is not None:
             bug.assigned_users.set(assigned_users)
         return bug
@@ -849,6 +942,7 @@ class TestBugListSerializer(serializers.ModelSerializer):
     suite_name = serializers.CharField(source="suite.name", read_only=True)
     testcase_name = serializers.CharField(source="testcase.name", read_only=True)
     testcase_names = serializers.SerializerMethodField()
+    testcase_ids = serializers.SerializerMethodField()
     assigned_to_name = serializers.CharField(source="assigned_to.username", read_only=True)
     assigned_to_names = serializers.SerializerMethodField()
     assigned_to_ids = serializers.SerializerMethodField()
@@ -868,6 +962,7 @@ class TestBugListSerializer(serializers.ModelSerializer):
             "testcase",
             "testcase_name",
             "testcase_names",
+            "testcase_ids",
             "title",
             "bug_type",
             "bug_type_display",
@@ -907,11 +1002,25 @@ class TestBugListSerializer(serializers.ModelSerializer):
     def get_assigned_to_ids(self, obj):
         return list(obj.assigned_users.values_list("id", flat=True))
 
+    def get_testcase_ids(self, obj):
+        testcase_ids = []
+        if obj.testcase_id:
+            testcase_ids.append(obj.testcase_id)
+        related_ids = list(
+            obj.related_testcases.exclude(id=obj.testcase_id).order_by("id").values_list("id", flat=True)
+        )
+        testcase_ids.extend(related_ids)
+        return testcase_ids
+
     def get_testcase_names(self, obj):
-        names = list(obj.related_testcases.values_list("name", flat=True))
-        if names:
-            return names
-        return [obj.testcase.name] if obj.testcase_id and obj.testcase else []
+        testcase_names = []
+        if obj.testcase_id and obj.testcase:
+            testcase_names.append(obj.testcase.name)
+        related_names = list(
+            obj.related_testcases.exclude(id=obj.testcase_id).order_by("id").values_list("name", flat=True)
+        )
+        testcase_names.extend(related_names)
+        return testcase_names
 
 
 from urllib.parse import urlparse
