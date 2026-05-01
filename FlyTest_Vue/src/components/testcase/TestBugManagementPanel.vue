@@ -2,947 +2,734 @@
   <div class="bug-panel">
     <template v-if="viewMode === 'list'">
       <div class="bug-panel-header">
-      <div class="bug-panel-heading">
-        <div class="bug-panel-title">BUG ç®¡ç</div>
-        <div class="bug-panel-subtitle">æå¤çæµç¨ç®¡çå½åå¥ä»¶ä¸­çç¼ºé·ï¼ä¼å
-å¤çæ¿æ´»ç¶æä¸é«ä¼å
-çº§é®é¢ã</div>
+        <div class="bug-panel-heading">
+          <div class="bug-panel-title">BUG 管理</div>
+          <div class="bug-panel-subtitle">围绕当前测试套件查看、筛选、处理和追踪缺陷。</div>
+        </div>
+        <div class="bug-panel-actions">
+          <a-button @click="fetchBugs">刷新</a-button>
+          <a-button type="primary" @click="openCreateDetail">提 BUG</a-button>
+        </div>
       </div>
 
-      <div class="bug-panel-actions">
-        <a-button @click="fetchBugs">å·æ°</a-button>
-        <a-button type="primary" @click="openCreateDetail">æ BUG</a-button>
-      </div>
-    </div>
-
-    <div class="bug-status-grid">
-      <button
-        v-for="item in statusCards"
-        :key="item.key"
-        type="button"
-        class="status-card"
-        :class="{ 'status-card--active': activeStatusView === item.key }"
-        @click="activeStatusView = item.key"
-      >
-        <span class="status-card-label">{{ item.label }}</span>
-        <span class="status-card-value">{{ item.count }}</span>
-      </button>
-    </div>
-
-    <div class="bug-toolbar">
-      <div class="quick-view-list">
+      <div class="bug-status-grid">
         <button
-          v-for="item in quickViews"
+          v-for="item in statusCards"
           :key="item.key"
           type="button"
-          class="quick-view-item"
-          :class="{ 'quick-view-item--active': activeQuickView === item.key }"
-          @click="activeQuickView = item.key"
+          class="status-card"
+          :class="{ 'status-card--active': activeStatusView === item.key }"
+          @click="activeStatusView = item.key"
         >
-          {{ item.label }}
+          <span class="status-card-label">{{ item.label }}</span>
+          <span class="status-card-value">{{ item.count }}</span>
         </button>
       </div>
 
-      <div class="bug-filter-grid">
-        <a-input-search
-          v-model="filters.search"
-          placeholder="æç´¢æ é¢ãéç°æ­¥éª¤ãå®é
-ç»æ"
-          allow-clear
-          class="bug-filter-search"
-          @search="fetchBugs"
-          @clear="fetchBugs"
-        />
-
-        <a-select
-          v-model="filters.bug_type"
-          placeholder="BUGç±»å"
-          allow-clear
-          @change="handleFilterChange"
-          @clear="handleFilterChange"
-        >
-          <a-option v-for="item in TEST_BUG_TYPE_OPTIONS" :key="item.value" :value="item.value">
+      <div class="bug-toolbar">
+        <div class="quick-view-list">
+          <button
+            v-for="item in quickViews"
+            :key="item.key"
+            type="button"
+            class="quick-view-item"
+            :class="{ 'quick-view-item--active': activeQuickView === item.key }"
+            @click="activeQuickView = item.key"
+          >
             {{ item.label }}
-          </a-option>
-        </a-select>
+          </button>
+        </div>
 
-        <a-select
-          v-model="filters.severity"
-          placeholder="ä¸¥éç¨åº¦"
-          allow-clear
-          @change="handleFilterChange"
-          @clear="handleFilterChange"
-        >
-          <a-option v-for="item in levelOptions" :key="item" :value="item">{{ item }}</a-option>
-        </a-select>
+        <div class="bug-filter-grid">
+          <a-input-search
+            v-model="filters.search"
+            class="bug-filter-search"
+            placeholder="搜索 BUG 标题、重现步骤、期望结果、实际结果"
+            allow-clear
+            @search="fetchBugs"
+            @clear="fetchBugs"
+          />
 
-        <a-select
-          v-model="filters.priority"
-          placeholder="ä¼å
-çº§"
-          allow-clear
-          @change="handleFilterChange"
-          @clear="handleFilterChange"
-        >
-          <a-option v-for="item in levelOptions" :key="item" :value="item">{{ item }}</a-option>
-        </a-select>
-
-        <a-select
-          v-model="filters.assigned_to"
-          placeholder="ææ´¾ç»"
-          allow-clear
-          @change="handleFilterChange"
-          @clear="handleFilterChange"
-        >
-          <a-option v-for="member in projectMembers" :key="member.user" :value="member.user">
-            {{ member.user_detail.username }}
-          </a-option>
-        </a-select>
-
-        <a-button type="outline" @click="resetFilters">éç½®ç­é</a-button>
-      </div>
-      <div class="bug-toolbar-footer">
-        <div class="bug-toolbar-sort">
-          <span class="bug-toolbar-sort-label">æåº</span>
-          <a-select v-model="sortBy" size="small" class="bug-sort-select">
-            <a-option v-for="item in bugSortOptions" :key="item.value" :value="item.value">
+          <a-select v-model="filters.bug_type" placeholder="BUG类型" allow-clear @change="handleFilterChange" @clear="handleFilterChange">
+            <a-option v-for="item in TEST_BUG_TYPE_OPTIONS" :key="item.value" :value="item.value">
               {{ item.label }}
             </a-option>
           </a-select>
+
+          <a-select v-model="filters.severity" placeholder="严重程度" allow-clear @change="handleFilterChange" @clear="handleFilterChange">
+            <a-option v-for="item in levelOptions" :key="item" :value="item">S{{ item }}</a-option>
+          </a-select>
+
+          <a-select v-model="filters.priority" placeholder="优先级" allow-clear @change="handleFilterChange" @clear="handleFilterChange">
+            <a-option v-for="item in levelOptions" :key="item" :value="item">P{{ item }}</a-option>
+          </a-select>
+
+          <a-select v-model="filters.assigned_to" placeholder="指派给" allow-clear @change="handleFilterChange" @clear="handleFilterChange">
+            <a-option v-for="member in projectMembers" :key="member.user" :value="member.user">
+              {{ member.user_detail.username }}
+            </a-option>
+          </a-select>
+
+          <a-button type="outline" @click="resetFilters">重置筛选</a-button>
         </div>
-        <div class="bug-toolbar-footer-actions">
-          <a-button size="small" type="outline" @click="openSaveFilterViewModal">ä¿å­å½åè§å¾</a-button>
-          <a-button size="small" type="outline" @click="exportSavedFilterViews">å¯¼åºè§å¾</a-button>
-          <a-button size="small" type="outline" @click="triggerImportFilterViews">å¯¼å
-¥è§å¾</a-button>
-          <input
-            ref="filterViewImportRef"
-            type="file"
-            accept="application/json"
-            class="bug-hidden-file-input"
-            @change="handleImportFilterViews"
-          />
-          <a-dropdown trigger="click" position="br">
-            <a-button size="small" type="outline">
-              <template #icon><icon-settings /></template>
-              åè®¾ç½®
-            </a-button>
-            <template #content>
-              <div class="bug-column-dropdown">
-                <div class="bug-column-dropdown-header">
-                  <span>æ¾ç¤ºå­æ®µ</span>
-                  <a-button type="text" size="mini" @click="resetVisibleColumns">æ¢å¤é»è®¤</a-button>
-                </div>
-                <a-checkbox-group v-model="visibleColumns" direction="vertical" class="bug-column-checkbox-group">
-                  <a-checkbox
-                    v-for="column in tableColumnOptions"
-                    :key="column.key"
-                    :value="column.key"
-                  >
-                    {{ column.label }}
-                  </a-checkbox>
-                </a-checkbox-group>
-              </div>
-            </template>
-          </a-dropdown>
-        </div>
-      </div>
-      <div v-if="savedFilterViews.length" class="bug-saved-views">
-        <span class="bug-saved-views-label">å¸¸ç¨è§å¾</span>
-        <button
-          v-for="item in savedFilterViews"
-          :key="item.id"
-          type="button"
-          class="bug-saved-view-chip"
-          :class="{
-            'bug-saved-view-chip--pinned': item.pinned,
-            'bug-saved-view-chip--active': currentAppliedFilterViewId === item.id,
-          }"
-          :title="getSavedFilterViewMetaLabel(item)"
-          @click="applySavedFilterView(item.id)"
-        >
-          <icon-up v-if="item.pinned" class="bug-saved-view-chip-pin" />
-          <span class="bug-saved-view-chip-text">{{ item.name }}</span>
-          <icon-edit
-            class="bug-saved-view-chip-action"
-            @click.stop="openEditFilterViewModal(item)"
-          />
-          <icon-up
-            class="bug-saved-view-chip-action"
-            @click.stop="togglePinFilterView(item.id)"
-          />
-          <icon-close
-            class="bug-saved-view-chip-action"
-            @click.stop="removeSavedFilterView(item.id)"
-          />
-        </button>
-      </div>
-    </div>
 
-    <div class="bug-summary-bar">
-      <span class="bug-summary-pill bug-summary-pill--primary">å½åè§å¾å
-± {{ filteredBugList.length }} æ¡ BUG</span>
-      <button
-        v-if="activeStatusView !== 'all'"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable"
-        @click="clearSummaryFilter('status')"
-      >
-        <span>ç¶æï¼{{ getStatusViewLabel(activeStatusView) }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-      <button
-        v-if="activeQuickView !== 'all'"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable"
-        @click="clearSummaryFilter('quickView')"
-      >
-        <span>è§å¾ï¼{{ getQuickViewLabel(activeQuickView) }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-      <span class="bug-summary-pill">æåºï¼{{ getSortLabel(sortBy) }}</span>
-      <button
-        v-if="filters.bug_type"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable"
-        @click="clearSummaryFilter('bug_type')"
-      >
-        <span>BUGç±»åï¼{{ getBugTypeLabel(filters.bug_type) }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-      <button
-        v-if="filters.severity"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable"
-        @click="clearSummaryFilter('severity')"
-      >
-        <span>ä¸¥éç¨åº¦ï¼S{{ filters.severity }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-      <button
-        v-if="filters.priority"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable"
-        @click="clearSummaryFilter('priority')"
-      >
-        <span>ä¼å
-çº§ï¼P{{ filters.priority }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-      <button
-        v-if="filters.assigned_to"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable"
-        @click="clearSummaryFilter('assigned_to')"
-      >
-        <span>ææ´¾ç»ï¼{{ getMemberName(filters.assigned_to) }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-      <button
-        v-if="filters.search"
-        type="button"
-        class="bug-summary-pill bug-summary-pill--clearable bug-summary-pill--search"
-        :title="filters.search"
-        @click="clearSummaryFilter('search')"
-      >
-        <span>æç´¢ï¼{{ filters.search }}</span>
-        <icon-close class="bug-summary-pill-close" />
-      </button>
-    </div>
-
-    <div v-if="isDevelopment" class="bug-debug-panel">
-      è°è¯ï¼project={{ props.currentProjectId || '-' }} |
-      suite={{ props.selectedSuiteId || '-' }} |
-      list={{ bugList.length }} |
-      filtered={{ filteredBugList.length }} |
-      page={{ pagedBugList.length }} |
-      current={{ pagination.current }} |
-      pageSize={{ pagination.pageSize }}
-    </div>
-        <a-button v-if="lastSelectionSnapshot.length" type="text" size="mini" @click="restoreLastSelection">????</a-button>
-    <div v-if="updateSummary" class="bug-update-summary">
-      <div class="bug-update-summary-content">
-        <span class="bug-update-summary-title">{{ updateSummary.text }}</span>
-        <span class="bug-update-summary-time">{{ updateSummary.timeLabel }}</span>
-      </div>
-      <div class="bug-update-summary-actions">
-        <a-button v-if="lastSelectionSnapshot.length" type="text" size="mini" @click="restoreLastSelection">恢复选择</a-button>
-        <a-button type="text" size="mini" @click="clearUpdateSummary">
-        <span class="bug-batch-toolbar-count">?? {{ selectedBugCount }} ? BUG</span>
-        </a-button>
-      </div>
-    </div>
-
-    <div v-if="filteredBugList.length > 0" class="bug-batch-toolbar">
-          {{ isCurrentPageSelected ? '?????' : '?????' }}
-        <span class="bug-batch-toolbar-count">已选 {{ selectedBugCount }} 条 BUG</span>
-        <a-button
-          type="text"
-          size="small"
-          @click="toggleSelectCurrentPage"
-        >
-          {{ isAllFilteredSelected ? '??????' : '????????' }}
-        </a-button>
-        <a-button v-if="selectedBugCount > 0" type="text" size="small" @click="selectedBugIds = []">????</a-button>
-          type="text"
-          size="small"
-          @click="toggleSelectFiltered"
-        >
-          {{ isAllFilteredSelected ? '取消当前筛选' : '全选当前筛选结果' }}
-        </a-button>
-        <a-button v-if="selectedBugCount > 0" type="text" size="small" @click="selectedBugIds = []">清空选择</a-button>
-      </div>
-            ????
-        <a-dropdown
-          trigger="click"
-          :popup-visible="selectedBugCount === 0 ? false : undefined"
-            <a-doption value="assign">????</a-doption>
-            <a-doption value="status">BUG??</a-doption>
-            <a-doption value="priority">???</a-doption>
-            <a-doption value="severity">????</a-doption>
-            <a-doption value="bug_type">BUG??</a-doption>
-            <a-doption value="resolution">????</a-doption>
-            <a-doption value="delete" class="bug-batch-toolbar-danger-option">??</a-doption>
-            <a-doption value="assign">批量指派</a-doption>
-            <a-doption value="status">BUG状态</a-doption>
-            <a-doption value="priority">优先级</a-doption>
-            <a-doption value="severity">严重程度</a-doption>
-            <a-doption value="bug_type">BUG类型</a-doption>
-            <a-doption value="resolution">解决方案</a-doption>
-            <a-doption value="delete" class="bug-batch-toolbar-danger-option">删除</a-doption>
-          </template>
-        </a-dropdown>
-      </div>
-    </div>
-
-    <a-table
-      v-if="filteredBugList.length > 0"
-      :data="pagedBugList"
-      :loading="loading"
-      :pagination="false"
-      row-key="id"
-      class="bug-table"
-      :scroll="{ x: 1560, y: 420 }"
-      <a-table-column v-if="isColumnVisible('title')" title="BUG??" :width="280">
-      :row-class="getBugRowClass"
-      :row-selection="rowSelection"
-      column-resizable
-    >
-      <a-table-column v-if="isColumnVisible('id')" title="ID" data-index="id" :width="72" align="center" />
-      <a-table-column v-if="isColumnVisible('status')" title="??" :width="110" align="center">
-      <a-table-column v-if="isColumnVisible('title')" title="BUG标题" :width="280">
-        <template #cell="{ record }">
-          <a-link @click="openDetail(record)">{{ record.title }}</a-link>
-        </template>
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('status')" title="状态" :width="110" align="center">
-        <template #cell="{ record }">
-          <a-dropdown trigger="click" @select="(value) => handleStatusQuickSelect(record, String(value))">
-            <a-tag :color="getStatusColor(record.status)" class="bug-selectable-tag">
-              {{ record.status_display || record.status }}
-              <icon-down class="bug-selectable-tag-icon" />
-            </a-tag>
-            <template #content>
-              <a-doption v-for="item in getStatusActionOptions(record)" :key="item.value" :value="item.value">
-      <a-table-column v-if="isColumnVisible('related_testcases')" title="????" :width="220">
-              </a-doption>
-            </template>
-          </a-dropdown>
-        </template>
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('related_testcases')" title="关联用例" :width="220">
-        <template #cell="{ record }">
-          <div class="bug-related-cell" :title="getRelatedTestcaseSummary(record)">
-            <template v-if="getRelatedTestcaseNames(record).length">
-              <a-tag v-for="name in getRelatedTestcaseNames(record).slice(0, 2)" :key="name" size="small">
-                {{ name }}
-              </a-tag>
-              <a-tag v-if="getRelatedTestcaseNames(record).length > 2" size="small" color="arcoblue">
-                +{{ getRelatedTestcaseNames(record).length - 2 }}
-      <a-table-column v-if="isColumnVisible('bug_type')" title="BUG??" :width="120" align="center">
-            </template>
-            <span v-else>-</span>
+        <div class="bug-toolbar-footer">
+          <div class="bug-toolbar-sort">
+            <span class="bug-toolbar-sort-label">排序</span>
+            <a-select v-model="sortBy" size="small" class="bug-sort-select">
+              <a-option v-for="item in bugSortOptions" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </a-option>
+            </a-select>
           </div>
-        </template>
-      </a-table-column>
 
-      <a-table-column v-if="isColumnVisible('bug_type')" title="BUG类型" :width="120" align="center">
-        <template #cell="{ record }">
-          <a-dropdown trigger="click" @select="(value) => handleBugTypeChange(record, String(value) as TestBugType)">
-            <a-tag :color="getBugTypeColor(record.bug_type)" class="bug-selectable-tag">
-              {{ getBugTypeLabel(record.bug_type) }}
-              <icon-down class="bug-selectable-tag-icon" />
-            </a-tag>
-            <template #content>
-              <a-doption v-for="item in TEST_BUG_TYPE_OPTIONS" :key="item.value" :value="item.value">
-      <a-table-column v-if="isColumnVisible('severity')" title="????" :width="96" align="center">
-              </a-doption>
-            </template>
-          </a-dropdown>
-        </template>
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('severity')" title="严重程度" :width="96" align="center">
-        <template #cell="{ record }">
-          <a-dropdown trigger="click" @select="(value) => handleSeverityChange(record, String(value))">
-            <a-tag :color="getSeverityColor(record.severity)" class="bug-selectable-tag">
-              S{{ record.severity }}
-              <icon-down class="bug-selectable-tag-icon" />
-            </a-tag>
-            <template #content>
-              <a-doption v-for="item in levelOptions" :key="item" :value="item">
-      <a-table-column v-if="isColumnVisible('priority')" title="???" :width="96" align="center">
-              </a-doption>
-            </template>
-          </a-dropdown>
-        </template>
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('priority')" title="优先级" :width="96" align="center">
-        <template #cell="{ record }">
-          <a-dropdown trigger="click" @select="(value) => handlePriorityChange(record, String(value))">
-            <a-tag :color="getPriorityColor(record.priority)" class="bug-selectable-tag">
-              P{{ record.priority }}
-              <icon-down class="bug-selectable-tag-icon" />
-            </a-tag>
-            <template #content>
-              <a-doption v-for="item in levelOptions" :key="item" :value="item">
-      <a-table-column v-if="isColumnVisible('resolution')" title="????" :width="120" align="center">
-              </a-doption>
-            </template>
-          </a-dropdown>
-        </template>
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('resolution')" title="解决方案" :width="120" align="center">
-        <template #cell="{ record }">
-      <a-table-column v-if="isColumnVisible('assigned_to')" title="???" :width="120" align="center">
-            {{ record.resolution_display || getResolutionLabel(record.resolution) }}
-          </a-tag>
-          <template v-else>-</template>
-      <a-table-column v-if="isColumnVisible('opened_by')" title="???" :width="120" align="center">
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('assigned_to')" title="指派给" :width="120" align="center">
-      <a-table-column v-if="isColumnVisible('opened_at')" title="????" :width="166" align="center">
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('opened_by')" title="创建人" :width="120" align="center">
-      <a-table-column v-if="isColumnVisible('resolved_at')" title="????" :width="166" align="center">
-      </a-table-column>
-
-      <a-table-column v-if="isColumnVisible('opened_at')" title="创建时间" :width="166" align="center">
-      <a-table-column v-if="isColumnVisible('actions')" title="??" :width="260" fixed="right" align="center">
-      </a-table-column>
-
-            <a-button size="mini" @click="openDetail(record)">??</a-button>
-            <a-button size="mini" type="primary" @click="openDetail(record, true)">??</a-button>
-      </a-table-column>
-              <a-button size="mini" type="outline">??</a-button>
-      <a-table-column v-if="isColumnVisible('actions')" title="操作" :width="260" fixed="right" align="center">
-                <a-doption value="assign">??</a-doption>
-                <a-doption v-if="record.status === 'assigned'" value="confirm">??</a-doption>
-                <a-doption v-if="record.status === 'confirmed'" value="fix">??</a-doption>
-                <a-doption v-if="record.status === 'fixed'" value="resolve">????</a-doption>
-                <a-doption v-if="['pending_retest', 'closed', 'expired'].includes(record.status)" value="activate">??</a-doption>
-                <a-doption value="close" :disabled="record.status === 'closed'">??</a-doption>
-                <a-doption value="delete">??</a-doption>
-                <a-doption value="assign">指派</a-doption>
-                <a-doption v-if="record.status === 'assigned'" value="confirm">确认</a-doption>
-                <a-doption v-if="record.status === 'confirmed'" value="fix">修复</a-doption>
-                <a-doption v-if="record.status === 'fixed'" value="resolve">提交复测</a-doption>
-                <a-doption v-if="['pending_retest', 'closed', 'expired'].includes(record.status)" value="activate">激活</a-doption>
-                <a-doption value="close" :disabled="record.status === 'closed'">关闭</a-doption>
-                <a-doption value="delete">删除</a-doption>
+          <div class="bug-toolbar-footer-actions">
+            <a-button size="small" type="outline" @click="openSaveFilterViewModal">保存常用视图</a-button>
+            <a-button size="small" type="outline" @click="exportSavedFilterViews">导出视图</a-button>
+            <a-button size="small" type="outline" @click="triggerImportFilterViews">导入视图</a-button>
+            <input
+              ref="filterViewImportRef"
+              type="file"
+              accept="application/json"
+              class="bug-hidden-file-input"
+              @change="handleImportFilterViews"
+            />
+            <a-dropdown trigger="click" position="br">
+              <a-button size="small" type="outline">
+                <template #icon><icon-settings /></template>
+                显示列
+              </a-button>
+              <template #content>
+                <div class="bug-column-dropdown">
+                  <div class="bug-column-dropdown-header">
+                    <span>选择列表字段</span>
+                    <a-button type="text" size="mini" @click="resetVisibleColumns">恢复默认</a-button>
+                  </div>
+                  <a-checkbox-group v-model="visibleColumns" direction="vertical" class="bug-column-checkbox-group">
+                    <a-checkbox v-for="column in tableColumnOptions" :key="column.key" :value="column.key">
+                      {{ column.label }}
+                    </a-checkbox>
+                  </a-checkbox-group>
+                </div>
               </template>
             </a-dropdown>
-          </a-space>
-          <div class="bug-empty-title">{{ hasActiveFilters ? '??????????? BUG' : '???????? BUG' }}</div>
-      </a-table-column>
-            {{ hasActiveFilters ? '???????????????' : '?????? BUG????????????????' }}
+          </div>
+        </div>
 
-    <a-empty v-else-if="!loading" class="bug-empty-state">
-            <a-button size="small" @click="resetFilters">??????</a-button>
+        <div v-if="savedFilterViews.length" class="bug-saved-view-list">
+          <button
+            v-for="item in savedFilterViews"
+            :key="item.id"
+            type="button"
+            class="bug-saved-view-chip"
+            :class="{ 'bug-saved-view-chip--active': currentAppliedFilterViewId === item.id }"
+            :title="getSavedFilterViewMetaLabel(item)"
+            @click="applySavedFilterView(item.id)"
+          >
+            <icon-up v-if="item.pinned" class="bug-saved-view-chip-pin" />
+            <span class="bug-saved-view-chip-name">{{ item.name }}</span>
+            <icon-edit class="bug-saved-view-chip-action" @click.stop="openEditFilterViewModal(item)" />
+            <icon-up class="bug-saved-view-chip-action" @click.stop="togglePinFilterView(item.id)" />
+            <icon-close class="bug-saved-view-chip-action" @click.stop="removeSavedFilterView(item.id)" />
+          </button>
+        </div>
+      </div>
+
+      <div class="bug-summary-pills">
+        <button
+          v-if="activeStatusView !== 'all'"
+          type="button"
+          class="bug-summary-pill bug-summary-pill--clearable"
+          @click="clearSummaryFilter('status')"
+        >
+          <span>状态：{{ getStatusViewLabel(activeStatusView) }}</span>
+          <icon-close class="bug-summary-pill-close" />
+        </button>
+        <button
+          v-if="activeQuickView !== 'all'"
+          type="button"
+          class="bug-summary-pill bug-summary-pill--clearable"
+          @click="clearSummaryFilter('quickView')"
+        >
+          <span>视图：{{ getQuickViewLabel(activeQuickView) }}</span>
+          <icon-close class="bug-summary-pill-close" />
+        </button>
+        <button
+          v-if="filters.search"
+          type="button"
+          class="bug-summary-pill bug-summary-pill--clearable bug-summary-pill--search"
+          :title="filters.search"
+          @click="clearSummaryFilter('search')"
+        >
+          <span>搜索：{{ filters.search }}</span>
+          <icon-close class="bug-summary-pill-close" />
+        </button>
+      </div>
+
+      <div v-if="updateSummary" class="bug-update-summary">
+        <div class="bug-update-summary-content">
+          <span class="bug-update-summary-title">{{ updateSummary.text }}</span>
+          <span class="bug-update-summary-time">{{ updateSummary.timeLabel }}</span>
+        </div>
+        <div class="bug-update-summary-actions">
+          <a-button v-if="lastSelectionSnapshot.length" type="text" size="mini" @click="restoreLastSelection">恢复选择</a-button>
+          <a-button type="text" size="mini" @click="clearUpdateSummary">关闭</a-button>
+        </div>
+      </div>
+
+      <div v-if="filteredBugList.length > 0" class="bug-batch-toolbar">
+        <div class="bug-batch-toolbar-left">
+          <span class="bug-batch-toolbar-count">已选 {{ selectedBugCount }} 条 BUG</span>
+          <a-button type="text" size="small" @click="toggleSelectCurrentPage">
+            {{ isCurrentPageSelected ? '取消本页选择' : '选择本页' }}
+          </a-button>
+          <a-button type="text" size="small" @click="toggleSelectFiltered">
+            {{ isAllFilteredSelected ? '取消当前筛选' : '全选当前筛选结果' }}
+          </a-button>
+          <a-button v-if="selectedBugCount > 0" type="text" size="small" @click="selectedBugIds = []">清空选择</a-button>
+        </div>
+        <div class="bug-batch-toolbar-right">
+          <a-dropdown trigger="click" :popup-visible="selectedBugCount === 0 ? false : undefined">
+            <a-button type="primary" size="small" :disabled="selectedBugCount === 0">批量操作</a-button>
+            <template #content>
+              <a-doption @click="openBatchModal('assign')">批量指派</a-doption>
+              <a-doption @click="openBatchModal('status')">批量修改状态</a-doption>
+              <a-doption @click="openBatchModal('priority')">批量修改优先级</a-doption>
+              <a-doption @click="openBatchModal('severity')">批量修改严重程度</a-doption>
+              <a-doption @click="openBatchModal('bug_type')">批量修改BUG类型</a-doption>
+              <a-doption @click="openBatchModal('resolution')">批量修改解决方案</a-doption>
+              <a-doption class="bug-batch-toolbar-danger-option" @click="openBatchModal('delete')">批量删除</a-doption>
+            </template>
+          </a-dropdown>
+        </div>
+      </div>
+
+      <a-table
+        v-if="filteredBugList.length > 0"
+        :data="pagedBugList"
+        :loading="loading"
+        :pagination="false"
+        row-key="id"
+        class="bug-table"
+        :scroll="{ x: 1560, y: 420 }"
+        :row-class="getBugRowClass"
+        :row-selection="rowSelection"
+        column-resizable
+      >
+        <a-table-column v-if="isColumnVisible('id')" title="ID" data-index="id" :width="72" align="center" />
+
+        <a-table-column v-if="isColumnVisible('title')" title="BUG标题" :width="280">
+          <template #cell="{ record }">
+            <a-link @click="openDetail(record)">{{ record.title }}</a-link>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('status')" title="状态" :width="120" align="center">
+          <template #cell="{ record }">
+            <a-dropdown trigger="click" @select="(value) => handleStatusQuickSelect(record, String(value))">
+              <a-tag :color="getStatusColor(record.status)" class="bug-selectable-tag">
+                {{ record.status_display || record.status }}
+                <icon-down class="bug-selectable-tag-icon" />
+              </a-tag>
+              <template #content>
+                <a-doption v-for="item in getStatusActionOptions(record)" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-doption>
+              </template>
+            </a-dropdown>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('related_testcases')" title="关联用例" :width="220">
+          <template #cell="{ record }">
+            <div class="bug-related-cell" :title="getRelatedTestcaseSummary(record)">
+              <template v-if="getRelatedTestcaseNames(record).length">
+                <a-tag v-for="name in getRelatedTestcaseNames(record).slice(0, 2)" :key="name" size="small">
+                  {{ name }}
+                </a-tag>
+                <a-tag v-if="getRelatedTestcaseNames(record).length > 2" size="small" color="arcoblue">
+                  +{{ getRelatedTestcaseNames(record).length - 2 }}
+                </a-tag>
+              </template>
+              <span v-else>-</span>
+            </div>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('bug_type')" title="BUG类型" :width="120" align="center">
+          <template #cell="{ record }">
+            <a-dropdown trigger="click" @select="(value) => handleBugTypeChange(record, String(value) as TestBugType)">
+              <a-tag :color="getBugTypeColor(record.bug_type)" class="bug-selectable-tag">
+                {{ getBugTypeLabel(record.bug_type) }}
+                <icon-down class="bug-selectable-tag-icon" />
+              </a-tag>
+              <template #content>
+                <a-doption v-for="item in TEST_BUG_TYPE_OPTIONS" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-doption>
+              </template>
+            </a-dropdown>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('severity')" title="严重程度" :width="96" align="center">
+          <template #cell="{ record }">
+            <a-dropdown trigger="click" @select="(value) => handleSeverityChange(record, String(value))">
+              <a-tag :color="getSeverityColor(record.severity)" class="bug-selectable-tag">
+                S{{ record.severity }}
+                <icon-down class="bug-selectable-tag-icon" />
+              </a-tag>
+              <template #content>
+                <a-doption v-for="item in levelOptions" :key="item" :value="item">S{{ item }}</a-doption>
+              </template>
+            </a-dropdown>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('priority')" title="优先级" :width="96" align="center">
+          <template #cell="{ record }">
+            <a-dropdown trigger="click" @select="(value) => handlePriorityChange(record, String(value))">
+              <a-tag :color="getPriorityColor(record.priority)" class="bug-selectable-tag">
+                P{{ record.priority }}
+                <icon-down class="bug-selectable-tag-icon" />
+              </a-tag>
+              <template #content>
+                <a-doption v-for="item in levelOptions" :key="item" :value="item">P{{ item }}</a-doption>
+              </template>
+            </a-dropdown>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('resolution')" title="解决方案" :width="120" align="center">
+          <template #cell="{ record }">
+            <a-tag v-if="record.resolution" :color="getResolutionColor(record.resolution)">
+              {{ record.resolution_display || getResolutionLabel(record.resolution) }}
+            </a-tag>
+            <span v-else>-</span>
+          </template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('assigned_to')" title="指派给" :width="160" align="center">
+          <template #cell="{ record }">{{ getAssignedUserName(record) }}</template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('opened_by')" title="创建人" :width="120" align="center">
+          <template #cell="{ record }">{{ record.opened_by_name || record.opened_by || '-' }}</template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('opened_at')" title="创建时间" :width="166" align="center">
+          <template #cell="{ record }">{{ record.opened_at ? formatDate(record.opened_at) : '-' }}</template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('resolved_at')" title="解决时间" :width="166" align="center">
+          <template #cell="{ record }">{{ record.resolved_at ? formatDate(record.resolved_at) : '-' }}</template>
+        </a-table-column>
+
+        <a-table-column v-if="isColumnVisible('actions')" title="操作" :width="260" fixed="right" align="center">
+          <template #cell="{ record }">
+            <a-space>
+              <a-button size="mini" @click="openDetail(record)">查看</a-button>
+              <a-button size="mini" type="primary" @click="openDetail(record, true)">编辑</a-button>
+              <a-dropdown trigger="click">
+                <a-button size="mini" type="outline">更多</a-button>
+                <template #content>
+                  <a-doption @click="handleActionSelect(record, 'assign')">指派</a-doption>
+                  <a-doption v-if="record.status === 'assigned'" @click="handleActionSelect(record, 'confirm')">确认</a-doption>
+                  <a-doption v-if="record.status === 'confirmed'" @click="handleActionSelect(record, 'fix')">修复</a-doption>
+                  <a-doption v-if="record.status === 'fixed'" @click="handleActionSelect(record, 'resolve')">提交复测</a-doption>
+                  <a-doption v-if="['pending_retest', 'closed', 'expired'].includes(record.status)" @click="handleActionSelect(record, 'activate')">激活</a-doption>
+                  <a-doption :disabled="record.status === 'closed'" @click="handleActionSelect(record, 'close')">关闭</a-doption>
+                  <a-doption @click="handleActionSelect(record, 'delete')">删除</a-doption>
+                </template>
+              </a-dropdown>
+            </a-space>
+          </template>
+        </a-table-column>
+      </a-table>
+
+      <a-empty v-else-if="!loading" class="bug-empty-state">
         <div class="bug-empty-content">
           <div class="bug-empty-title">{{ hasActiveFilters ? '当前筛选条件下没有找到 BUG' : '当前套件下还没有 BUG' }}</div>
           <div class="bug-empty-description">
-            {{ hasActiveFilters ? '可以清空部分筛选条件后再查看。' : '可以先提一个 BUG，或切换到其他套件查看已有缺陷。' }}
+            {{ hasActiveFilters ? '可以清空部分筛选条件后再查看。' : '可以先提交一个 BUG，或切换到其他测试套件查看。' }}
           </div>
           <div v-if="hasActiveFilters" class="bug-empty-actions">
             <a-button size="small" @click="resetFilters">清空全部筛选</a-button>
           </div>
         </div>
-      </template>
-    </a-empty>
+      </a-empty>
 
-    <div class="bug-pagination">
-      <a-pagination
-        v-model:current="pagination.current"
-        v-model:page-size="pagination.pageSize"
-        :total="filteredBugList.length"
-        :page-size-options="[10, 20, 50, 100]"
-        show-total
-        show-page-size
-      />
-            <a-button type="text" size="small" @click="backToList">????</a-button>
-            <h2>BUG??</h2>
+      <div class="bug-pagination">
+        <a-pagination
+          v-model:current="pagination.current"
+          v-model:page-size="pagination.pageSize"
+          :total="filteredBugList.length"
+          :page-size-options="[10, 20, 50, 100]"
+          show-total
+          show-page-size
+        />
+      </div>
+    </template>
 
     <template v-else>
       <div class="bug-detail-page">
-              <a-button v-if="detailBug && !detailDraftType" @click="openDetail(detailBug)">??</a-button>
-          <div class="bug-detail-page-title">
-                <a-button @click="cancelDetailEdit">??</a-button>
-                <a-button type="primary" :loading="detailSaving" @click="saveDetailEdit">??</a-button>
+        <div class="bug-detail-page-header">
+          <div class="bug-detail-page-title-wrap">
+            <a-button type="text" size="small" @click="backToList">返回列表</a-button>
+            <h2>{{ detailDraftType === 'create' ? '新建 BUG' : detailDraftType === 'copy' ? '复制 BUG' : 'BUG 详情' }}</h2>
           </div>
-          <div class="bug-detail-page-actions" v-if="detailBug || detailDraftType">
-                <a-button type="primary" @click="startDetailEdit(detailBug)">??</a-button>
-                <a-button @click="openCopyDetail(detailBug)">??</a-button>
-              <template v-if="detailEditMode">
-                <a-button @click="cancelDetailEdit">取消</a-button>
-                <a-button type="outline">??</a-button>
-              </template>
-                  <a-doption value="assign">??</a-doption>
-                  <a-doption v-if="detailBug.status === 'assigned'" value="confirm">??</a-doption>
-                  <a-doption v-if="detailBug.status === 'confirmed'" value="fix">??</a-doption>
-                  <a-doption v-if="detailBug.status === 'fixed'" value="resolve">????</a-doption>
-                  <a-doption v-if="['pending_retest', 'closed', 'expired'].includes(detailBug.status)" value="activate">??</a-doption>
-                  <a-doption value="close" :disabled="detailBug.status === 'closed'">??</a-doption>
-                  <a-doption value="delete">??</a-doption>
-                  <a-doption value="assign">指派</a-doption>
-                  <a-doption v-if="detailBug.status === 'assigned'" value="confirm">确认</a-doption>
-                  <a-doption v-if="detailBug.status === 'confirmed'" value="fix">修复</a-doption>
-                  <a-doption v-if="detailBug.status === 'fixed'" value="resolve">提交复测</a-doption>
-                  <a-doption v-if="['pending_retest', 'closed', 'expired'].includes(detailBug.status)" value="activate">激活</a-doption>
-                  <a-doption value="close" :disabled="detailBug.status === 'closed'">关闭</a-doption>
-                  <a-doption value="delete">删除</a-doption>
-                </template>
-              </a-dropdown>
-            </a-space>
+          <div class="bug-detail-page-actions">
+            <template v-if="detailEditMode">
+              <a-button @click="cancelDetailEdit">取消</a-button>
+              <a-button type="primary" :loading="detailSaving" @click="saveDetailEdit">保存</a-button>
+            </template>
+            <template v-else-if="detailBug">
+              <a-button type="primary" @click="startDetailEdit(detailBug)">编辑</a-button>
+              <a-button @click="openCopyDetail(detailBug)">复制</a-button>
+            </template>
           </div>
-                  <a-input v-if="detailEditMode" v-model="detailForm.title" size="large" placeholder="??? BUG ??" />
+        </div>
 
-        <a-spin :loading="detailLoading" class="bug-detail-spin">
-          <template v-if="detailBug || detailDraftType">
-            <div class="bug-detail">
-              <div class="bug-detail-header">
-                <div class="bug-detail-title">
-                  <a-input v-if="detailEditMode" v-model="detailForm.title" size="large" placeholder="请输入 BUG 标题" />
-                  <template v-else>{{ detailBug?.title }}</template>
+        <div class="bug-detail-page-title">
+          <a-input
+            v-if="detailEditMode"
+            v-model="detailForm.title"
+            size="large"
+            placeholder="请输入 BUG 标题"
+          />
+          <template v-else>{{ detailBug?.title || '-' }}</template>
+        </div>
+
+        <div class="bug-detail-status-row">
+          <div class="bug-detail-status-main">
+            <span class="bug-detail-status-label">BUG状态</span>
+            <a-dropdown v-if="detailBug && !detailDraftType" trigger="click" @select="(value) => handleActionSelect(detailBug!, String(value))">
+              <a-tag :color="getStatusColor(detailBug?.status)" class="bug-selectable-tag">
+                {{ detailBug?.status_display || detailBug?.status || '未指派' }}
+                <icon-down class="bug-selectable-tag-icon" />
+              </a-tag>
+              <template #content>
+                <a-doption v-for="item in getStatusActionOptions(detailBug)" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-doption>
+              </template>
+            </a-dropdown>
+            <a-tag v-else color="gray">未指派</a-tag>
+          </div>
+          <div v-if="detailBug && !detailDraftType && !detailEditMode" class="bug-detail-toolbar">
+            <a-button type="outline" class="bug-detail-toolbar-button" @click="handleActionSelect(detailBug, 'assign')">
+              <template #icon><icon-user /></template>
+              指派给
+            </a-button>
+            <a-dropdown trigger="click" @select="(value) => handleActionSelect(detailBug, String(value))">
+              <a-button type="outline" class="bug-detail-toolbar-button">
+                <template #icon><icon-check-circle /></template>
+                处理状态
+              </a-button>
+              <template #content>
+                <a-doption v-for="item in getStatusActionOptions(detailBug)" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-doption>
+              </template>
+            </a-dropdown>
+            <a-button type="outline" class="bug-detail-toolbar-button" @click="openCopyDetail(detailBug)">
+              <template #icon><icon-copy /></template>
+              复制
+            </a-button>
+            <a-button type="outline" status="danger" class="bug-detail-toolbar-button" @click="handleActionSelect(detailBug, 'delete')">
+              <template #icon><icon-delete /></template>
+              删除
+            </a-button>
+          </div>
+        </div>
+
+        <div class="bug-detail-section">
+          <div class="bug-detail-section-title">基础信息</div>
+          <div class="bug-detail-grid">
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">所属套件</div>
+              <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.suite_name || '-') }}</div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">关联用例</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-select v-model="detailForm.testcase_ids" multiple allow-clear placeholder="请选择关联用例" style="width: 100%;">
+                    <a-option v-for="item in suiteTestCases" :key="item.id" :value="item.id">{{ item.name }}</a-option>
+                  </a-select>
+                </template>
+                <div v-else class="bug-related-field">
+                  <template v-if="getRelatedTestcaseNames(detailBug).length">
+                    <a-tag v-for="name in getRelatedTestcaseNames(detailBug)" :key="name" size="small">
+                      {{ name }}
+                    </a-tag>
+                  </template>
+                  <span v-else>-</span>
                 </div>
-                <div class="bug-detail-tags">
-                  <a-dropdown
-                    v-if="detailEditMode && detailBug && !detailDraftType"
-                    trigger="click"
-                    @select="(value) => handleStatusQuickSelect(detailBug, String(value))"
-                  >
-                    <a-tag :color="getStatusColor(detailBug.status)" class="bug-selectable-tag">
-                      {{ detailBug.status_display || detailBug.status }}
-                      <icon-down class="bug-selectable-tag-icon" />
-                    </a-tag>
-                    <template #content>
-                      <a-doption v-for="item in getStatusActionOptions(detailBug)" :key="item.value" :value="item.value">
-                        {{ item.label }}
-                    {{ detailDraftType ? '???' : (detailBug?.status_display || detailBug?.status) }}
-                    </template>
-                  </a-dropdown>
-                  <a-tag
-                    v-else
-                    :color="detailDraftType ? 'gray' : getStatusColor(detailBug?.status)"
-                  >
-                    {{ detailDraftType ? '未指派' : (detailBug?.status_display || detailBug?.status) }}
-                  </a-tag>
-                  <a-dropdown v-if="detailEditMode" trigger="click" @select="(value) => (detailForm.severity = String(value))">
-                    <a-tag :color="getSeverityColor(detailForm.severity)" class="bug-selectable-tag">
-                      S{{ detailForm.severity }}
-                      <icon-down class="bug-selectable-tag-icon" />
-                    </a-tag>
-                    <template #content>
-                      <a-doption v-for="item in levelOptions" :key="item" :value="item">
-                        <a-tag :color="getSeverityColor(item)" size="small">S{{ item }}</a-tag>
-                      </a-doption>
-                    </template>
-                  </a-dropdown>
-                  <a-tag v-else :color="getSeverityColor(detailBug.severity)">S{{ detailBug.severity }}</a-tag>
-                  <a-dropdown v-if="detailEditMode" trigger="click" @select="(value) => (detailForm.priority = String(value))">
-                    <a-tag :color="getPriorityColor(detailForm.priority)" class="bug-selectable-tag">
-                      P{{ detailForm.priority }}
-                      <icon-down class="bug-selectable-tag-icon" />
-                    </a-tag>
-                    <template #content>
-                      <a-doption v-for="item in levelOptions" :key="item" :value="item">
-                        <a-tag :color="getPriorityColor(item)" size="small">P{{ item }}</a-tag>
-                      </a-doption>
-                    </template>
-                  </a-dropdown>
-                  <a-tag v-else :color="getPriorityColor(detailBug.priority)">P{{ detailBug.priority }}</a-tag>
-                  <a-dropdown v-if="detailEditMode" trigger="click" @select="(value) => (detailForm.bug_type = String(value) as TestBugType)">
+              </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">指派给</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-select v-model="detailForm.assigned_to" multiple allow-clear placeholder="请选择指派人员" style="width: 100%;">
+                    <a-option v-for="member in projectMembers" :key="member.user" :value="member.user">
+                      {{ member.user_detail.username }}
+                    </a-option>
+                  </a-select>
+                </template>
+                <template v-else>{{ detailBug ? getAssignedUserName(detailBug) : '-' }}</template>
+              </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">创建人</div>
+              <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.opened_by_name || detailBug?.opened_by || '-') }}</div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">BUG类型</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-dropdown trigger="click" @select="(value) => (detailForm.bug_type = String(value) as TestBugType)">
                     <a-tag :color="getBugTypeColor(detailForm.bug_type)" class="bug-selectable-tag">
                       {{ getBugTypeLabel(detailForm.bug_type) }}
                       <icon-down class="bug-selectable-tag-icon" />
                     </a-tag>
                     <template #content>
                       <a-doption v-for="item in TEST_BUG_TYPE_OPTIONS" :key="item.value" :value="item.value">
-                        <a-tag :color="getBugTypeColor(item.value)" size="small">{{ item.label }}</a-tag>
+                        {{ item.label }}
                       </a-doption>
                     </template>
                   </a-dropdown>
-                  <a-tag v-else :color="getBugTypeColor(detailBug.bug_type)">{{ detailBug.bug_type_display || '-' }}</a-tag>
-                    BUG??
+                </template>
+                <a-tag v-else :color="getBugTypeColor(detailBug?.bug_type)">{{ getBugTypeLabel(detailBug?.bug_type) }}</a-tag>
               </div>
-
-              <div v-if="detailBug && !detailDraftType && !detailEditMode" class="bug-detail-toolbar">
-                <a-dropdown trigger="click" @select="(value) => handleActionSelect(detailBug, String(value))">
-                  <a-button type="outline" class="bug-detail-toolbar-button">
-                    <template #icon><icon-check-circle /></template>
-                    BUG状态
-                  </a-button>
-                  <template #content>
-                  ???
-                      {{ item.label }}
-                    </a-doption>
-                  </template>
-                  ??
-                <a-button type="outline" class="bug-detail-toolbar-button" @click="openActionModal(detailBug, 'assign')">
-                  <template #icon><icon-user /></template>
-                  指派给
-                  ??
-                <a-button type="outline" class="bug-detail-toolbar-button" @click="openCopyDetail(detailBug)">
-                  <template #icon><icon-copy /></template>
-                  复制
-                </a-button>
-                <div class="bug-detail-section-title">????</div>
-                  <template #icon><icon-delete /></template>
-                  删除
-                    <div class="bug-detail-field-label">????</div>
-              </div>
-
-              <div class="bug-detail-section">
-                    <div class="bug-detail-field-label">????</div>
-                <div class="bug-detail-grid">
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">所属套件</div>
-                    <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.suite_name || '-') }}</div>
-                  </div>
-                  <div class="bug-detail-field">
-                        placeholder="???????"
-                    <div class="bug-detail-field-value">
-                    <template v-if="detailEditMode">
-                      <a-select
-                        v-model="detailForm.testcase_ids"
-                        multiple
-                        allow-clear
-                        placeholder="请选择关联用例"
-                        style="width: 100%;"
-                        >
-                          <a-option v-for="item in suiteTestCases" :key="item.id" :value="item.id">{{ item.name }}</a-option>
-                        </a-select>
-                      </template>
-                      <div v-else class="bug-related-field">
-                        <template v-if="getRelatedTestcaseNames(detailBug).length">
-                          <a-tag v-for="name in getRelatedTestcaseNames(detailBug)" :key="name" size="small">
-                            {{ name }}
-                    <div class="bug-detail-field-label">???</div>
-                        </template>
-                        <span v-else>-</span>
-                      <a-select v-model="detailForm.assigned_to" multiple allow-clear placeholder="???????" style="width: 100%;">
-                    </div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">指派给</div>
-                    <div class="bug-detail-field-value">
-                    <template v-if="detailEditMode">
-                      <a-select v-model="detailForm.assigned_to" multiple allow-clear placeholder="请选择指派人员" style="width: 100%;">
-                    <div class="bug-detail-field-label">???</div>
-                      </a-select>
-                    </template>
-                    <template v-else>{{ detailBug ? getAssignedUserName(detailBug) : '-' }}</template>
-                    <div class="bug-detail-field-label">????</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">创建人</div>
-                    <div class="bug-detail-field-label">????</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">创建时间</div>
-                    <div class="bug-detail-field-label">????</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">指派时间</div>
-                    <div class="bug-detail-field-label">????</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">解决时间</div>
-                    <div class="bug-detail-field-label">????</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">关闭时间</div>
-                    <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.closed_at ? formatDate(detailBug.closed_at) : '-') }}</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">解决方案</div>
-                    <div class="bug-detail-field-value">
-                    <template v-if="detailEditMode">
-                      <a-dropdown trigger="click" @select="(value) => (detailForm.resolution = String(value) as TestBugResolution)">
-                        <a-tag :color="getResolutionColor(detailForm.resolution)" class="bug-selectable-tag">
-                          {{ getResolutionLabel(detailForm.resolution) }}
-                          <icon-down class="bug-selectable-tag-icon" />
-                        </a-tag>
-                        <template #content>
-                          <a-doption :value="''">
-                            <a-tag color="gray" size="small">-</a-tag>
-                          </a-doption>
-                          <a-doption v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
-                            <a-tag :color="getResolutionColor(item.value)" size="small">{{ item.label }}</a-tag>
-                          </a-doption>
-                    <div class="bug-detail-field-label">????</div>
-                      </a-dropdown>
-                    </template>
-                    <template v-else>{{ detailDraftType ? '-' : (detailBug?.resolution_display || '-') }}</template>
-                    <div class="bug-detail-field-label">????</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">激活次数</div>
-                    <div class="bug-detail-field-value">{{ detailDraftType ? 0 : (detailBug?.activated_count ?? 0) }}</div>
-                  </div>
-                  <div class="bug-detail-field">
-                    <div class="bug-detail-field-label">截止日期</div>
-                    <div class="bug-detail-field-value">
-                    <div class="bug-detail-field-label">???</div>
-                      <a-date-picker v-model="detailForm.deadline" value-format="YYYY-MM-DD" style="width: 100%;" />
-                    </template>
-                      <a-input v-model="detailForm.keywords" placeholder="???????????" />
-                    </div>
-                  </div>
-                  <div class="bug-detail-field bug-detail-field--full">
-                    <div class="bug-detail-field-label">关键词</div>
-                    <div class="bug-detail-field-value">
-                    <template v-if="detailEditMode">
-                      <a-input v-model="detailForm.keywords" placeholder="多个关键词可用空格分隔" />
-                    </template>
-                <div class="bug-detail-section-title">????</div>
-                    </div>
-                  </div>
-                </div>
-                  placeholder="???????"
-
-              <div class="bug-detail-section">
-                <div class="bug-detail-section-title">重现步骤</div>
-                <BugRichTextEditor
-                  v-if="detailEditMode"
-                  v-model="detailForm.steps"
-                  placeholder="请输入重现步骤"
-                  :attachments="getSectionAttachments('steps')"
-                  :pending-files="pendingAttachmentFiles.steps"
-                  @upload-files="(files) => handleDetailAttachmentUpload('steps', files)"
-                  @remove-attachment="(attachment) => removeDetailAttachment('steps', attachment)"
-                  @remove-pending-file="(id) => removePendingAttachment('steps', id)"
-                />
-                <template v-else>
-                  <div class="bug-detail-content" v-html="renderBugContent(detailBug?.steps)"></div>
-                  <div v-if="getSectionAttachments('steps').length" class="bug-detail-attachment-list">
-                    <div
-                      v-for="attachment in getSectionAttachments('steps')"
-                      :key="attachment.id"
-                      class="bug-detail-attachment-item"
-                    >
-                      <a v-if="attachment.file_type === 'image'" :href="attachment.url" target="_blank" rel="noreferrer">
-                        <img :src="attachment.url" :alt="attachment.original_name" class="bug-detail-attachment-image" />
-                      </a>
-                      <video
-                        v-else-if="attachment.file_type === 'video'"
-                        class="bug-detail-attachment-video"
-                        controls
-                        :src="attachment.url"
-                      />
-                      <a v-else :href="attachment.url" target="_blank" rel="noreferrer" class="bug-detail-attachment-file">
-                        {{ attachment.original_name }}
-                <div class="bug-detail-section-title">????</div>
-                    </div>
-                  </div>
-                </template>
-                  placeholder="???????"
-
-              <div class="bug-detail-section">
-                <div class="bug-detail-section-title">期望结果</div>
-                <BugRichTextEditor
-                  v-if="detailEditMode"
-                  v-model="detailForm.expected_result"
-                  placeholder="请输入期望结果"
-                  :attachments="getSectionAttachments('expected_result')"
-                  :pending-files="pendingAttachmentFiles.expected_result"
-                  @upload-files="(files) => handleDetailAttachmentUpload('expected_result', files)"
-                  @remove-attachment="(attachment) => removeDetailAttachment('expected_result', attachment)"
-                  @remove-pending-file="(id) => removePendingAttachment('expected_result', id)"
-                />
-                <template v-else>
-                  <div class="bug-detail-content" v-html="renderBugContent(detailBug?.expected_result)"></div>
-                  <div v-if="getSectionAttachments('expected_result').length" class="bug-detail-attachment-list">
-                    <div
-                      v-for="attachment in getSectionAttachments('expected_result')"
-                      :key="attachment.id"
-                      class="bug-detail-attachment-item"
-                    >
-                      <a v-if="attachment.file_type === 'image'" :href="attachment.url" target="_blank" rel="noreferrer">
-                        <img :src="attachment.url" :alt="attachment.original_name" class="bug-detail-attachment-image" />
-                      </a>
-                      <video
-                        v-else-if="attachment.file_type === 'video'"
-                        class="bug-detail-attachment-video"
-                        controls
-                        :src="attachment.url"
-                      />
-                      <a v-else :href="attachment.url" target="_blank" rel="noreferrer" class="bug-detail-attachment-file">
-                        {{ attachment.original_name }}
-                <div class="bug-detail-section-title">????</div>
-                    </div>
-                  </div>
-                </template>
-                  placeholder="???????"
-
-              <div class="bug-detail-section">
-                <div class="bug-detail-section-title">实际结果</div>
-                <BugRichTextEditor
-                  v-if="detailEditMode"
-                  v-model="detailForm.actual_result"
-                  placeholder="请输入实际结果"
-                  :attachments="getSectionAttachments('actual_result')"
-                  :pending-files="pendingAttachmentFiles.actual_result"
-                  @upload-files="(files) => handleDetailAttachmentUpload('actual_result', files)"
-                  @remove-attachment="(attachment) => removeDetailAttachment('actual_result', attachment)"
-                  @remove-pending-file="(id) => removePendingAttachment('actual_result', id)"
-                />
-                <template v-else>
-                  <div class="bug-detail-content" v-html="renderBugContent(detailBug?.actual_result)"></div>
-                  <div v-if="getSectionAttachments('actual_result').length" class="bug-detail-attachment-list">
-                    <div
-                      v-for="attachment in getSectionAttachments('actual_result')"
-                      :key="attachment.id"
-                      class="bug-detail-attachment-item"
-                    >
-                      <a v-if="attachment.file_type === 'image'" :href="attachment.url" target="_blank" rel="noreferrer">
-                        <img :src="attachment.url" :alt="attachment.original_name" class="bug-detail-attachment-image" />
-                      </a>
-                      <video
-                        v-else-if="attachment.file_type === 'video'"
-                        class="bug-detail-attachment-video"
-                        controls
-                        :src="attachment.url"
-                      />
-                      <a v-else :href="attachment.url" target="_blank" rel="noreferrer" class="bug-detail-attachment-file">
-                        {{ attachment.original_name }}
-                <div class="bug-detail-section-title">????</div>
-                    </div>
-                  </div>
-                </template>
-                    placeholder="???????"
-
-              <div class="bug-detail-section">
-                <div class="bug-detail-section-title">处理备注</div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">严重程度</div>
+              <div class="bug-detail-field-value">
                 <template v-if="detailEditMode">
-                  <a-textarea
-                    v-model="detailForm.solution"
-                    placeholder="请输入处理备注"
-                <div class="bug-detail-section-title">????</div>
-                  />
+                  <a-dropdown trigger="click" @select="(value) => (detailForm.severity = String(value))">
+                    <a-tag :color="getSeverityColor(detailForm.severity)" class="bug-selectable-tag">
+                      S{{ detailForm.severity }}
+                      <icon-down class="bug-selectable-tag-icon" />
+                    </a-tag>
+                    <template #content>
+                      <a-doption v-for="item in levelOptions" :key="item" :value="item">S{{ item }}</a-doption>
+                    </template>
+                  </a-dropdown>
                 </template>
-                <div v-else class="bug-detail-content" v-html="renderBugContent(detailDraftType ? '' : detailBug?.solution)"></div>
+                <a-tag v-else :color="getSeverityColor(detailBug?.severity)">S{{ detailBug?.severity || '-' }}</a-tag>
               </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">优先级</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-dropdown trigger="click" @select="(value) => (detailForm.priority = String(value))">
+                    <a-tag :color="getPriorityColor(detailForm.priority)" class="bug-selectable-tag">
+                      P{{ detailForm.priority }}
+                      <icon-down class="bug-selectable-tag-icon" />
+                    </a-tag>
+                    <template #content>
+                      <a-doption v-for="item in levelOptions" :key="item" :value="item">P{{ item }}</a-doption>
+                    </template>
+                  </a-dropdown>
+                </template>
+                <a-tag v-else :color="getPriorityColor(detailBug?.priority)">P{{ detailBug?.priority || '-' }}</a-tag>
+              </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">解决方案</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-dropdown trigger="click" @select="(value) => (detailForm.resolution = String(value) as TestBugResolution)">
+                    <a-tag :color="getResolutionColor(detailForm.resolution)" class="bug-selectable-tag">
+                      {{ getResolutionLabel(detailForm.resolution) }}
+                      <icon-down class="bug-selectable-tag-icon" />
+                    </a-tag>
+                    <template #content>
+                      <a-doption v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
+                        {{ item.label }}
+                      </a-doption>
+                    </template>
+                  </a-dropdown>
+                </template>
+                <template v-else>{{ detailDraftType ? '-' : (detailBug?.resolution_display || '-') }}</template>
+              </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">截止时间</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-date-picker v-model="detailForm.deadline" value-format="YYYY-MM-DD" style="width: 100%;" />
+                </template>
+                <template v-else>{{ detailDraftType ? '-' : (detailBug?.deadline || '-') }}</template>
+              </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">关键词</div>
+              <div class="bug-detail-field-value">
+                <template v-if="detailEditMode">
+                  <a-input v-model="detailForm.keywords" placeholder="多个关键词可用空格分隔" />
+                </template>
+                <template v-else>{{ detailDraftType ? '-' : (detailBug?.keywords || '-') }}</template>
+              </div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">创建时间</div>
+              <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.opened_at ? formatDate(detailBug.opened_at) : '-') }}</div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">指派时间</div>
+              <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.assigned_at ? formatDate(detailBug.assigned_at) : '-') }}</div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">解决时间</div>
+              <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.resolved_at ? formatDate(detailBug.resolved_at) : '-') }}</div>
+            </div>
+            <div class="bug-detail-field">
+              <div class="bug-detail-field-label">关闭时间</div>
+              <div class="bug-detail-field-value">{{ detailDraftType ? '-' : (detailBug?.closed_at ? formatDate(detailBug.closed_at) : '-') }}</div>
+            </div>
+          </div>
+        </div>
 
-              <div v-if="detailBug && !detailDraftType" class="bug-detail-section">
-                        <span class="bug-activity-meta">{{ item.operator_name || '??' }} ? {{ formatDate(item.created_at) }}</span>
-                <div v-if="detailBug.activity_logs?.length" class="bug-activity-list">
-                      <div class="bug-activity-content">{{ item.content || '???????' }}</div>
-                    <div class="bug-activity-dot"></div>
-                    <div class="bug-activity-main">
-                      <div class="bug-activity-header">
-                <a-empty v-else description="??????" />
-                        <span class="bug-activity-meta">{{ item.operator_name || '系统' }} · {{ formatDate(item.created_at) }}</span>
-                      </div>
-                      <div class="bug-activity-content">{{ item.content || '已完成本次操作' }}</div>
-                    </div>
-                  </div>
-                </div>
-                <a-empty v-else description="暂无流转记录" />
+        <div class="bug-detail-section">
+          <div class="bug-detail-section-title">重现步骤</div>
+          <BugRichTextEditor
+            v-if="detailEditMode"
+            v-model="detailForm.steps"
+            placeholder="请输入重现步骤"
+            :attachments="getSectionAttachments('steps')"
+            :pending-files="pendingAttachmentFiles.steps"
+            @upload-files="(files) => handleDetailAttachmentUpload('steps', files)"
+            @remove-attachment="(attachment) => removeDetailAttachment('steps', attachment)"
+            @remove-pending-file="(id) => removePendingAttachment('steps', id)"
+          />
+          <template v-else>
+            <div class="bug-detail-content" v-html="renderBugContent(detailBug?.steps)"></div>
+            <div v-if="getSectionAttachments('steps').length" class="bug-detail-attachment-list">
+              <div v-for="attachment in getSectionAttachments('steps')" :key="attachment.id" class="bug-detail-attachment-item">
+                <a v-if="attachment.file_type === 'image'" :href="attachment.url" target="_blank" rel="noreferrer">
+                  <img :src="attachment.url" :alt="attachment.original_name" class="bug-detail-attachment-image" />
+                </a>
+                <video v-else-if="attachment.file_type === 'video'" class="bug-detail-attachment-video" controls :src="attachment.url" />
+                <a v-else :href="attachment.url" target="_blank" rel="noreferrer" class="bug-detail-attachment-file">
+                  {{ attachment.original_name }}
+                </a>
               </div>
             </div>
           </template>
-        </a-spin>
+        </div>
+
+        <div class="bug-detail-section">
+          <div class="bug-detail-section-title">期望结果</div>
+          <BugRichTextEditor
+            v-if="detailEditMode"
+            v-model="detailForm.expected_result"
+            placeholder="请输入期望结果"
+            :attachments="getSectionAttachments('expected_result')"
+            :pending-files="pendingAttachmentFiles.expected_result"
+            @upload-files="(files) => handleDetailAttachmentUpload('expected_result', files)"
+            @remove-attachment="(attachment) => removeDetailAttachment('expected_result', attachment)"
+            @remove-pending-file="(id) => removePendingAttachment('expected_result', id)"
+          />
+          <template v-else>
+            <div class="bug-detail-content" v-html="renderBugContent(detailBug?.expected_result)"></div>
+            <div v-if="getSectionAttachments('expected_result').length" class="bug-detail-attachment-list">
+              <div v-for="attachment in getSectionAttachments('expected_result')" :key="attachment.id" class="bug-detail-attachment-item">
+                <a v-if="attachment.file_type === 'image'" :href="attachment.url" target="_blank" rel="noreferrer">
+                  <img :src="attachment.url" :alt="attachment.original_name" class="bug-detail-attachment-image" />
+                </a>
+                <video v-else-if="attachment.file_type === 'video'" class="bug-detail-attachment-video" controls :src="attachment.url" />
+                <a v-else :href="attachment.url" target="_blank" rel="noreferrer" class="bug-detail-attachment-file">
+                  {{ attachment.original_name }}
+                </a>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="bug-detail-section">
+          <div class="bug-detail-section-title">实际结果</div>
+          <BugRichTextEditor
+            v-if="detailEditMode"
+            v-model="detailForm.actual_result"
+            placeholder="请输入实际结果"
+            :attachments="getSectionAttachments('actual_result')"
+            :pending-files="pendingAttachmentFiles.actual_result"
+            @upload-files="(files) => handleDetailAttachmentUpload('actual_result', files)"
+            @remove-attachment="(attachment) => removeDetailAttachment('actual_result', attachment)"
+            @remove-pending-file="(id) => removePendingAttachment('actual_result', id)"
+          />
+          <template v-else>
+            <div class="bug-detail-content" v-html="renderBugContent(detailBug?.actual_result)"></div>
+            <div v-if="getSectionAttachments('actual_result').length" class="bug-detail-attachment-list">
+              <div v-for="attachment in getSectionAttachments('actual_result')" :key="attachment.id" class="bug-detail-attachment-item">
+                <a v-if="attachment.file_type === 'image'" :href="attachment.url" target="_blank" rel="noreferrer">
+                  <img :src="attachment.url" :alt="attachment.original_name" class="bug-detail-attachment-image" />
+                </a>
+                <video v-else-if="attachment.file_type === 'video'" class="bug-detail-attachment-video" controls :src="attachment.url" />
+                <a v-else :href="attachment.url" target="_blank" rel="noreferrer" class="bug-detail-attachment-file">
+                  {{ attachment.original_name }}
+                </a>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="bug-detail-section">
+          <div class="bug-detail-section-title">处理备注</div>
+          <template v-if="detailEditMode">
+            <a-textarea v-model="detailForm.solution" :auto-size="{ minRows: 4, maxRows: 8 }" placeholder="请输入处理备注" />
+          </template>
+          <div v-else class="bug-detail-content" v-html="renderBugContent(detailDraftType ? '' : detailBug?.solution)"></div>
+        </div>
       </div>
     </template>
 
     <a-modal
       v-model:visible="actionVisible"
       :title="actionModalTitle"
-          <a-form-item field="assigned_to" label="???" required>
-            <a-select v-model="actionForm.assigned_to" multiple allow-clear placeholder="???????">
+      width="560px"
+      :ok-loading="actionSubmitting"
       @ok="submitAction"
       @cancel="resetActionState"
     >
-        <a-form :model="actionForm" layout="vertical">
+      <a-form :model="actionForm" layout="vertical">
         <template v-if="actionType === 'assign'">
-          <a-form-item field="assigned_to" label="指派给" required>
-            <a-select v-model="actionForm.assigned_to" multiple allow-clear placeholder="请选择项目成员">
+          <a-form-item field="assigned_to" label="???" required>
+            <a-select v-model="actionForm.assigned_to" multiple allow-clear placeholder="???????">
               <a-option v-for="member in projectMembers" :key="member.user" :value="member.user">
-          <div class="action-confirm-tip">??? BUG ??????????</div>
+                {{ member.user_detail.username }}
               </a-option>
             </a-select>
           </a-form-item>
-          <div class="action-confirm-tip">??? BUG ??????????</div>
-          <a-form-item field="resolution" label="????" required>
-        <template v-else-if="actionType === 'confirm'">
-          <div class="action-confirm-tip">确认后 BUG 状态将更新为已确认。</div>
         </template>
-
-        <template v-else-if="actionType === 'fix'">
-          <div class="action-confirm-tip">提交后 BUG 状态将更新为已修复。</div>
-          <a-form-item field="solution" label="????">
-            <a-select v-model="actionForm.resolution">
+        <template v-else-if="actionType === 'fix' || actionType === 'resolve' || actionType === 'close'">
+          <a-form-item field="resolution" label="????" required>
+            <a-select v-model="actionForm.resolution" placeholder="???????">
               <a-option v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
                 {{ item.label }}
               </a-option>
             </a-select>
-          <div class="action-confirm-tip">??? BUG ??????????</div>
-          <a-form-item field="resolution" label="????" required>
-            <a-textarea v-model="actionForm.solution" :auto-size="{ minRows: 4, maxRows: 8 }" />
           </a-form-item>
-        </template>
-
-        <template v-else-if="actionType === 'resolve'">
-          <div class="action-confirm-tip">提交后 BUG 状态将更新为待复测。</div>
           <a-form-item field="solution" label="????">
-            <a-select v-model="actionForm.resolution">
-              <a-option v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </a-option>
-            </a-select>
-          <div class="action-confirm-tip">?? BUG ??????????????</div>
-          <a-form-item field="resolution" label="????" required>
-            <a-textarea v-model="actionForm.solution" :auto-size="{ minRows: 4, maxRows: 8 }" />
-          </a-form-item>
-        </template>
-
-        <template v-else-if="actionType === 'close'">
-          <div class="action-confirm-tip">关闭 BUG 时需要同步确认最终解决方案。</div>
-          <a-form-item field="solution" label="????">
-            <a-select v-model="actionForm.resolution">
-              <a-option v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
-              placeholder="??????????"
-              </a-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item field="solution" label="关闭备注">
             <a-textarea
               v-model="actionForm.solution"
-          <div class="action-confirm-tip">??????? BUG????????????????</div>
               :auto-size="{ minRows: 4, maxRows: 8 }"
+              placeholder="???????"
             />
           </a-form-item>
         </template>
-
+        <template v-else-if="actionType === 'delete'">
+          <div class="action-confirm-tip">?????? BUG ??????????</div>
+        </template>
         <template v-else-if="actionType === 'activate'">
-          <div class="action-confirm-tip">将重新激活当前 BUG，并保留已有解决记录供后续追踪。</div>
+          <div class="action-confirm-tip">??????BUG ?????????</div>
+        </template>
+        <template v-else>
+          <div class="action-confirm-tip">?????????</div>
         </template>
       </a-form>
     </a-modal>
@@ -950,11 +737,11 @@
     <a-modal
       v-model:visible="batchVisible"
       :title="batchModalTitle"
-          <div class="bug-batch-preview-title">????? {{ selectedBugCount }} ? BUG</div>
       width="560px"
+      :ok-loading="batchSubmitting"
       @ok="submitBatchAction"
-            <span class="bug-batch-preview-impact-item bug-batch-preview-impact-item--active">???? {{ batchAffectedCount }} ?</span>
-            <span v-if="batchUnchangedCount > 0" class="bug-batch-preview-impact-item">???? {{ batchUnchangedCount }} ?</span>
+      @cancel="resetBatchState"
+    >
       <a-form :model="batchForm" layout="vertical">
         <div class="bug-batch-preview">
           <div class="bug-batch-preview-title">本次将处理 {{ selectedBugCount }} 条 BUG</div>
@@ -967,16 +754,17 @@
             <div v-for="item in batchAffectedDiffs" :key="item" class="bug-batch-preview-diff">{{ item }}</div>
           </div>
           <div v-if="batchPreviewTitles.length" class="bug-batch-preview-tags">
-          <a-form-item field="assigned_to" label="???" required>
-            <a-select v-model="batchForm.assigned_to" multiple allow-clear placeholder="???????">
+            <a-tag v-for="item in batchPreviewTitles" :key="item">{{ item }}</a-tag>
+            <a-tag v-if="batchAffectedCount > batchPreviewTitles.length" color="arcoblue">
               +{{ batchAffectedCount - batchPreviewTitles.length }}
             </a-tag>
           </div>
         </div>
+
         <template v-if="batchActionType === 'assign'">
           <a-form-item field="assigned_to" label="指派给" required>
             <a-select v-model="batchForm.assigned_to" multiple allow-clear placeholder="请选择项目成员">
-          <a-form-item field="status" label="BUG??" required>
+              <a-option v-for="member in projectMembers" :key="member.user" :value="member.user">
                 {{ member.user_detail.username }}
               </a-option>
             </a-select>
@@ -989,21 +777,21 @@
                 v-for="item in TEST_BUG_STATUS_OPTIONS.filter((option) => option.value !== 'expired')"
                 :key="item.value"
                 :value="item.value"
-          <a-form-item field="priority" label="???" required>
+              >
                 {{ item.label }}
               </a-option>
             </a-select>
           </a-form-item>
         </template>
         <template v-else-if="batchActionType === 'priority'">
-          <a-form-item field="severity" label="????" required>
+          <a-form-item field="priority" label="优先级" required>
             <a-select v-model="batchForm.priority">
               <a-option v-for="item in levelOptions" :key="item" :value="item">P{{ item }}</a-option>
             </a-select>
           </a-form-item>
         </template>
         <template v-else-if="batchActionType === 'severity'">
-          <a-form-item field="bug_type" label="BUG??" required>
+          <a-form-item field="severity" label="严重程度" required>
             <a-select v-model="batchForm.severity">
               <a-option v-for="item in levelOptions" :key="item" :value="item">S{{ item }}</a-option>
             </a-select>
@@ -1012,39 +800,33 @@
         <template v-else-if="batchActionType === 'bug_type'">
           <a-form-item field="bug_type" label="BUG类型" required>
             <a-select v-model="batchForm.bug_type">
-          <a-form-item field="resolution" label="????" required>
+              <a-option v-for="item in TEST_BUG_TYPE_OPTIONS" :key="item.value" :value="item.value">
                 {{ item.label }}
               </a-option>
             </a-select>
           </a-form-item>
         </template>
         <template v-else-if="batchActionType === 'resolution'">
-          <a-form-item field="solution" label="????">
-            <a-select v-model="batchForm.resolution">
+          <a-form-item field="resolution" label="解决方案" required>
+            <a-select v-model="batchForm.resolution" placeholder="请选择解决方案">
               <a-option v-for="item in TEST_BUG_RESOLUTION_OPTIONS" :key="item.value" :value="item.value">
-              placeholder="???????????"
+                {{ item.label }}
               </a-option>
             </a-select>
           </a-form-item>
           <a-form-item field="solution" label="处理备注">
-            <a-textarea
-              v-model="batchForm.solution"
-            ????????? {{ selectedBugCount }} ? BUG ??????????
-              :auto-size="{ minRows: 4, maxRows: 8 }"
-            />
+            <a-textarea v-model="batchForm.solution" :auto-size="{ minRows: 4, maxRows: 8 }" placeholder="请输入处理备注" />
           </a-form-item>
         </template>
         <template v-else-if="batchActionType === 'delete'">
-          <div class="action-confirm-tip">
-            确定删除当前选中的 {{ selectedBugCount }} 条 BUG 吗？删除后不可恢复。
-      :title="editingFilterViewId ? '???????' : '??????'"
+          <div class="action-confirm-tip">确定删除当前选中的 {{ selectedBugCount }} 条 BUG 吗？删除后不可恢复。</div>
         </template>
       </a-form>
     </a-modal>
 
     <a-modal
-        <a-form-item field="name" label="????" required>
-          <a-input v-model="saveFilterViewName" :max-length="20" placeholder="???????" />
+      v-model:visible="saveFilterViewVisible"
+      :title="editingFilterViewId ? '编辑常用视图' : '保存常用视图'"
       width="420px"
       @ok="submitSaveFilterView"
       @cancel="resetSaveFilterViewState"
@@ -1055,9 +837,9 @@
         </a-form-item>
       </a-form>
     </a-modal>
-
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
@@ -1100,7 +882,7 @@ import {
 import { getProjectMembers, type ProjectMember } from '@/services/projectService';
 import { getTestCaseList, type TestCase } from '@/services/testcaseService';
 
-type ActionType = 'assign' | 'confirm' | 'fix' | 'resolve' | 'activate' | 'close' | null;
+type ActionType = 'assign' | 'confirm' | 'fix' | 'resolve' | 'activate' | 'close' | 'delete' | null;
 type StatusView = 'all' | TestBugStatus;
 type QuickView = 'all' | 'assigned_to_me' | 'opened_by_me' | 'unassigned' | 'unresolved';
 type BugSortValue =
@@ -1820,6 +1602,31 @@ const getSavedFilterViewMetaLabel = (view: SavedBugFilterView) => {
     parts.push(`最近使用：${formatDate(view.last_applied_at)}`);
   }
   return parts.join(' | ') || '点击应用该视图';
+};
+
+const applySavedFilterView = async (id: string) => {
+  const view = savedFilterViews.value.find((item) => item.id === id);
+  if (!view) {
+    return;
+  }
+
+  filters.search = view.filters.search || '';
+  filters.bug_type = view.filters.bug_type || undefined;
+  filters.severity = view.filters.severity || undefined;
+  filters.priority = view.filters.priority || undefined;
+  filters.assigned_to = view.filters.assigned_to ? Number(view.filters.assigned_to) : undefined;
+  activeStatusView.value = view.filters.activeStatusView || 'all';
+  activeQuickView.value = view.filters.activeQuickView || 'all';
+  sortBy.value = view.filters.sortBy || 'priority_desc';
+  pagination.current = 1;
+
+  const now = new Date().toISOString();
+  savedFilterViews.value = savedFilterViews.value.map((item) =>
+    item.id === id ? { ...item, last_applied_at: now } : item
+  );
+  sortSavedFilterViews();
+  persistSavedFilterViews();
+  await fetchBugs();
 };
 
 const applySavedBugFilters = (projectId?: number | null) => {
