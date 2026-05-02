@@ -834,7 +834,7 @@ export interface UpdateTestReportSnapshotPayload {
   report_data?: AiIterationTestReport;
 }
 
-const AI_REPORT_REQUEST_TIMEOUT = 15000;
+const AI_REPORT_REQUEST_TIMEOUT = 90000;
 const REPORT_SNAPSHOT_REQUEST_TIMEOUT = 10000;
 
 const unwrapApiPayload = <T>(payload: any): T | undefined => {

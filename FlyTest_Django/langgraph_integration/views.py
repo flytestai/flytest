@@ -506,6 +506,51 @@ def _build_openai_compatible_headers(api_key: str) -> dict:
     return headers
 
 
+def _is_local_proxy_endpoint(api_url: str) -> bool:
+    parsed = urlparse((api_url or "").strip())
+    host = (parsed.hostname or "").strip().lower()
+    port = parsed.port
+    return host in {"127.0.0.1", "localhost"} and port == 8327
+
+
+def _probe_model_id_via_chat(api_url: str, api_key: str, model_name: str, timeout: int = 12) -> bool:
+    headers = _build_openai_compatible_headers(api_key)
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Reply with the exact text: OK"},
+        ],
+        "temperature": 0.1,
+    }
+    response = http_requests.post(
+        f"{api_url.rstrip('/')}/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    data = response.json()
+    return bool(_extract_chat_completion_text(data) or data.get("choices"))
+
+
+def _augment_local_proxy_models(api_url: str, api_key: str, models: list[str]) -> list[str]:
+    if not _is_local_proxy_endpoint(api_url):
+        return models
+
+    augmented = list(dict.fromkeys([item for item in models if item]))
+    hidden_candidates = ["gpt-5.5"]
+    for candidate in hidden_candidates:
+        if candidate in augmented:
+            continue
+        try:
+            if _probe_model_id_via_chat(api_url, api_key, candidate):
+                augmented.append(candidate)
+        except Exception:
+            logger.info("Model %s is not exposed by /models and probe failed on %s", candidate, api_url)
+    return augmented
+
+
 def _fetch_available_models_for_probe(api_url: str, api_key: str, limit: int = 8) -> list[str]:
     headers = _build_openai_compatible_headers(api_key)
     response = http_requests.get(f"{api_url.rstrip('/')}/models", headers=headers, timeout=15)
@@ -516,6 +561,7 @@ def _fetch_available_models_for_probe(api_url: str, api_key: str, limit: int = 8
         for item in payload.get("data", [])
         if isinstance(item, dict) and item.get("id")
     ]
+    models = _augment_local_proxy_models(api_url, api_key, models)
     return models[:limit]
 
 
@@ -1030,6 +1076,7 @@ class LLMConfigViewSet(BaseModelViewSet):
 
             if data.get("data"):
                 models = [model.get("id") for model in data["data"] if model.get("id")]
+                models = _augment_local_proxy_models(api_url, api_key, models)
                 return Response(
                     {
                         "status": "success",

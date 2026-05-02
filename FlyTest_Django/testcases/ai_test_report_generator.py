@@ -11,6 +11,7 @@ from langgraph_integration.models import get_user_active_llm_config
 from langgraph_integration.views import invoke_plain_text_llm
 
 logger = logging.getLogger(__name__)
+AI_TEST_REPORT_TIMEOUT_SECONDS = 45
 
 TEST_REPORT_SYSTEM_PROMPT = """
 你是 FlyTest 的测试报告分析助手。
@@ -380,10 +381,51 @@ def build_rule_based_iteration_report(report_context: dict[str, Any]) -> Iterati
 def generate_iteration_test_report(*, user, report_context: dict[str, Any]) -> IterationTestReportResult:
     fallback = build_rule_based_iteration_report(report_context)
     active_config = get_user_active_llm_config(user)
-    if active_config:
-        fallback.note = (
-            "当前已优先使用结构化测试数据快速生成测试报告，"
-            "未等待外部模型返回，避免长时间加载。"
+    if not active_config:
+        return fallback
+
+    model_name = getattr(active_config, "name", None) or None
+    fallback.model_name = model_name
+
+    try:
+        response_text = invoke_plain_text_llm(
+            active_config,
+            [
+                SystemMessage(content=TEST_REPORT_SYSTEM_PROMPT),
+                HumanMessage(content=_build_ai_prompt(report_context)),
+            ],
+            temperature=0.2,
+            timeout=AI_TEST_REPORT_TIMEOUT_SECONDS,
         )
-        fallback.model_name = getattr(active_config, "name", None) or None
+        payload = _safe_json_loads(response_text)
+
+        summary = _truncate(str(payload.get("summary") or "").strip(), 300) or fallback.summary
+        quality_overview = (
+            _truncate(str(payload.get("quality_overview") or "").strip(), 300) or fallback.quality_overview
+        )
+        risk_overview = _truncate(str(payload.get("risk_overview") or "").strip(), 300) or fallback.risk_overview
+        findings = _normalize_report_items(payload.get("findings"), kind="finding") or fallback.findings
+        recommendations = (
+            _normalize_report_items(payload.get("recommendations"), kind="recommendation")
+            or fallback.recommendations
+        )
+        evidence = _normalize_report_items(payload.get("evidence"), kind="evidence") or fallback.evidence
+
+        return IterationTestReportResult(
+            used_ai=True,
+            note="测试报告已通过 AI 分析接口生成，并结合当前测试数据完成结构化整理。",
+            model_name=model_name,
+            summary=summary,
+            quality_overview=quality_overview,
+            risk_overview=risk_overview,
+            findings=findings[:8],
+            recommendations=recommendations[:8],
+            evidence=evidence[:10],
+        )
+    except Exception as exc:
+        logger.warning("AI test report generation failed, fallback to rule-based report: %s", exc, exc_info=True)
+        fallback.note = (
+            f"AI 分析接口调用失败或超时（最长等待 {AI_TEST_REPORT_TIMEOUT_SECONDS} 秒），"
+            f"已自动切换为规则生成报告。原因：{exc}"
+        )
     return fallback

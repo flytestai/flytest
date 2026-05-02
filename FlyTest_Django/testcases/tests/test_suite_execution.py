@@ -1,5 +1,7 @@
 from io import StringIO
 import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -10,6 +12,7 @@ from rest_framework.test import APIClient
 
 from projects.models import Project, ProjectMember
 from requirements.models import RequirementDocument, RequirementModule
+from testcases.ai_test_report_generator import generate_iteration_test_report
 from testcases.models import TestBug, TestBugActivity, TestCase as TestCaseModel
 from testcases.models import TestCaseAssignment, TestCaseModule, TestReportSnapshot, TestSuite
 from testcases.serializers import TestExecutionCreateSerializer, TestSuiteSerializer
@@ -428,9 +431,50 @@ class TestSuiteExecutionTests(TestCase):
         self.assertIn("bug_workflow_summary", payload)
         self.assertEqual(payload["requirement_summary"]["linked_document_count"], 1)
         self.assertEqual(payload["requirement_summary"]["linked_module_count"], 1)
-        self.assertEqual(payload["requirement_summary"]["traceable_testcase_count"], 1)
-        self.assertEqual(payload["bug_workflow_summary"]["retest_failed_total_count"], 1)
-        self.assertEqual(payload["bug_workflow_summary"]["reactivated_bug_count"], 1)
+
+    def test_ai_report_blocks_release_when_cases_are_unreviewed_and_not_executed(self):
+        admin_user = User.objects.create_superuser(
+            username="reportblockadmin",
+            email="reportblockadmin@example.com",
+            password="password",
+        )
+        ProjectMember.objects.create(project=self.project, user=admin_user, role="admin")
+
+        second_case = TestCaseModel.objects.create(
+            project=self.project,
+            module=self.module,
+            name="Pending Case 2",
+            creator=self.user,
+            review_status="optimization_pending_review",
+            execution_status="not_executed",
+        )
+        self.testcase.review_status = "pending_review"
+        self.testcase.execution_status = "not_executed"
+        self.testcase.save(update_fields=["review_status", "execution_status"])
+        self.suite.testcases.add(self.testcase, second_case)
+
+        self.api_client.force_authenticate(user=admin_user)
+        response = self.api_client.post(
+            f"/api/projects/{self.project.id}/test-executions/ai-report/",
+            {"suite_ids": [self.suite.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        payload = response.data["data"]
+        standard = payload["report_standard"]
+        self.assertEqual(standard["quality_conclusion"]["rating"], "不合格")
+        self.assertEqual(standard["quality_conclusion"]["release_recommendation"], "不建议发布")
+        self.assertIn("均未审核通过", standard["quality_conclusion"]["conclusion"])
+        self.assertIn("尚未执行", standard["quality_conclusion"]["conclusion"])
+        review_criteria = next(
+            item for item in standard["quality_conclusion"]["criteria"] if item["name"] == "测试用例均已审核通过"
+        )
+        self.assertFalse(review_criteria["passed"])
+        self.assertEqual(standard["result_details"]["case_execution"]["not_executed"], 2)
+        self.assertEqual(payload["requirement_summary"]["traceable_testcase_count"], 0)
+        self.assertEqual(payload["bug_workflow_summary"]["retest_failed_total_count"], 0)
+        self.assertEqual(payload["bug_workflow_summary"]["reactivated_bug_count"], 0)
 
     def test_ai_report_requires_suite_selection(self):
         admin_user = User.objects.create_superuser(
@@ -449,6 +493,83 @@ class TestSuiteExecutionTests(TestCase):
 
         self.assertEqual(response.status_code, 400, response.data)
         self.assertEqual(response.data["error"], "请至少选择一个测试套件")
+
+    @patch("testcases.ai_test_report_generator.invoke_plain_text_llm")
+    @patch("testcases.ai_test_report_generator.get_user_active_llm_config")
+    def test_iteration_report_uses_ai_when_llm_config_exists(self, mock_get_config, mock_invoke_plain_text_llm):
+        mock_get_config.return_value = SimpleNamespace(name="proxy-key")
+        mock_invoke_plain_text_llm.return_value = """
+        {
+          "summary": "AI总结",
+          "quality_overview": "AI质量概览",
+          "risk_overview": "AI风险概览",
+          "findings": [{"title": "发现1", "detail": "说明1", "severity": "high"}],
+          "recommendations": [{"title": "建议1", "detail": "动作1", "priority": "medium"}],
+          "evidence": [{"label": "证据1", "detail": "证据详情"}]
+        }
+        """
+
+        result = generate_iteration_test_report(
+            user=self.user,
+            report_context={
+                "project": {"id": self.project.id, "name": self.project.name},
+                "selected_suite_ids": [self.suite.id],
+                "selected_suite_names": [self.suite.name],
+                "generated_at": "2026-05-02T12:00:00+08:00",
+                "totals": {
+                    "suite_count": 1,
+                    "selected_suite_count": 1,
+                    "testcase_count": 1,
+                    "approved_testcase_count": 1,
+                    "bug_count": 0,
+                },
+                "execution_status_distribution": {"passed": 1},
+                "review_status_distribution": {"approved": 1},
+                "bug_status_distribution": {},
+                "requirement_summary": {},
+                "bug_workflow_summary": {},
+                "suite_breakdown": [],
+            },
+        )
+
+        self.assertTrue(result.used_ai)
+        self.assertEqual(result.model_name, "proxy-key")
+        self.assertEqual(result.summary, "AI总结")
+        self.assertEqual(result.findings[0]["title"], "发现1")
+        mock_invoke_plain_text_llm.assert_called_once()
+
+    @patch("testcases.ai_test_report_generator.invoke_plain_text_llm", side_effect=RuntimeError("Service error"))
+    @patch("testcases.ai_test_report_generator.get_user_active_llm_config")
+    def test_iteration_report_falls_back_when_ai_call_fails(self, mock_get_config, _mock_invoke_plain_text_llm):
+        mock_get_config.return_value = SimpleNamespace(name="proxy-key")
+
+        result = generate_iteration_test_report(
+            user=self.user,
+            report_context={
+                "project": {"id": self.project.id, "name": self.project.name},
+                "selected_suite_ids": [self.suite.id],
+                "selected_suite_names": [self.suite.name],
+                "generated_at": "2026-05-02T12:00:00+08:00",
+                "totals": {
+                    "suite_count": 1,
+                    "selected_suite_count": 1,
+                    "testcase_count": 1,
+                    "approved_testcase_count": 0,
+                    "bug_count": 0,
+                },
+                "execution_status_distribution": {"not_executed": 1},
+                "review_status_distribution": {"pending_review": 1},
+                "bug_status_distribution": {},
+                "requirement_summary": {},
+                "bug_workflow_summary": {},
+                "suite_breakdown": [],
+            },
+        )
+
+        self.assertFalse(result.used_ai)
+        self.assertEqual(result.model_name, "proxy-key")
+        self.assertIn("AI 分析接口调用失败", result.note)
+        self.assertIn("45 秒", result.note)
 
     def test_report_snapshot_can_be_created_and_listed(self):
         admin_user = User.objects.create_superuser(

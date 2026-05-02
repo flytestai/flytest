@@ -167,6 +167,108 @@ class LlmConnectionDiagnosticsTests(TestCase):
             "https://api.siliconflow.cn/v1",
         )
 
+    @patch("langgraph_integration.views.http_requests.post")
+    @patch("langgraph_integration.views.http_requests.get")
+    def test_fetch_models_augments_local_proxy_with_gpt_5_5(self, mock_get, mock_post) -> None:
+        self.config.api_url = "http://127.0.0.1:8327/v1"
+        self.config.save(update_fields=["api_url"])
+
+        models_response = Mock()
+        models_response.raise_for_status.return_value = None
+        models_response.json.return_value = {
+            "data": [
+                {"id": "gpt-5"},
+                {"id": "gpt-5.4"},
+            ]
+        }
+        mock_get.return_value = models_response
+
+        probe_response = Mock()
+        probe_response.raise_for_status.return_value = None
+        probe_response.json.return_value = {
+            "choices": [{"message": {"content": "ok"}}]
+        }
+        mock_post.return_value = probe_response
+
+        request = self.factory.post(
+            "/api/lg/llm-configs/fetch_models/",
+            {"config_id": self.config.id},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+        view = LLMConfigViewSet.as_view({"post": "fetch_models"})
+
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "success")
+        self.assertEqual(response.data["models"], ["gpt-5", "gpt-5.4", "gpt-5.5"])
+        mock_post.assert_called_once()
+        self.assertEqual(
+            mock_post.call_args.args[0],
+            "http://127.0.0.1:8327/v1/chat/completions",
+        )
+        self.assertEqual(mock_post.call_args.kwargs["json"]["model"], "gpt-5.5")
+
+    @patch("langgraph_integration.views.http_requests.post")
+    @patch("langgraph_integration.views.http_requests.get")
+    def test_fetch_models_keeps_original_models_when_probe_fails(self, mock_get, mock_post) -> None:
+        self.config.api_url = "http://127.0.0.1:8327/v1"
+        self.config.save(update_fields=["api_url"])
+
+        models_response = Mock()
+        models_response.raise_for_status.return_value = None
+        models_response.json.return_value = {
+            "data": [
+                {"id": "gpt-5"},
+                {"id": "gpt-5.4"},
+            ]
+        }
+        mock_get.return_value = models_response
+        mock_post.side_effect = Exception("probe failed")
+
+        request = self.factory.post(
+            "/api/lg/llm-configs/fetch_models/",
+            {"config_id": self.config.id},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+        view = LLMConfigViewSet.as_view({"post": "fetch_models"})
+
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "success")
+        self.assertEqual(response.data["models"], ["gpt-5", "gpt-5.4"])
+
+    @patch("langgraph_integration.views.http_requests.post")
+    @patch("langgraph_integration.views.http_requests.get")
+    def test_fetch_models_does_not_probe_non_local_proxy_endpoint(self, mock_get, mock_post) -> None:
+        models_response = Mock()
+        models_response.raise_for_status.return_value = None
+        models_response.json.return_value = {
+            "data": [
+                {"id": "gpt-5"},
+                {"id": "gpt-5.4"},
+            ]
+        }
+        mock_get.return_value = models_response
+
+        request = self.factory.post(
+            "/api/lg/llm-configs/fetch_models/",
+            {"config_id": self.config.id},
+            format="json",
+        )
+        force_authenticate(request, user=self.user)
+        view = LLMConfigViewSet.as_view({"post": "fetch_models"})
+
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "success")
+        self.assertEqual(response.data["models"], ["gpt-5", "gpt-5.4"])
+        mock_post.assert_not_called()
+
 
 class LlmConfigSharingTests(TestCase):
     def setUp(self) -> None:

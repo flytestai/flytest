@@ -4823,6 +4823,12 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
         blocked_count = execution_status_distribution.get("not_applicable", 0)
         executed_count = max(len(testcases) - not_executed_count, 0)
         pass_rate = round((passed_count / executed_count) * 100, 2) if executed_count else 0
+        approved_testcase_count = sum(1 for case in testcases if case.review_status == "approved")
+        unapproved_testcase_count = max(len(testcases) - approved_testcase_count, 0)
+        pending_review_testcase_count = (
+            review_status_distribution.get("pending_review", 0)
+            + review_status_distribution.get("optimization_pending_review", 0)
+        )
         traceable_testcase_count = requirement_summary.get("traceable_testcase_count", 0)
         unlinked_testcase_count = requirement_summary.get("unlinked_testcase_count", 0)
 
@@ -4929,6 +4935,14 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
                 "detail": f"当前失败用例 {failed_count} 条",
             },
             {
+                "name": "测试用例均已审核通过",
+                "passed": unapproved_testcase_count == 0,
+                "detail": (
+                    f"当前审核通过 {approved_testcase_count} 条，未通过审核 {unapproved_testcase_count} 条，"
+                    f"其中待审核/优化待审核 {pending_review_testcase_count} 条"
+                ),
+            },
+            {
                 "name": "测试范围内用例已全部执行",
                 "passed": not_executed_count == 0,
                 "detail": f"当前未执行用例 {not_executed_count} 条",
@@ -4948,7 +4962,19 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
         ]
         passed_criteria_count = sum(1 for item in completion_criteria if item["passed"])
 
-        if high_severity_open_bug_count > 0:
+        if len(testcases) == 0:
+            quality_rating = "不合格"
+            release_recommendation = "不建议发布"
+        elif approved_testcase_count == 0:
+            quality_rating = "不合格"
+            release_recommendation = "不建议发布"
+        elif unapproved_testcase_count > 0:
+            quality_rating = "不合格"
+            release_recommendation = "不建议发布"
+        elif executed_count == 0:
+            quality_rating = "不合格"
+            release_recommendation = "不建议发布"
+        elif high_severity_open_bug_count > 0:
             quality_rating = "不合格"
             release_recommendation = "不建议发布"
         elif failed_count > 0:
@@ -4968,6 +4994,10 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
             release_recommendation = "建议发布"
 
         process_risks = []
+        if unapproved_testcase_count > 0:
+            process_risks.append(
+                f"当前仍有 {unapproved_testcase_count} 条测试用例未审核通过，其中待审核/优化待审核 {pending_review_testcase_count} 条，测试资产尚未达到发布评估前提。"
+            )
         if unlinked_testcase_count > 0:
             process_risks.append(
                 f"仍有 {unlinked_testcase_count} 条测试用例未关联需求，测试范围与需求覆盖关系追溯不完整。"
@@ -4979,6 +5009,8 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
         process_risks.append("当前系统未结构化记录硬件、网络、浏览器、中间件版本等环境数据，环境可追溯性不足。")
 
         residual_risks = []
+        if executed_count == 0 and len(testcases) > 0:
+            residual_risks.append("当前测试范围内用例尚未开始执行，缺少有效执行结果，无法支撑发布判断。")
         if high_severity_open_bug_count > 0:
             residual_risks.append(
                 f"仍有 {high_severity_open_bug_count} 个致命/严重 BUG 未关闭，核心业务上线风险较高。"
@@ -4993,6 +5025,10 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
             residual_risks.append(f"未执行用例 {not_executed_count} 条，剩余需求覆盖与边界风险仍未被完全验证。")
 
         follow_up_actions = []
+        if unapproved_testcase_count > 0:
+            follow_up_actions.append("先完成测试用例审核，使测试范围内用例全部达到可执行、可评估状态后再生成发布结论。")
+        if executed_count == 0 and len(testcases) > 0:
+            follow_up_actions.append("先执行当前测试范围内测试用例并回填真实执行结果，再生成测试报告。")
         if high_severity_open_bug_count > 0:
             follow_up_actions.append("优先关闭全部未关闭的致命/严重 BUG，完成复测通过后再进入发布评审。")
         if failed_count > 0:
@@ -5010,12 +5046,19 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
 
         conclusion_parts = [
             f"本轮共纳入 {len(testcases)} 条测试用例，已执行 {executed_count} 条，通过 {passed_count} 条，失败 {failed_count} 条，未执行 {not_executed_count} 条，执行通过率 {pass_rate}%。",
+            f"当前审核通过 {approved_testcase_count} 条，未通过审核 {unapproved_testcase_count} 条。",
             f"同步统计 BUG {len(bugs)} 个，其中未关闭 {len(open_bugs)} 个，致命/严重未关闭 {high_severity_open_bug_count} 个，复测失败累计 {bug_workflow_summary['retest_failed_total_count']} 次。",
         ]
         if unlinked_testcase_count > 0:
             conclusion_parts.append(
                 f"当前仍有 {unlinked_testcase_count} 条测试用例未完成需求追踪映射，报告追溯完整性仍需补齐。"
             )
+        if approved_testcase_count == 0 and len(testcases) > 0:
+            conclusion_parts.append("当前测试范围内用例均未审核通过，尚不具备发布评估前提。")
+        elif unapproved_testcase_count > 0:
+            conclusion_parts.append("当前仍有部分测试用例未审核通过，测试资产完整性不足。")
+        if executed_count == 0 and len(testcases) > 0:
+            conclusion_parts.append("当前测试范围内用例尚未执行，缺少有效执行证据。")
         if release_recommendation == "建议发布":
             conclusion_parts.append("核心完成标准已达成，当前质量状态支持进入发布或上线验证阶段。")
         elif release_recommendation == "有条件发布":
