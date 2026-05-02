@@ -4666,6 +4666,7 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
                 }
             )
 
+        generated_at = timezone.localtime()
         report_context = {
             "project": {
                 "id": project.id,
@@ -4673,7 +4674,7 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
             },
             "selected_suite_ids": selected_suite_ids,
             "selected_suite_names": [suite.name for suite in selected_suites],
-            "generated_at": timezone.now().isoformat(),
+            "generated_at": generated_at.isoformat(),
             "totals": {
                 "suite_count": len(suites),
                 "selected_suite_count": len(selected_suites),
@@ -4693,6 +4694,455 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
         }
 
         report_result = generate_iteration_test_report(user=request.user, report_context=report_context)
+
+        severity_label_map = {
+            "1": "致命",
+            "2": "严重",
+            "3": "一般",
+            "4": "轻微",
+        }
+        execution_label_map = {
+            "passed": "通过",
+            "failed": "失败",
+            "not_executed": "未执行",
+            "not_applicable": "阻塞/无需执行",
+        }
+        bug_status_label_map = {
+            TestBug.STATUS_UNASSIGNED: "未指派",
+            TestBug.STATUS_ASSIGNED: "未确认",
+            TestBug.STATUS_CONFIRMED: "已确认",
+            TestBug.STATUS_FIXED: "已修复",
+            TestBug.STATUS_PENDING_RETEST: "待复测",
+            TestBug.STATUS_CLOSED: "已关闭",
+            TestBug.STATUS_EXPIRED: "已过期",
+        }
+
+        def _display_name(user_obj):
+            if not user_obj:
+                return "-"
+            return getattr(user_obj, "real_name", "") or getattr(user_obj, "username", "") or "-"
+
+        def _normalize_version(value):
+            version = str(value or "").strip()
+            if not version:
+                return "V1.0"
+            return version if version.lower().startswith("v") else f"V{version}"
+
+        def _strip_rich_text(value):
+            text = re.sub(r"<[^>]+>", " ", value or "")
+            text = (
+                text.replace("&nbsp;", " ")
+                .replace("&ensp;", " ")
+                .replace("&emsp;", " ")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+            )
+            return re.sub(r"\s+", " ", text).strip()
+
+        def _short_text(value, limit=80):
+            text = _strip_rich_text(value)
+            if len(text) <= limit:
+                return text or "-"
+            return f"{text[:limit].rstrip()}..."
+
+        latest_requirement_item = next(
+            (
+                item
+                for item in requirement_documents_payload
+                if item.get("is_latest") and item.get("version")
+            ),
+            None,
+        ) or next((item for item in requirement_documents_payload if item.get("version")), None)
+        report_version = _normalize_version(latest_requirement_item.get("version") if latest_requirement_item else None)
+
+        report_author = _display_name(request.user)
+        report_owner = _display_name(getattr(project, "creator", None))
+        reviewer_candidate = (
+            ProjectMember.objects.filter(project=project, role__in=["owner", "admin"])
+            .select_related("user")
+            .exclude(user=request.user)
+            .first()
+        )
+        report_reviewer = _display_name(
+            reviewer_candidate.user if reviewer_candidate and getattr(reviewer_candidate, "user", None) else getattr(project, "creator", None)
+        )
+
+        all_project_suites = list(TestSuite.objects.filter(project=project).select_related("parent"))
+        all_project_suite_count = len(all_project_suites)
+        all_project_suites_by_id = {suite.id: suite for suite in all_project_suites}
+        excluded_suite_ids = [suite.id for suite in all_project_suites if suite.id not in expanded_suite_ids]
+        excluded_suite_count = len(excluded_suite_ids)
+        suite_breakdown_by_id = {item["id"]: item for item in suite_breakdown}
+        selected_suite_nodes = [suite_breakdown_by_id[item] for item in selected_suite_ids if item in suite_breakdown_by_id]
+        selected_suite_paths = [item["path"] for item in selected_suite_nodes]
+        selected_suite_scope = (
+            f"本次直接选择 {len(selected_suite_ids)} 个套件：{'；'.join(selected_suite_paths[:5])}"
+            if selected_suite_paths
+            else "未选择测试套件"
+        )
+        if selected_suite_paths:
+            selected_suite_scope += f"。报告自动覆盖其下共 {len(expanded_suite_ids)} 个套件节点"
+            if len(expanded_suite_ids) > len(selected_suite_ids):
+                selected_suite_scope += f"（含 {len(expanded_suite_ids) - len(selected_suite_ids)} 个子套件）"
+            selected_suite_scope += "。"
+        excluded_suite_paths = [
+            self._build_suite_path(all_project_suites_by_id[item], all_project_suites_by_id)
+            for item in excluded_suite_ids[:5]
+            if item in all_project_suites_by_id
+        ]
+        excluded_scope = (
+            f"未纳入本次报告的套件/子套件共 {excluded_suite_count} 个：{'；'.join(excluded_suite_paths)}"
+            + (" 等。" if excluded_suite_count > len(excluded_suite_paths) else "。")
+            if excluded_suite_count > 0
+            else "当前项目全部套件均已纳入本次测试报告。"
+        )
+
+        observed_time_points = [generated_at]
+        observed_time_points.extend([case.executed_at for case in testcases if case.executed_at])
+        observed_time_points.extend([assignment.created_at for assignment in assignment_map.values() if assignment and assignment.created_at])
+        observed_time_points.extend([bug.opened_at for bug in bugs if bug.opened_at])
+        observed_time_points.extend([bug.assigned_at for bug in bugs if bug.assigned_at])
+        observed_time_points.extend([bug.resolved_at for bug in bugs if bug.resolved_at])
+        observed_time_points.extend([bug.closed_at for bug in bugs if bug.closed_at])
+        observed_time_points = [item for item in observed_time_points if item]
+        observed_start = min(observed_time_points) if observed_time_points else generated_at
+        observed_end = max(observed_time_points) if observed_time_points else generated_at
+
+        distinct_test_types = sorted(
+            {
+                testcase.get_test_type_display() if hasattr(testcase, "get_test_type_display") else testcase.test_type
+                for testcase in testcases
+                if (testcase.get_test_type_display() if hasattr(testcase, "get_test_type_display") else testcase.test_type)
+            }
+        )
+
+        passed_count = execution_status_distribution.get("passed", 0)
+        failed_count = execution_status_distribution.get("failed", 0)
+        not_executed_count = execution_status_distribution.get("not_executed", 0)
+        blocked_count = execution_status_distribution.get("not_applicable", 0)
+        executed_count = max(len(testcases) - not_executed_count, 0)
+        pass_rate = round((passed_count / executed_count) * 100, 2) if executed_count else 0
+        traceable_testcase_count = requirement_summary.get("traceable_testcase_count", 0)
+        unlinked_testcase_count = requirement_summary.get("unlinked_testcase_count", 0)
+
+        severity_distribution = {
+            "致命": 0,
+            "严重": 0,
+            "一般": 0,
+            "轻微": 0,
+        }
+        open_bugs = []
+        by_module_bug_map = defaultdict(int)
+        bug_list_rows = []
+        for bug in bugs:
+            severity_label = severity_label_map.get(bug.severity, bug.severity or "-")
+            effective_status = bug.get_effective_status()
+            status_label = bug_status_label_map.get(effective_status, bug.get_effective_status_display())
+            workflow_counts = bug_activity_counts.get(
+                bug.id,
+                {
+                    "fix_count": 0,
+                    "resolve_count": 0,
+                    "activate_count": 0,
+                    "close_count": 0,
+                    "confirm_count": 0,
+                    "assign_count": 0,
+                },
+            )
+            related_testcase_names = list(bug.related_testcases.order_by("id").values_list("name", flat=True))
+            impact_parts = []
+            if bug.suite:
+                impact_parts.append(f"影响套件：{bug.suite.name}")
+            if related_testcase_names:
+                testcase_scope = "、".join(related_testcase_names[:3])
+                if len(related_testcase_names) > 3:
+                    testcase_scope += "等"
+                impact_parts.append(f"关联用例：{testcase_scope}")
+            actual_summary = _short_text(bug.actual_result or bug.expected_result or bug.steps, 70)
+            if actual_summary and actual_summary != "-":
+                impact_parts.append(f"问题表现：{actual_summary}")
+
+            if effective_status == TestBug.STATUS_CLOSED:
+                risk_acceptance = "该 BUG 已完成关闭验证，可接受当前风险。"
+            elif effective_status == TestBug.STATUS_EXPIRED:
+                risk_acceptance = "该 BUG 已超过解决时间且仍未关闭，当前风险不可接受。"
+            elif workflow_counts.get("activate_count", 0) > 0:
+                risk_acceptance = (
+                    f"该 BUG 已复测失败 {workflow_counts['activate_count']} 次，需继续修复并重新验证，当前不建议接受风险。"
+                )
+            elif bug.severity in {"1", "2"}:
+                risk_acceptance = "存在未关闭的高风险缺陷，当前不建议接受风险。"
+            elif effective_status in {TestBug.STATUS_FIXED, TestBug.STATUS_PENDING_RETEST}:
+                risk_acceptance = "开发已完成处理但尚未闭环，需测试复测通过后再评估是否接受风险。"
+            else:
+                risk_acceptance = "缺陷尚未闭环，需继续指派、修复并跟进验证。"
+            severity_distribution[severity_label] = severity_distribution.get(severity_label, 0) + 1
+            by_module_bug_map[bug.suite.name if bug.suite else "未归属套件"] += 1
+            if effective_status != TestBug.STATUS_CLOSED:
+                open_bugs.append(bug)
+            bug_list_rows.append(
+                {
+                    "id": bug.id,
+                    "title": bug.title,
+                    "severity": severity_label,
+                    "status": status_label,
+                    "module": bug.suite.name if bug.suite else "未归属套件",
+                    "impact_scope": "；".join(impact_parts) if impact_parts else "-",
+                    "repro_steps": _short_text(bug.steps, 120),
+                    "planned_fix_version": bug.deadline.isoformat() if bug.deadline else "未设置解决时间",
+                    "risk_acceptance": risk_acceptance,
+                }
+            )
+
+        high_severity_open_bug_count = sum(
+            1
+            for bug in open_bugs
+            if bug.severity in {"1", "2"}
+        )
+
+        module_bug_distribution = [
+            {"name": name, "count": count}
+            for name, count in sorted(by_module_bug_map.items(), key=lambda item: (-item[1], item[0]))
+        ]
+        bug_status_summary = [
+            {
+                "name": bug_status_label_map.get(key, key),
+                "count": value,
+            }
+            for key, value in sorted(bug_status_distribution.items(), key=lambda item: item[0])
+        ]
+        severity_summary = [
+            {"name": name, "count": count}
+            for name, count in severity_distribution.items()
+        ]
+
+        completion_criteria = [
+            {
+                "name": "无未关闭致命/严重缺陷",
+                "passed": high_severity_open_bug_count == 0,
+                "detail": f"当前未关闭致命/严重缺陷 {high_severity_open_bug_count} 个",
+            },
+            {
+                "name": "核心测试执行失败数为 0",
+                "passed": failed_count == 0,
+                "detail": f"当前失败用例 {failed_count} 条",
+            },
+            {
+                "name": "测试范围内用例已全部执行",
+                "passed": not_executed_count == 0,
+                "detail": f"当前未执行用例 {not_executed_count} 条",
+            },
+            {
+                "name": "测试用例已完成需求追踪",
+                "passed": unlinked_testcase_count == 0,
+                "detail": f"当前已关联需求 {traceable_testcase_count} 条，未关联需求 {unlinked_testcase_count} 条",
+            },
+            {
+                "name": "BUG 闭环达到收敛状态",
+                "passed": bug_workflow_summary["retest_failed_total_count"] == 0 and len(open_bugs) == 0,
+                "detail": (
+                    f"当前未关闭 BUG {len(open_bugs)} 个，复测失败累计 {bug_workflow_summary['retest_failed_total_count']} 次"
+                ),
+            },
+        ]
+        passed_criteria_count = sum(1 for item in completion_criteria if item["passed"])
+
+        if high_severity_open_bug_count > 0:
+            quality_rating = "不合格"
+            release_recommendation = "不建议发布"
+        elif failed_count > 0:
+            quality_rating = "不合格"
+            release_recommendation = "不建议发布"
+        elif len(open_bugs) > 0 or bug_workflow_summary["retest_failed_total_count"] > 0:
+            quality_rating = "良"
+            release_recommendation = "有条件发布"
+        elif not_executed_count > 0 or unlinked_testcase_count > 0:
+            quality_rating = "合格"
+            release_recommendation = "有条件发布"
+        elif passed_criteria_count == len(completion_criteria):
+            quality_rating = "优"
+            release_recommendation = "建议发布"
+        else:
+            quality_rating = "良"
+            release_recommendation = "建议发布"
+
+        process_risks = []
+        if unlinked_testcase_count > 0:
+            process_risks.append(
+                f"仍有 {unlinked_testcase_count} 条测试用例未关联需求，测试范围与需求覆盖关系追溯不完整。"
+            )
+        if not_executed_count > 0:
+            process_risks.append(f"仍有 {not_executed_count} 条测试用例未执行，当前测试活动尚未完整覆盖所选套件范围。")
+        if not distinct_test_types:
+            process_risks.append("当前测试用例未完整标注测试类型，测试活动分类统计存在缺口。")
+        process_risks.append("当前系统未结构化记录硬件、网络、浏览器、中间件版本等环境数据，环境可追溯性不足。")
+
+        residual_risks = []
+        if high_severity_open_bug_count > 0:
+            residual_risks.append(
+                f"仍有 {high_severity_open_bug_count} 个致命/严重 BUG 未关闭，核心业务上线风险较高。"
+            )
+        if len(open_bugs) > 0:
+            residual_risks.append(f"仍有 {len(open_bugs)} 个 BUG 未关闭，需在发布前确认影响范围与风险接受策略。")
+        if bug_workflow_summary["retest_failed_total_count"] > 0:
+            residual_risks.append(
+                f"BUG 复测失败累计 {bug_workflow_summary['retest_failed_total_count']} 次，说明部分问题修复质量仍需重点验证。"
+            )
+        if not_executed_count > 0:
+            residual_risks.append(f"未执行用例 {not_executed_count} 条，剩余需求覆盖与边界风险仍未被完全验证。")
+
+        follow_up_actions = []
+        if high_severity_open_bug_count > 0:
+            follow_up_actions.append("优先关闭全部未关闭的致命/严重 BUG，完成复测通过后再进入发布评审。")
+        if failed_count > 0:
+            follow_up_actions.append("按失败用例所属套件逐项复盘失败原因，并补充回归验证记录。")
+        if not_executed_count > 0:
+            follow_up_actions.append("补齐未执行用例的执行结果，避免测试报告范围与实际交付范围不一致。")
+        if unlinked_testcase_count > 0:
+            follow_up_actions.append("为未关联需求的测试用例补齐需求文档与需求模块映射，提升报告可追溯性。")
+        for item in report_result.recommendations[:5]:
+            detail = item["detail"]
+            if detail and detail not in follow_up_actions:
+                follow_up_actions.append(detail)
+        if not follow_up_actions:
+            follow_up_actions.append("建议持续补齐环境记录、执行结果和 BUG 闭环信息，确保后续版本测试报告可直接复用。")
+
+        conclusion_parts = [
+            f"本轮共纳入 {len(testcases)} 条测试用例，已执行 {executed_count} 条，通过 {passed_count} 条，失败 {failed_count} 条，未执行 {not_executed_count} 条，执行通过率 {pass_rate}%。",
+            f"同步统计 BUG {len(bugs)} 个，其中未关闭 {len(open_bugs)} 个，致命/严重未关闭 {high_severity_open_bug_count} 个，复测失败累计 {bug_workflow_summary['retest_failed_total_count']} 次。",
+        ]
+        if unlinked_testcase_count > 0:
+            conclusion_parts.append(
+                f"当前仍有 {unlinked_testcase_count} 条测试用例未完成需求追踪映射，报告追溯完整性仍需补齐。"
+            )
+        if release_recommendation == "建议发布":
+            conclusion_parts.append("核心完成标准已达成，当前质量状态支持进入发布或上线验证阶段。")
+        elif release_recommendation == "有条件发布":
+            conclusion_parts.append("当前建议有条件发布，需先明确遗留缺陷、未执行项或复测风险的接受与跟进责任。")
+        else:
+            conclusion_parts.append("当前仍存在阻断发布的质量风险，暂不建议进入发布阶段。")
+        computed_conclusion = "".join(conclusion_parts)
+
+        report_standard = {
+            "basic_info": {
+                "report_no": f"TR-{project.id}-{generated_at.strftime('%Y%m%d%H%M%S')}",
+                "report_version": report_version,
+                "report_date": generated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "author": report_author,
+                "owner": report_owner,
+                "reviewer": report_reviewer,
+            },
+            "test_overview": {
+                "test_object": project.name,
+                "target_version": report_version,
+                "scope_included": selected_suite_scope,
+                "scope_excluded": excluded_scope,
+                "objectives": [
+                    "验证所选测试套件及其子套件下测试用例的执行结果与覆盖情况。",
+                    "核对需求文档、需求模块与测试用例之间的追踪关系是否完整。",
+                    "评估 BUG 从提出、指派、修复到复测/关闭的闭环质量与风险状态。",
+                ],
+            },
+            "environment": {
+                "hardware_network": "当前系统未采集服务器硬件、终端型号和网络模拟信息，需由测试执行人补充。",
+                "software_environment": "当前系统未采集操作系统、数据库、浏览器、中间件版本信息，报告仅基于测试资产与缺陷数据生成。",
+                "test_tools": ["FlyTest 测试用例库", "FlyTest BUG 管理", "需求文档追踪", "AI 测试报告生成"],
+                "third_party_services": "当前系统未记录第三方服务版本与依赖信息。",
+            },
+            "activity_summary": {
+                "test_types": distinct_test_types or ["未标注"],
+                "test_round": "当前迭代测试报告",
+                "time_span": {
+                    "start": observed_start.isoformat() if observed_start else None,
+                    "end": observed_end.isoformat() if observed_end else None,
+                },
+                "workload": {
+                    "person_days": "当前系统未统计",
+                    "total_cases": len(testcases),
+                    "executed_cases": executed_count,
+                    "automation_ratio": "当前系统未统计",
+                    "bug_count": len(bugs),
+                },
+            },
+            "result_details": {
+                "case_execution": {
+                    "total": len(testcases),
+                    "passed": passed_count,
+                    "failed": failed_count,
+                    "blocked": blocked_count,
+                    "not_executed": not_executed_count,
+                    "pass_rate": pass_rate,
+                },
+                "execution_breakdown": [
+                    {"name": execution_label_map.get(key, key), "count": value}
+                    for key, value in execution_status_distribution.items()
+                ],
+            },
+            "defect_summary": {
+                "by_severity": severity_summary,
+                "by_status": bug_status_summary,
+                "by_module": module_bug_distribution,
+                "trend_summary": {
+                    "discovered": len(bugs),
+                    "closed": bug_workflow_summary["closed_bug_count"],
+                    "reactivated": bug_workflow_summary["reactivated_bug_count"],
+                    "retest_failed_total": bug_workflow_summary["retest_failed_total_count"],
+                },
+                "legacy_defects": [
+                    {
+                        "id": item["id"],
+                        "title": item["title"],
+                        "severity": item["severity"],
+                        "status": item["status"],
+                        "module": item["module"],
+                        "repro_steps": item["repro_steps"],
+                        "impact_scope": item["impact_scope"],
+                        "planned_fix_version": item["planned_fix_version"],
+                        "risk_acceptance": item["risk_acceptance"],
+                    }
+                    for item in bug_list_rows
+                    if item["status"] != "已关闭"
+                ],
+            },
+            "quality_conclusion": {
+                "rating": quality_rating,
+                "release_recommendation": release_recommendation,
+                "criteria": completion_criteria,
+                "conclusion": computed_conclusion,
+            },
+            "risk_and_suggestions": {
+                "process_risks": process_risks,
+                "residual_risks": residual_risks or ["当前未识别额外剩余风险。"],
+                "follow_up_actions": follow_up_actions,
+            },
+            "appendices": {
+                "defect_list_summary": {
+                    "total": len(bugs),
+                    "open_total": len(open_bugs),
+                    "items": bug_list_rows[:20],
+                },
+                "key_testcases": [
+                    {
+                        "id": item["id"],
+                        "name": item["name"],
+                        "module": item["module"],
+                        "test_type": item["test_type"],
+                        "execution_status": item["execution_status"],
+                    }
+                    for item in testcase_payload[:20]
+                ],
+                "requirement_documents": [
+                    {
+                        "title": item["title"],
+                        "version": item["version"],
+                        "status": item["status"],
+                    }
+                    for item in requirement_documents_payload
+                ],
+                "test_data_note": "当前报告直接使用所选套件下的测试用例、需求追踪与 BUG 数据生成，未额外注入模拟测试数据。",
+            },
+        }
 
         return Response(
             {
@@ -4719,6 +5169,7 @@ class TestExecutionViewSet(viewsets.ModelViewSet):
                     "review_status_distribution": review_status_distribution,
                     "requirement_summary": requirement_summary,
                     "bug_workflow_summary": bug_workflow_summary,
+                    "report_standard": report_standard,
                 },
             },
             status=status.HTTP_200_OK,

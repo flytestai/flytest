@@ -663,6 +663,134 @@ export interface AiIterationTestReport {
       close_count: number;
     }>;
   };
+  report_standard: {
+    basic_info: {
+      report_no: string;
+      report_version: string;
+      report_date: string;
+      author: string;
+      owner: string;
+      reviewer: string;
+    };
+    test_overview: {
+      test_object: string;
+      target_version: string;
+      scope_included: string;
+      scope_excluded: string;
+      objectives: string[];
+    };
+    environment: {
+      hardware_network: string;
+      software_environment: string;
+      test_tools: string[];
+      third_party_services: string;
+    };
+    activity_summary: {
+      test_types: string[];
+      test_round: string;
+      time_span: {
+        start?: string | null;
+        end?: string | null;
+      };
+      workload: {
+        person_days: string;
+        total_cases: number;
+        executed_cases: number;
+        automation_ratio: string;
+        bug_count: number;
+      };
+    };
+    result_details: {
+      case_execution: {
+        total: number;
+        passed: number;
+        failed: number;
+        blocked: number;
+        not_executed: number;
+        pass_rate: number;
+      };
+      execution_breakdown: Array<{
+        name: string;
+        count: number;
+      }>;
+    };
+    defect_summary: {
+      by_severity: Array<{
+        name: string;
+        count: number;
+      }>;
+      by_status: Array<{
+        name: string;
+        count: number;
+      }>;
+      by_module: Array<{
+        name: string;
+        count: number;
+      }>;
+      trend_summary: {
+        discovered: number;
+        closed: number;
+        reactivated: number;
+        retest_failed_total: number;
+      };
+      legacy_defects: Array<{
+        id: number;
+        title: string;
+        severity: string;
+        status: string;
+        module: string;
+        repro_steps: string;
+        impact_scope: string;
+        planned_fix_version: string;
+        risk_acceptance: string;
+      }>;
+    };
+    quality_conclusion: {
+      rating: string;
+      release_recommendation: string;
+      criteria: Array<{
+        name: string;
+        passed: boolean;
+        detail: string;
+      }>;
+      conclusion: string;
+    };
+    risk_and_suggestions: {
+      process_risks: string[];
+      residual_risks: string[];
+      follow_up_actions: string[];
+    };
+    appendices: {
+      defect_list_summary: {
+        total: number;
+        open_total: number;
+        items: Array<{
+          id: number;
+          title: string;
+          severity: string;
+          status: string;
+          module: string;
+          impact_scope: string;
+          repro_steps: string;
+          planned_fix_version: string;
+          risk_acceptance: string;
+        }>;
+      };
+      key_testcases: Array<{
+        id: number;
+        name: string;
+        module: string;
+        test_type: string;
+        execution_status: string;
+      }>;
+      requirement_documents: Array<{
+        title: string;
+        version: string;
+        status: string;
+      }>;
+      test_data_note: string;
+    };
+  };
 }
 
 export interface AiIterationTestReportResponse {
@@ -706,6 +834,26 @@ export interface UpdateTestReportSnapshotPayload {
   report_data?: AiIterationTestReport;
 }
 
+const AI_REPORT_REQUEST_TIMEOUT = 15000;
+const REPORT_SNAPSHOT_REQUEST_TIMEOUT = 10000;
+
+const unwrapApiPayload = <T>(payload: any): T | undefined => {
+  if (payload && typeof payload === 'object') {
+    if ('status' in payload && payload.data !== undefined) {
+      return unwrapApiPayload<T>(payload.data);
+    }
+    if (
+      'success' in payload &&
+      'data' in payload &&
+      payload.success === true &&
+      payload.data !== undefined
+    ) {
+      return unwrapApiPayload<T>(payload.data);
+    }
+  }
+  return payload as T | undefined;
+};
+
 export const generateAiIterationTestReport = async (
   projectId: number,
   suiteIds: number[]
@@ -725,6 +873,7 @@ export const generateAiIterationTestReport = async (
       `${API_BASE_URL}/projects/${projectId}/test-executions/ai-report/`,
       { suite_ids: suiteIds },
       {
+        timeout: AI_REPORT_REQUEST_TIMEOUT,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -735,13 +884,15 @@ export const generateAiIterationTestReport = async (
 
     return {
       success: true,
-      data: response.data?.data || response.data,
+      data: unwrapApiPayload<AiIterationTestReport>(response.data),
       statusCode: response.status,
     };
   } catch (error: any) {
+    const isTimeout = error.code === 'ECONNABORTED' || String(error.message || '').includes('timeout');
     return {
       success: false,
       error:
+        (isTimeout ? '生成测试报告超时，请稍后重试' : null) ||
         error.response?.data?.error ||
         error.response?.data?.message ||
         error.message ||
@@ -772,7 +923,7 @@ export const getTestReportSnapshots = async (
 
     return {
       success: true,
-      data: response.data?.data || [],
+      data: unwrapApiPayload<any[]>(response.data) || [],
       statusCode: response.status,
     };
   } catch (error: any) {
@@ -805,6 +956,7 @@ export const createTestReportSnapshot = async (
       `${API_BASE_URL}/projects/${projectId}/test-executions/report-snapshots/`,
       payload,
       {
+        timeout: REPORT_SNAPSHOT_REQUEST_TIMEOUT,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -815,13 +967,19 @@ export const createTestReportSnapshot = async (
 
     return {
       success: true,
-      data: response.data?.data,
+      data: unwrapApiPayload<any>(response.data),
       statusCode: response.status,
     };
   } catch (error: any) {
+    const isTimeout = error.code === 'ECONNABORTED' || String(error.message || '').includes('timeout');
     return {
       success: false,
-      error: error.response?.data?.error || error.response?.data?.message || error.message || '保存报告快照失败',
+      error:
+        (isTimeout ? '保存报告快照超时，请稍后重试' : null) ||
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        '保存报告快照失败',
       statusCode: error.response?.status,
     };
   }
@@ -854,7 +1012,7 @@ export const updateTestReportSnapshot = async (
 
     return {
       success: true,
-      data: response.data?.data,
+      data: unwrapApiPayload<any>(response.data),
       statusCode: response.status,
     };
   } catch (error: any) {

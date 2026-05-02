@@ -120,7 +120,7 @@ def _build_ai_prompt(report_context: dict[str, Any]) -> str:
         "bug_workflow_summary": report_context.get("bug_workflow_summary") or {},
         "suite_breakdown": report_context.get("suite_breakdown") or [],
     }
-    return json.dumps(prompt_payload, ensure_ascii=False, indent=2)
+    return json.dumps(prompt_payload, ensure_ascii=False, indent=2, default=str)
 
 
 def _safe_int(value: Any) -> int:
@@ -380,44 +380,10 @@ def build_rule_based_iteration_report(report_context: dict[str, Any]) -> Iterati
 def generate_iteration_test_report(*, user, report_context: dict[str, Any]) -> IterationTestReportResult:
     fallback = build_rule_based_iteration_report(report_context)
     active_config = get_user_active_llm_config(user)
-    if not active_config:
-        return fallback
-
-    try:
-        response_text = invoke_plain_text_llm(
-            active_config,
-            [
-                SystemMessage(content=TEST_REPORT_SYSTEM_PROMPT),
-                HumanMessage(content=_build_ai_prompt(report_context)),
-            ],
-            temperature=0.2,
+    if active_config:
+        fallback.note = (
+            "当前已优先使用结构化测试数据快速生成测试报告，"
+            "未等待外部模型返回，避免长时间加载。"
         )
-        payload = _safe_json_loads(response_text)
-
-        summary = _truncate(str(payload.get("summary") or fallback.summary), 300)
-        quality_overview = _truncate(
-            str(payload.get("quality_overview") or fallback.quality_overview),
-            300,
-        )
-        risk_overview = _truncate(str(payload.get("risk_overview") or fallback.risk_overview), 300)
-        findings = _normalize_report_items(payload.get("findings"), kind="finding") or fallback.findings
-        recommendations = (
-            _normalize_report_items(payload.get("recommendations"), kind="recommendation")
-            or fallback.recommendations
-        )
-        evidence = _normalize_report_items(payload.get("evidence"), kind="evidence") or fallback.evidence
-
-        return IterationTestReportResult(
-            used_ai=True,
-            note="报告已结合当前模型输出与结构化测试数据自动生成。",
-            model_name=getattr(active_config, "name", None) or None,
-            summary=summary,
-            quality_overview=quality_overview,
-            risk_overview=risk_overview,
-            findings=findings[:8],
-            recommendations=recommendations[:8],
-            evidence=evidence[:10],
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("生成 AI 测试报告失败，已回退到规则报告: %s", exc, exc_info=True)
-        return fallback
+        fallback.model_name = getattr(active_config, "name", None) or None
+    return fallback
