@@ -963,7 +963,7 @@ const sampleJsonArrayText = JSON.stringify(
 
 const sampleJsonDiffLeftText = JSON.stringify(
   {
-    project: 'FlyTest',
+    project: 'FeiCe 飞测',
     version: '1.0.0',
     features: ['api', 'ui'],
     enabled: true,
@@ -974,7 +974,7 @@ const sampleJsonDiffLeftText = JSON.stringify(
 
 const sampleJsonDiffRightText = JSON.stringify(
   {
-    project: 'FlyTest',
+    project: 'FeiCe 飞测',
     version: '1.1.0',
     features: ['api', 'ui', 'app'],
     enabled: true,
@@ -1361,7 +1361,7 @@ const toolHelperPresets = computed<ToolPreset[]>(() => {
     case 'generate_qrcode':
       return [
         { key: 'qrcode-url', label: '示例链接', values: { text: 'https://flytest.example.com/login', box_size: 8, border: 2 } },
-        { key: 'qrcode-note', label: '示例备注', values: { text: 'FlyTest\\nUI 自动化\\n执行冒烟套件' } },
+        { key: 'qrcode-note', label: '示例备注', values: { text: 'FeiCe 飞测\\nUI 自动化\\n执行冒烟套件' } },
       ]
     case 'generate_barcode':
       return [

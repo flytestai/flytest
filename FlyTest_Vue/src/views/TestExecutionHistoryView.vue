@@ -1322,7 +1322,7 @@ const buildFallbackStandardReport = (report: any) => {
     environment: {
       hardware_network: '历史快照未记录',
       software_environment: '历史快照未记录',
-      test_tools: ['FlyTest'],
+      test_tools: ['FeiCe 飞测'],
       third_party_services: '历史快照未记录',
     },
     activity_summary: {

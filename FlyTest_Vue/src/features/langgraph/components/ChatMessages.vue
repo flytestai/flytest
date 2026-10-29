@@ -4,7 +4,7 @@
       <div class="empty-icon">
         <img :src="brandLogoUrl" alt="" class="empty-logo" />
       </div>
-      <p>开始与 FlyTest 的对话吧</p>
+      <p>开始与 FeiCe 飞测的对话吧</p>
     </div>
 
     <MessageItem

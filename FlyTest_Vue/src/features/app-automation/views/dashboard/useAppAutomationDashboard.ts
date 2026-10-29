@@ -436,7 +436,7 @@ export const useAppAutomationDashboard = () => {
   const runTaskNow = async (task: AppScheduledTask) => {
     setTaskActionLoading('run', task.id, true)
     try {
-      const result = await AppAutomationService.runScheduledTaskNow(task.id, authStore.currentUser?.username || 'FlyTest')
+      const result = await AppAutomationService.runScheduledTaskNow(task.id, authStore.currentUser?.username || 'FeiCe')
       const createdCount = result.trigger_payload?.execution_ids?.length || (result.trigger_payload?.execution_id ? 1 : 0)
       Message.success(createdCount > 1 ? `任务已触发，已创建 ${createdCount} 条执行记录` : '定时任务已触发执行')
       await loadDashboardState({ includeAi: false })

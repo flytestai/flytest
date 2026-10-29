@@ -1,4 +1,4 @@
-# FlyTest Vue
+# FeiCe 飞测 Vue
 
 A modern test automation management system built with Vue 3, TypeScript, and Vite.
 
@@ -34,10 +34,10 @@ A modern test automation management system built with Vue 3, TypeScript, and Vit
 
 ```bash
 # Clone the repository
-git clone https://github.com/MGdaasLab/FlyTest.git
+git clone https://github.com/flytestai/flytest.git
 
 # Navigate to project directory
-cd FlyTest_vue
+cd flytest/FlyTest_Vue
 
 # Install dependencies
 npm install

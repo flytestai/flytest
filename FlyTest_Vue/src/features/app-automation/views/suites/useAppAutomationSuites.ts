@@ -362,7 +362,7 @@ export function useAppAutomationSuites() {
       const result = await AppAutomationService.runTestSuite(currentSuiteId.value, {
         device_id: runForm.device_id,
         package_name: runForm.package_name || undefined,
-        triggered_by: authStore.currentUser?.username || 'FlyTest',
+        triggered_by: authStore.currentUser?.username || 'FeiCe',
       })
       runVisible.value = false
       Message.success(`测试套件已提交执行，共创建 ${result.test_case_count} 条执行记录`)

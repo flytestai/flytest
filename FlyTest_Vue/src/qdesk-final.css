@@ -1,0 +1,646 @@
+/* =========================================================
+   FeiCe QDesk · final surface pass
+   Resolves the remaining specificity collisions with the
+   previous flat theme, keeping the QDesk composition intact.
+   ========================================================= */
+
+html body:has(.main-layout) .main-layout .sider {
+  box-sizing: border-box !important;
+}
+
+html body:has(.main-layout) .main-layout .header *,
+html body:has(.main-layout) .main-layout .content * {
+  box-sizing: border-box;
+}
+
+html body:has(.main-layout) .main-layout .sider-brand,
+html body:has(.main-layout) .main-layout .sider-context {
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+html body:has(.main-layout) .main-layout .sider .menu {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding: 0 0 64px !important;
+}
+
+html body:has(.main-layout) .main-layout .sider .arco-menu-light .arco-menu-item:hover,
+html body:has(.main-layout) .main-layout .sider .arco-menu-light .arco-menu-inline-header:hover,
+html body:has(.main-layout) .main-layout .sider .arco-menu-light .arco-menu-pop-header:hover,
+html body:has(.main-layout) .main-layout .sider .arco-menu-item:hover,
+html body:has(.main-layout) .main-layout .sider .arco-menu-inline-header:hover {
+  color: #f2f5fc !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
+}
+
+html body:has(.main-layout) .main-layout .sider .arco-menu-light .arco-menu-selected,
+html body:has(.main-layout) .main-layout .sider .arco-menu-light .arco-menu-inline-header.arco-menu-selected,
+html body:has(.main-layout) .main-layout .sider .arco-menu-light .arco-menu-item-selected {
+  color: #fff !important;
+  background: linear-gradient(90deg, rgba(86, 110, 247, 0.24), rgba(86, 110, 247, 0.07)) !important;
+  border-left: 0 !important;
+  box-shadow: inset 0 0 0 1px rgba(123, 145, 255, 0.13) !important;
+}
+
+html body:has(.main-layout) .main-layout .sider .arco-menu-selected .arco-icon,
+html body:has(.main-layout) .main-layout .sider .arco-menu-item-selected .arco-icon,
+html body:has(.main-layout) .main-layout .sider .arco-menu-selected .menu-parent-icon {
+  color: #fff !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html body:has(.main-layout) .main-layout .content:not(.content--chat) > * {
+  padding: 26px 32px 44px !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view {
+  padding: 26px 32px 44px !important;
+  background: transparent !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section {
+  padding: 28px 30px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at 72% 5%, rgba(132, 155, 255, 0.45), transparent 30%),
+    radial-gradient(circle at 105% 110%, rgba(34, 207, 182, 0.28), transparent 32%),
+    linear-gradient(115deg, #172440 0%, #223568 45%, #3e55c9 100%) !important;
+  box-shadow: 0 18px 40px rgba(34, 53, 104, 0.19) !important;
+  color: #e8eeff !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section::before,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section::after {
+  display: none !important;
+  content: none !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section .hero-highlight-card,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section .hero-kpi-card,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-panel,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-score-stat,
+html body:has(.main-layout) .main-layout .dashboard-view .governance-item {
+  padding: 14px 15px !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  border-radius: 13px !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(8px);
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section .hero-highlight-card:nth-child(n),
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section .hero-kpi-card:nth-child(n) {
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-title {
+  color: #fff !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-project-chip {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #dbe4ff !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-eyebrow,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-kicker {
+  color: #9fb0dc !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-highlight-label,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-kpi-title,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-kpi-unit,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-score-stat span,
+html body:has(.main-layout) .main-layout .dashboard-view .governance-label,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-badge {
+  color: #aebbd9 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-highlight-value,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-kpi-value,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-score-text strong,
+html body:has(.main-layout) .main-layout .dashboard-view .hero-score-stat strong,
+html body:has(.main-layout) .main-layout .dashboard-view .governance-value {
+  color: #fff !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .surface-card,
+html body:has(.main-layout) .main-layout .content-card,
+html body:has(.main-layout) .main-layout .filter-card,
+html body:has(.main-layout) .main-layout .filter-section,
+html body:has(.main-layout) .main-layout .content-section,
+html body:has(.main-layout) .main-layout .panel-card,
+html body:has(.main-layout) .main-layout .arco-card {
+  padding: 18px 20px !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(15, 27, 50, 0.03), 0 6px 18px rgba(15, 27, 50, 0.035) !important;
+  backdrop-filter: none !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .surface-card {
+  padding: 18px 20px !important;
+}
+
+html body:has(.main-layout) .main-layout .page-header {
+  padding: 16px 18px !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(15, 27, 50, 0.03), 0 6px 18px rgba(15, 27, 50, 0.035) !important;
+}
+
+html body:has(.main-layout) .main-layout .workspace-hero {
+  padding: 24px 28px !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(15, 27, 50, 0.03), 0 6px 18px rgba(15, 27, 50, 0.035) !important;
+}
+
+html body:has(.main-layout) .main-layout .workspace-stat-card {
+  padding: 13px 15px !important;
+  border: 1px solid #e2e8f2 !important;
+  border-radius: 12px !important;
+  background: #f8faff !important;
+  box-shadow: none !important;
+}
+
+html body:has(.main-layout) .arco-btn {
+  border-radius: 8px !important;
+  box-shadow: none;
+}
+
+html body:has(.main-layout) .arco-btn-primary {
+  border-color: transparent !important;
+  background: linear-gradient(180deg, #4b68ef 0%, #3854d8 100%) !important;
+  box-shadow: 0 6px 16px rgba(63, 94, 232, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.17) !important;
+}
+
+html body:has(.main-layout) .arco-btn-primary:hover {
+  background: linear-gradient(180deg, #5672f5 0%, #405cde 100%) !important;
+  box-shadow: 0 8px 20px rgba(63, 94, 232, 0.3) !important;
+}
+
+html body:has(.main-layout) .arco-input-wrapper,
+html body:has(.main-layout) .arco-input-search,
+html body:has(.main-layout) .arco-select-view,
+html body:has(.main-layout) .arco-textarea-wrapper {
+  border-radius: 8px !important;
+  border-color: #d4ddeb !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+html body:has(.main-layout) .arco-table-th,
+html body:has(.main-layout) .arco-table-thead > tr > .arco-table-th {
+  padding: 11px 14px !important;
+  border-bottom: 1px solid var(--theme-border) !important;
+  background: #fbfcff !important;
+  color: #66738a !important;
+}
+
+html body:has(.main-layout) .arco-table-tr .arco-table-td,
+html body:has(.main-layout) .arco-table-tbody > .arco-table-tr > .arco-table-td {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid #f0f3f8 !important;
+  color: #34425c !important;
+}
+
+html body:has(.main-layout) .arco-modal {
+  border-radius: 18px !important;
+  box-shadow: 0 30px 84px rgba(9, 18, 36, 0.2) !important;
+}
+
+html body:has(.main-layout) .arco-modal-body,
+html body:has(.main-layout) .arco-drawer-body {
+  padding: 19px 22px !important;
+}
+
+/* Login and register cards should respect their grid tracks. */
+body .login-page .content-layer,
+body .login-page .brand-area,
+body .login-page .login-card,
+body .register-container .register-card,
+body .register-container .brand-section,
+body .register-container .register-form {
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 1000px) {
+  html body:has(.main-layout) .main-layout .content:not(.content--chat) > *,
+  html body:has(.main-layout) .main-layout .dashboard-view {
+    padding: 22px 22px 38px !important;
+  }
+}
+
+@media (max-width: 720px) {
+  html body:has(.main-layout) .main-layout .content:not(.content--chat) > *,
+  html body:has(.main-layout) .main-layout .dashboard-view {
+    padding: 18px 16px 34px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .workspace-hero {
+    padding: 20px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .page-header {
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 720px) {
+  html body:has(.main-layout) .main-layout .header {
+    gap: 8px !important;
+    padding: 12px 16px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .header .left-section {
+    display: none !important;
+  }
+
+  html body:has(.main-layout) .main-layout .header .user-info {
+    gap: 4px !important;
+    margin-left: auto !important;
+  }
+
+  html body:has(.main-layout) .main-layout .header .user-dropdown-wrapper {
+    display: none !important;
+  }
+
+  html body:has(.main-layout) .main-layout .header .qdesk-topbar-heading {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  html body:has(.main-layout) .main-layout .header .qdesk-topbar-heading h1 {
+    max-width: none !important;
+    overflow: hidden !important;
+    font-size: 20px !important;
+    text-overflow: ellipsis !important;
+  }
+
+  html body:has(.main-layout) .main-layout .header .qdesk-topbar-eyebrow {
+    font-size: 8px !important;
+    letter-spacing: 0.12em !important;
+  }
+}
+
+
+/* ---------- QDesk hero refinement ---------- */
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-main {
+  justify-content: space-between !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-description {
+  max-width: 590px !important;
+  margin: 4px 0 0 !important;
+  color: rgba(214, 224, 245, 0.82) !important;
+  font-family: "Inter", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-top: 2px !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-action {
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e8eeff !important;
+  font-family: "Inter", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  line-height: 32px !important;
+  cursor: pointer !important;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-action:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-action--primary {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #253a72 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-action--primary:hover {
+  border-color: #edf1ff !important;
+  background: #edf1ff !important;
+  color: #1f3265 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-section .hero-highlight-card {
+  min-height: 86px !important;
+  padding: 13px 15px !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-highlight-label {
+  color: #aebbd9 !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-highlight-value {
+  color: #ffffff !important;
+  font-family: "Bahnschrift", "Inter", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.03em !important;
+  font-feature-settings: "tnum" 1 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-panel.compact .governance-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-panel.compact .governance-item {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 9px 10px !important;
+  border-radius: 10px !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-panel.compact .governance-label {
+  color: #aebbd9 !important;
+  font-size: 10.5px !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-panel.compact .governance-value {
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+}
+
+/* ---------- QDesk KPI deck ---------- */
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  margin-top: 18px !important;
+  overflow: hidden !important;
+  border: 1px solid #e5eaf3 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(23, 35, 61, 0.04), 0 4px 12px rgba(23, 35, 61, 0.03) !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card {
+  position: relative !important;
+  min-height: 0 !important;
+  padding: 20px 22px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: background-color 160ms ease !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card:not(:last-child) {
+  border-right: 1px solid #e5eaf3 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card:hover {
+  border-color: #e5eaf3 !important;
+  background: #fbfcff !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-label {
+  color: #77849e !important;
+  font-family: "Inter", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  flex: none !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-icon svg {
+  display: block !important;
+  width: 17px !important;
+  height: 17px !important;
+  font-size: 17px !important;
+  color: inherit !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .tint-blue {
+  color: #4f6ef7 !important;
+  background: #edf1ff !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .tint-purple {
+  color: #8b66df !important;
+  background: #f3eeff !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .tint-amber {
+  color: #e69b28 !important;
+  background: #fff5e4 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .tint-teal {
+  color: #11aa99 !important;
+  background: #e8f8f5 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-value {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  margin-top: 11px !important;
+  color: #17233d !important;
+  font-family: "Bahnschrift", "Inter", "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 36px !important;
+  font-weight: 700 !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.045em !important;
+  font-feature-settings: "tnum" 1 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-value small {
+  color: #77849e !important;
+  font-family: "Inter", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 550 !important;
+  letter-spacing: 0 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  margin-top: 9px !important;
+  color: #77849e !important;
+  font-family: "Inter", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3px !important;
+  white-space: nowrap !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part b {
+  color: #3d4b67 !important;
+  font-weight: 650 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part.positive b,
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part.up b {
+  color: #1eab7a !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part.warning b,
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part.warn b {
+  color: #e69b28 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part.danger b {
+  color: #e95366 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-part.accent b {
+  color: #4f6ef7 !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-foot-sep {
+  color: #c3ccda !important;
+}
+
+html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid + .insight-grid {
+  margin-top: 18px !important;
+}
+
+@media (max-width: 900px) {
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card {
+    padding: 17px 18px !important;
+    border-right: 1px solid #e5eaf3 !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card:nth-child(2n) {
+    border-right: 0 !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card:nth-child(-n + 2) {
+    border-bottom: 1px solid #e5eaf3 !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-value {
+    font-size: 30px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card {
+    border-right: 0 !important;
+    border-bottom: 1px solid #e5eaf3 !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card:last-child {
+    border-bottom: 0 !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-value {
+    font-size: 28px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  html body:has(.main-layout) .main-layout .dashboard-view .hero-actions {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .hero-action {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 0 6px !important;
+    font-size: 12px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .hero-section .hero-highlight-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 58px !important;
+    padding: 12px 15px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .hero-highlight-value {
+    font-size: 24px !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .hero-score-row {
+    grid-template-columns: 96px minmax(0, 1fr) !important;
+  }
+
+  html body:has(.main-layout) .main-layout .dashboard-view .hero-aside-panel.compact .governance-label {
+    white-space: normal !important;
+  }
+}

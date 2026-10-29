@@ -364,7 +364,7 @@ export const useSceneBuilderWorkflow = ({
       const execution = await AppAutomationService.executeTestCase(caseId, {
         device_id: executeForm.device_id,
         trigger_mode: 'manual',
-        triggered_by: authStore.currentUser?.username || 'FlyTest',
+        triggered_by: authStore.currentUser?.username || 'FeiCe',
       })
       executeVisible.value = false
       Message.success('执行任务已启动，正在跳转到执行记录')

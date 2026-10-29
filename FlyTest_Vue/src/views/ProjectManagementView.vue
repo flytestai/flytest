@@ -19,7 +19,7 @@
       <section class="workspace-hero workspace-hero--projects workspace-hero--compact workspace-hero--project-command">
         <div class="workspace-hero-copy">
           <span class="workspace-hero-eyebrow">Project Command</span>
-          <h2 class="workspace-hero-title">FlyTest 项目中枢</h2>
+          <h2 class="workspace-hero-title">FeiCe 飞测项目中枢</h2>
           <p class="workspace-hero-description">
             将项目、成员、环境与测试资产统一纳入智能测试驾驶舱，让 AI 生成、自动化执行与协同治理从一开始就拥有清晰的组织边界。
           </p>

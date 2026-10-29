@@ -39,6 +39,18 @@
               <span class="hero-inline-status" :class="passRateTone">{{ passRateStatusText }}</span>
             </div>
 
+            <p class="hero-description">
+              汇总项目质量、执行结果与 AI 能力，优先暴露风险，帮助团队把今天的测试工作推进到可交付状态。
+            </p>
+
+            <div class="hero-actions">
+              <button type="button" class="hero-action hero-action--primary" @click="goToProjectManagement">
+                项目总览
+              </button>
+              <button type="button" class="hero-action" @click="goToTestcases">测试用例</button>
+              <button type="button" class="hero-action" @click="goToExecutionReports">执行报告</button>
+            </div>
+
             <div class="hero-highlights">
               <div v-for="item in heroHighlights" :key="item.label" class="hero-highlight-card">
                 <span class="hero-highlight-label">{{ item.label }}</span>
@@ -46,18 +58,6 @@
               </div>
             </div>
 
-            <div class="hero-kpi-strip">
-              <article v-for="card in overviewCards" :key="card.title" class="hero-kpi-card">
-                <div class="hero-kpi-head">
-                  <component :is="card.icon" class="hero-kpi-icon" />
-                  <span class="hero-kpi-title">{{ card.title }}</span>
-                </div>
-                <div class="hero-kpi-value-row">
-                  <strong class="hero-kpi-value">{{ card.value }}</strong>
-                  <span class="hero-kpi-unit">{{ card.unit }}</span>
-                </div>
-              </article>
-            </div>
           </div>
 
           <div class="hero-aside">
@@ -112,6 +112,27 @@
               </div>
             </div>
           </div>
+        </section>
+
+        <section class="kpi-grid" aria-label="工作概览">
+          <article v-for="card in overviewCards" :key="card.title" class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">{{ card.title }}</span>
+              <span :class="['kpi-icon', card.tint]">
+                <component :is="card.icon" />
+              </span>
+            </div>
+            <div class="kpi-value">
+              {{ card.value }}
+              <small>{{ card.unit }}</small>
+            </div>
+            <div class="kpi-foot">
+              <template v-for="(tag, index) in card.tags" :key="tag.label">
+                <span :class="['kpi-foot-part', tag.tone]">{{ tag.label }} <b>{{ tag.value }}</b></span>
+                <span v-if="index < card.tags.length - 1" class="kpi-foot-sep">·</span>
+              </template>
+            </div>
+          </article>
         </section>
 
         <section class="insight-grid">
@@ -366,7 +387,7 @@ const tokenUsageStats = ref<LlmTokenUsageStats | null>(null)
 const tokenUsageLoading = ref(false)
 const usagePreset = ref<'today' | '7d' | '30d' | 'custom'>('today')
 const usageSource = ref('')
-const currentProjectName = computed(() => projectStore.currentProject?.name || 'FlyTest Project')
+const currentProjectName = computed(() => projectStore.currentProject?.name || 'FeiCe 飞测 Project')
 const DASHBOARD_REFRESH_INTERVAL_MS = 120000
 const DASHBOARD_FOCUS_REFRESH_COOLDOWN_MS = 15000
 let dashboardRefreshTimer: ReturnType<typeof setTimeout> | null = null
@@ -393,6 +414,14 @@ const approvalSubtitle = computed(() => {
 
 const goToProjectManagement = () => {
   void router.push({ name: 'ProjectManagement' })
+}
+
+const goToTestcases = () => {
+  void router.push({ path: '/testcases' })
+}
+
+const goToExecutionReports = () => {
+  void router.push({ path: '/test-executions' })
 }
 
 const formatDashboardDate = (date: Date): string => {
@@ -477,6 +506,7 @@ const overviewCards = computed(() => [
     value: statistics.value?.testcases?.total || 0,
     unit: '条',
     icon: IconFile,
+    tint: 'tint-blue',
     tags: [
       { label: '通过', value: statistics.value?.testcases?.by_review_status?.approved || 0, tone: 'positive' },
       { label: '待审核', value: statistics.value?.testcases?.by_review_status?.pending_review || 0, tone: 'warning' },
@@ -489,6 +519,7 @@ const overviewCards = computed(() => [
     value: statistics.value?.ui_automation?.total_cases || 0,
     unit: '条',
     icon: IconDesktop,
+    tint: 'tint-purple',
     tags: [
       { label: '执行', value: statistics.value?.ui_automation?.total_executions || 0, tone: 'neutral' },
       { label: '成功', value: statistics.value?.ui_automation?.by_status?.success || 0, tone: 'positive' },
@@ -501,6 +532,7 @@ const overviewCards = computed(() => [
     value: statistics.value?.executions?.total_executions || 0,
     unit: '次',
     icon: IconThunderbolt,
+    tint: 'tint-amber',
     tags: [
       { label: '通过', value: statistics.value?.executions?.case_results?.passed || 0, tone: 'positive' },
       { label: '失败', value: statistics.value?.executions?.case_results?.failed || 0, tone: 'danger' },
@@ -513,6 +545,7 @@ const overviewCards = computed(() => [
     value: (statistics.value?.mcp?.total || 0) + (statistics.value?.skills?.total || 0),
     unit: '项',
     icon: IconApps,
+    tint: 'tint-teal',
     tags: [
       { label: 'MCP', value: `${statistics.value?.mcp?.active || 0}/${statistics.value?.mcp?.total || 0}`, tone: 'neutral' },
       { label: 'Skills', value: `${statistics.value?.skills?.active || 0}/${statistics.value?.skills?.total || 0}`, tone: 'info' },
@@ -1029,6 +1062,7 @@ onUnmounted(() => {
 .hero-main {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 8px;
 }
 
@@ -1078,6 +1112,52 @@ onUnmounted(() => {
   color: var(--theme-text);
 }
 
+.hero-description {
+  max-width: 560px;
+  margin: 2px 0 0;
+  color: rgba(214, 224, 245, 0.78);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hero-action {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eeff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 32px;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.hero-action:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hero-action--primary {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #253a72;
+}
+
+.hero-action--primary:hover {
+  border-color: #edf1ff;
+  background: #edf1ff;
+  color: #1f3265;
+}
+
 .hero-highlights {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1114,9 +1194,10 @@ onUnmounted(() => {
 .hero-highlight-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 72px;
-  padding: 10px 12px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 86px;
+  padding: 12px 14px;
   border-radius: 12px;
 }
 
@@ -2049,7 +2130,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1400px) {
-  .hero-section,
   .insight-grid,
   .secondary-insight-grid,
   .trend-grid {
@@ -2058,6 +2138,12 @@ onUnmounted(() => {
 
   .hero-kpi-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .hero-section {
+    grid-template-columns: 1fr;
   }
 }
 

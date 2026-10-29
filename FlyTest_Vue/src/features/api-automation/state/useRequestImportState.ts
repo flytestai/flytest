@@ -23,11 +23,11 @@ export function useRequestImportState() {
   const importProgressFileName = ref('')
 
   const importProgressSteps = [
-    { title: '上传接口文档', description: '将 Word、PDF、Swagger 等接口文档上传到 FlyTest。' },
+    { title: '上传接口文档', description: '将 Word、PDF、Swagger 等接口文档上传到 FeiCe 飞测。' },
     { title: '提取文档正文', description: '转换文档内容并抽取接口结构线索。' },
     { title: '识别接口定义', description: '结合规则与 AI 解析请求方式、路径、参数和断言。' },
     { title: '生成脚本与用例', description: '为识别出的接口批量生成可执行脚本和测试用例。' },
-    { title: '写入 FlyTest', description: '把接口、脚本和测试用例保存到当前集合。' },
+    { title: '写入 FeiCe 飞测', description: '把接口、脚本和测试用例保存到当前集合。' },
   ]
 
   const documentFileSummary = computed(() => {

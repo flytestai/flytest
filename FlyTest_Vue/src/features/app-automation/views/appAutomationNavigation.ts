@@ -50,7 +50,7 @@ const openLoadingWindow = () => {
   }
 
   popup.document.write(
-    '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8" /><title>FlyTest</title></head><body style="margin:0;padding:24px;font:14px/1.6 Segoe UI,PingFang SC,Microsoft YaHei,sans-serif;color:#1f2937;background:#f8fafc;">Loading...</body></html>',
+    '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8" /><title>FeiCe 飞测</title></head><body style="margin:0;padding:24px;font:14px/1.6 Segoe UI,PingFang SC,Microsoft YaHei,sans-serif;color:#1f2937;background:#f8fafc;">Loading...</body></html>',
   )
   popup.document.close()
   return popup

@@ -537,7 +537,7 @@ export function useAppAutomationScheduledTasks() {
         const payload = buildPayload()
         await AppAutomationService.createScheduledTask({
           ...payload,
-          created_by: authStore.currentUser?.username || 'FlyTest',
+          created_by: authStore.currentUser?.username || 'FeiCe',
         })
         Message.success('定时任务已创建')
       }
@@ -613,7 +613,7 @@ export function useAppAutomationScheduledTasks() {
     try {
       const result = (await AppAutomationService.runScheduledTaskNow(
         id,
-        authStore.currentUser?.username || 'FlyTest',
+        authStore.currentUser?.username || 'FeiCe',
       )) as AppScheduledTaskRunResult
 
       const createdCount =

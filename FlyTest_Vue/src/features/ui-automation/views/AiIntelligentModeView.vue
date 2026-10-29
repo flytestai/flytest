@@ -1113,7 +1113,7 @@ const exportReportPdf = async () => {
     if (!(blob instanceof Blob)) throw new Error('服务器返回的不是有效 PDF 文件')
 
     const contentDisposition = response.headers['content-disposition']
-    let filename = `FlyTest_AI_Report_${currentReportType.value}.pdf`
+    let filename = `FeiCe_AI_Report_${currentReportType.value}.pdf`
     if (contentDisposition) {
       const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
       const normalMatch = contentDisposition.match(/filename="?([^\";]+)"?/i)

@@ -23,7 +23,7 @@
           <template #cell="{ record }">
             <div class="meta-stack">
               <span>{{ recipientSummary(record) }}</span>
-              <small>发送者：{{ record.sender_name || 'FlyTest' }}</small>
+              <small>发送者：{{ record.sender_name || '系统' }}</small>
             </div>
           </template>
         </a-table-column>

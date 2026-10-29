@@ -247,7 +247,7 @@ export function useAppAutomationDevices() {
 
   const lock = async (id: number) => {
     try {
-      const updated = await AppAutomationService.lockDevice(id, authStore.currentUser?.username || 'FlyTest')
+      const updated = await AppAutomationService.lockDevice(id, authStore.currentUser?.username || 'FeiCe')
       syncCurrentDevice(updated)
       Message.success('设备已锁定')
       await loadDevices()

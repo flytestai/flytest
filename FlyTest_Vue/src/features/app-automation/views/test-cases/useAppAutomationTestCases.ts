@@ -333,7 +333,7 @@ export function useAppAutomationTestCases() {
               device_id: executeForm.device_id as number,
               package_id: executeForm.package_id ?? null,
               trigger_mode: 'manual',
-              triggered_by: authStore.currentUser?.username || 'FlyTest',
+              triggered_by: authStore.currentUser?.username || 'FeiCe',
             })
             results.push({ status: 'fulfilled', value: execution })
           } catch (error) {
@@ -409,7 +409,7 @@ export function useAppAutomationTestCases() {
         device_id: executeForm.device_id,
         package_id: executeForm.package_id ?? null,
         trigger_mode: 'manual',
-        triggered_by: authStore.currentUser?.username || 'FlyTest',
+        triggered_by: authStore.currentUser?.username || 'FeiCe',
       })
       executeVisible.value = false
       Message.success('执行任务已启动，正在跳转到执行记录')

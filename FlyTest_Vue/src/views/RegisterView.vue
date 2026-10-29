@@ -9,10 +9,10 @@
     <div class="register-card">
       <div class="brand-section">
         <div class="brand-logo">
-          <img :src="brandFullLogoUrl" alt="FlyTest Logo" class="register-full-logo" />
+          <img :src="brandFullLogoUrl" alt="FeiCe 飞测 Logo" class="register-full-logo" />
         </div>
         <h1 class="brand-title">注册新账号</h1>
-        <p class="brand-subtitle">欢迎加入 FlyTest</p>
+        <p class="brand-subtitle">欢迎加入 FeiCe 飞测</p>
       </div>
 
       <form class="register-form" @submit.prevent="handleSubmit">

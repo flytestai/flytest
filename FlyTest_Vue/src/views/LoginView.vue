@@ -4,7 +4,7 @@
 
     <div class="content-layer">
       <div class="brand-area">
-        <img :src="brandFullLogoLoginWhiteUrl" alt="FlyTest Logo" class="brand-full-logo" />
+        <img :src="brandFullLogoLoginWhiteUrl" alt="FeiCe 飞测 Logo" class="brand-full-logo" />
         <p class="brand-subtitle">AI智能测试平台</p>
         <div class="brand-tags" role="list" aria-label="平台能力标签">
           <div v-for="tag in featureTags" :key="tag.label" class="tag-item" role="listitem">
@@ -160,7 +160,7 @@
     </Transition>
 
     <footer class="page-copyright">
-      <span>Copyright © {{ currentYear }} FlyTest AI智能测试平台 版权所有 · 开发与维护：魏振 · 66674094@qq.com</span>
+      <span>Copyright © {{ currentYear }} FeiCe 飞测 AI智能测试平台 版权所有 · 开发与维护：魏振 · 66674094@qq.com</span>
     </footer>
   </div>
 </template>

@@ -119,8 +119,8 @@ export const useAuthStore = defineStore('auth', {
 
     hydrateFromStorage() {
       migrateLegacyAuthStorage()
-      removeAuthStorageItem(AUTH_KEYS.accessToken)
-      removeAuthStorageItem(AUTH_KEYS.refreshToken)
+      this.accessToken = getAuthStorageItem(AUTH_KEYS.accessToken)
+      this.refreshToken = getAuthStorageItem(AUTH_KEYS.refreshToken)
       this.isAuthenticated = getAuthStorageItem(AUTH_KEYS.isAuthenticated) === 'true'
       this.user = readStoredJson<User>(AUTH_KEYS.user)
       this.userPermissions = readStoredJson<Permission[] | string[]>(AUTH_KEYS.userPermissions) ?? []
@@ -139,10 +139,20 @@ export const useAuthStore = defineStore('auth', {
 
     updateAccessToken(token: string | null) {
       this.accessToken = token
+      if (token) {
+        setAuthStorageItem(AUTH_KEYS.accessToken, token)
+      } else {
+        removeAuthStorageItem(AUTH_KEYS.accessToken)
+      }
     },
 
     updateRefreshToken(token: string | null) {
       this.refreshToken = token
+      if (token) {
+        setAuthStorageItem(AUTH_KEYS.refreshToken, token)
+      } else {
+        removeAuthStorageItem(AUTH_KEYS.refreshToken)
+      }
     },
 
     setCurrentUser(user: User | null) {
@@ -166,7 +176,7 @@ export const useAuthStore = defineStore('auth', {
         try {
           const refreshResponse = await axios.post(
             `${API_BASE_URL}/token/refresh/`,
-            {},
+            this.refreshToken ? { refresh: this.refreshToken } : {},
             {
               withCredentials: true,
               headers: { Accept: 'application/json' },
@@ -177,8 +187,8 @@ export const useAuthStore = defineStore('auth', {
             throw new Error('No access token returned from refresh endpoint.')
           }
 
-          this.accessToken = refreshPayload.access
-          this.refreshToken = refreshPayload.refresh || null
+          this.updateAccessToken(refreshPayload.access)
+          this.updateRefreshToken(refreshPayload.refresh || null)
 
           const userResponse = await axios.get(`${API_BASE_URL}/accounts/me/`, {
             withCredentials: true,
@@ -221,8 +231,8 @@ export const useAuthStore = defineStore('auth', {
 
         this.isAuthenticated = true
         this.user = response.data.user
-        this.accessToken = response.data.access
-        this.refreshToken = response.data.refresh
+        this.updateAccessToken(response.data.access)
+        this.updateRefreshToken(response.data.refresh)
         this.persistUserState()
         await this.loadUserPermissions()
         this.isInitialized = true

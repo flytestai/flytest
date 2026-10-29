@@ -120,7 +120,7 @@ async function refreshToken() {
   try {
     const response = await axios.post(
       `${getApiBaseUrl()}/token/refresh/`,
-      {},
+      authStore.getRefreshToken ? { refresh: authStore.getRefreshToken } : {},
       {
         withCredentials: true,
         headers: {

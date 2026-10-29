@@ -1,10 +1,15 @@
 ﻿<template>
-  <a-layout class="main-layout">
-    <!-- 椤堕儴瀵艰埅鏍?-->
+  <a-layout class="main-layout" :class="{ 'layout-collapsed': collapsed }">
+    <!-- 顶部导航栏 -->
     <a-layout-header class="header">
+      <div class="qdesk-topbar-heading">
+        <p class="qdesk-topbar-eyebrow">{{ pageMeta.eyebrow }}</p>
+        <h1>{{ pageMeta.title }}</h1>
+        <p class="qdesk-topbar-subtitle">{{ pageMeta.subtitle }}</p>
+      </div>
       <div class="left-section">
         <div class="logo" unselectable="on">
-          <img :src="brandFullLogoUrl" alt="FlyTest Logo" class="logo-full" />
+          <img :src="brandFullLogoUrl" alt="FeiCe 飞测 Logo" class="logo-full" />
         </div>
         <div class="project-selector" v-if="showProjectSelector">
           <a-select
@@ -114,6 +119,17 @@
         hide-trigger
         class="sider"
       >
+        <div class="sider-brand">
+          <div class="sider-brand-mark" aria-hidden="true">F</div>
+          <div class="sider-brand-copy">
+            <strong>FeiCe</strong>
+            <span>飞测 · AI 测试平台</span>
+          </div>
+        </div>
+        <div class="sider-context">
+          <span class="sider-context-dot"></span>
+          <span>AI TEST OPERATIONS</span>
+        </div>
         <a-menu
           mode="vertical"
           :selected-keys="[activeMenu]"
@@ -888,6 +904,79 @@ const activeGroupKey = computed(() => {
   return '';
 });
 
+type PageMeta = {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+};
+
+const pageMetaMap: Record<string, PageMeta> = {
+  dashboard: { eyebrow: 'OVERVIEW', title: '工作台', subtitle: '项目健康、测试进度与 AI 运行状态总览' },
+  projects: { eyebrow: 'PROJECTS', title: '项目管理', subtitle: '管理项目空间、成员与测试资产' },
+  requirements: { eyebrow: 'REQUIREMENTS', title: '需求管理', subtitle: '汇总需求文档、评审结论与跟踪状态' },
+  testcases: { eyebrow: 'TEST MANAGEMENT', title: '测试用例', subtitle: '组织、维护并评审功能测试用例' },
+  testsuites: { eyebrow: 'TEST MANAGEMENT', title: '测试套件', subtitle: '按业务域组合用例与执行范围' },
+  'test-bugs': { eyebrow: 'TEST MANAGEMENT', title: 'BUG 管理', subtitle: '跟踪缺陷生命周期与修复验证' },
+  'test-executions': { eyebrow: 'TEST MANAGEMENT', title: '测试报告', subtitle: '查看执行结果、通过率与趋势' },
+  'api-automation-requests': { eyebrow: 'API AUTOMATION', title: '请求管理', subtitle: '维护接口资产、请求定义与环境变量' },
+  'api-automation-test-cases': { eyebrow: 'API AUTOMATION', title: '接口测试用例', subtitle: '编排断言、变量与前后置脚本' },
+  'api-automation-environments': { eyebrow: 'API AUTOMATION', title: '环境配置', subtitle: '管理接口运行环境与公共参数' },
+  'api-automation-execution-records': { eyebrow: 'API AUTOMATION', title: '接口执行记录', subtitle: '追踪每次执行的请求明细与结果' },
+  'api-automation-execution-report': { eyebrow: 'API AUTOMATION', title: '接口测试报告', subtitle: '汇总用例通过率、耗时与失败原因' },
+  'ui-automation-pages': { eyebrow: 'UI AUTOMATION', title: '页面管理', subtitle: '沉淀页面对象与可复用的定位信息' },
+  'ui-automation-page-steps': { eyebrow: 'UI AUTOMATION', title: '页面步骤', subtitle: '组织页面操作步骤与原子动作' },
+  'ui-automation-testcases': { eyebrow: 'UI AUTOMATION', title: 'UI 测试用例', subtitle: '组合步骤形成可执行的 UI 场景' },
+  'ui-automation-ai-intelligent': { eyebrow: 'UI AUTOMATION', title: 'AI 智能模式', subtitle: '用自然语言驱动 Web 自动化执行' },
+  'ui-automation-execution-records': { eyebrow: 'UI AUTOMATION', title: 'UI 执行记录', subtitle: '查看执行轨迹、截图与回放信息' },
+  'ui-automation-batch-records': { eyebrow: 'UI AUTOMATION', title: '批量执行', subtitle: '批量调度用例并跟踪运行进度' },
+  'ui-automation-public-data': { eyebrow: 'UI AUTOMATION', title: '公共数据', subtitle: '维护跨用例共享的数据集与变量' },
+  'ui-automation-env-config': { eyebrow: 'UI AUTOMATION', title: 'UI 环境配置', subtitle: '配置浏览器、地址与运行参数' },
+  'ui-automation-actuators': { eyebrow: 'UI AUTOMATION', title: '执行器', subtitle: '管理 UI 自动化执行节点与状态' },
+  'app-automation-overview': { eyebrow: 'APP AUTOMATION', title: 'APP 自动化概览', subtitle: '掌握设备、用例与执行运行态势' },
+  'app-automation-devices': { eyebrow: 'APP AUTOMATION', title: '设备管理', subtitle: '纳管真机与模拟器并查看连接状态' },
+  'app-automation-packages': { eyebrow: 'APP AUTOMATION', title: '应用包', subtitle: '管理被测 App 安装包与版本' },
+  'app-automation-elements': { eyebrow: 'APP AUTOMATION', title: '元素管理', subtitle: '维护页面元素与稳定定位策略' },
+  'app-automation-scene-builder': { eyebrow: 'APP AUTOMATION', title: '场景编排', subtitle: '以流程化方式编排移动端场景' },
+  'app-automation-test-cases': { eyebrow: 'APP AUTOMATION', title: 'APP 测试用例', subtitle: '管理与调试移动端自动化用例' },
+  'app-automation-suites': { eyebrow: 'APP AUTOMATION', title: 'APP 测试套件', subtitle: '按业务范围组织移动端用例集' },
+  'app-automation-executions': { eyebrow: 'APP AUTOMATION', title: 'APP 执行记录', subtitle: '追踪设备执行过程与结果' },
+  'app-automation-scheduled-tasks': { eyebrow: 'APP AUTOMATION', title: '定时任务', subtitle: '规划自动化任务的周期调度' },
+  'app-automation-notifications': { eyebrow: 'APP AUTOMATION', title: '通知日志', subtitle: '查看执行通知的发送与回执' },
+  'app-automation-reports': { eyebrow: 'APP AUTOMATION', title: 'APP 执行报告', subtitle: '汇总移动端执行质量与趋势' },
+  'app-automation-settings': { eyebrow: 'APP AUTOMATION', title: '环境设置', subtitle: '配置 APP 自动化的运行环境' },
+  'langgraph-chat': { eyebrow: 'AI COPILOT', title: 'AI 对话', subtitle: '与测试智能体协作完成分析与生成' },
+  'knowledge-management': { eyebrow: 'KNOWLEDGE', title: '知识库管理', subtitle: '管理测试知识、文档与检索语料' },
+  'data-factory-all': { eyebrow: 'DATA FACTORY', title: '工具面板', subtitle: '聚合常用测试数据构造工具' },
+  'data-factory-string': { eyebrow: 'DATA FACTORY', title: '字符工具', subtitle: '生成、转换与校验文本数据' },
+  'data-factory-encoding': { eyebrow: 'DATA FACTORY', title: '编码工具', subtitle: '完成常用编码与解码转换' },
+  'data-factory-random': { eyebrow: 'DATA FACTORY', title: '随机工具', subtitle: '构造随机字符串、数字与身份数据' },
+  'data-factory-encryption': { eyebrow: 'DATA FACTORY', title: '加密工具', subtitle: '生成摘要与常用加密结果' },
+  'data-factory-test-data': { eyebrow: 'DATA FACTORY', title: '测试数据', subtitle: '维护可复用的测试数据集合' },
+  'data-factory-json': { eyebrow: 'DATA FACTORY', title: 'JSON 工具', subtitle: '格式化、校验与转换 JSON 数据' },
+  'data-factory-crontab': { eyebrow: 'DATA FACTORY', title: 'Crontab 工具', subtitle: '解析并预览定时表达式' },
+  users: { eyebrow: 'SYSTEM', title: '用户管理', subtitle: '管理平台账号、角色与访问状态' },
+  organizations: { eyebrow: 'SYSTEM', title: '组织管理', subtitle: '维护组织架构与团队归属' },
+  permissions: { eyebrow: 'SYSTEM', title: '权限管理', subtitle: '配置角色权限与资源访问边界' },
+  'project-deletion-logs': { eyebrow: 'SYSTEM', title: '项目删除记录', subtitle: '审计项目删除操作与历史信息' },
+  'llm-configs': { eyebrow: 'SYSTEM', title: 'AI 大模型配置', subtitle: '接入并管理智能测试所需模型' },
+  'api-keys': { eyebrow: 'SYSTEM', title: 'API KEY 管理', subtitle: '管理开放接口凭据与调用范围' },
+  'remote-mcp-configs': { eyebrow: 'SYSTEM', title: 'MCP 配置', subtitle: '连接外部 MCP 服务与工具能力' },
+  skills: { eyebrow: 'SYSTEM', title: 'Skills 管理', subtitle: '维护智能体可调用的技能集合' },
+  'personal-center': { eyebrow: 'ACCOUNT', title: '个人中心', subtitle: '维护个人信息、头像与安全设置' },
+};
+
+const pageMeta = computed<PageMeta>(() => {
+  if (route.path.startsWith('/personal-center')) {
+    return pageMetaMap['personal-center'];
+  }
+
+  return pageMetaMap[activeMenu.value] || {
+    eyebrow: 'FEICE WORKSPACE',
+    title: 'FeiCe 飞测',
+    subtitle: 'AI 驱动的一体化测试工作台',
+  };
+});
+
 const openKeys = ref<string[]>([]);
 const collapsed = ref(false);
 const hasProjectAccess = computed(() => projectStore.projectList.length > 0);
@@ -1191,8 +1280,16 @@ const handlePopupVisibleChange = (visible: boolean) => {
   }
 };
 
+const handleLayoutResize = () => {
+  if (window.innerWidth <= 1080) {
+    collapsed.value = true;
+  }
+};
+
 onMounted(async () => {
   window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener('resize', handleLayoutResize);
+  handleLayoutResize();
   document.addEventListener('visibilitychange', handleVisibilityChange);
   await authStore.bootstrapSession();
   console.log('MainLayout mounted, user:', user.value?.username);
@@ -1205,6 +1302,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener('resize', handleLayoutResize);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   clearAiStatusTimer();
 });

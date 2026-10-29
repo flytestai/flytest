@@ -27,7 +27,7 @@ export const useSceneBuilderComponentPackages = ({
     name: 'app-component-pack',
     version: '',
     author: '',
-    description: 'FlyTest APP 自动化组件包',
+    description: 'FeiCe 飞测 APP 自动化组件包',
   })
 
   const resetComponentPackageImportState = () => {
@@ -41,7 +41,7 @@ export const useSceneBuilderComponentPackages = ({
     componentPackageExportForm.name = 'app-component-pack'
     componentPackageExportForm.version = ''
     componentPackageExportForm.author = ''
-    componentPackageExportForm.description = 'FlyTest APP 自动化组件包'
+    componentPackageExportForm.description = 'FeiCe 飞测 APP 自动化组件包'
   }
 
   const loadComponentPackageRecords = async () => {
