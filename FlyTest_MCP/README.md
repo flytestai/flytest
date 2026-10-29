@@ -5,7 +5,7 @@
 本项目包含两个 MCP (Model Context Protocol) 工具服务：
 
 - **ms_mcp_api.py** - MS测试用例工具，提供与MS测试平台的API交互功能
-- **FlyTest_tools.py** - FlyTest 测试用例工具，提供本地测试用例管理功能
+- **FlyTest_tools.py** - FeiCe 飞测测试用例工具，提供本地测试用例管理功能
 
 ## 环境要求
 
@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 ### 2. 配置说明
 
-#### FlyTest Tools (FlyTest_tools.py) ✨ 开箱即用
+#### FeiCe 飞测 Tools (FlyTest_tools.py) ✨ 开箱即用
 
 - **服务端口**: 8006
 - **后端地址**: `FLYTEST_BACKEND_URL`（默认：http://backend:8000）

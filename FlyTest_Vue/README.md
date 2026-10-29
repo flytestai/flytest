@@ -1,6 +1,6 @@
-# FeiCe 飞测 Vue
+# FeiCe 飞测前端
 
-A modern test automation management system built with Vue 3, TypeScript, and Vite.
+The FeiCe frontend for an AI-native testing platform, built with Vue 3, TypeScript, and Vite.
 
 ## Features
 

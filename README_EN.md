@@ -1,10 +1,10 @@
-# FlyTest - Intelligent Testing Platform
+# FeiCe - AI-Native Testing Platform
 
 English | [中文](README.md)
 
 ## Overview
 
-FlyTest is an AI-native testing platform for modern QA teams. It covers the full workflow from requirement understanding and knowledge grounding to test design, automation execution, and result tracking. Built with Django REST Framework and Vue 3, FlyTest combines LangGraph, RAG, MCP, and Playwright to help teams create higher-quality test assets faster and run them more efficiently.
+FeiCe is an AI-native testing platform for modern QA teams. It covers the full workflow from requirement understanding and knowledge grounding to test design, automation execution, and result tracking. Built with Django REST Framework and Vue 3, FeiCe combines LangGraph, RAG, MCP, and Playwright to help teams create higher-quality test assets faster and run them more efficiently.
 
 ## Core Capabilities
 
@@ -39,7 +39,7 @@ FlyTest is an AI-native testing platform for modern QA teams. It covers the full
 ### Docker Deployment
 
 ```bash
-git clone https://github.com/weixiaoluan/flytest.git
+git clone https://github.com/flytestai/flytest.git
 cd flytest
 cp .env.example .env
 docker compose up -d
@@ -56,7 +56,7 @@ Default account:
 
 ## Documentation
 
-- Online docs: https://mgdaaslab.github.io/FlyTest/
+- Online platform: https://www.feice.net
 - Quick start guide: [docs/QUICK_START.md](./docs/QUICK_START.md)
 - GitHub auto-build deployment guide: [docs/github-docker-deployment.md](./docs/github-docker-deployment.md)
 
@@ -86,4 +86,4 @@ Default account:
 - Avoid exposing the platform directly to the public Internet without proper authentication and access control.
 - Apply least-privilege principles when enabling Skills, MCP tools, and automation actuators.
 
-**FlyTest** - Smarter test design, faster test execution.
+**FeiCe** - Smarter test design, faster test execution.

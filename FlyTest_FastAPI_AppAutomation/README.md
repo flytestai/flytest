@@ -1,4 +1,4 @@
-# FlyTest APP Automation FastAPI
+# FeiCe 飞测 APP 自动化 FastAPI
 
 独立的 APP 自动化后端服务，负责设备、应用包、元素、测试用例、执行记录和环境设置等能力。
 

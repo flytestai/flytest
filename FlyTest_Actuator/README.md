@@ -1,4 +1,4 @@
-# UI自动化执行器 (FlyTest Actuator)
+# FeiCe 飞测 UI 自动化执行器
 
 独立的UI自动化执行器服务，通过WebSocket连接Django后端，接收并执行自动化测试任务。
 

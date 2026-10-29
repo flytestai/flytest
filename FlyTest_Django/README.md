@@ -1,6 +1,6 @@
-# FlyTest Django Backend
+# FeiCe 飞测 Django 后端
 
-FlyTest 后端基于 `Django + Django REST Framework`，负责项目管理、测试用例管理、知识库、AI 对话、API 自动化等核心能力。
+FeiCe 飞测后端基于 `Django + Django REST Framework`，负责项目管理、测试用例管理、知识库、AI 对话、API 自动化等核心能力。
 
 ## 主要能力
 

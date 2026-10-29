@@ -1,12 +1,14 @@
-# FlyTest
+# FeiCe 飞测
 
-FlyTest 是一个面向测试团队的 AI 智能测试平台，覆盖需求理解、AI 对话、测试用例、测试套件、BUG 管理、测试报告、知识库、API/UI/APP 自动化，以及 MCP / Skills 扩展能力。
+> 说明：仓库内的 `FlyTest_*` 为历史目录名，产品品牌已统一为 FeiCe 飞测。
+
+FeiCe 飞测是一个面向测试团队的 AI 智能测试平台，覆盖需求理解、AI 对话、测试用例、测试套件、BUG 管理、测试报告、知识库、API/UI/APP 自动化，以及 MCP / Skills 扩展能力。
 
 [English](./README_EN.md)
 
 ## 项目定位
 
-FlyTest 不是单点的“AI 生成用例”工具，而是把测试工作从需求到执行再到复盘串起来的一套平台：
+FeiCe 飞测不是单点的“AI 生成用例”工具，而是把测试工作从需求到执行再到复盘串起来的一套平台：
 
 - 需求文档上传、拆解、评审与报告生成
 - 基于大模型和知识库的 AI 对话与测试设计
@@ -20,21 +22,21 @@ FlyTest 不是单点的“AI 生成用例”工具，而是把测试工作从需
 
 | 登录首页 | 登录弹窗 |
 | --- | --- |
-| ![FlyTest 登录首页](./.github/readme-assets/login-home.png) | ![FlyTest 登录弹窗](./.github/readme-assets/login-dialog.png) |
+| ![FeiCe 飞测 登录首页](./.github/readme-assets/login-home.png) | ![FeiCe 飞测 登录弹窗](./.github/readme-assets/login-dialog.png) |
 
 ### 管理后台
 
 | 首页工作台 | 测试用例 |
 | --- | --- |
-| ![FlyTest 首页工作台](./.github/readme-assets/dashboard-home.png) | ![FlyTest 测试用例](./.github/readme-assets/testcases-page.png) |
+| ![FeiCe 飞测 首页工作台](./.github/readme-assets/dashboard-home.png) | ![FeiCe 飞测 测试用例](./.github/readme-assets/testcases-page.png) |
 
 | BUG 管理 | APP 自动化 |
 | --- | --- |
-| ![FlyTest BUG 管理](./.github/readme-assets/bugs-page.png) | ![FlyTest APP 自动化](./.github/readme-assets/app-automation-page.png) |
+| ![FeiCe 飞测 BUG 管理](./.github/readme-assets/bugs-page.png) | ![FeiCe 飞测 APP 自动化](./.github/readme-assets/app-automation-page.png) |
 
 | 执行历史 | 测试工作台示意 |
 | --- | --- |
-| ![FlyTest 执行历史](./.github/readme-assets/reports-page.png) | ![FlyTest 测试工作台示意](./.github/readme-assets/workspace-testcases.png) |
+| ![FeiCe 飞测 执行历史](./.github/readme-assets/reports-page.png) | ![FeiCe 飞测 测试工作台示意](./.github/readme-assets/workspace-testcases.png) |
 
 ## 核心能力
 
@@ -92,7 +94,7 @@ FlyTest 不是单点的“AI 生成用例”工具，而是把测试工作从需
 
 ## 前端主要模块
 
-根据当前路由与功能目录，FlyTest 前端主要包含：
+根据当前路由与功能目录，FeiCe 飞测前端主要包含：
 
 - 首页与个人中心
 - 项目管理 / 用户管理 / 组织管理 / 权限管理
