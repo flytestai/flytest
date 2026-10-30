@@ -1,60 +1,6 @@
-<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="fly-whale-favicon-bg" x1="18" y1="14" x2="110" y2="114" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#77A8FF" />
-      <stop offset="0.52" stop-color="#4B7BFF" />
-      <stop offset="1" stop-color="#2C56E8" />
-    </linearGradient>
-    <radialGradient id="fly-whale-favicon-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(92 28) rotate(138) scale(40)">
-      <stop stop-color="#D3E0FF" stop-opacity="0.56" />
-      <stop offset="1" stop-color="#D3E0FF" stop-opacity="0" />
-    </radialGradient>
-    <filter id="fly-whale-favicon-shadow" x="6" y="6" width="116" height="116" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#2447BF" flood-opacity="0.28" />
-      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#FFFFFF" flood-opacity="0.16" />
-    </filter>
-    <linearGradient id="fly-whale-favicon-body" x1="36" y1="44" x2="88" y2="92" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF" />
-      <stop offset="1" stop-color="#E3EBFF" />
-    </linearGradient>
-  </defs>
-
-  <g filter="url(#fly-whale-favicon-shadow)">
-    <circle cx="64" cy="64" r="56" fill="url(#fly-whale-favicon-bg)" />
-    <circle cx="64" cy="64" r="55" stroke="#DCE5FF" stroke-opacity="0.26" stroke-width="2" />
-    <circle cx="92" cy="28" r="30" fill="url(#fly-whale-favicon-glow)" />
-
-    <path
-      d="M33.5 71.3C33.5 57.8 45.1 47 59.5 47C67.6 47 74.7 49.9 80.3 55C84.3 58.6 87.1 62.9 90.8 65.8C94.4 68.7 98.6 70.1 103.5 70C101.9 77.2 98.4 82.8 92.9 86.7C89 89.5 84.5 91.2 79.4 91.5C77.1 91.6 75.3 92.2 73.6 93.6C69.8 96.6 65.1 98.2 59.6 98.2C45.3 98.2 33.5 86.5 33.5 71.3Z"
-      fill="url(#fly-whale-favicon-body)"
-    />
-    <path
-      d="M78.8 55.7C83.1 49.6 88.9 44.9 96.8 41.2C97.1 48.3 95 53.9 90.4 59"
-      stroke="#F8FAFF"
-      stroke-width="6"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <path
-      d="M91.4 66.3C94.8 62 99.3 59.3 105 58.4C104 64.1 103.4 68 103.5 70"
-      stroke="#F8FAFF"
-      stroke-width="5.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <path
-      d="M52.8 88.6C59.1 89 65.4 88 71.1 84.9"
-      stroke="#B9CBFF"
-      stroke-width="4.2"
-      stroke-linecap="round"
-    />
-    <path
-      d="M54.8 60.8C57.4 58.8 60.6 57.8 64.2 57.8C68.8 57.8 72.6 59.5 75.5 62.7"
-      stroke="#D4DFFF"
-      stroke-width="4"
-      stroke-linecap="round"
-    />
-    <circle cx="55.9" cy="68.1" r="3.3" fill="#2D57E8" />
-    <circle cx="56.9" cy="67" r="0.95" fill="#FFFFFF" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>FeiCe 飞测</title>
+  <rect width="64" height="64" rx="18" fill="#3563E9"/>
+  <path d="M18 16H48L42 25H27V32H40L34 41H27V49H18V16Z" fill="#FFFFFF"/>
+  <path d="M39 42L44 47L55 32" stroke="#B7D5FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

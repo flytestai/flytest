@@ -12,7 +12,7 @@
 
     <a-form :model="draft" layout="vertical">
       <a-row :gutter="12">
-        <a-col :span="8">
+        <a-col :xs="24" :md="8">
           <a-form-item field="caseId" label="加载已有用例">
             <a-select
               v-model="selectedCaseIdModel"
@@ -26,12 +26,12 @@
             </a-select>
           </a-form-item>
         </a-col>
-        <a-col :span="8">
+        <a-col :xs="24" :md="8">
           <a-form-item field="name" label="用例名称">
             <a-input v-model="draft.name" placeholder="例如：登录并进入首页" />
           </a-form-item>
         </a-col>
-        <a-col :span="8">
+        <a-col :xs="24" :md="8">
           <a-form-item field="package_id" label="应用包">
             <a-select v-model="draft.package_id" allow-clear placeholder="可选">
               <a-option v-for="item in packages" :key="item.id" :value="item.id">
@@ -43,7 +43,7 @@
       </a-row>
 
       <a-row :gutter="12">
-        <a-col :span="12">
+        <a-col :xs="24" :md="12">
           <a-form-item field="description" label="描述">
             <a-textarea
               v-model="draft.description"
@@ -52,12 +52,12 @@
             />
           </a-form-item>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :md="6">
           <a-form-item field="timeout" label="超时时间（秒）">
             <a-input-number v-model="draft.timeout" :min="1" :max="7200" />
           </a-form-item>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :md="6">
           <a-form-item field="retry_count" label="失败重试">
             <a-input-number v-model="draft.retry_count" :min="0" :max="10" />
           </a-form-item>

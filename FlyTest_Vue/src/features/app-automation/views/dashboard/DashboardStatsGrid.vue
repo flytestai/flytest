@@ -42,7 +42,7 @@ defineProps<DashboardStatsGridProps>()
 <style scoped>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -94,5 +94,14 @@ defineProps<DashboardStatsGridProps>()
     min-height: 112px;
     padding: 18px;
   }
+}
+@container workspace (min-width: 1400px) {
+  .stats-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@container workspace (max-width: 680px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container workspace (max-width: 420px) {
+  .stats-grid { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

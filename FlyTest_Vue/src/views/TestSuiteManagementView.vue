@@ -14,7 +14,10 @@
         />
       </div>
 
-      <div class="suite-panel-resizer" @mousedown="startSuitePanelResize" />
+      <div class="suite-panel-resizer" @mousedown="startSuitePanelResize"
+        role="separator" tabindex="0" aria-label="调整目录宽度" aria-orientation="vertical"
+        :aria-valuenow="panelWidth" :aria-valuemin="panelMinWidth" :aria-valuemax="panelMaxWidth"
+        @keydown="resizeWithKeyboard" />
 
       <div class="right-content-area">
         <template v-if="selectedSuiteId">
@@ -115,6 +118,7 @@
 </template>
 
 <script setup lang="ts">
+import { useResizablePanel } from '@/composables/useResizablePanel';
 import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message, Notification } from '@arco-design/web-vue';
@@ -160,12 +164,8 @@ const testCaseIdsForNavigation = ref<number[]>([]);
 const isOptimizationModalVisible = ref(false);
 const pendingOptimizationTestCase = ref<TestCase | null>(null);
 
-const suitePanelWidth = ref(180);
-const isResizingSuitePanel = ref(false);
+const { panelWidth, minWidth: panelMinWidth, maxWidth: panelMaxWidth, shellStyle: suitePanelShellStyle, startResize: startSuitePanelResize, stopResize: stopSuitePanelResize, resizeWithKeyboard } = useResizablePanel();
 
-const suitePanelShellStyle = computed(() => ({
-  width: `${suitePanelWidth.value}px`,
-}));
 
 const buildModuleTree = (modules: TestCaseModule[], parentId: number | null = null): TreeNodeData[] =>
   modules
@@ -394,32 +394,7 @@ const handleExecutionSuccess = () => {
   Message.success('测试执行已启动');
 };
 
-const stopSuitePanelResize = () => {
-  isResizingSuitePanel.value = false;
-  window.removeEventListener('mousemove', handleSuitePanelResize);
-  window.removeEventListener('mouseup', stopSuitePanelResize);
-};
 
-const handleSuitePanelResize = (event: MouseEvent) => {
-  if (!isResizingSuitePanel.value) {
-    return;
-  }
-
-  const minWidth = 180;
-  const maxWidth = Math.max(260, Math.floor(window.innerWidth * 0.45));
-  suitePanelWidth.value = Math.min(maxWidth, Math.max(minWidth, event.clientX - 8));
-};
-
-const startSuitePanelResize = (event: MouseEvent) => {
-  if (window.innerWidth <= 768) {
-    return;
-  }
-
-  event.preventDefault();
-  isResizingSuitePanel.value = true;
-  window.addEventListener('mousemove', handleSuitePanelResize);
-  window.addEventListener('mouseup', stopSuitePanelResize);
-};
 
 watch(currentProjectId, async (projectId) => {
   selectedSuiteId.value = null;

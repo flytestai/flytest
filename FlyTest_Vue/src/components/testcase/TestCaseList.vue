@@ -1128,23 +1128,22 @@ defineExpose({
   align-items: center;
   margin-bottom: 16px;
   flex-shrink: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid var(--ui-toolbar-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
   background: var(--ui-toolbar-bg, var(--color-fill-1));
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
 }
 
 .search-box {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  min-width: max-content;
+  min-width: 0;
   flex: 1 1 auto;
   overflow: visible;
   padding-bottom: 2px;
@@ -1160,7 +1159,7 @@ defineExpose({
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  min-width: fit-content;
+  min-width: 0;
   padding-bottom: 2px;
   margin-left: auto;
 }

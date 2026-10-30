@@ -242,13 +242,13 @@ const emit = defineEmits<{
   color: var(--theme-text-secondary);
 }
 
-@media (max-width: 1480px) {
+@container workspace (max-width: 680px) {
   .ai-status-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 960px) {
+@container workspace (max-width: 680px) {
   .ai-status-header,
   .ai-activity-header {
     flex-direction: column;

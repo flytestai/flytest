@@ -24,7 +24,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:layout": "node scripts/verify-workspace-layout.cjs",
+    "test:layout:interactions": "node scripts/verify-workspace-interactions.cjs",
+    "test:dashboard": "node scripts/verify-dashboard-insights.cjs",
+    "test:auth": "node scripts/verify-auth-pages.cjs",
+    "brand:export": "node scripts/export-brand-assets.cjs"
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.57.0",

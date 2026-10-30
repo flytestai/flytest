@@ -1,28 +1,25 @@
 {
-  "name": "FlyTest 智能测试平台",
-  "short_name": "FlyTest",
-  "description": "FlyTest 智能测试平台，提供 AI 生成用例、知识检索、自动化执行与智能编排能力。",
-  "theme_color": "#0089FF",
-  "background_color": "#09111F",
+  "name": "FeiCe 飞测 AI 智能测试平台",
+  "short_name": "FeiCe",
+  "description": "FeiCe 飞测，连接需求、用例、知识与自动化执行的 AI 测试协作平台。",
+  "theme_color": "#f5f7fb",
+  "background_color": "#f5f7fb",
   "display": "standalone",
   "orientation": "portrait-primary",
   "scope": "/",
   "start_url": "/",
   "icons": [
     {
-      "src": "/app-icon.png?v=20260506-uploaded-logo-1",
+      "src": "/app-icon.png?v=20261030-feice-3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/assets/beijing.png",
-      "sizes": "1200x800",
-      "type": "image/png"
-    }
+  "categories": [
+    "productivity",
+    "developer",
+    "utilities"
   ],
-  "categories": ["productivity", "developer", "utilities"],
   "lang": "zh-CN"
 }

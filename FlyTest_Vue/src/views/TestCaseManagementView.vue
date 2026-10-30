@@ -17,6 +17,9 @@
       <div
         class="module-panel-resizer"
         @mousedown="startModulePanelResize"
+        role="separator" tabindex="0" aria-label="调整目录宽度" aria-orientation="vertical"
+        :aria-valuenow="panelWidth" :aria-valuemin="panelMinWidth" :aria-valuemax="panelMaxWidth"
+        @keydown="resizeWithKeyboard"
       />
 
       <!-- 右侧内容区域 - 根据视图模式动态切换 -->
@@ -96,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+import { useResizablePanel } from '@/composables/useResizablePanel';
 import { defineAsyncComponent, h, ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProjectStore } from '@/store/projectStore';
@@ -199,8 +203,7 @@ const generationDraftMap = ref<GenerateDraftMap>({});
 const pendingExecuteTestCase = ref<TestCase | null>(null);
 const pendingOptimizationTestCase = ref<TestCase | null>(null);
 const testCaseIdsForNavigation = ref<number[]>([]); // 用于编辑页面导航的用例ID列表
-const modulePanelWidth = ref(140);
-const isResizingModulePanel = ref(false);
+const { panelWidth, minWidth: panelMinWidth, maxWidth: panelMaxWidth, shellStyle: modulePanelShellStyle, startResize: startModulePanelResize, stopResize: stopModulePanelResize, resizeWithKeyboard } = useResizablePanel();
 
 const modulePanelRef = ref<InstanceType<typeof ModuleManagementPanel> | null>(null);
 const testCaseListRef = ref<InstanceType<typeof TestCaseList> | null>(null);
@@ -245,34 +248,8 @@ const currentGenerateDraft = computed<Partial<GenerateDraft> | null>(() => {
 });
 const moduleTreeForForm = ref<TreeNodeData[]>([]); // 用于表单的模块树
 
-const modulePanelShellStyle = computed(() => ({
-  width: `${modulePanelWidth.value}px`,
-}));
 
-const stopModulePanelResize = () => {
-  isResizingModulePanel.value = false;
-  window.removeEventListener('mousemove', handleModulePanelResize);
-  window.removeEventListener('mouseup', stopModulePanelResize);
-};
 
-const handleModulePanelResize = (event: MouseEvent) => {
-  if (!isResizingModulePanel.value) {
-    return;
-  }
-  const minWidth = 140;
-  const maxWidth = Math.max(220, Math.floor(window.innerWidth * 0.45));
-  modulePanelWidth.value = Math.min(maxWidth, Math.max(minWidth, event.clientX - 8));
-};
-
-const startModulePanelResize = (event: MouseEvent) => {
-  if (window.innerWidth <= 768) {
-    return;
-  }
-  event.preventDefault();
-  isResizingModulePanel.value = true;
-  window.addEventListener('mousemove', handleModulePanelResize);
-  window.addEventListener('mouseup', stopModulePanelResize);
-};
 
 const startAutomationTask = (
   requestData: ChatRequest,

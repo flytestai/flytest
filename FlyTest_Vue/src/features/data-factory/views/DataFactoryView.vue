@@ -1215,7 +1215,7 @@ const pageDescription = computed(() => {
   if (isCategoryMenuView.value) {
     return `当前为“${categoryName(routeCategory.value as DataFactoryCategoryKey)}”分类视图，仅展示该分类下的工具内容。`
   }
-  return '参考 testhub_platform 的数据工厂交互，保留 7 大类工具总览、场景筛选、工具执行、记录和标签管理能力。'
+  return '按场景查找数据工具，生成、转换与校验测试数据，通过记录和标签复用结果。'
 })
 const referencePickerTitle = computed(() => referencePickerMode.value === 'api' ? '浏览 API 数据工厂引用' : '浏览 UI 数据工厂引用')
 const topReferenceTags = computed(() => statistics.value.tag_stats.slice(0, 6).map(item => {

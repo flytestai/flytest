@@ -7,10 +7,10 @@
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Manrope', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
+  text-align: left;
   color: var(--theme-page-text);
   min-height: 100vh;
 }

@@ -3,10 +3,10 @@ export function getPublicAssetUrl(assetPath: string): string {
   return `${import.meta.env.BASE_URL}${normalizedPath}`;
 }
 
-const BRAND_ASSET_VERSION = '20261029-feice-1';
+const BRAND_ASSET_VERSION = '20261030-feice-3';
 
-export const brandLogoUrl = `${getPublicAssetUrl('logo.png')}?v=${BRAND_ASSET_VERSION}`;
-export const brandFaviconUrl = `${getPublicAssetUrl('favicon.png')}?v=${BRAND_ASSET_VERSION}`;
-export const brandWordmarkUrl = `${getPublicAssetUrl('wordmark.png')}?v=${BRAND_ASSET_VERSION}`;
-export const brandFullLogoUrl = `${getPublicAssetUrl('full-logo.png')}?v=${BRAND_ASSET_VERSION}`;
-export const brandFullLogoLoginWhiteUrl = `${getPublicAssetUrl('full-logo-login-white.png')}?v=${BRAND_ASSET_VERSION}`;
+export const brandLogoUrl = `${getPublicAssetUrl('feice-mark.svg')}?v=${BRAND_ASSET_VERSION}`;
+export const brandFaviconUrl = `${getPublicAssetUrl('favicon.svg')}?v=${BRAND_ASSET_VERSION}`;
+export const brandWordmarkUrl = `${getPublicAssetUrl('feice-logo.svg')}?v=${BRAND_ASSET_VERSION}`;
+export const brandFullLogoUrl = `${getPublicAssetUrl('feice-logo.svg')}?v=${BRAND_ASSET_VERSION}`;
+export const brandFullLogoLoginWhiteUrl = `${getPublicAssetUrl('feice-logo-light.svg')}?v=${BRAND_ASSET_VERSION}`;
