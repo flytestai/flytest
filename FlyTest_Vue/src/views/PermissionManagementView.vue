@@ -1,8 +1,8 @@
 <template>
-  <div class="permission-management">
+  <div class="permission-management fc-page">
     <div class="permission-content">
       <!-- 左侧实体选择面板 -->
-      <div class="entity-panel">
+      <div class="entity-panel fc-directory">
         <div class="panel-header">
           <h3>选择实体</h3>
           <div class="entity-type-selector">
@@ -312,7 +312,7 @@ onMounted(() => {
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .entity-type-selector {
@@ -380,11 +380,11 @@ onMounted(() => {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-accent), #2563eb);
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
 }
@@ -401,7 +401,7 @@ onMounted(() => {
 
 .entity-name {
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
   margin-bottom: 4px;
   font-size: 15px;
   white-space: nowrap;
@@ -411,7 +411,7 @@ onMounted(() => {
 
 .entity-meta {
   font-size: 13px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -445,7 +445,7 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .empty-state i {
@@ -490,13 +490,13 @@ onMounted(() => {
   margin: 0 0 4px 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .details-header .entity-details p {
   margin: 0;
   font-size: 14px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .permission-tree-container {
@@ -579,7 +579,7 @@ onMounted(() => {
 .pagination-total {
   text-align: center;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-bottom: 4px;
 }
 

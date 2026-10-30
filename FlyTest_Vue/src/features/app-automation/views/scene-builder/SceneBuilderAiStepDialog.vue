@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visibleModel" width="640px">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" width="640px">
     <template #title>AI 补全当前步骤</template>
 
     <div class="dialog-shell">
@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <a-form layout="vertical" class="dialog-form">
+      <a-form layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
           <a-form-item field="prompt" label="补全说明">
             <a-textarea

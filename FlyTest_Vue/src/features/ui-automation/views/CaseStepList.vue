@@ -1,5 +1,5 @@
 <template>
-  <div class="case-step-list">
+  <div class="case-step-list fc-page">
     <div class="step-header">
       <span class="step-title">步骤列表（拖拽可排序）</span>
       <a-button type="primary" size="small" @click="showAddModal">
@@ -54,14 +54,14 @@
     </a-spin>
 
     <!-- 添加/编辑步骤弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑步骤' : '添加步骤'"
       :ok-loading="submitting"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item field="page_step" label="选择页面步骤" required>
           <a-select
             v-model="formData.page_step"

@@ -1,10 +1,8 @@
 <template>
-  <div class="page-header">
-    <div class="header-copy">
-      <h3>元素管理</h3>
-      <p>统一维护图片、坐标、区域等元素资源，供 APP 场景编排、步骤补全和执行复用。</p>
-    </div>
-    <a-space wrap class="header-actions">
+  <WorkspacePageHeader>
+        <template #title>元素管理</template>
+        <template #description>统一维护图片、坐标、区域等元素资源，供 APP 场景编排、步骤补全和执行复用。</template>
+        <template #actions><a-space wrap class="header-actions">
       <a-input-search
         v-model="searchModel"
         placeholder="搜索元素名称或定位值"
@@ -25,11 +23,12 @@
       <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
       <a-button @click="emit('open-capture')">从设备截图创建</a-button>
       <a-button type="primary" @click="emit('open-create')">新增元素</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { ElementsHeaderBarEmits } from './elementEventModels'
 import type { ElementsHeaderBarProps } from './elementViewModels'
 

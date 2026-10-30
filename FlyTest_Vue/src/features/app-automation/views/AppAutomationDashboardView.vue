@@ -1,6 +1,6 @@
 <template>
-  <div class="dashboard-view">
-    <div v-if="!currentProjectId" class="empty-shell">
+  <div class="dashboard-view fc-page">
+    <div v-if="!currentProjectId" class="empty-shell fc-empty-state">
       <a-empty description="请先选择项目后查看 APP 自动化概览" />
     </div>
     <template v-else>

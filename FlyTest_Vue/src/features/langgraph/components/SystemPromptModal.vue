@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="我的提示词"
     @cancel="handleCancel"
@@ -131,7 +131,7 @@
     </div>
 
     <!-- 提示词表单弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="isPromptFormVisible"
       :title="isEditingPrompt ? '编辑提示词' : '新建提示词'"
       @ok="handlePromptSubmit"
@@ -141,7 +141,7 @@
       ok-text="保存"
       cancel-text="取消"
     >
-      <a-form
+      <a-form class="fc-form"
         ref="promptFormRef"
         :model="promptFormData"
         :rules="promptFormRules"
@@ -668,7 +668,7 @@ const handlePromptTypeChange = (type: PromptType) => {
 
 .section-title {
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 16px;
 }
 
@@ -682,7 +682,7 @@ const handlePromptTypeChange = (type: PromptType) => {
   align-items: center;
   justify-content: center;
   padding: 40px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   gap: 8px;
 }
 
@@ -704,13 +704,13 @@ const handlePromptTypeChange = (type: PromptType) => {
 .empty-text {
   font-size: 16px;
   font-weight: 500;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   margin-bottom: 8px;
 }
 
 .empty-desc {
   font-size: 14px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .prompts-list-compact {
@@ -723,9 +723,9 @@ const handlePromptTypeChange = (type: PromptType) => {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
-  background: #fafbfc;
+  background: var(--theme-surface-soft);
   margin-bottom: 8px;
   transition: all 0.2s ease;
 }
@@ -748,7 +748,7 @@ const handlePromptTypeChange = (type: PromptType) => {
 
 .prompt-name {
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   margin-bottom: 2px;
   white-space: nowrap;
@@ -758,7 +758,7 @@ const handlePromptTypeChange = (type: PromptType) => {
 
 .prompt-description {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -768,13 +768,13 @@ const handlePromptTypeChange = (type: PromptType) => {
 .prompt-meta {
   flex-shrink: 0;
   font-size: 11px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
     width: 120px;
   text-align: left;
 }
 
 .prompt-time {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .prompt-status {

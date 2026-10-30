@@ -1,13 +1,13 @@
 <template>
-  <div class="remote-mcp-management">
-    <div class="page-header">
-      <h2>MCP配置管理</h2>
-      <a-button type="primary" @click="showAddForm">添加远程MCP</a-button>
-    </div>
+  <div class="remote-mcp-management fc-page">
+    <WorkspacePageHeader>
+        <template #title>MCP配置管理</template>
+        <template #actions><a-button type="primary" @click="showAddForm">添加远程MCP</a-button></template>
+      </WorkspacePageHeader>
 
     <!-- 远程MCP配置列表 -->
-    <a-card class="content-card">
-      <a-table
+    <a-card class="content-card fc-panel">
+      <a-table class="fc-table"
         :data="mcpConfigs"
         :columns="columns"
         :loading="loading"
@@ -72,13 +72,13 @@
     </a-card>
 
     <!-- 添加/编辑远程MCP配置的弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEditing ? '编辑远程MCP配置' : '添加远程MCP配置'"
       @cancel="closeModal"
       @before-ok="handleSubmit"
     >
-      <a-form ref="formRef" :model="formData" :rules="formRules" label-align="left">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="formRules" label-align="left">
         <a-form-item field="name" label="名称" required>
           <a-input v-model="formData.name" placeholder="请输入配置名称" />
         </a-form-item>
@@ -106,7 +106,7 @@
     </a-modal>
 
     <!-- 删除确认弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="deleteModalVisible"
       title="确认删除"
       @ok="handleDelete"
@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import {

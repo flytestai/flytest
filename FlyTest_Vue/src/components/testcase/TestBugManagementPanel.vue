@@ -17,7 +17,7 @@
           v-for="item in statusCards"
           :key="item.key"
           type="button"
-          class="status-card"
+          class="status-card fc-native-action"
           :class="{ 'status-card--active': activeStatusView === item.key }"
           @click="activeStatusView = item.key"
         >
@@ -32,7 +32,7 @@
             v-for="item in quickViews"
             :key="item.key"
             type="button"
-            class="quick-view-item"
+            class="quick-view-item fc-native-action"
             :class="{ 'quick-view-item--active': activeQuickView === item.key }"
             @click="activeQuickView = item.key"
           >
@@ -91,7 +91,7 @@
               ref="filterViewImportRef"
               type="file"
               accept="application/json"
-              class="bug-hidden-file-input"
+              class="bug-hidden-file-input fc-native-input"
               @change="handleImportFilterViews"
             />
             <a-dropdown trigger="click" position="br">
@@ -126,7 +126,7 @@
             v-for="item in savedFilterViews"
             :key="item.id"
             type="button"
-            class="bug-saved-view-chip"
+            class="bug-saved-view-chip fc-native-action"
             :class="{ 'bug-saved-view-chip--active': currentAppliedFilterViewId === item.id }"
             :title="getSavedFilterViewMetaLabel(item)"
             @click="applySavedFilterView(item.id)"
@@ -144,7 +144,7 @@
         <button
           v-if="activeStatusView !== 'all'"
           type="button"
-          class="bug-summary-pill bug-summary-pill--clearable"
+          class="bug-summary-pill bug-summary-pill--clearable fc-native-action"
           @click="clearSummaryFilter('status')"
         >
           <span>状态：{{ getStatusViewLabel(activeStatusView) }}</span>
@@ -153,7 +153,7 @@
         <button
           v-if="activeQuickView !== 'all'"
           type="button"
-          class="bug-summary-pill bug-summary-pill--clearable"
+          class="bug-summary-pill bug-summary-pill--clearable fc-native-action"
           @click="clearSummaryFilter('quickView')"
         >
           <span>视图：{{ getQuickViewLabel(activeQuickView) }}</span>
@@ -162,7 +162,7 @@
         <button
           v-if="filters.search"
           type="button"
-          class="bug-summary-pill bug-summary-pill--clearable bug-summary-pill--search"
+          class="bug-summary-pill bug-summary-pill--clearable bug-summary-pill--search fc-native-action"
           :title="filters.search"
           @click="clearSummaryFilter('search')"
         >
@@ -753,7 +753,7 @@
       </div>
     </template>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="actionVisible"
       :title="actionModalTitle"
       width="560px"
@@ -761,7 +761,7 @@
       @ok="submitAction"
       @cancel="resetActionState"
     >
-      <a-form :model="actionForm" layout="vertical">
+      <a-form class="fc-form" :model="actionForm" layout="vertical">
         <template v-if="actionType === 'assign'">
           <a-form-item field="assigned_to" label="指派给" required>
             <a-select v-model="actionForm.assigned_to" multiple allow-clear placeholder="请选择指派人员">
@@ -799,7 +799,7 @@
       </a-form>
     </a-modal>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="batchVisible"
       :title="batchModalTitle"
       width="560px"
@@ -807,7 +807,7 @@
       @ok="submitBatchAction"
       @cancel="resetBatchState"
     >
-      <a-form :model="batchForm" layout="vertical">
+      <a-form class="fc-form" :model="batchForm" layout="vertical">
         <div class="bug-batch-preview">
           <div class="bug-batch-preview-title">本次将处理 {{ selectedBugCount }} 条 BUG</div>
           <div class="bug-batch-preview-summary">{{ batchPreviewSummary }}</div>
@@ -893,14 +893,14 @@
       </a-form>
     </a-modal>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="saveFilterViewVisible"
       :title="editingFilterViewId ? '编辑常用视图' : '保存常用视图'"
       width="420px"
       @ok="submitSaveFilterView"
       @cancel="resetSaveFilterViewState"
     >
-      <a-form layout="vertical">
+      <a-form class="fc-form" layout="vertical">
         <a-form-item field="name" label="视图名称" required>
           <a-input v-model="saveFilterViewName" :max-length="20" placeholder="请输入视图名称" />
         </a-form-item>
@@ -3370,7 +3370,7 @@ defineExpose({
   height: 30px;
   padding: 0 10px;
   color: var(--color-text-2);
-  background: #fff;
+  background: var(--theme-surface);
   border: 1px solid var(--color-neutral-3);
   border-radius: 999px;
   cursor: pointer;
@@ -3657,7 +3657,7 @@ defineExpose({
   padding: 0 10px;
   color: var(--color-text-2);
   font-size: 12px;
-  background: #fff;
+  background: var(--theme-surface);
   border: 1px solid var(--color-neutral-3);
   border-radius: 999px;
 }

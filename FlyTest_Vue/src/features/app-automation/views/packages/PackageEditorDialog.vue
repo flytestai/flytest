@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑应用包' : '新增应用包'"
     :ok-loading="submitting"
@@ -7,12 +7,12 @@
     @ok="emit('submit')"
   >
     <div class="dialog-shell">
-      <div class="dialog-intro">
+      <div class="dialog-intro fc-dialog-intro">
         <span class="dialog-kicker">App Package</span>
         <strong>{{ form.id ? '维护应用包信息' : '新建可复用应用包' }}</strong>
         <p>统一维护平台、包名和启动 Activity，方便在自动化执行时快速选择目标应用。</p>
       </div>
-      <a-form :model="form" layout="vertical" class="dialog-form">
+      <a-form :model="form" layout="vertical" class="dialog-form fc-form">
         <div class="form-grid">
           <div class="field-card">
             <a-form-item field="name" label="应用名称">

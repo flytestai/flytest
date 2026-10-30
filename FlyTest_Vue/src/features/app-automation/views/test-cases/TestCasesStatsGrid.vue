@@ -1,18 +1,18 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">用例总数</span>
       <strong>{{ statistics.total }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">最近通过</span>
       <strong>{{ statistics.passed }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">最近失败</span>
       <strong>{{ statistics.failed }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">未执行</span>
       <strong>{{ statistics.pending }}</strong>
     </a-card>

@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visible"
     title="用例优化"
     :width="960"
@@ -146,7 +146,7 @@ const handleCancel = () => {
   align-items: center;
   gap: 24px;
   padding: 10px 14px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #f2f3f5 100%);
+  background: linear-gradient(135deg, #f8f9fa 0%, var(--theme-surface-soft) 100%);
   border-radius: 6px;
   flex-wrap: wrap;
 }
@@ -164,13 +164,13 @@ const handleCancel = () => {
 
 .info-label {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   flex-shrink: 0;
 }
 
 .info-value {
   font-size: 13px;
-  color: #1d2129;
+  color: var(--theme-text);
   font-weight: 500;
 }
 
@@ -185,13 +185,13 @@ const handleCancel = () => {
 }
 
 .section-label {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   flex-shrink: 0;
   margin-right: 8px;
 }
 
 .section-text {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   word-break: break-word;
 }
 
@@ -204,12 +204,12 @@ const handleCancel = () => {
 .section-header {
   font-size: 13px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
   margin-bottom: 8px;
 }
 
 .steps-table {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   overflow: hidden;
   max-height: 240px;
@@ -218,11 +218,11 @@ const handleCancel = () => {
 
 .table-header {
   display: flex;
-  background-color: #f7f8fa;
+  background-color: var(--theme-surface-soft);
   font-size: 12px;
   font-weight: 500;
-  color: #4e5969;
-  border-bottom: 1px solid #e5e6eb;
+  color: var(--theme-text-secondary);
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .table-body {
@@ -231,7 +231,7 @@ const handleCancel = () => {
 
 .table-row {
   display: flex;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--theme-surface-soft);
 }
 
 .table-row:last-child {
@@ -239,7 +239,7 @@ const handleCancel = () => {
 }
 
 .table-row:hover {
-  background-color: #f7f8fa;
+  background-color: var(--theme-surface-soft);
 }
 
 .col-step {
@@ -249,24 +249,24 @@ const handleCancel = () => {
   text-align: center;
   color: var(--theme-accent);
   font-weight: 500;
-  border-right: 1px solid #f2f3f5;
+  border-right: 1px solid var(--theme-surface-soft);
 }
 
 .table-header .col-step {
-  color: #4e5969;
-  border-right: 1px solid #e5e6eb;
+  color: var(--theme-text-secondary);
+  border-right: 1px solid var(--theme-border);
 }
 
 .col-action {
   flex: 1;
   padding: 8px 12px;
-  color: #1d2129;
-  border-right: 1px solid #f2f3f5;
+  color: var(--theme-text);
+  border-right: 1px solid var(--theme-surface-soft);
   word-break: break-word;
 }
 
 .table-header .col-action {
-  border-right: 1px solid #e5e6eb;
+  border-right: 1px solid var(--theme-border);
 }
 
 .col-expected {
@@ -277,7 +277,7 @@ const handleCancel = () => {
 }
 
 .table-header .col-expected {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 /* 备注区域 */
@@ -285,7 +285,7 @@ const handleCancel = () => {
   display: flex;
   font-size: 12px;
   padding: 8px 12px;
-  background-color: #f7f8fa;
+  background-color: var(--theme-surface-soft);
   border-radius: 4px;
 }
 
@@ -308,12 +308,12 @@ const handleCancel = () => {
 .suggestion-title {
   font-size: 13px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .suggestion-optional {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-left: 4px;
 }
 
@@ -323,7 +323,7 @@ const handleCancel = () => {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background-color: #e8f3ff;
+  background-color: var(--theme-accent-soft);
   border-radius: 4px;
   color: var(--theme-accent);
   font-size: 12px;

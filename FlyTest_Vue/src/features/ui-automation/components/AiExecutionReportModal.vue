@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="AI 执行报告"
     width="920px"
@@ -25,12 +25,12 @@
           </a-space>
         </div>
         <div class="report-summary">
-          <div v-for="item in reportStats" :key="item.label" class="summary-card">
+          <div v-for="item in reportStats" :key="item.label" class="summary-card fc-metric">
             <span class="summary-label">{{ item.label }}</span>
             <strong :class="item.tone ? `quality-${item.tone}` : undefined">{{ item.value }}</strong>
           </div>
         </div>
-        <a-descriptions :column="2" bordered size="small">
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
           <a-descriptions-item label="任务名称">{{ report.case_name }}</a-descriptions-item>
           <a-descriptions-item label="执行状态">
             <a-tag :color="statusColors[report.status]">{{ AI_STATUS_LABELS[report.status] }}</a-tag>

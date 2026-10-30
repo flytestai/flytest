@@ -1,6 +1,6 @@
 <template>
-  <a-card class="table-card">
-    <a-table :data="logs" :loading="loading" :pagination="false" row-key="id">
+  <a-card class="table-card fc-panel">
+    <a-table class="fc-table" :data="logs" :loading="loading" :pagination="false" row-key="id">
       <template #columns>
         <a-table-column title="任务" :width="220">
           <template #cell="{ record }">
@@ -131,7 +131,7 @@ const emit = defineEmits<NotificationsTableCardEmits>()
 
 .table-card :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

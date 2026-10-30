@@ -30,7 +30,7 @@
       </a-row>
     </div>
 
-    <a-tabs v-model:active-key="activeTab" type="rounded" class="structured-http-editor__tabs">
+    <a-tabs v-model:active-key="activeTab" type="rounded" class="structured-http-editor__tabs fc-tabs">
       <a-tab-pane key="headers" title="Headers">
         <div class="editor-tab-header">
           <div>
@@ -1028,7 +1028,7 @@ const handleAssertionTypeChange = (item: ApiAssertionSpec) => {
   border: 1px solid var(--color-neutral-3);
   border-radius: 16px;
   padding: 16px;
-  background: linear-gradient(180deg, #fbfcfd 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #fbfcfd 0%, var(--theme-surface) 100%);
 }
 
 .editor-tab-header {

@@ -172,7 +172,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   min-height: 220px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .empty-icon {

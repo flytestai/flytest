@@ -1,5 +1,5 @@
 ﻿<template>
-<a-card class="config-panel">
+<a-card class="config-panel fc-panel">
           <template #title>步骤配置</template>
           <div v-if="!selectedSceneStep" class="config-empty">请选择一个步骤进行配置</div>
 
@@ -10,7 +10,7 @@
           />
 
           <div v-else class="config-form">
-            <a-form layout="vertical">
+            <a-form class="fc-form" layout="vertical">
               <SceneBuilderConfigHeaderSection
                 :selected-scene-step="selectedSceneStep"
                 :resolve-step-meta="resolveStepMeta"

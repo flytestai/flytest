@@ -1,17 +1,17 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="编辑设备信息"
     :confirm-loading="editSaving"
     @ok="emit('submit')"
   >
     <div class="dialog-shell">
-      <div class="dialog-intro">
+      <div class="dialog-intro fc-dialog-intro">
         <span class="dialog-kicker">Device Settings</span>
         <strong>维护设备基础信息与状态展示</strong>
         <p>这里保留人工可维护的信息项，执行链路中的锁定与停止状态仍由系统自动回写。</p>
       </div>
-      <a-form :model="editForm" layout="vertical" class="dialog-form">
+      <a-form :model="editForm" layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
           <a-form-item field="name" label="设备名称">
             <a-input v-model="editForm.name" placeholder="输入设备名称" />

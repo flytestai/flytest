@@ -1,6 +1,6 @@
 <template>
-  <div class="apikey-management">
-    <div class="page-header">
+  <div class="apikey-management fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-input-search
           placeholder="搜索Key名称"
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="apiKeyData"
       :pagination="pagination"
@@ -64,20 +64,20 @@
       </template>
       <template #operations="{ record }">
         <a-space>
-          <a-button type="primary" size="small" @click="editApiKey(record)">编辑</a-button>
-          <a-button type="primary" status="danger" size="small" @click="handleDelete(record)">删除</a-button>
+          <a-button type="text" size="small" @click="editApiKey(record)">编辑</a-button>
+          <a-button type="text" status="danger" size="small" @click="handleDelete(record)">删除</a-button>
         </a-space>
       </template>
     </a-table>
 
     <!-- 添加/编辑 API Key 的模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="apiKeyModalVisible"
       :title="isEditMode ? '编辑 Key' : '创建 Key'"
       @cancel="resetForm"
       @before-ok="handleSubmit"
     >
-      <a-form
+      <a-form class="fc-form"
         ref="formRef"
         :model="formData"
         :rules="rules"
@@ -124,7 +124,7 @@
     </a-modal>
 
     <!-- 删除确认对话框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="deleteModalVisible"
       title="删除确认"
       @ok="confirmDelete"
@@ -659,7 +659,7 @@ const toggleKeyVisibility = (record: ApiKeyItem) => {
 
 .apikey-management :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

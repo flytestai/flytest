@@ -1,7 +1,7 @@
 <template>
   <a-modal
     :visible="visible"
-    class="detail-modal detail-modal--wide"
+    class="detail-modal detail-modal--wide fc-dialog"
     :title="result?.id ? '执行结果详情' : '接口详情'"
     width="1120px"
     :footer="false"
@@ -10,7 +10,7 @@
     @update:visible="value => emit('update:visible', value)"
   >
     <div v-if="result" class="result-drawer">
-      <a-descriptions :column="2" bordered size="small">
+      <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
         <a-descriptions-item label="接口名称">{{ result.request_name }}</a-descriptions-item>
         <a-descriptions-item label="执行状态">
           <a-tag :color="result.passed ? 'green' : result.status === 'error' ? 'red' : 'orange'">
@@ -26,7 +26,7 @@
       </a-descriptions>
 
       <a-divider>断言结果</a-divider>
-      <a-table :data="result.assertions_results || []" :pagination="false" row-key="index">
+      <a-table class="fc-table" :data="result.assertions_results || []" :pagination="false" row-key="index">
         <template #columns>
           <a-table-column title="#" data-index="index" :width="60" />
           <a-table-column title="类型" data-index="type" :width="120" />

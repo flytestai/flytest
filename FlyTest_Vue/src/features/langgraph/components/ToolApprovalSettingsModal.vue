@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="props.visible"
     title="工具审批偏好设置"
     @ok="handleSave"

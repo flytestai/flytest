@@ -1,19 +1,14 @@
 <template>
-  <div class="environment-list">
-    <div class="page-hero">
-      <div class="hero-copy">
-        <div class="hero-copy__eyebrow">Environment Center</div>
-        <div class="hero-copy__title">执行环境</div>
-        <div class="hero-copy__desc">
-          统一维护接口执行环境、变量、公共请求头和自动鉴权建议，保证接口、用例与报告使用同一套环境上下文。
-        </div>
-        <div class="hero-copy__meta">
+  <div class="environment-list fc-page">
+    <WorkspacePageHeader>
+        <template #title>执行环境</template>
+        <template #description>统一维护接口执行环境、变量、公共请求头和自动鉴权建议，保证接口、用例与报告使用同一套环境上下文。</template>
+        <template #meta><div class="hero-copy__meta">
           <span>{{ filteredEnvironments.length }} 个环境</span>
           <span>{{ environments.filter(item => item.is_default).length }} 个默认环境</span>
           <span v-if="environmentSuggestions">已检测到最近导入建议</span>
-        </div>
-      </div>
-      <div class="hero-actions">
+        </div></template>
+        <template #actions><div class="hero-actions">
         <a-input-search
           v-model="searchKeyword"
           class="toolbar-search"
@@ -23,8 +18,8 @@
           @clear="loadEnvironments"
         />
         <a-button type="primary" @click="openCreateModal">新增环境</a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div v-if="environmentSuggestions" class="suggestion-strip">
       <div class="suggestion-strip__copy">
@@ -44,8 +39,8 @@
       </div>
     </div>
 
-    <div class="content-card">
-      <a-table :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id" size="large">
+    <div class="content-card fc-panel">
+      <a-table class="fc-table" :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id" size="large">
         <template #columns>
           <a-table-column title="环境名称" data-index="name" :width="220" />
           <a-table-column title="基础地址" data-index="base_url" ellipsis tooltip />
@@ -74,7 +69,7 @@
       </a-table>
     </div>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editorVisible"
       :title="editingEnvironment ? '编辑环境' : '新增环境'"
       width="1080px"
@@ -119,7 +114,7 @@
         </div>
       </div>
 
-      <a-form :model="formState" layout="vertical">
+      <a-form class="fc-form" :model="formState" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="name" label="环境名称" :rules="[{ required: true, message: '请输入环境名称' }]">
@@ -162,6 +157,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
@@ -449,21 +445,21 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .hero-copy__title {
   font-size: 30px;
   font-weight: 800;
   line-height: 1.06;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .hero-copy__desc {
   max-width: 760px;
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .hero-copy__meta {
@@ -471,7 +467,7 @@ defineExpose({
   gap: 12px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .hero-actions {
@@ -519,7 +515,7 @@ defineExpose({
 .suggestion-strip__title {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .suggestion-strip__meta {
@@ -529,7 +525,7 @@ defineExpose({
   flex-wrap: wrap;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .content-card {
@@ -580,7 +576,7 @@ defineExpose({
 .draft-banner__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .draft-banner__desc {
@@ -590,7 +586,7 @@ defineExpose({
   flex-wrap: wrap;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .draft-banner__chips,

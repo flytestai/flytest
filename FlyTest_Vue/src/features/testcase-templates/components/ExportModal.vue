@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visible"
     title="导出用例"
     :width="400"
@@ -381,12 +381,12 @@ defineExpose({ open });
 }
 
 .option-card:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: rgba(0, 160, 233, 0.02);
 }
 
 .option-card.active {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: rgba(0, 160, 233, 0.06);
 }
 
@@ -415,7 +415,7 @@ defineExpose({ open });
 
 .option-card.active .option-icon {
   background: rgba(0, 160, 233, 0.15);
-  color: #00a0e9;
+  color: var(--theme-accent);
 }
 
 .option-content {
@@ -441,7 +441,7 @@ defineExpose({ open });
 
 .option-check {
   font-size: 18px;
-  color: #00a0e9;
+  color: var(--theme-accent);
   flex-shrink: 0;
   position: absolute;
   right: 14px;

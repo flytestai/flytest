@@ -1,10 +1,8 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>测试用例</h3>
-      <p>维护 APP 自动化场景、最近执行结果与快速执行入口，让日常回归更高效。</p>
-    </div>
-    <div class="header-toolbar">
+  <WorkspacePageHeader>
+        <template #title>测试用例</template>
+        <template #description>维护 APP 自动化场景、最近执行结果与快速执行入口，让日常回归更高效。</template>
+        <template #actions><div class="header-toolbar">
       <div class="toolbar-filters">
         <a-input-search
           v-model="searchModel"
@@ -22,11 +20,12 @@
         <a-button @click="emit('quick-create')">快速新建</a-button>
         <a-button type="primary" @click="emit('open-scene-builder-draft')">新增测试用例</a-button>
       </a-space>
-    </div>
-  </div>
+    </div></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { TestCasesHeaderBarEmits } from './testCaseEventModels'
 import type { TestCasesHeaderBarProps } from './testCaseViewModels'
 

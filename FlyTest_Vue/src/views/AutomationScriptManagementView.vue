@@ -1,7 +1,7 @@
 <template>
-  <div class="automation-script-management">
-    <a-card class="filter-card">
-      <div class="filter-row">
+  <div class="automation-script-management fc-page">
+    <a-card class="filter-card fc-filter-panel fc-panel">
+      <div class="filter-row fc-filter-row">
         <a-space wrap>
           <a-button type="primary" @click="openCreateModal">
             <template #icon><icon-plus /></template>
@@ -42,8 +42,8 @@
       </div>
     </a-card>
 
-    <a-card class="table-card">
-      <a-table
+    <a-card class="table-card fc-panel">
+      <a-table class="fc-table"
         :data="scripts"
         :loading="loading"
         :pagination="pagination"
@@ -128,14 +128,14 @@
     </a-card>
 
     <!-- 脚本详情抽屉 -->
-    <a-drawer
+    <a-drawer class="fc-drawer"
       v-model:visible="detailVisible"
       :title="currentScript?.name || '脚本详情'"
       :width="drawerWidth"
       :footer="false"
     >
       <template v-if="currentScript">
-        <a-descriptions :column="2" bordered>
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered>
           <a-descriptions-item label="脚本名称">{{ currentScript.name }}</a-descriptions-item>
           <a-descriptions-item label="版本">v{{ currentScript.version }}</a-descriptions-item>
           <a-descriptions-item label="关联用例">{{ currentScript.test_case_name }}</a-descriptions-item>
@@ -152,7 +152,7 @@
         </div>
 
         <a-divider>执行历史</a-divider>
-        <a-table
+        <a-table class="fc-table"
           :data="currentScript.executions || []"
           :loading="executionsLoading"
           size="small"
@@ -246,7 +246,7 @@
     </a-drawer>
 
     <!-- 新建/编辑脚本弹窗 - 左右布局 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editModalVisible"
       :title="isEditMode ? '编辑脚本' : '新建脚本'"
       :width="modalWidth"
@@ -277,7 +277,7 @@
           </div>
           
           <!-- 编辑模式：显示表单 -->
-          <a-form v-else :model="scriptForm" layout="vertical" :rules="formRules" ref="formRef" class="script-form">
+          <a-form v-else :model="scriptForm" layout="vertical" :rules="formRules" ref="formRef" class="script-form fc-form">
             <a-form-item label="脚本名称" field="name" required>
               <a-input v-model="scriptForm.name" placeholder="请输入脚本名称" />
             </a-form-item>
@@ -1230,7 +1230,7 @@ onUnmounted(() => {
 }
 
 .text-gray {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .code-container {
@@ -1272,12 +1272,12 @@ onUnmounted(() => {
 .detail-label {
   font-weight: 500;
   margin-bottom: 4px;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .detail-content {
-  background: #fff;
-  border: 1px solid #e5e6eb;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   padding: 8px 12px;
   margin: 0;
@@ -1291,7 +1291,7 @@ onUnmounted(() => {
 }
 
 .detail-content.stack-trace {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 11px;
 }
 
@@ -1302,7 +1302,7 @@ onUnmounted(() => {
 }
 
 .screenshots :deep(.arco-image) {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -1320,12 +1320,12 @@ onUnmounted(() => {
 .video-player {
   max-width: 400px;
   max-height: 300px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
 }
 
 .no-detail {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   text-align: center;
   padding: 16px;
 }
@@ -1363,7 +1363,7 @@ onUnmounted(() => {
     width: 100%;
     min-width: 0;
     border-right: none;
-    border-bottom: 1px solid #e5e6eb;
+    border-bottom: 1px solid var(--theme-border);
     max-height: 300px;
   }
 }
@@ -1398,7 +1398,7 @@ onUnmounted(() => {
   justify-content: space-between;
   font-size: 14px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
   margin-bottom: 12px;
   flex-shrink: 0;
 }

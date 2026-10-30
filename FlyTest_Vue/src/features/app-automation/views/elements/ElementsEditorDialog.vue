@@ -1,12 +1,12 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑元素' : '新增元素'"
     width="980px"
     @ok="emit('submit')"
     @cancel="emit('cancel')"
   >
-    <a-form :model="form" layout="vertical">
+    <a-form class="fc-form" :model="form" layout="vertical">
       <a-row :gutter="12">
         <a-col :span="12">
           <a-form-item field="name" label="元素名称">
@@ -25,7 +25,7 @@
       </a-row>
 
       <template v-if="form.element_type === 'image'">
-        <div class="config-block">
+        <div class="config-block fc-section">
           <div class="config-block-title">图片配置</div>
           <a-row :gutter="12">
             <a-col :span="12">
@@ -65,7 +65,7 @@
                 ref="fileInputRef"
                 type="file"
                 accept="image/*"
-                class="hidden-input"
+                class="hidden-input fc-native-input"
                 @change="handleFileInputChange"
               />
               <a-space>
@@ -79,11 +79,11 @@
           </a-form-item>
 
           <div class="summary-grid">
-            <div class="summary-card">
+            <div class="summary-card fc-metric">
               <span class="summary-label">匹配阈值</span>
               <a-input-number v-model="form.threshold" :min="0.5" :max="1" :step="0.05" />
             </div>
-            <div class="summary-card">
+            <div class="summary-card fc-metric">
               <span class="summary-label">颜色模式</span>
               <label class="switch-row">
                 <a-switch v-model="form.rgb" />
@@ -95,7 +95,7 @@
       </template>
 
       <template v-else-if="form.element_type === 'pos'">
-        <div class="config-block">
+        <div class="config-block fc-section">
           <div class="config-block-title">坐标配置</div>
           <a-row :gutter="12">
             <a-col :span="12">
@@ -113,7 +113,7 @@
       </template>
 
       <template v-else>
-        <div class="config-block">
+        <div class="config-block fc-section">
           <div class="config-block-title">区域配置</div>
           <a-row :gutter="12">
             <a-col :span="12">

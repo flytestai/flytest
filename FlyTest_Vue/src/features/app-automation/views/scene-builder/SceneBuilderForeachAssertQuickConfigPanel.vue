@@ -1,5 +1,5 @@
 <template>
-  <div class="quick-config-panel">
+  <div class="quick-config-panel fc-section">
     <div class="quick-config-head">
       <span class="quick-config-kicker">Loop Assert</span>
       <div class="quick-config-title">循环点击断言配置</div>

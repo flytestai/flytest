@@ -1,5 +1,5 @@
 <template>
-  <a-drawer
+  <a-drawer class="fc-drawer"
     :visible="modelValue"
     title="标签管理"
     width="560px"
@@ -12,7 +12,7 @@
       </div>
 
       <a-spin :loading="loading">
-        <a-table :data="tags" :pagination="false" row-key="id">
+        <a-table class="fc-table" :data="tags" :pagination="false" row-key="id">
           <template #columns>
             <a-table-column title="标签名称" data-index="name" />
             <a-table-column title="引用编码" :width="150">
@@ -44,14 +44,14 @@
         </a-table>
       </a-spin>
 
-      <a-modal
+      <a-modal class="fc-dialog"
         :visible="modalVisible"
         :title="editingTag ? '编辑标签' : '新增标签'"
         :ok-loading="submitting"
         @cancel="closeModal"
         @before-ok="handleSubmit"
       >
-        <a-form :model="form" layout="vertical">
+        <a-form class="fc-form" :model="form" layout="vertical">
           <a-form-item field="name" label="标签名称" required>
             <a-input v-model="form.name" placeholder="请输入标签名称" />
           </a-form-item>

@@ -1,5 +1,5 @@
 <template>
-  <a-card class="panel-card" title="AI 智能模式">
+  <a-card class="panel-card fc-panel" title="AI 智能模式">
     <div class="ai-panel">
       <div class="ai-panel-head">
         <div class="ai-copy">

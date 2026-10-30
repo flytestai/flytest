@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="props.visible"
     :title="isEditing ? '编辑 LLM 配置' : '新增 LLM 配置'"
     @cancel="handleCancel"
@@ -7,7 +7,7 @@
     :mask-closable="false"
     width="700px"
   >
-    <a-form
+    <a-form class="fc-form"
       ref="formRef"
       :model="formData"
       :rules="formRules"
@@ -161,7 +161,7 @@
           <a-form-item field="shared_expires_at" label="共享有效期截止">
             <input
               v-model="sharedExpiresAtInput"
-              class="native-datetime-input"
+              class="native-datetime-input fc-native-input"
               type="datetime-local"
             />
           </a-form-item>
@@ -1034,7 +1034,7 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
   padding: 0 12px;
   border: 1px solid var(--color-neutral-3);
   border-radius: 6px;
-  background: #fff;
+  background: var(--theme-surface);
   color: var(--color-text-1);
   font-size: 13px;
   outline: none;

@@ -232,8 +232,8 @@ defineExpose({
 
 <style scoped>
 .chat-header-container {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e6eb;
+  background-color: var(--theme-surface);
+  border-bottom: 1px solid var(--theme-border);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   z-index: 1;
 }
@@ -250,7 +250,7 @@ defineExpose({
 .chat-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   margin: 0;
   flex-shrink: 0;
 }
@@ -319,7 +319,7 @@ defineExpose({
 }
 
 .toggle-label {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-weight: 500;
 }
 
@@ -329,8 +329,8 @@ defineExpose({
 }
 
 .kb-settings-panel {
-  border-top: 1px solid #e5e6eb;
-  background-color: #f7f8fa;
+  border-top: 1px solid var(--theme-border);
+  background-color: var(--theme-surface-soft);
 }
 
 .prompt-selector {
@@ -341,7 +341,7 @@ defineExpose({
 
 .prompt-label {
   font-size: 13px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   white-space: nowrap;
 }
 

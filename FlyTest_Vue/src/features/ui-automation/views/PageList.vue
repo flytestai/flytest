@@ -1,6 +1,6 @@
 <template>
-  <div class="page-management">
-    <div class="page-header">
+  <div class="page-management fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.module"
@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="pageData"
       :pagination="pagination"
@@ -78,14 +78,14 @@
     </a-table>
 
     <!-- 新增/编辑弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑页面' : '新增页面'"
       :ok-loading="submitting"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item field="module" label="所属模块" required>
           <a-select v-model="formData.module" placeholder="请选择模块">
             <a-option v-for="mod in moduleOptions" :key="mod.id" :value="mod.id">
@@ -106,7 +106,7 @@
     </a-modal>
 
     <!-- 元素管理抽屉 -->
-    <a-drawer
+    <a-drawer class="fc-drawer"
       v-model:visible="elementDrawerVisible"
       :title="`元素管理 - ${currentPage?.name || ''}`"
       :width="800"

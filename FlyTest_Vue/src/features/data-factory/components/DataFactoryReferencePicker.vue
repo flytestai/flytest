@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="modelValue"
     :title="title"
     width="980px"
@@ -20,9 +20,9 @@
       </div>
 
       <a-spin :loading="loading">
-        <a-tabs v-model:active-key="activeTab" type="rounded">
+        <a-tabs class="fc-tabs" v-model:active-key="activeTab" type="rounded">
           <a-tab-pane key="tags" title="标签引用">
-            <a-table :data="filteredTags" :pagination="false" row-key="code">
+            <a-table class="fc-table" :data="filteredTags" :pagination="false" row-key="code">
               <template #columns>
                 <a-table-column title="标签名称" data-index="name" />
                 <a-table-column title="引用编码" :width="160">
@@ -38,7 +38,7 @@
                 </a-table-column>
                 <a-table-column title="操作" :width="90" align="center">
                   <template #cell="{ record }">
-                    <a-button size="mini" type="primary" @click="handleSelect(record.placeholder)">
+                    <a-button size="mini" type="text" @click="handleSelect(record.placeholder)">
                       选择
                     </a-button>
                   </template>
@@ -48,7 +48,7 @@
           </a-tab-pane>
 
           <a-tab-pane key="records" title="记录引用">
-            <a-table :data="filteredRecords" :pagination="false" row-key="id">
+            <a-table class="fc-table" :data="filteredRecords" :pagination="false" row-key="id">
               <template #columns>
                 <a-table-column title="记录ID" data-index="id" :width="90" />
                 <a-table-column title="工具" data-index="tool_name" :width="170" />
@@ -72,7 +72,7 @@
                 </a-table-column>
                 <a-table-column title="操作" :width="90" align="center">
                   <template #cell="{ record }">
-                    <a-button size="mini" type="primary" @click="handleSelect(record.placeholder)">
+                    <a-button size="mini" type="text" @click="handleSelect(record.placeholder)">
                       选择
                     </a-button>
                   </template>
@@ -206,7 +206,7 @@ watch(
   padding: 4px 8px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--theme-text);
   font-size: 12px;
 }
 

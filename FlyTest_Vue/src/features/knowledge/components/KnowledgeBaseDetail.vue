@@ -1,6 +1,6 @@
 <template>
   <div class="knowledge-base-detail">
-    <div class="detail-header">
+    <div class="detail-header fc-detail-heading">
       <h3>{{ knowledgeBase.name }}</h3>
       <a-button type="text" @click="$emit('close')">
         <template #icon><icon-close /></template>
@@ -11,7 +11,7 @@
       <!-- 基本信息和配置信息 - 两列布局 -->
       <div class="info-grid">
         <!-- 基本信息 -->
-        <div class="info-section">
+        <div class="info-section fc-section">
           <h4>基本信息</h4>
           <div class="info-item">
             <span class="label">描述:</span>
@@ -38,7 +38,7 @@
         </div>
 
         <!-- 配置信息 -->
-        <div class="info-section">
+        <div class="info-section fc-section">
           <h4>配置信息</h4>
           <div class="info-item">
             <span class="label">分块大小:</span>
@@ -52,9 +52,9 @@
       </div>
 
       <!-- 统计信息 -->
-      <div class="info-section">
+      <div class="info-section fc-section">
         <h4>统计信息</h4>
-        <div class="stats-grid">
+        <div class="stats-grid fc-metric-grid">
           <div class="stat-item">
             <div class="stat-value">{{ knowledgeBase.document_count }}</div>
             <div class="stat-label">文档数量</div>
@@ -83,7 +83,7 @@
         </div>
 
         <div class="documents-list">
-          <a-table
+          <a-table class="fc-table"
             :columns="documentColumns"
             :data="documents"
             :loading="documentsLoading"
@@ -550,7 +550,7 @@ onMounted(() => {
 .stat-value {
   font-size: 24px;
   font-weight: bold;
-  color: #00a0e9;
+  color: var(--theme-accent);
 }
 
 .stat-label {
@@ -670,7 +670,7 @@ onMounted(() => {
   padding: 8px;
   background: var(--theme-surface);
   border-radius: 4px;
-  border-left: 3px solid #00a0e9;
+  border-left: 3px solid var(--theme-accent);
 }
 
 .source-content {
@@ -691,7 +691,7 @@ onMounted(() => {
 }
 
 .document-title-link {
-  color: #00a0e9;
+  color: var(--theme-accent);
   cursor: pointer;
   text-decoration: none;
   transition: color 0.2s;

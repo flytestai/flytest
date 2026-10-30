@@ -1,6 +1,6 @@
 <template>
-  <div class="public-data-list">
-    <div class="page-header">
+  <div class="public-data-list fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.type"
@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="publicData"
       :pagination="pagination"
@@ -69,14 +69,14 @@
     </a-table>
 
     <!-- 新增/编辑弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑数据' : '新增数据'"
       :ok-loading="submitting"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="key" label="变量名" required>

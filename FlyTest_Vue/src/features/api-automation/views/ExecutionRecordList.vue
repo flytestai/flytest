@@ -1,20 +1,15 @@
 <template>
-  <div class="execution-record-list">
-    <div class="page-hero">
-      <div class="page-summary">
-        <div class="page-summary__eyebrow">Project / Batch / Interface / Case</div>
-        <div class="page-summary__title">执行历史</div>
-        <div class="page-summary__desc">
-          按执行批次聚合查看接口和测试用例的历史结果，适合快速定位失败批次与异常热点。
-        </div>
-        <div class="page-summary__meta">
+  <div class="execution-record-list fc-page">
+    <WorkspacePageHeader>
+        <template #title>执行历史</template>
+        <template #description>按执行批次聚合查看接口和测试用例的历史结果，适合快速定位失败批次与异常热点。</template>
+        <template #meta><div class="page-summary__meta">
           <span>{{ projectName }}</span>
           <span>{{ selectedCollectionName || '当前项目全部接口目录' }}</span>
           <span>{{ groupedRuns.length }} 个执行批次</span>
           <span>{{ filteredRecords.length }} 条执行记录</span>
-        </div>
-      </div>
-      <div class="page-toolbar">
+        </div></template>
+        <template #actions><div class="page-toolbar">
         <a-input-search
           v-model="searchKeyword"
           class="toolbar-search"
@@ -24,8 +19,8 @@
           @clear="loadRecords"
         />
         <a-button @click="loadRecords">刷新</a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div v-if="!projectId" class="state-card">
       <a-empty description="请先选择项目" />
@@ -80,7 +75,7 @@
               </div>
             </div>
 
-            <a-table :data="interfaceItem.cases" :pagination="false" row-key="key" size="small">
+            <a-table class="fc-table" :data="interfaceItem.cases" :pagination="false" row-key="key" size="small">
               <template #columns>
                 <a-table-column title="执行对象" :width="280">
                   <template #cell="{ record }">
@@ -134,7 +129,7 @@
 
     <a-modal
       v-model:visible="detailVisible"
-      class="detail-modal detail-modal--wide"
+      class="detail-modal detail-modal--wide fc-dialog"
       title="执行记录详情"
       width="1120px"
       :footer="false"
@@ -147,6 +142,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
@@ -505,21 +501,21 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .page-summary__title {
   font-size: 30px;
   font-weight: 800;
   line-height: 1.06;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .page-summary__desc {
   max-width: 700px;
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .page-summary__meta {
@@ -528,7 +524,7 @@ defineExpose({
   flex-wrap: wrap;
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .page-summary__meta span {
@@ -622,7 +618,7 @@ defineExpose({
 .run-card__title {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
@@ -633,7 +629,7 @@ defineExpose({
   gap: 10px 14px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .run-card__stats,
@@ -665,7 +661,7 @@ defineExpose({
   min-width: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .interface-card__title span {
@@ -689,7 +685,7 @@ defineExpose({
 .case-cell__title {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
@@ -697,7 +693,7 @@ defineExpose({
 .failure-text {
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
   word-break: break-word;
 }
 

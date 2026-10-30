@@ -17,9 +17,9 @@
           @change="value => emit('update:source', value ? String(value) : '')"
         />
         <div class="dashboard-date-range">
-          <input :value="startDate" class="dashboard-date-input" type="date" @input="emitDateRange(($event.target as HTMLInputElement).value, endDate)" />
+          <input :value="startDate" class="dashboard-date-input fc-native-input" type="date" @input="emitDateRange(($event.target as HTMLInputElement).value, endDate)" />
           <span class="dashboard-date-separator">-</span>
-          <input :value="endDate" class="dashboard-date-input" type="date" @input="emitDateRange(startDate, ($event.target as HTMLInputElement).value)" />
+          <input :value="endDate" class="dashboard-date-input fc-native-input" type="date" @input="emitDateRange(startDate, ($event.target as HTMLInputElement).value)" />
         </div>
         <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
       </div>
@@ -28,22 +28,22 @@
     <a-spin :loading="loading" class="dashboard-spin" tip="正在汇总 Token 消耗...">
       <template v-if="stats">
         <div class="summary-grid">
-          <div class="summary-card">
+          <div class="summary-card fc-metric">
             <div class="summary-card__label">总消耗 Token</div>
             <div class="summary-card__value">{{ formatNumber(stats.total.total_tokens) }}</div>
             <div class="summary-card__meta">{{ periodLabel }}</div>
           </div>
-          <div class="summary-card">
+          <div class="summary-card fc-metric">
             <div class="summary-card__label">输入 Token</div>
             <div class="summary-card__value">{{ formatNumber(stats.total.input_tokens) }}</div>
             <div class="summary-card__meta">输出 {{ formatNumber(stats.total.output_tokens) }}</div>
           </div>
-          <div class="summary-card">
+          <div class="summary-card fc-metric">
             <div class="summary-card__label">调用请求数</div>
             <div class="summary-card__value">{{ formatNumber(stats.total.request_count) }}</div>
             <div class="summary-card__meta">覆盖 {{ formatNumber(stats.total.model_count) }} 个模型</div>
           </div>
-          <div class="summary-card">
+          <div class="summary-card fc-metric">
             <div class="summary-card__label">涉及用户数</div>
             <div class="summary-card__value">{{ formatNumber(stats.total.user_count) }}</div>
             <div class="summary-card__meta">{{ stats.permissions?.can_view_all_users ? '管理员视角' : '个人视角' }}</div>
@@ -96,7 +96,7 @@
         <div class="panel-grid">
           <div class="dashboard-panel">
             <div class="dashboard-panel__title">按用户名展示</div>
-            <a-table
+            <a-table class="fc-table"
               :data="stats.by_user || []"
               :pagination="false"
               row-key="rank"
@@ -232,7 +232,7 @@ const computePercent = (value: number, maxValue: number) => {
 }
 
 .dashboard-date-separator {
-  color: #64748b;
+  color: var(--theme-text-secondary);
   font-size: 12px;
 }
 
@@ -251,27 +251,27 @@ const computePercent = (value: number, maxValue: number) => {
 .dashboard-panel {
   padding: 18px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
 }
 
 .summary-card__label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .summary-card__value {
   margin-top: 8px;
   font-size: 28px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .summary-card__meta {
   margin-top: 8px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--theme-text-tertiary);
 }
 
 .panel-grid {
@@ -285,7 +285,7 @@ const computePercent = (value: number, maxValue: number) => {
   margin-bottom: 14px;
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .trend-list,
@@ -306,13 +306,13 @@ const computePercent = (value: number, maxValue: number) => {
 .ranking-item__title {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .ranking-item__meta {
   margin-top: 4px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 @media (max-width: 1200px) {

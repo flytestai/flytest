@@ -207,14 +207,14 @@ onMounted(() => {
 
 .kb-stats {
   font-size: 11px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .advanced-settings {
   padding: 8px 12px;
   background-color: white;
   border-radius: 6px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   display: flex;
   gap: 16px;
   align-items: center;
@@ -228,13 +228,13 @@ onMounted(() => {
 
 .setting-item label {
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   white-space: nowrap;
 }
 
 .value-display {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   min-width: 30px;
 }
 
@@ -244,6 +244,6 @@ onMounted(() => {
 
 .active {
   background-color: #e8f4ff;
-  color: #00a0e9;
+  color: var(--theme-accent);
 }
 </style>

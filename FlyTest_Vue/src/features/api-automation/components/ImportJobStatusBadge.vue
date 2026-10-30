@@ -1,12 +1,12 @@
 <template>
   <div v-if="showBadge || importTaskVisible" class="import-job-status">
-    <button type="button" class="import-job-badge" @click="importTaskVisible = true">
+    <button type="button" class="import-job-badge fc-native-action" @click="importTaskVisible = true">
       <span class="import-job-dot" :class="`is-${badgeTone}`"></span>
       <span class="import-job-title">{{ badgeTitle }}</span>
       <span v-if="activeCount" class="import-job-count">{{ activeCount }}</span>
     </button>
 
-    <a-drawer v-model:visible="importTaskVisible" width="440px" title="文档解析状态" :footer="false">
+    <a-drawer class="fc-drawer" v-model:visible="importTaskVisible" width="440px" title="文档解析状态" :footer="false">
       <div class="import-task-drawer">
         <a-alert v-if="activeImportJobs.length" type="info" class="import-task-alert">
           <template #title>关闭这个面板不会中断后台解析</template>
@@ -259,12 +259,12 @@ watch(
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #94a3b8, #64748b);
+  background: linear-gradient(135deg, var(--theme-text-tertiary), var(--theme-text-secondary));
   box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
 }
 
 .import-job-dot.is-active {
-  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  background: linear-gradient(135deg, #38bdf8, var(--theme-accent));
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
 }
 
@@ -372,7 +372,7 @@ watch(
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--theme-text-tertiary);
 }
 
 .import-task-step-dot {
@@ -391,7 +391,7 @@ watch(
 }
 
 .import-task-step.is-active {
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .import-task-step.is-active .import-task-step-dot {

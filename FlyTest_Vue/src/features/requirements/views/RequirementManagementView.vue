@@ -1,34 +1,22 @@
 ﻿<template>
-  <div class="requirement-management">
-    <section class="workspace-hero workspace-hero--requirements workspace-hero--compact workspace-hero--requirement-command">
-      <div class="workspace-hero-copy">
-        <span class="workspace-hero-eyebrow">Requirement Intelligence</span>
-        <h2 class="workspace-hero-title">需求管理</h2>
-        <p class="workspace-hero-description">
-          上传和评审需求文档，跟踪分析结果，为测试设计提供依据。
-        </p>
-        <div class="workspace-chip-row">
-          <span class="workspace-chip">AI 语义理解</span>
-          <span class="workspace-chip">结构化拆解</span>
-          <span class="workspace-chip">评审闭环</span>
-          <span class="workspace-chip">报告沉淀</span>
+  <div class="requirement-management fc-page">
+    <WorkspacePageHeader>
+        <template #title>需求管理</template>
+        <template #description>上传和评审需求文档，跟踪分析结果，为测试设计提供依据。</template>
+        <template #meta><div class="fc-inline-metrics">
+        <div class="fc-inline-metric">
+          <span class="fc-inline-metric-value">{{ pagination.total || documentList.length }}</span>
+          <span class="fc-inline-metric-label">需求文档</span>
         </div>
-      </div>
-      <div class="workspace-hero-stats">
-        <div class="workspace-stat-card">
-          <span class="workspace-stat-value">{{ pagination.total || documentList.length }}</span>
-          <span class="workspace-stat-label">需求文档</span>
+        <div class="fc-inline-metric">
+          <span class="fc-inline-metric-value">{{ currentProjectId || '--' }}</span>
+          <span class="fc-inline-metric-label">项目编号</span>
         </div>
-        <div class="workspace-stat-card">
-          <span class="workspace-stat-value">{{ currentProjectId || '--' }}</span>
-          <span class="workspace-stat-label">项目编号</span>
-        </div>
-      </div>
-      <div class="workspace-hero-orb" aria-hidden="true"></div>
-    </section>
+      </div></template>
+      </WorkspacePageHeader>
 
-    <div class="filter-section">
-      <div class="filter-row">
+    <div class="filter-section fc-toolbar">
+      <div class="filter-row fc-filter-row">
         <a-input-search
           v-model="searchKeyword"
           class="filter-search"
@@ -77,7 +65,7 @@
     </div>
 
     <div class="content-section">
-      <a-table
+      <a-table class="fc-table"
         :columns="columns"
         :data="documentList"
         :loading="loading"
@@ -172,7 +160,7 @@
       </a-table>
     </div>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="uploadModalVisible"
       title="上传需求文档"
       width="600px"
@@ -180,7 +168,7 @@
       @cancel="resetUploadForm"
       :confirm-loading="uploadLoading"
     >
-      <a-form
+      <a-form class="fc-form"
         ref="uploadFormRef"
         :model="uploadForm"
         :rules="uploadRules"
@@ -256,7 +244,7 @@
       </a-form>
     </a-modal>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="reviewConfigVisible"
       :title="reviewAction === 'restart' ? '重新评审配置' : '评审配置'"
       @ok="confirmReview"
@@ -266,7 +254,7 @@
         重新评审将创建新的评审报告，原有报告会保留。
       </a-alert>
       
-      <a-form :model="reviewConfig" layout="vertical">
+      <a-form class="fc-form" :model="reviewConfig" layout="vertical">
         <a-form-item label="并发分析数量" field="max_workers">
           <a-select v-model="reviewConfig.max_workers" placeholder="请选择并发数量">
             <a-option :value="1">1（串行分析，最慢但最稳定）</a-option>
@@ -284,6 +272,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
@@ -1117,7 +1106,7 @@ projectStore.$subscribe((_mutation, state) => {
 
 .stat-item {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   white-space: nowrap;
 }
 
@@ -1135,14 +1124,14 @@ projectStore.$subscribe((_mutation, state) => {
 }
 
 .upload-area:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: #f0f8ff;
 }
 
 .upload-tip {
   margin-top: 8px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .upload-file-item {
@@ -1151,9 +1140,9 @@ projectStore.$subscribe((_mutation, state) => {
   justify-content: space-between;
   padding: 8px 12px;
   margin-top: 8px;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   border-radius: 4px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
 }
 
 .file-info {
@@ -1165,13 +1154,13 @@ projectStore.$subscribe((_mutation, state) => {
 
 .file-name {
   font-size: 14px;
-  color: #1d2129;
+  color: var(--theme-text);
   font-weight: 500;
 }
 
 .file-size {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .actions-wrapper {

@@ -1,5 +1,5 @@
 <template>
-  <div class="ui-automation-layout">
+  <div class="ui-automation-layout fc-page">
     <ModulePanel ref="modulePanelRef" @select="onModuleSelect" @updated="onModuleUpdated" />
     <div class="layout-content">
       <PageList

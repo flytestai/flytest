@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visibleModel" width="720px">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" width="720px">
     <template #title>AI 生成 APP 场景</template>
 
     <div class="dialog-shell">
@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <a-form layout="vertical" class="dialog-form">
+      <a-form layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
           <a-form-item field="prompt" label="场景描述">
             <a-textarea

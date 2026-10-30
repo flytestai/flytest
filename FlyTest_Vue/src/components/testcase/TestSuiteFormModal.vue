@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     :title="isEditing ? '编辑测试套件' : '新建测试套件'"
     :width="720"
@@ -8,7 +8,7 @@
     @cancel="handleCancel"
   >
     <a-spin :loading="initializing || loading" style="width: 100%">
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item label="套件名称" field="name" required>
           <a-input
             v-model="formData.name"

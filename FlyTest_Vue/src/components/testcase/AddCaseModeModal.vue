@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="添加用例"
     :footer="false"
@@ -7,12 +7,12 @@
     @cancel="handleCancel"
   >
     <div class="mode-list">
-      <button type="button" class="mode-card" @click="emit('manual')">
+      <button type="button" class="mode-card fc-native-action" @click="emit('manual')">
         <div class="mode-title">手动输入</div>
         <div class="mode-desc">保持当前添加用例逻辑不变，手动填写名称、步骤和预期结果。</div>
       </button>
 
-      <button type="button" class="mode-card mode-card--ai" @click="emit('ai')">
+      <button type="button" class="mode-card mode-card--ai fc-native-action" @click="emit('ai')">
         <div class="mode-title">AI生成</div>
         <div class="mode-desc">自动带入当前模块的已有用例和需求上下文，按追加方式生成并自动避重。</div>
       </button>
@@ -47,7 +47,7 @@ const handleCancel = () => {
   padding: 18px;
   border: 1px solid var(--color-border-2);
   border-radius: 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+  background: linear-gradient(135deg, var(--theme-surface) 0%, #f7fafc 100%);
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;

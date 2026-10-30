@@ -1,5 +1,5 @@
 <template>
-  <div class="quick-config-panel">
+  <div class="quick-config-panel fc-section">
     <div class="quick-config-head">
       <span class="quick-config-kicker">API Request</span>
       <div class="quick-config-title">接口请求配置</div>

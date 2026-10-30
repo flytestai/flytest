@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="chat-layout">
+  <div class="chat-layout fc-page">
     <!-- 左侧历史对话列表 -->
     <ChatSidebar
       :sessions="chatSessions"
@@ -13,32 +13,20 @@
 
     <!-- 右侧聊天区域 -->
     <div class="chat-container">
-      <section class="workspace-hero workspace-hero--chat workspace-hero--compact workspace-hero--chat-command">
-        <div class="workspace-hero-copy">
-          <span class="workspace-hero-eyebrow">AI Conversation</span>
-          <h2 class="workspace-hero-title">{{ projectStore.currentProject?.name || '当前项目' }} AI 对话中枢</h2>
-          <p class="workspace-hero-description">
-            让模型推理、知识检索、工具调用与执行反馈在一块高级工作台内连续协同，形成更有掌控感的智能测试交互体验。
-          </p>
-          <div class="workspace-chip-row">
-            <span class="workspace-chip">RAG 增强</span>
-            <span class="workspace-chip">工具编排</span>
-            <span class="workspace-chip">多轮推理</span>
-            <span class="workspace-chip">执行反馈</span>
+      <WorkspacePageHeader>
+        <template #title>AI 对话</template>
+        <template #description>结合当前项目、知识库和工具进行测试分析。</template>
+        <template #meta><div class="fc-inline-metrics">
+          <div class="fc-inline-metric">
+            <span class="fc-inline-metric-value">{{ chatSessions.length }}</span>
+            <span class="fc-inline-metric-label">会话数量</span>
           </div>
-        </div>
-        <div class="workspace-hero-stats">
-          <div class="workspace-stat-card">
-            <span class="workspace-stat-value">{{ chatSessions.length }}</span>
-            <span class="workspace-stat-label">会话数量</span>
+          <div class="fc-inline-metric">
+            <span class="fc-inline-metric-value">{{ useKnowledgeBase ? 'ON' : 'OFF' }}</span>
+            <span class="fc-inline-metric-label">知识增强</span>
           </div>
-          <div class="workspace-stat-card">
-            <span class="workspace-stat-value">{{ useKnowledgeBase ? 'ON' : 'OFF' }}</span>
-            <span class="workspace-stat-label">知识增强</span>
-          </div>
-        </div>
-        <div class="workspace-hero-orb" aria-hidden="true"></div>
-      </section>
+        </div></template>
+      </WorkspacePageHeader>
 
       <ChatHeader
         ref="chatHeaderRef"
@@ -84,7 +72,7 @@
       >
         <div class="floating-panel-header" @mousedown="startDrag">
           <span class="floating-panel-title">📷 工具截图</span>
-          <button class="floating-panel-close" @click="closeFloatingImage">&times;</button>
+          <button class="floating-panel-close fc-native-action" @click="closeFloatingImage">&times;</button>
         </div>
         <img :src="floatingToolImageSrc" alt="工具截图" class="floating-panel-img" />
       </div>
@@ -127,7 +115,7 @@
     />
 
     <!-- 图表预览弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="diagramPreviewVisible"
       title="图表预览"
       :width="'90%'"
@@ -144,7 +132,7 @@
     </a-modal>
 
     <!-- HTML 预览弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="htmlPreviewVisible"
       title="HTML 预览"
       :width="'90%'"
@@ -176,6 +164,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, onActivated, watch, onUnmounted, computed, nextTick } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import {
@@ -2261,9 +2250,9 @@ export default {
 .diagram-preview-iframe {
   width: 100%;
   height: 72vh;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--theme-surface);
 }
 
 .html-preview-wrapper {
@@ -2290,7 +2279,7 @@ export default {
   right: 16px;
   z-index: 100;
   width: 320px;
-  background: #fff;
+  background: var(--theme-surface);
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -2305,8 +2294,8 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: #f2f3f5;
-  border-bottom: 1px solid #e5e6eb;
+  background: var(--theme-surface-soft);
+  border-bottom: 1px solid var(--theme-border);
   cursor: grab;
   user-select: none;
 }
@@ -2315,7 +2304,7 @@ export default {
 }
 .floating-panel-title {
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-weight: 500;
 }
 .floating-panel-close {
@@ -2323,12 +2312,12 @@ export default {
   border: none;
   font-size: 18px;
   line-height: 1;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   cursor: pointer;
   padding: 0 4px;
 }
 .floating-panel-close:hover {
-  color: #1d2129;
+  color: var(--theme-text);
 }
 .floating-panel-img {
   display: block;

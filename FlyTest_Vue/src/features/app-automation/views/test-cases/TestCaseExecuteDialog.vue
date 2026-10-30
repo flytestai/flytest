@@ -1,10 +1,10 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="mode === 'batch' ? '批量执行测试用例' : '执行测试用例'"
     @ok="emit('execute')"
   >
-    <a-form :model="executeForm" layout="vertical">
+    <a-form class="fc-form" :model="executeForm" layout="vertical">
       <a-form-item field="device_id" label="执行设备">
         <a-select v-model="executeForm.device_id" placeholder="请选择设备">
           <a-option v-for="device in availableDevices" :key="device.id" :value="device.id">

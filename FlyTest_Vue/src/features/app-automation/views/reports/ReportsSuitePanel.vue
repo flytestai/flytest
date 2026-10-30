@@ -1,6 +1,6 @@
 <template>
   <div class="panel-shell">
-    <a-card class="filter-card">
+    <a-card class="filter-card fc-filter-panel fc-panel">
       <div class="filter-grid">
         <a-input-search
           v-model="filters.search"
@@ -22,27 +22,27 @@
       </div>
     </a-card>
 
-    <div class="stats-grid">
-      <a-card class="stat-card">
+    <div class="stats-grid fc-metric-grid">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">套件总数</span>
         <strong>{{ statistics.total }}</strong>
       </a-card>
-      <a-card class="stat-card">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">执行中</span>
         <strong>{{ statistics.running }}</strong>
       </a-card>
-      <a-card class="stat-card">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">通过套件</span>
         <strong>{{ statistics.passed }}</strong>
       </a-card>
-      <a-card class="stat-card">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">平均健康度</span>
         <strong>{{ statistics.health }}%</strong>
       </a-card>
     </div>
 
-    <a-card class="table-card">
-      <a-table :data="suites" :loading="loading" :pagination="false" row-key="id">
+    <a-card class="table-card fc-panel">
+      <a-table class="fc-table" :data="suites" :loading="loading" :pagination="false" row-key="id">
         <template #columns>
           <a-table-column title="套件 / 描述" :width="280">
             <template #cell="{ record }">
@@ -211,7 +211,7 @@ const emit = defineEmits<ReportsSuitePanelEmits>()
 
 .table-card :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

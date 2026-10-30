@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-mode-view">
+  <div class="ai-mode-view fc-page">
     <a-alert class="mode-tip" type="info" show-icon>
       AI 智能模式会优先使用当前已启用的模型进行任务规划与真实浏览器执行；文本模式可直接使用，视觉模式需要支持图片能力的模型。
     </a-alert>
@@ -21,28 +21,28 @@
         <a-spin :loading="capabilityLoading" style="width:100%">
           <template v-if="runtimeCapabilities">
             <div class="capability-grid">
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">执行后端</span>
                 <strong>{{ AI_BACKEND_LABELS[runtimeCapabilities.execution_backend] }}</strong>
                 <div class="capability-detail">
                   {{ runtimeCapabilities.execution_backend === 'browser_use' ? '真实浏览器智能执行' : 'AI 规划回退执行' }}
                 </div>
               </div>
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">当前模型</span>
                 <strong>{{ runtimeCapabilities.model_config_name || '未配置' }}</strong>
                 <div class="capability-detail">
                   {{ runtimeCapabilities.model_provider && runtimeCapabilities.model_name ? `${runtimeCapabilities.model_provider} · ${runtimeCapabilities.model_name}` : '未启用 LLM 配置' }}
                 </div>
               </div>
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">视觉模式</span>
                 <strong>{{ runtimeCapabilities.vision_mode_ready ? '可执行' : '暂不可用' }}</strong>
                 <div class="capability-detail">
                   {{ runtimeCapabilities.supports_vision ? '当前模型支持图片输入' : '当前模型不支持视觉能力' }}
                 </div>
               </div>
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">默认环境</span>
                 <strong>{{ runtimeCapabilities.default_environment?.name || '未配置' }}</strong>
                 <div class="capability-detail">
@@ -88,7 +88,7 @@
               <p>直接输入任务并发起智能浏览器自动化，适合临时验证和快速排查。</p>
             </div>
           </div>
-          <a-form layout="vertical">
+          <a-form class="fc-form" layout="vertical">
             <a-row :gutter="16">
               <a-col :span="12"><a-form-item label="任务名称"><a-input v-model="adhocForm.case_name" placeholder="不填则自动生成任务名称" /></a-form-item></a-col>
               <a-col :span="12"><a-form-item label="执行模式" required><a-select v-model="adhocForm.execution_mode"><a-option value="text">文本模式</a-option><a-option value="vision" :disabled="visionSelectionDisabled">视觉模式</a-option></a-select></a-form-item></a-col>
@@ -147,23 +147,23 @@
           <a-spin :loading="liveExecutionLoading" style="width:100%">
             <template v-if="liveExecutionRecord">
               <div class="live-metrics">
-                <div class="summary-card">
+                <div class="summary-card fc-metric">
                   <span class="summary-label">任务名称</span>
                   <strong class="summary-text">{{ liveExecutionRecord.case_name }}</strong>
                 </div>
-                <div class="summary-card">
+                <div class="summary-card fc-metric">
                   <span class="summary-label">执行状态</span>
                   <strong><a-tag :color="statusColors[liveExecutionRecord.status]">{{ AI_STATUS_LABELS[liveExecutionRecord.status] }}</a-tag></strong>
                 </div>
-                <div class="summary-card">
+                <div class="summary-card fc-metric">
                   <span class="summary-label">执行模式</span>
                   <strong><a-tag :color="modeColors[liveExecutionRecord.execution_mode]">{{ AI_MODE_LABELS[liveExecutionRecord.execution_mode] }}</a-tag></strong>
                 </div>
-                <div class="summary-card">
+                <div class="summary-card fc-metric">
                   <span class="summary-label">任务进度</span>
                   <strong>{{ formatProgress(liveExecutionRecord) }}</strong>
                 </div>
-                <div class="summary-card">
+                <div class="summary-card fc-metric">
                   <span class="summary-label">GIF 录制</span>
                   <strong>{{ liveExecutionRecord.enable_gif ? '已开启' : '已关闭' }}</strong>
                 </div>
@@ -197,9 +197,9 @@
         </div>
       </div>
 
-      <a-tabs v-model:active-key="activeView" lazy-load>
+      <a-tabs class="fc-tabs" v-model:active-key="activeView" lazy-load>
         <a-tab-pane key="cases" title="AI 用例">
-          <div class="page-header">
+          <div class="page-header fc-toolbar">
             <div class="search-box">
               <a-input-search v-model="caseFilters.search" placeholder="搜索用例名称或任务描述" allow-clear style="width:280px" @search="reloadCases" @clear="reloadCases" />
               <a-select v-model="caseFilters.default_execution_mode" placeholder="执行模式" allow-clear style="width:140px" @change="reloadCases">
@@ -217,7 +217,7 @@
               <a-button type="primary" @click="openCaseModal()"><template #icon><icon-plus /></template>新建 AI 用例</a-button>
             </div>
           </div>
-          <a-table v-model:selectedKeys="selectedCaseIds" :columns="caseColumns" :data="cases" :loading="caseLoading" :pagination="casePagination" :scroll="{ x: 1080 }" :row-selection="caseRowSelection" row-key="id" @page-change="onCasePageChange" @page-size-change="onCasePageSizeChange">
+          <a-table class="fc-table" v-model:selectedKeys="selectedCaseIds" :columns="caseColumns" :data="cases" :loading="caseLoading" :pagination="casePagination" :scroll="{ x: 1080 }" :row-selection="caseRowSelection" row-key="id" @page-change="onCasePageChange" @page-size-change="onCasePageSizeChange">
             <template #default_execution_mode="{ record }"><a-tag :color="modeColors[record.default_execution_mode]">{{ AI_MODE_LABELS[record.default_execution_mode] }}</a-tag></template>
             <template #enable_gif="{ record }"><a-tag :color="gifSwitchTagColor(record.enable_gif)">{{ gifSwitchLabel(record.enable_gif) }}</a-tag></template>
             <template #updated_at="{ record }">{{ formatTime(record.updated_at) }}</template>
@@ -232,7 +232,7 @@
           </a-table>
         </a-tab-pane>
         <a-tab-pane key="records" title="AI 执行记录">
-          <div class="page-header">
+          <div class="page-header fc-toolbar">
             <div class="search-box">
               <a-input-search v-model="recordFilters.search" placeholder="搜索任务名称或任务描述" allow-clear style="width:240px" @search="reloadRecords" @clear="reloadRecords" />
               <a-select v-model="recordFilters.status" placeholder="执行状态" allow-clear style="width:140px" @change="reloadRecords">
@@ -257,7 +257,7 @@
               </a-button>
             </div>
           </div>
-          <a-table v-model:selectedKeys="selectedRecordIds" :columns="recordColumns" :data="records" :loading="recordLoading" :pagination="recordPagination" :scroll="{ x: 1600 }" :row-selection="recordRowSelection" row-key="id" @page-change="onRecordPageChange" @page-size-change="onRecordPageSizeChange">
+          <a-table class="fc-table" v-model:selectedKeys="selectedRecordIds" :columns="recordColumns" :data="records" :loading="recordLoading" :pagination="recordPagination" :scroll="{ x: 1600 }" :row-selection="recordRowSelection" row-key="id" @page-change="onRecordPageChange" @page-size-change="onRecordPageSizeChange">
             <template #execution_mode="{ record }"><a-tag :color="modeColors[record.execution_mode]">{{ AI_MODE_LABELS[record.execution_mode] }}</a-tag></template>
             <template #execution_backend="{ record }"><a-tag :color="backendColors[record.execution_backend]">{{ AI_BACKEND_LABELS[record.execution_backend] }}</a-tag></template>
             <template #status="{ record }"><a-tag :color="statusColors[record.status]">{{ AI_STATUS_LABELS[record.status] }}</a-tag></template>
@@ -279,8 +279,8 @@
       </a-tabs>
     </template>
 
-    <a-modal v-model:visible="caseModalVisible" :title="caseModalTitle" :confirm-loading="caseSubmitting" width="720px" @ok="submitCase">
-      <a-form layout="vertical">
+    <a-modal class="fc-dialog" v-model:visible="caseModalVisible" :title="caseModalTitle" :confirm-loading="caseSubmitting" width="720px" @ok="submitCase">
+      <a-form class="fc-form" layout="vertical">
         <a-form-item label="用例名称" required><a-input v-model="caseForm.name" placeholder="例如：登录后台并校验首页核心概览卡片" /></a-form-item>
         <a-row :gutter="16">
           <a-col :span="12"><a-form-item label="默认执行模式" required><a-select v-model="caseForm.default_execution_mode"><a-option value="text">文本模式</a-option><a-option value="vision">视觉模式</a-option></a-select></a-form-item></a-col>
@@ -305,8 +305,8 @@
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="adhocModalVisible" title="临时执行 AI 任务" :confirm-loading="adhocSubmitting" width="720px" @ok="submitAdhoc">
-      <a-form layout="vertical">
+    <a-modal class="fc-dialog" v-model:visible="adhocModalVisible" title="临时执行 AI 任务" :confirm-loading="adhocSubmitting" width="720px" @ok="submitAdhoc">
+      <a-form class="fc-form" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12"><a-form-item label="任务名称"><a-input v-model="adhocForm.case_name" placeholder="不填则自动生成" /></a-form-item></a-col>
           <a-col :span="12"><a-form-item label="执行模式" required><a-select v-model="adhocForm.execution_mode"><a-option value="text">文本模式</a-option><a-option value="vision" :disabled="visionSelectionDisabled">视觉模式</a-option></a-select></a-form-item></a-col>

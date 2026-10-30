@@ -1,16 +1,15 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>通知日志</h3>
-      <p>查看 APP 自动化任务的通知投递结果、历史状态和关联执行上下文。</p>
-    </div>
-    <a-space>
+  <WorkspacePageHeader>
+        <template #title>通知日志</template>
+        <template #description>查看 APP 自动化任务的通知投递结果、历史状态和关联执行上下文。</template>
+        <template #actions><a-space>
       <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { NotificationsHeaderBarEmits } from './notificationEventModels'
 import type { NotificationsHeaderBarProps } from './notificationViewModels'
 

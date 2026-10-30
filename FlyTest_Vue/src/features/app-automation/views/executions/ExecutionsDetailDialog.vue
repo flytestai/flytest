@@ -1,12 +1,12 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="执行详情"
     width="980px"
     :footer="false"
   >
     <div v-if="detailLoading" class="modal-state">正在加载执行详情...</div>
-    <div v-else-if="currentExecution" class="detail-shell">
+    <div v-else-if="currentExecution" class="detail-shell fc-detail-page">
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">执行状态</span>
@@ -26,7 +26,7 @@
         </div>
       </div>
 
-      <a-card class="detail-panel" title="执行摘要">
+      <a-card class="detail-panel fc-panel" title="执行摘要">
         <div class="summary-text">
           {{ currentExecution.report_summary || currentExecution.error_message || '暂无执行摘要，可继续查看日志定位运行细节。' }}
         </div>
@@ -57,7 +57,7 @@
         </a-space>
       </a-card>
 
-      <a-card class="detail-panel" title="步骤统计与诊断">
+      <a-card class="detail-panel fc-panel" title="步骤统计与诊断">
         <div class="metric-row">
           <div class="metric-chip success-chip">通过 {{ currentExecution.passed_steps || 0 }}</div>
           <div class="metric-chip danger-chip">失败 {{ currentExecution.failed_steps || 0 }}</div>
@@ -69,7 +69,7 @@
         </a-alert>
       </a-card>
 
-      <a-card class="detail-panel" title="执行证据">
+      <a-card class="detail-panel fc-panel" title="执行证据">
         <div v-if="executionArtifacts.length" class="artifact-list">
           <div v-for="item in executionArtifacts" :key="item.key" class="artifact-item">
             <div class="artifact-meta">
@@ -84,7 +84,7 @@
         <div v-else class="empty-note compact">当前执行暂无可查看的证据文件</div>
       </a-card>
 
-      <a-card class="detail-panel" title="执行日志">
+      <a-card class="detail-panel fc-panel" title="执行日志">
         <div v-if="currentExecution.logs?.length" class="log-list">
           <div v-for="(log, index) in currentExecution.logs" :key="`${log.timestamp}-${index}`" class="log-item">
             <div class="log-meta">

@@ -1,5 +1,5 @@
 <template>
-  <a-card class="panel-card" title="执行态势">
+  <a-card class="panel-card fc-panel" title="执行态势">
     <div class="summary-grid">
       <div class="summary-item">
         <span>总执行</span>

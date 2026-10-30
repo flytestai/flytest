@@ -1,17 +1,16 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>定时任务</h3>
-      <p>统一管理 APP 自动化调度任务，支持触发、排查、通知回看和最近执行追踪。</p>
-    </div>
-    <a-space>
+  <WorkspacePageHeader>
+        <template #title>定时任务</template>
+        <template #description>统一管理 APP 自动化调度任务，支持触发、排查、通知回看和最近执行追踪。</template>
+        <template #actions><a-space>
       <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
       <a-button type="primary" @click="emit('create')">新建任务</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { ScheduledTaskHeaderBarEmits } from './scheduledTaskEventModels'
 import type { ScheduledTaskHeaderBarProps } from './scheduledTaskViewModels'
 

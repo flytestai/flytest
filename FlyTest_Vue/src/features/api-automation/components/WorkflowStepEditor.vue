@@ -301,14 +301,14 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
 .workflow-step-editor__title {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .workflow-step-editor__description {
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .workflow-step-editor__spin,
@@ -323,13 +323,13 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
   border: 1px dashed rgba(148, 163, 184, 0.36);
   border-radius: 18px;
   background: rgba(248, 250, 252, 0.75);
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .workflow-step-card {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 22px;
-  background: #ffffff;
+  background: var(--theme-surface);
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
   overflow: hidden;
 }
@@ -353,14 +353,14 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
 .workflow-step-card__name {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
 .workflow-step-card__meta {
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
   word-break: break-word;
 }
 

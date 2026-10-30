@@ -1,17 +1,13 @@
 ﻿<template>
-  <div class="request-list">
-    <div class="page-header api-page-header">
-      <div class="page-summary">
-        <div class="page-summary__eyebrow">项目 / 接口 / 用例</div>
-        <div class="page-summary__title">接口管理</div>
-        <div class="page-summary__meta">
+  <div class="request-list fc-page">
+    <WorkspacePageHeader title="接口管理">
+      <template #meta><div class="page-summary__meta">
           <span>{{ projectName }}</span>
           <span>{{ selectedCollectionName || '未选择接口集合' }}</span>
           <span>共 {{ requests.length }} 个接口</span>
           <span>共 {{ requestCaseTotal }} 条测试用例</span>
-        </div>
-      </div>
-      <div class="page-toolbar">
+        </div></template>
+      <template #actions><div class="page-toolbar">
         <a-input-search
           v-model="searchKeyword"
           class="toolbar-search"
@@ -55,15 +51,15 @@
             新增接口
           </a-button>
         </div>
-      </div>
-    </div>
+      </div></template>
+    </WorkspacePageHeader>
 
     <div v-if="!selectedCollectionId" class="empty-tip-card">
       <a-empty description="请先在左侧选择一个接口集合" />
     </div>
 
     <div v-else class="content-section">
-      <a-table
+      <a-table class="fc-table"
         v-model:selectedKeys="selectedRequestIds"
         v-model:expanded-keys="expandedRequestKeys"
         :data="filteredRequests"
@@ -164,7 +160,7 @@
       </a-table>
     </div>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editorVisible"
       :title="editingRequest ? '编辑接口' : '新增接口'"
       width="900px"
@@ -181,7 +177,7 @@
         </a-radio-group>
       </div>
 
-      <a-form v-if="editingRequest || createMode === 'manual'" :model="formState" layout="vertical">
+      <a-form class="fc-form" v-if="editingRequest || createMode === 'manual'" :model="formState" layout="vertical">
         <div v-if="!editingRequest && createMode === 'manual' && hasRequestDrafts" class="import-prefill-banner">
           <div class="prefill-copy">
             <div class="prefill-title">已同步最近一次文档解析结果</div>
@@ -202,8 +198,8 @@
                 :label="draft.label"
               />
             </a-select>
-            <a-button @click="applySelectedRequestDraft()">鍥炲～瀛楁</a-button>
-            <a-button type="text" @click="clearDraftsAndReset">娓呴櫎鑽夌</a-button>
+            <a-button @click="applySelectedRequestDraft()">回填字段</a-button>
+            <a-button type="text" @click="clearDraftsAndReset">清除草稿</a-button>
           </div>
         </div>
 
@@ -319,7 +315,7 @@
         >
           <input
             ref="documentInputRef"
-            class="file-input-hidden"
+            class="file-input-hidden fc-native-input"
             type="file"
             accept=".json,.yaml,.yml,.txt,.md,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.html,.htm,.epub"
             @change="handleDocumentChange"
@@ -423,6 +419,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
@@ -1028,14 +1025,14 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .page-summary__title {
   font-size: 28px;
   font-weight: 800;
   line-height: 1.08;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .page-summary__meta {
@@ -1044,7 +1041,7 @@ defineExpose({
   flex-wrap: wrap;
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .page-summary__meta span {
@@ -1145,14 +1142,14 @@ defineExpose({
 .request-case-panel__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .request-case-panel__subtitle {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .request-case-panel__actions {
@@ -1195,21 +1192,21 @@ defineExpose({
 .request-case-card__name {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
 .request-case-card__desc {
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
   word-break: break-word;
 }
 
 .request-case-card__meta {
   flex: 0 0 auto;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--theme-text-tertiary);
   white-space: nowrap;
 }
 
@@ -1279,14 +1276,14 @@ defineExpose({
 .prefill-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .prefill-description {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .prefill-actions {
@@ -1356,14 +1353,14 @@ defineExpose({
 .import-progress-title {
   font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
 .import-progress-description {
   font-size: 14px;
   line-height: 1.7;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .import-progress-step-list {
@@ -1417,7 +1414,7 @@ defineExpose({
 }
 
 .import-progress-step.is-active .import-progress-step-marker {
-  background: linear-gradient(135deg, #2563eb, #14b8a6);
+  background: linear-gradient(135deg, var(--theme-accent), #14b8a6);
   color: #fff;
 }
 
@@ -1438,14 +1435,14 @@ defineExpose({
 .import-progress-step-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .import-progress-step-description {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .import-progress-alert {
@@ -1485,14 +1482,14 @@ defineExpose({
 .import-hero-title {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   line-height: 1.2;
 }
 
 .import-hero-description {
   font-size: 14px;
   line-height: 1.8;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .import-hero-meta {
@@ -1560,7 +1557,7 @@ defineExpose({
 .dropzone-title {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .dropzone-subtitle {
@@ -1568,7 +1565,7 @@ defineExpose({
   text-align: center;
   font-size: 13px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .selected-file-card {
@@ -1592,14 +1589,14 @@ defineExpose({
 .selected-file-name {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-all;
 }
 
 .selected-file-meta {
   margin-top: 4px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .document-text-panel {
@@ -1625,7 +1622,7 @@ defineExpose({
 .document-text-panel__title {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .document-text-panel__description {
@@ -1633,7 +1630,7 @@ defineExpose({
   max-width: 760px;
   font-size: 13px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .document-text-panel__summary {
@@ -1686,14 +1683,14 @@ defineExpose({
 .option-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .option-description {
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .import-option-status {
@@ -1767,7 +1764,7 @@ defineExpose({
 .import-task-name {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
@@ -1775,7 +1772,7 @@ defineExpose({
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .import-task-progress {
@@ -1805,7 +1802,7 @@ defineExpose({
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--theme-text-tertiary);
 }
 
 .import-task-step-dot {
@@ -1825,11 +1822,11 @@ defineExpose({
 }
 
 .import-task-step.is-active {
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .import-task-step.is-active .import-task-step-dot {
-  background: #2563eb;
+  background: var(--theme-accent);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
 }
 
@@ -1886,7 +1883,7 @@ defineExpose({
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #2563eb, #14b8a6);
+  background: linear-gradient(135deg, var(--theme-accent), #14b8a6);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -1901,14 +1898,14 @@ defineExpose({
 .import-task-float-title {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .import-task-float-desc {
   margin-top: 2px;
   font-size: 12px;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--theme-text-secondary);
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;

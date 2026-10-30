@@ -1,5 +1,5 @@
 <template>
-  <div class="api-automation-shell">
+  <div class="api-automation-shell fc-page">
     <div class="api-automation-layout">
       <CollectionPanel ref="collectionPanelRef" @select="onCollectionSelect" @updated="onCollectionUpdated" />
       <div class="layout-content">

@@ -70,7 +70,7 @@
       <!-- 展开/收起按钮 -->
       <button
         v-if="hasArgs"
-        class="toggle-detail"
+        class="toggle-detail fc-native-action"
         @click="showDetails = !showDetails"
       >
         <icon-down v-if="!showDetails" />
@@ -350,7 +350,7 @@ const handleReject = async () => {
 .btn-reject {
   border-color: #d9d9d9;
   color: #595959;
-  background: #fff;
+  background: var(--theme-surface);
 }
 
 .btn-reject:hover {

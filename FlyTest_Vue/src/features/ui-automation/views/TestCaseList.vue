@@ -1,6 +1,6 @@
 <template>
-  <div class="testcase-list">
-    <div class="page-header">
+  <div class="testcase-list fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.module"
@@ -95,7 +95,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="testcaseData"
       :pagination="pagination"
@@ -151,7 +151,7 @@
       </template>
     </a-table>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑用例' : '新增用例'"
       :ok-loading="submitting"
@@ -159,7 +159,7 @@
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="module" label="所属模块" required>
@@ -190,7 +190,7 @@
       </a-form>
     </a-modal>
 
-    <a-drawer
+    <a-drawer class="fc-drawer"
       v-model:visible="stepsDrawerVisible"
       :title="`用例步骤 - ${currentTestCase?.name || ''}`"
       :width="900"

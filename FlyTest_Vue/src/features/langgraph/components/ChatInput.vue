@@ -325,7 +325,7 @@ const handlePaste = (e: ClipboardEvent) => {
   margin-top: auto;
   padding: 18px 20px 20px;
   background-color: white;
-  border-top: 1px solid #e5e6eb;
+  border-top: 1px solid var(--theme-border);
 }
 
 /* 引用消息预览 */
@@ -338,7 +338,7 @@ const handlePaste = (e: ClipboardEvent) => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f3ff 100%);
+  background: linear-gradient(135deg, #f0f5ff 0%, var(--theme-accent-soft) 100%);
   border-left: 3px solid var(--theme-accent);
   border-radius: 0 8px 8px 0;
 }
@@ -352,7 +352,7 @@ const handlePaste = (e: ClipboardEvent) => {
 .quote-text {
   flex: 1;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -360,7 +360,7 @@ const handlePaste = (e: ClipboardEvent) => {
 
 .quote-close-btn {
   flex-shrink: 0;
-  color: #86909c !important;
+  color: var(--theme-text-tertiary) !important;
 }
 
 .quote-close-btn:hover {
@@ -433,7 +433,7 @@ const handlePaste = (e: ClipboardEvent) => {
 .chat-input {
   width: 100%;
   border-radius: 12px;
-  background-color: #f2f3f5;
+  background-color: var(--theme-surface-soft);
   transition: all 0.2s;
   resize: none;
   min-height: 72px;

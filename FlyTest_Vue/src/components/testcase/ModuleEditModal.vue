@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     :title="isEditing ? '编辑模块' : '添加模块'"
     @ok="handleSubmit"
@@ -7,7 +7,7 @@
     :mask-closable="false"
     :confirm-loading="formLoading"
   >
-    <a-form ref="moduleFormRef" :model="formState" :rules="moduleFormRules" layout="vertical">
+    <a-form class="fc-form" ref="moduleFormRef" :model="formState" :rules="moduleFormRules" layout="vertical">
       <a-form-item field="name" label="模块名称">
         <a-input v-model="formState.name" placeholder="请输入模块名称" allow-clear />
       </a-form-item>

@@ -49,7 +49,7 @@
       </a-select>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="testCaseData"
       :pagination="paginationConfig"

@@ -80,7 +80,7 @@ const statusClass = computed(() => {
 
 .circle-bg {
   fill: none;
-  stroke: #e5e6eb;
+  stroke: var(--theme-border);
   stroke-width: 3;
 }
 
@@ -98,7 +98,7 @@ const statusClass = computed(() => {
 
 /* 警告状态 - 黄色 */
 .status-warning .circle-progress {
-  stroke: #ff7d00;
+  stroke: var(--theme-warning);
 }
 
 /* 危险状态 - 红色 */
@@ -118,7 +118,7 @@ const statusClass = computed(() => {
 }
 
 .status-warning .percentage-text {
-  color: #ff7d00;
+  color: var(--theme-warning);
 }
 
 .status-critical .percentage-text {

@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visibleModel" width="560px">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" width="560px">
     <template #title>保存并执行当前用例</template>
 
     <div class="dialog-shell">
@@ -7,7 +7,7 @@
         会先保存当前场景草稿，再立即创建执行任务，并跳转到执行记录页跟踪执行进度。
       </a-alert>
 
-      <a-form layout="vertical" class="dialog-form">
+      <a-form layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
           <a-form-item label="当前用例">
             <a-input :model-value="executionCaseName" readonly />

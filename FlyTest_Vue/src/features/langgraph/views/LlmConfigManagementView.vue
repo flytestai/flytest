@@ -1,8 +1,8 @@
 <template>
-  <div class="llm-config-management">
-    <div class="page-header">
-      <h1 class="text-2xl font-semibold mb-4">AI大模型配置管理</h1>
-      <div class="header-actions">
+  <div class="llm-config-management fc-page">
+    <WorkspacePageHeader>
+        <template #title>AI大模型配置管理</template>
+        <template #actions><div class="header-actions">
         <a-button @click="showPromptManagement">
           <template #icon><icon-file /></template>
           提示词管理
@@ -11,8 +11,8 @@
           <template #icon><icon-plus /></template>
           新增配置
         </a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <LlmConfigTable
       :configs="llmConfigs"
@@ -46,6 +46,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, reactive, watch } from 'vue';
 import { Button as AButton, Message, Modal as AModal } from '@arco-design/web-vue';
 import { IconPlus, IconFile } from '@arco-design/web-vue/es/icon';
@@ -403,7 +404,7 @@ onMounted(() => {
 
 .llm-config-management :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

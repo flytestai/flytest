@@ -1,36 +1,31 @@
 <template>
-  <div class="execution-report-view">
-    <div class="report-hero">
-      <div class="report-hero__copy">
-        <div class="report-hero__eyebrow">Execution Analytics</div>
-        <div class="report-hero__title">执行分析</div>
-        <div class="report-hero__desc">
-          聚合最近时间范围内的接口执行情况，快速查看通过率、失败热点和最近执行明细。
-        </div>
-      </div>
-      <div class="report-hero__actions">
+  <div class="execution-report-view fc-page">
+    <WorkspacePageHeader>
+        <template #title>执行分析</template>
+        <template #description>聚合最近时间范围内的接口执行情况，快速查看通过率、失败热点和最近执行明细。</template>
+        <template #actions><div class="report-hero__actions">
         <div class="range-selector">
           <span class="range-selector__label">统计范围</span>
           <a-input-number v-model="days" :min="1" :max="90" mode="button" size="large" />
           <span class="range-selector__value">最近 {{ days }} 天</span>
         </div>
         <a-button @click="loadReport">刷新报告</a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div v-if="report" class="report-grid">
       <section class="summary-grid">
-        <article class="summary-card summary-card--primary">
+        <article class="summary-card summary-card--primary fc-metric">
           <span class="summary-label">总执行次数</span>
           <strong class="summary-value">{{ report.summary.total_count }}</strong>
           <span class="summary-note">覆盖当前时间窗口内全部接口执行记录</span>
         </article>
-        <article class="summary-card summary-card--success">
+        <article class="summary-card summary-card--success fc-metric">
           <span class="summary-label">通过率</span>
           <strong class="summary-value"><span :class="'quality-' + passRateTone(report.summary.pass_rate)">{{ formatQualityPercent(report.summary.pass_rate) }}</span></strong>
           <span class="summary-note">通过 {{ report.summary.passed_count }} 次</span>
         </article>
-        <article class="summary-card">
+        <article class="summary-card fc-metric">
           <span class="summary-label">失败与异常</span>
           <strong class="summary-value">
             {{ report.summary.failed_count + report.summary.error_count }}
@@ -39,7 +34,7 @@
             失败 {{ report.summary.failed_count }} / 异常 {{ report.summary.error_count }}
           </span>
         </article>
-        <article class="summary-card">
+        <article class="summary-card fc-metric">
           <span class="summary-label">平均响应</span>
           <strong class="summary-value">
             {{ report.summary.avg_response_time !== null ? `${report.summary.avg_response_time.toFixed(2)} ms` : '-' }}
@@ -55,7 +50,7 @@
             <div class="card-head__desc">按方法维度查看执行量、失败量和平均响应时长。</div>
           </div>
         </div>
-        <a-table :data="report.method_breakdown" :pagination="false" row-key="method" size="small">
+        <a-table class="fc-table" :data="report.method_breakdown" :pagination="false" row-key="method" size="small">
           <template #columns>
             <a-table-column title="方法" data-index="method" :width="120" />
             <a-table-column title="总数" data-index="total" :width="90" />
@@ -79,7 +74,7 @@
             <div class="card-head__desc">定位哪些接口目录在当前周期里最活跃。</div>
           </div>
         </div>
-        <a-table :data="report.collection_breakdown" :pagination="false" row-key="request__collection__name" size="small">
+        <a-table class="fc-table" :data="report.collection_breakdown" :pagination="false" row-key="request__collection__name" size="small">
           <template #columns>
             <a-table-column title="目录" :width="220">
               <template #cell="{ record }">{{ record.request__collection__name || '未分组' }}</template>
@@ -100,7 +95,7 @@
             <div class="card-head__desc">优先处理重复失败次数高的接口。</div>
           </div>
         </div>
-        <a-table :data="report.failing_requests" :pagination="false" row-key="request_name" size="small">
+        <a-table class="fc-table" :data="report.failing_requests" :pagination="false" row-key="request_name" size="small">
           <template #columns>
             <a-table-column title="接口" data-index="request_name" ellipsis tooltip />
             <a-table-column title="目录" :width="160">
@@ -119,7 +114,7 @@
             <div class="card-head__desc">展示最近一批接口执行结果，便于直接追踪。</div>
           </div>
         </div>
-        <a-table :data="report.recent_records" :pagination="false" row-key="id" size="small">
+        <a-table class="fc-table" :data="report.recent_records" :pagination="false" row-key="id" size="small">
           <template #columns>
             <a-table-column title="接口" data-index="request_name" :width="220" ellipsis tooltip />
             <a-table-column title="目录" :width="140">
@@ -157,6 +152,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateColor, passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -256,21 +252,21 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .report-hero__title {
   font-size: 30px;
   font-weight: 800;
   line-height: 1.06;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .report-hero__desc {
   max-width: 720px;
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .report-hero__actions {
@@ -289,7 +285,7 @@ defineExpose({
 .range-selector__label,
 .range-selector__value {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .report-grid {
@@ -339,19 +335,19 @@ defineExpose({
 
 .summary-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .summary-value {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .summary-note {
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .card-head {
@@ -365,14 +361,14 @@ defineExpose({
 .card-head__title {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .card-head__desc {
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .report-card-full {

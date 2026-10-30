@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="上传文档"
     :width="600"
@@ -7,7 +7,7 @@
     @cancel="handleCancel"
     :confirm-loading="loading"
   >
-    <a-form
+    <a-form class="fc-form"
       ref="formRef"
       :model="formData"
       :rules="rules"
@@ -33,7 +33,7 @@
       <template v-if="formData.uploadType === 'file'">
         <a-form-item label="选择文件" field="file">
           <div class="file-upload-container">
-            <input
+            <input class="fc-native-input"
               ref="fileInputRef"
               type="file"
               accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.txt,.md,.html,.htm"
@@ -365,7 +365,7 @@ const handleCancel = () => {
 }
 
 .upload-area:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
 }
 
 .upload-text {

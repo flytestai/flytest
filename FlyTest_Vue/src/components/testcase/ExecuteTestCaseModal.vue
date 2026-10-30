@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="internalVisible"
     title="执行测试用例"
     :width="480"
@@ -9,7 +9,7 @@
     cancel-text="取消"
   >
     <div class="execute-modal-content">
-      <a-descriptions :column="1" bordered size="small" class="testcase-info">
+      <a-descriptions :column="1" bordered size="small" class="testcase-info fc-descriptions">
         <a-descriptions-item label="用例名称">
           {{ testCase?.name || '-' }}
         </a-descriptions-item>
@@ -22,7 +22,7 @@
 
       <a-divider orientation="left">执行选项</a-divider>
 
-      <a-form :model="formData" layout="vertical">
+      <a-form class="fc-form" :model="formData" layout="vertical">
         <a-form-item>
           <a-checkbox v-model="formData.generatePlaywrightScript">
             <span class="checkbox-label">

@@ -1,6 +1,6 @@
 <template>
-  <div class="testcase-form-container"> <!-- 复用form的容器样式 -->
-    <div class="form-header">
+  <div class="testcase-form-container fc-detail-page"> <!-- 复用form的容器样式 -->
+    <div class="form-header fc-detail-heading">
       <div class="form-title">
         <a-button type="text" size="small" @click="handleBackToList">
           <template #icon><icon-arrow-left /></template>
@@ -37,7 +37,7 @@
       <a-spin />
     </div>
     <div v-else-if="testCaseDetail" class="testcase-detail-content">
-      <a-descriptions :column="2" bordered>
+      <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered>
         <a-descriptions-item label="用例名称">{{ testCaseDetail.name }}</a-descriptions-item>
         <a-descriptions-item label="所属模块">
             {{ getModuleNameById(testCaseDetail.module_id) }}
@@ -71,7 +71,7 @@
 
       <div class="steps-section view-steps">
         <h3>测试步骤</h3>
-        <a-table
+        <a-table class="fc-table"
           :columns="stepColumns"
           :data="testCaseDetail.steps"
           :pagination="false"
@@ -177,7 +177,7 @@
     <a-empty v-else description="无法加载测试用例详情" />
 
     <!-- 截图上传模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="showUploadModal"
       title="上传截图"
       :width="600"
@@ -185,7 +185,7 @@
       @cancel="handleCancelUpload"
       :confirm-loading="uploadLoading"
     >
-      <a-form layout="vertical" :model="uploadForm">
+      <a-form class="fc-form" layout="vertical" :model="uploadForm">
         <a-form-item label="标题（可选）">
           <a-input v-model="uploadForm.title" placeholder="为这批截图添加标题" />
         </a-form-item>
@@ -209,7 +209,7 @@
       </a-form>
 
       <div class="upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleDrop">
-        <input
+        <input class="fc-native-input"
           ref="fileInputRef"
           type="file"
           accept="image/*"
@@ -248,7 +248,7 @@
       :footer="false"
       :width="1200"
       :style="{ top: '50px' }"
-      class="screenshot-preview-modal"
+      class="screenshot-preview-modal fc-dialog"
       :title="`图片预览 (${currentPreviewIndex + 1}/${allScreenshots.length})`"
       :mask-closable="true"
       :esc-to-close="true"
@@ -1096,8 +1096,8 @@ const handleBatchDeleteScreenshots = () => {
 
 .precondition-content {
   padding: 16px;
-  background-color: #f9fafb;
-  border: 1px solid #e5e6eb;
+  background-color: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   min-height: 60px;
 }
@@ -1126,8 +1126,8 @@ const handleBatchDeleteScreenshots = () => {
 
 .notes-content {
   padding: 16px;
-  background-color: #f9fafb;
-  border: 1px solid #e5e6eb;
+  background-color: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   min-height: 60px;
 }
@@ -1160,9 +1160,9 @@ const handleBatchDeleteScreenshots = () => {
 .screenshot-item {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background-color: #fff;
+  background-color: var(--theme-surface);
   transition: all 0.3s ease;
   overflow: hidden;
   position: relative;
@@ -1191,9 +1191,9 @@ const handleBatchDeleteScreenshots = () => {
 .screenshot-item {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background-color: #fff;
+  background-color: var(--theme-surface);
   transition: all 0.3s ease;
   overflow: hidden;
 }
@@ -1301,14 +1301,14 @@ const handleBatchDeleteScreenshots = () => {
 .screenshot-filename {
   font-size: 14px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
   word-break: break-all;
   line-height: 1.4;
 }
 
 .screenshot-description {
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.4;
 }
 
@@ -1317,11 +1317,11 @@ const handleBatchDeleteScreenshots = () => {
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .step-number {
-  background-color: #f2f3f5;
+  background-color: var(--theme-surface-soft);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 11px;
@@ -1329,7 +1329,7 @@ const handleBatchDeleteScreenshots = () => {
 
 .screenshot-date {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .delete-btn {
@@ -1364,12 +1364,12 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .upload-text {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .upload-tip {
   font-size: 12px;
-  color: #c9cdd4;
+  color: var(--theme-border);
 }
 
 .selected-files {
@@ -1384,10 +1384,10 @@ const handleBatchDeleteScreenshots = () => {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
   font-size: 14px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .file-item {
@@ -1395,10 +1395,10 @@ const handleBatchDeleteScreenshots = () => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   margin-bottom: 8px;
-  background-color: #fafbfc;
+  background-color: var(--theme-surface-soft);
 }
 
 .file-preview {
@@ -1416,14 +1416,14 @@ const handleBatchDeleteScreenshots = () => {
 
 .file-name {
   font-size: 14px;
-  color: #1d2129;
+  color: var(--theme-text);
   word-break: break-all;
   margin-bottom: 4px;
 }
 
 .file-size {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 /* 预览模态框样式 */
@@ -1434,21 +1434,21 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .screenshot-preview-modal :deep(.arco-modal-header) {
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
   padding: 16px 24px;
 }
 
 .enhanced-preview-container {
   display: flex;
   height: 100%;
-  background-color: #f7f8fa;
+  background-color: var(--theme-surface-soft);
 }
 
 /* 左侧信息面板 */
 .preview-sidebar {
   width: 320px;
-  background-color: #fff;
-  border-right: 1px solid #e5e6eb;
+  background-color: var(--theme-surface);
+  border-right: 1px solid var(--theme-border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -1456,14 +1456,14 @@ const handleBatchDeleteScreenshots = () => {
 
 .preview-info {
   padding: 20px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .preview-info h4 {
   margin: 0 0 16px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .info-item {
@@ -1471,7 +1471,7 @@ const handleBatchDeleteScreenshots = () => {
   justify-content: space-between;
   align-items: flex-start;
   padding: 8px 0;
-  border-bottom: 1px solid #f2f3f5;
+  border-bottom: 1px solid var(--theme-surface-soft);
 }
 
 .info-item:last-child {
@@ -1480,13 +1480,13 @@ const handleBatchDeleteScreenshots = () => {
 
 .label {
   font-weight: 500;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   min-width: 80px;
   flex-shrink: 0;
 }
 
 .value {
-  color: #1d2129;
+  color: var(--theme-text);
   word-break: break-all;
   text-align: right;
 }
@@ -1501,7 +1501,7 @@ const handleBatchDeleteScreenshots = () => {
   margin: 0 0 16px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .thumbnail-grid {
@@ -1554,7 +1554,7 @@ const handleBatchDeleteScreenshots = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f7f8fa;
+  background-color: var(--theme-surface-soft);
 }
 
 .main-image-container {
@@ -1572,7 +1572,7 @@ const handleBatchDeleteScreenshots = () => {
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  background-color: #fff;
+  background-color: var(--theme-surface);
 }
 
 /* 图片切换按钮 */
@@ -1590,7 +1590,7 @@ const handleBatchDeleteScreenshots = () => {
   position: absolute;
   pointer-events: auto;
   background-color: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   width: 40px;
   height: 40px;
   display: flex;
@@ -1600,7 +1600,7 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .nav-button:hover:not(:disabled) {
-  background-color: #fff;
+  background-color: var(--theme-surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transform: scale(1.1);
 }
@@ -1614,15 +1614,15 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .value {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   word-break: break-all;
 }
 
 /* 导航指示器样式 */
 .nav-indicator {
   cursor: default !important;
-  background-color: #f2f3f5 !important;
-  color: #1d2129 !important;
+  background-color: var(--theme-surface-soft) !important;
+  color: var(--theme-text) !important;
   font-weight: 500;
   min-width: 70px;
 }
@@ -1681,7 +1681,7 @@ const handleBatchDeleteScreenshots = () => {
 .precondition-content,
 .notes-content {
   padding: 16px 18px;
-  border: 1px solid var(--ui-panel-border, #e5e6eb);
+  border: 1px solid var(--ui-panel-border, var(--theme-border));
   border-radius: 12px;
   line-height: 1.8;
   color: var(--color-text-2);
@@ -1697,7 +1697,7 @@ const handleBatchDeleteScreenshots = () => {
 
 .screenshots-section {
   padding: 18px;
-  border: 1px solid var(--ui-panel-border, #e5e6eb);
+  border: 1px solid var(--ui-panel-border, var(--theme-border));
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
@@ -1708,7 +1708,7 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .screenshot-item {
-  border: 1px solid var(--ui-panel-border, #e5e6eb);
+  border: 1px solid var(--ui-panel-border, var(--theme-border));
   border-radius: 14px;
   background-color: rgba(255, 255, 255, 0.96);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
@@ -1735,14 +1735,14 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .file-item {
-  border: 1px solid var(--ui-panel-border, #e5e6eb);
+  border: 1px solid var(--ui-panel-border, var(--theme-border));
   border-radius: 12px;
   background-color: rgba(255, 255, 255, 0.92);
 }
 
 .preview-sidebar {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.06));
-  border-right: 1px solid var(--ui-panel-border, #e5e6eb);
+  border-right: 1px solid var(--ui-panel-border, var(--theme-border));
 }
 
 .preview-main {

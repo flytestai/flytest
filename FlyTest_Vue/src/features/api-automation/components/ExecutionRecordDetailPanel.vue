@@ -1,6 +1,6 @@
 <template>
   <div v-if="record" class="detail-panel">
-    <a-descriptions :column="2" bordered size="small">
+    <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
       <a-descriptions-item label="执行批次">{{ record.run_name || '-' }}</a-descriptions-item>
       <a-descriptions-item label="接口名称">{{ record.interface_name || record.request_name }}</a-descriptions-item>
       <a-descriptions-item label="测试用例">{{ record.test_case_name || '接口直接执行' }}</a-descriptions-item>
@@ -179,7 +179,7 @@
     </template>
 
     <a-divider>断言结果</a-divider>
-    <a-table :data="assertionTableData" :pagination="false" row-key="__key" size="small">
+    <a-table class="fc-table" :data="assertionTableData" :pagination="false" row-key="__key" size="small">
       <template #columns>
         <a-table-column title="#" data-index="index" :width="60" />
         <a-table-column title="类型" data-index="type" :width="140" />
@@ -339,7 +339,7 @@ watch(
 
 .ai-analysis-toolbar__meta {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .ai-summary-card {
@@ -364,7 +364,7 @@ watch(
   font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .ai-summary-card__meta {
@@ -374,7 +374,7 @@ watch(
   align-items: center;
   font-size: 12px;
   line-height: 1.7;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .ai-grid {
@@ -396,7 +396,7 @@ watch(
 .ai-card__title {
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .ai-list {
@@ -422,19 +422,19 @@ watch(
   flex-wrap: wrap;
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .ai-list-item__meta {
   font-size: 12px;
   font-weight: 500;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .ai-list-item__detail {
   font-size: 12px;
   line-height: 1.7;
-  color: #475569;
+  color: var(--theme-text-secondary);
   word-break: break-word;
 }
 
@@ -463,19 +463,19 @@ watch(
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .workflow-summary-card__value {
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .workflow-summary-card__meta {
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .workflow-step-list {
@@ -508,7 +508,7 @@ watch(
 .workflow-step-card__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
@@ -518,7 +518,7 @@ watch(
   gap: 10px 14px;
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .workflow-step-card__error {
@@ -557,7 +557,7 @@ watch(
   margin-bottom: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .json-block {

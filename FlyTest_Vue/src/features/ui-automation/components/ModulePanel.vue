@@ -1,13 +1,9 @@
 <template>
   <div class="module-panel-wrapper">
-    <a-card class="module-panel" :bordered="false">
+    <a-card class="module-panel fc-directory fc-panel" :bordered="false">
       <div class="module-panel-content">
         <div class="module-panel-head">
-          <div class="module-panel-head__eyebrow">Module Directory</div>
-          <div class="module-panel-head__title">模块层级</div>
-          <div class="module-panel-head__desc">
-            左侧维护 UI 自动化模块树，切换菜单后右侧内容会保持和 API 自动化一致的双栏工作区布局。
-          </div>
+          <div class="module-panel-head__title">模块目录</div>
         </div>
 
         <div class="module-panel-header">
@@ -57,14 +53,14 @@
       </div>
     </a-card>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEditing ? '编辑模块' : '新增模块'"
       :ok-loading="submitLoading"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" layout="vertical">
         <a-form-item v-if="parentModule" label="父模块">
           <a-input :model-value="parentModule.name" disabled />
         </a-form-item>
@@ -389,20 +385,20 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .module-panel-head__title {
   font-size: 28px;
   font-weight: 800;
   line-height: 1.1;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .module-panel-head__desc {
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .module-panel-header {
@@ -471,7 +467,7 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .module-loading-container {

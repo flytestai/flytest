@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visible"
     title="导入用例"
     :width="600"
@@ -112,7 +112,7 @@
           </div>
         </div>
 
-        <a-form :model="form" layout="vertical">
+        <a-form class="fc-form" :model="form" layout="vertical">
           <a-form-item required>
             <template #label>
               <span class="form-label">
@@ -408,7 +408,7 @@ defineExpose({ open });
 }
 
 .step-item.active .step-num {
-  background: #00a0e9;
+  background: var(--theme-accent);
   color: #fff;
 }
 
@@ -512,7 +512,7 @@ defineExpose({ open });
 }
 
 .upload-area:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: rgba(0, 160, 233, 0.04);
 }
 

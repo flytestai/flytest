@@ -1,11 +1,11 @@
 <template>
-  <div class="test-report-view">
+  <div class="test-report-view fc-page">
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
 
     <div v-else class="report-layout">
-      <section class="report-sidebar">
+      <section class="report-sidebar fc-directory">
         <div class="sidebar-header">
           <div>
             <div class="sidebar-title">测试报告</div>
@@ -2981,7 +2981,7 @@ watch(
 .report-title {
   font-size: 22px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   letter-spacing: 0;
 }
 
@@ -2992,7 +2992,7 @@ watch(
 .summary-inline,
 .checked-summary {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
   line-height: 1.7;
 }
 
@@ -3023,7 +3023,7 @@ watch(
 
 .suite-node-name,
 .item-title {
-  color: #1d2129;
+  color: var(--theme-text);
   font-weight: 500;
 }
 
@@ -3032,8 +3032,8 @@ watch(
   text-align: center;
   padding: 0 8px;
   border-radius: 999px;
-  background: #f2f3f5;
-  color: #4e5969;
+  background: var(--theme-surface-soft);
+  color: var(--theme-text-secondary);
   font-size: 12px;
   line-height: 22px;
 }
@@ -3062,13 +3062,13 @@ watch(
 .generation-record-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .generation-record-time {
   margin-top: 6px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .generation-record-grid {
@@ -3089,12 +3089,12 @@ watch(
 
 .generation-record-label {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .generation-record-value {
   font-size: 13px;
-  color: #1d2129;
+  color: var(--theme-text);
   line-height: 1.6;
   word-break: break-word;
 }
@@ -3103,14 +3103,14 @@ watch(
   margin-top: 10px;
   font-size: 12px;
   line-height: 1.7;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .compare-panel-note {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .compare-panel-actions {
@@ -3148,7 +3148,7 @@ watch(
 .compare-item-label {
   font-size: 13px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .compare-item-delta {
@@ -3165,19 +3165,19 @@ watch(
 }
 
 .compare-item-delta.flat {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .compare-item-values {
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .compare-item-judgement {
   margin-top: 6px;
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .compare-item-delta.positive {
@@ -3189,7 +3189,7 @@ watch(
 }
 
 .compare-item-delta.neutral {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .snapshot-panel {
@@ -3211,7 +3211,7 @@ watch(
 .snapshot-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .snapshot-search {
@@ -3229,7 +3229,7 @@ watch(
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
@@ -3275,7 +3275,7 @@ watch(
 }
 
 .snapshot-name {
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 13px;
   font-weight: 500;
 }
@@ -3286,7 +3286,7 @@ watch(
 
 .snapshot-meta {
   margin-top: 4px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
   display: flex;
   flex-wrap: wrap;
@@ -3295,7 +3295,7 @@ watch(
 
 .snapshot-report-meta {
   margin-top: 8px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
   font-size: 12px;
   display: flex;
   flex-wrap: wrap;
@@ -3332,16 +3332,16 @@ watch(
   gap: 12px;
   margin-top: 12px;
   padding: 10px 12px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #f8fbff 100%);
 }
 
 .report-nav-title {
   flex: 0 0 auto;
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .report-nav-list {
@@ -3437,12 +3437,12 @@ watch(
 .hero-highlight-label,
 .hero-status-label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .hero-meta-value,
 .hero-status-footnote {
-  color: #0f172a;
+  color: var(--theme-text);
   font-size: 13px;
   line-height: 1.6;
   word-break: break-word;
@@ -3474,7 +3474,7 @@ watch(
   margin-top: 10px;
   font-size: 12px;
   line-height: 1.7;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .criteria-summary-grid {
@@ -3495,12 +3495,12 @@ watch(
   padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #f8fbff 100%);
 }
 
 .conclusion-overview-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .conclusion-overview-value {
@@ -3515,7 +3515,7 @@ watch(
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.7;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .risk-overview-grid {
@@ -3529,12 +3529,12 @@ watch(
   padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfcff 100%);
 }
 
 .risk-overview-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .risk-overview-value {
@@ -3549,7 +3549,7 @@ watch(
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.7;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .conclusion-reason-panel {
@@ -3557,7 +3557,7 @@ watch(
   padding: 16px;
   border-radius: 16px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, #fbfcff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #fbfcff 0%, var(--theme-surface) 100%);
 }
 
 .conclusion-reason-header {
@@ -3569,13 +3569,13 @@ watch(
 .conclusion-reason-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .conclusion-reason-subtitle {
   font-size: 12px;
   line-height: 1.7;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .conclusion-reason-list {
@@ -3617,14 +3617,14 @@ watch(
 .conclusion-reason-item-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .conclusion-reason-item-detail {
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .release-checklist-panel {
@@ -3632,7 +3632,7 @@ watch(
   padding: 16px;
   border-radius: 16px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #f9fbff 100%);
 }
 
 .release-checklist-header,
@@ -3646,7 +3646,7 @@ watch(
 .release-checklist-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .release-checklist-subtitle,
@@ -3654,7 +3654,7 @@ watch(
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.7;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .release-checklist-list {
@@ -3696,29 +3696,29 @@ watch(
 .release-checklist-item-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .criteria-summary-card {
   border: 1px solid rgba(229, 230, 235, 0.95);
   border-radius: 16px;
-  background: #fff;
+  background: var(--theme-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
   padding: 16px;
 }
 
 .criteria-summary-card.danger {
-  background: linear-gradient(180deg, rgba(255, 247, 247, 0.96) 0%, #ffffff 100%);
+  background: linear-gradient(180deg, rgba(255, 247, 247, 0.96) 0%, var(--theme-surface) 100%);
   border-color: rgba(245, 63, 63, 0.2);
 }
 
 .criteria-summary-card.warning {
-  background: linear-gradient(180deg, rgba(255, 250, 240, 0.96) 0%, #ffffff 100%);
+  background: linear-gradient(180deg, rgba(255, 250, 240, 0.96) 0%, var(--theme-surface) 100%);
   border-color: rgba(255, 125, 0, 0.2);
 }
 
 .criteria-summary-card.success {
-  background: linear-gradient(180deg, rgba(243, 255, 247, 0.96) 0%, #ffffff 100%);
+  background: linear-gradient(180deg, rgba(243, 255, 247, 0.96) 0%, var(--theme-surface) 100%);
   border-color: rgba(0, 180, 42, 0.18);
 }
 
@@ -3733,7 +3733,7 @@ watch(
 .criteria-summary-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .criteria-summary-description,
@@ -3741,7 +3741,7 @@ watch(
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.7;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .criteria-summary-list {
@@ -3761,7 +3761,7 @@ watch(
 .criteria-summary-item-name {
   font-size: 13px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .report-summary-grid-secondary {
@@ -3774,17 +3774,17 @@ watch(
 .report-header-card {
   border: 1px solid rgba(229, 230, 235, 0.95);
   border-radius: 16px;
-  background: #fff;
+  background: var(--theme-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .summary-card {
   padding: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfdff 100%);
 }
 
 .summary-card-soft {
-  background: linear-gradient(180deg, #fbfcff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #fbfcff 0%, var(--theme-surface) 100%);
 }
 
 .decision-focus-grid {
@@ -3798,13 +3798,13 @@ watch(
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #f8fbff 100%);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .decision-focus-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .decision-focus-value {
@@ -3820,20 +3820,20 @@ watch(
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.7;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .summary-label {
   margin-top: 8px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .summary-value {
   margin-top: 8px;
   font-size: 30px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--theme-text);
   line-height: 1;
 }
 
@@ -3848,7 +3848,7 @@ watch(
   min-height: 38px;
   font-size: 12px;
   line-height: 1.6;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .report-header-card,
@@ -3880,7 +3880,7 @@ watch(
 
 .support-summary-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .support-summary-value {
@@ -3900,14 +3900,14 @@ watch(
   padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(229, 230, 235, 0.88);
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfdff 100%);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
 }
 
 .report-section-intro {
   margin-bottom: 12px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .support-evidence-copy {
@@ -3918,7 +3918,7 @@ watch(
 .support-analysis-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .support-analysis-metrics {
@@ -3943,7 +3943,7 @@ watch(
 
 .support-analysis-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--theme-text-secondary);
 }
 
 .support-analysis-value {
@@ -3964,7 +3964,7 @@ watch(
   padding-left: 14px;
   font-size: 16px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .section-title::before {
@@ -4006,7 +4006,7 @@ watch(
 }
 
 .item-card {
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfcfe 100%);
 }
 
 .item-header + .item-detail,
@@ -4026,7 +4026,7 @@ watch(
 
 :deep(.arco-table-th) {
   background: #f8fafc;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 :deep(.arco-tree-node-title) {

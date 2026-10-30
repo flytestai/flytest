@@ -1,5 +1,5 @@
 <template>
-  <div class="testsuite-management-container">
+  <div class="testsuite-management-container fc-page">
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
@@ -438,7 +438,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--ui-panel-bg, #fff);
+  background: var(--ui-panel-bg, var(--theme-surface));
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
   box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));

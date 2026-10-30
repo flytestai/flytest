@@ -1,10 +1,10 @@
 <template>
   <a-layout class="main-layout" :class="{ 'layout-collapsed': collapsed, 'mobile-nav-open': mobileNavOpen }">
     <a class="skip-to-content" href="#workspace-content">跳到主要内容</a>
-    <button v-if="mobileNavOpen" class="navigation-backdrop" aria-label="关闭导航" tabindex="-1" @click="closeNavigation" />
+    <button v-if="mobileNavOpen" class="navigation-backdrop fc-native-action" aria-label="关闭导航" tabindex="-1" @click="closeNavigation" />
     <!-- 顶部导航栏 -->
     <a-layout-header class="header" :inert="mobileNavOpen || undefined">
-      <button class="navigation-toggle" type="button" :aria-label="isMobile ? '打开导航' : (collapsed ? '展开导航' : '收起导航')" :aria-expanded="isMobile ? mobileNavOpen : !collapsed" aria-controls="workspace-navigation" @click="toggleCollapse">
+      <button class="navigation-toggle fc-native-action" type="button" :aria-label="isMobile ? '打开导航' : (collapsed ? '展开导航' : '收起导航')" :aria-expanded="isMobile ? mobileNavOpen : !collapsed" aria-controls="workspace-navigation" @click="toggleCollapse">
         <icon-menu-unfold v-if="collapsed || isMobile" /><icon-menu-fold v-else />
       </button>
       <div class="qdesk-topbar-heading">
@@ -57,7 +57,7 @@
           <button
             v-if="canDismissGenerationBadge"
             type="button"
-            class="generation-badge-close"
+            class="generation-badge-close fc-native-action"
             aria-label="关闭生成提示"
             title="关闭生成提示"
             @click.stop="aiActivityStore.clearGenerationJob()"
@@ -70,7 +70,7 @@
       <div class="user-info">
         <button
           type="button"
-          class="theme-switch-button"
+          class="theme-switch-button fc-native-action"
           :aria-label="themeButtonLabel"
           :title="themeButtonLabel"
           @click="themeStore.toggleTheme"
@@ -95,7 +95,7 @@
           class="user-dropdown-wrapper"
           :trigger-props="{ contentClass: 'user-panel-dropdown' }"
         >
-          <button type="button" class="user-dropdown" aria-label="账户菜单">
+          <button type="button" class="user-dropdown fc-native-action" aria-label="账户菜单">
             <span class="username">{{ displayName }}</span>
             <icon-down />
           </button>
@@ -132,7 +132,7 @@
             <strong>FeiCe</strong>
             <span>飞测 · AI 测试平台</span>
           </div>
-          <button v-if="isMobile" type="button" class="navigation-close" aria-label="关闭导航" @click="closeNavigation"><icon-close /></button>
+          <button v-if="isMobile" type="button" class="navigation-close fc-native-action" aria-label="关闭导航" @click="closeNavigation"><icon-close /></button>
         </div>
         <div class="sider-context">
           <span class="sider-context-dot"></span>

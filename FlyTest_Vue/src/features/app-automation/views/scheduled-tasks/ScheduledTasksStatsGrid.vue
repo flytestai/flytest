@@ -1,21 +1,21 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">任务总数</span>
       <strong>{{ statistics.total }}</strong>
       <span class="stat-desc">当前筛选结果中的调度任务数量</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">激活任务</span>
       <strong>{{ statistics.active }}</strong>
       <span class="stat-desc">仍在自动调度中的任务</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">暂停任务</span>
       <strong>{{ statistics.paused }}</strong>
       <span class="stat-desc">已保留配置但暂停调度的任务</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">触发成功率</span>
       <strong><span :class="'quality-' + passRateTone(statistics.successRate)">{{ formatQualityPercent(statistics.successRate) }}</span></strong>
       <span class="stat-desc">成功 {{ statistics.successfulRuns }} / 总触发 {{ statistics.totalRuns }}</span>

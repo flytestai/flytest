@@ -32,7 +32,7 @@
       </a-select>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="scriptData"
       :pagination="paginationConfig"

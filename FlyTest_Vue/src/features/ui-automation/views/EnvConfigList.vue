@@ -1,6 +1,6 @@
 <template>
-  <div class="env-config-list">
-    <div class="page-header">
+  <div class="env-config-list fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.browser"
@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="envConfigData"
       :pagination="pagination"
@@ -69,7 +69,7 @@
       </template>
     </a-table>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑环境配置' : '新增环境配置'"
       :ok-loading="submitting"
@@ -77,7 +77,7 @@
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item field="name" label="环境名称" required>
           <a-input v-model="formData.name" placeholder="如：开发环境、测试环境" :max-length="64" />
         </a-form-item>

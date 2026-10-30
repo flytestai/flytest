@@ -1,5 +1,5 @@
 <template>
-  <div class="step-detail-list">
+  <div class="step-detail-list fc-page">
     <div class="step-header">
       <span class="step-title">操作步骤（拖拽可排序）</span>
       <a-space>
@@ -84,7 +84,7 @@
     </a-spin>
 
     <!-- 添加/编辑操作弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑操作' : '添加操作'"
       :ok-loading="submitting"
@@ -101,7 +101,7 @@
           插入数据工厂引用
         </a-button>
       </div>
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item field="step_type" label="操作类型" required>
           <a-select v-model="formData.step_type" @change="onStepTypeChange">
             <a-option v-for="(label, value) in STEP_TYPE_LABELS" :key="value" :value="Number(value)">

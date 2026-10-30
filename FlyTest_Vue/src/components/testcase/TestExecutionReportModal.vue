@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     title="测试执行报告"
     :width="1200"
@@ -31,7 +31,7 @@
 
       <!-- 统计概览 -->
       <div class="statistics-grid">
-        <a-card :bordered="false" class="stat-card total">
+        <a-card :bordered="false" class="stat-card total fc-metric fc-panel">
           <div class="stat-title-wrapper">
             <span class="stat-main-title">总任务数</span>
             <div class="stat-subtitle">
@@ -40,22 +40,22 @@
             </div>
           </div>
         </a-card>
-        <a-card :bordered="false" class="stat-card passed">
+        <a-card :bordered="false" class="stat-card passed fc-metric fc-panel">
           <a-statistic title="通过" :value="report.statistics.passed" />
         </a-card>
-        <a-card :bordered="false" class="stat-card failed">
+        <a-card :bordered="false" class="stat-card failed fc-metric fc-panel">
           <a-statistic title="失败" :value="report.statistics.failed" />
         </a-card>
-        <a-card :bordered="false" class="stat-card error">
+        <a-card :bordered="false" class="stat-card error fc-metric fc-panel">
           <a-statistic title="错误" :value="report.statistics.error" />
         </a-card>
-        <a-card :bordered="false" class="stat-card pass-rate">
+        <a-card :bordered="false" class="stat-card pass-rate fc-metric fc-panel">
           <a-statistic title="通过率" :value="report.statistics.pass_rate" :value-style="{ color: passRateColor(report.statistics.pass_rate) }" :formatter="() => formatQualityPercent(report.statistics.pass_rate).replace('%', '')" suffix="%" />
         </a-card>
       </div>
 
       <!-- 结果列表 - 使用标签页区分用例和脚本 -->
-      <a-tabs default-active-key="testcases" class="results-tabs">
+      <a-tabs default-active-key="testcases" class="results-tabs fc-tabs">
         <a-tab-pane key="testcases" :title="`功能用例 (${report.results?.length || 0})`">
           <a-table
             v-if="report.results && report.results.length > 0"
@@ -64,7 +64,7 @@
             row-key="testcase_id"
             :pagination="false"
             stripe
-            class="results-table"
+            class="results-table fc-table"
           >
             <template #status="{ record }">
               <a-tag :color="getStatusColor(record.status)">
@@ -91,7 +91,7 @@
             row-key="script_id"
             :pagination="false"
             stripe
-            class="results-table"
+            class="results-table fc-table"
           >
             <template #status="{ record }">
               <a-tag :color="getStatusColor(record.status)">
@@ -114,7 +114,7 @@
   </a-modal>
 
   <!-- 用例结果详情抽屉 -->
-  <a-drawer
+  <a-drawer class="fc-drawer"
     :width="900"
     :visible="detailDrawerVisible"
     @ok="detailDrawerVisible = false"
@@ -126,7 +126,7 @@
     </template>
     <div v-if="selectedResult && !isScriptDetail">
       <h4>{{ selectedResult.testcase_name }}</h4>
-      <a-descriptions :column="1" bordered>
+      <a-descriptions class="fc-descriptions" :column="1" bordered>
         <a-descriptions-item label="状态">
           <a-tag :color="getStatusColor(selectedResult.status)">
             {{ getStatusText(selectedResult.status) }}
@@ -164,14 +164,14 @@
             </div>
             <button
               v-if="selectedResult.screenshots.length > 1"
-              class="custom-arrow custom-arrow-left"
+              class="custom-arrow custom-arrow-left fc-native-action"
               @click="handlePrev"
             >
               <icon-left />
             </button>
             <button
               v-if="selectedResult.screenshots.length > 1"
-              class="custom-arrow custom-arrow-right"
+              class="custom-arrow custom-arrow-right fc-native-action"
               @click="handleNext"
             >
               <icon-right />
@@ -185,7 +185,7 @@
     <!-- 脚本执行详情 -->
     <div v-if="selectedScriptResult && isScriptDetail">
       <h4>{{ selectedScriptResult.script_name }}</h4>
-      <a-descriptions :column="1" bordered>
+      <a-descriptions class="fc-descriptions" :column="1" bordered>
         <a-descriptions-item label="状态">
           <a-tag :color="getStatusColor(selectedScriptResult.status)">
             {{ getStatusText(selectedScriptResult.status) }}
@@ -224,14 +224,14 @@
             </div>
             <button
               v-if="selectedScriptResult.screenshots.length > 1"
-              class="custom-arrow custom-arrow-left"
+              class="custom-arrow custom-arrow-left fc-native-action"
               @click="handlePrev"
             >
               <icon-left />
             </button>
             <button
               v-if="selectedScriptResult.screenshots.length > 1"
-              class="custom-arrow custom-arrow-right"
+              class="custom-arrow custom-arrow-right fc-native-action"
               @click="handleNext"
             >
               <icon-right />
@@ -667,7 +667,7 @@ watch(
 }
 
 .execution-log-container :deep(.log-line.warning) {
-  color: #ff7d00;
+  color: var(--theme-warning);
 }
 
 .execution-log-container :deep(.log-line.tool) {
@@ -778,7 +778,7 @@ watch(
   object-fit: contain;
   display: block;
   transition: opacity 0.3s ease;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -796,30 +796,30 @@ watch(
 }
 
 .screenshot-info-panel {
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   padding: 16px;
   margin-bottom: 12px;
   border-radius: 4px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
 }
 
 .screenshot-title {
   font-weight: bold;
   margin-bottom: 8px;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 15px;
 }
 
 .screenshot-description {
   font-size: 14px;
   margin-bottom: 8px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.5;
 }
 
 .screenshot-meta {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   display: flex;
   gap: 16px;
 }

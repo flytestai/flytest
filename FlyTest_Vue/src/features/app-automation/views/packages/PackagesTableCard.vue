@@ -1,6 +1,6 @@
 <template>
-  <a-card class="table-card">
-    <a-table :data="packages" :loading="loading" :pagination="false" row-key="id">
+  <a-card class="table-card fc-panel">
+    <a-table class="fc-table" :data="packages" :loading="loading" :pagination="false" row-key="id">
       <template #columns>
         <a-table-column title="应用名称" :width="260">
           <template #cell="{ record }">

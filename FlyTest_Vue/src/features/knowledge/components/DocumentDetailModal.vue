@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     :title="`文档详情 - ${documentContent?.title || ''}`"
     :width="1000"
@@ -13,9 +13,9 @@
 
     <div v-else-if="documentContent" class="document-detail">
       <!-- 基本信息 -->
-      <div class="info-section">
+      <div class="info-section fc-section">
         <h4>基本信息</h4>
-        <a-descriptions :column="2" bordered>
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered>
           <a-descriptions-item label="文档标题">{{ documentContent.title }}</a-descriptions-item>
           <a-descriptions-item label="文档类型">{{ getDocumentTypeText(documentContent.document_type) }}</a-descriptions-item>
           <a-descriptions-item label="状态">
@@ -320,7 +320,7 @@ watch(
 
 .loading-text {
   margin-top: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .document-detail {
@@ -373,7 +373,7 @@ watch(
   max-height: 400px;
   overflow-y: auto;
   padding: 16px;
-  background-color: #fafbfc;
+  background-color: var(--theme-surface-soft);
 }
 
 .content-text {
@@ -387,7 +387,7 @@ watch(
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .original-content-preview {
@@ -418,7 +418,7 @@ watch(
 
 .chunks-summary {
   font-size: 14px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-weight: 500;
 }
 
@@ -449,14 +449,14 @@ watch(
   gap: 16px;
   margin-bottom: 12px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   flex-wrap: wrap;
 }
 
 .chunk-index {
   font-weight: 600;
-  color: #1d2129;
-  background-color: #f2f3f5;
+  color: var(--theme-text);
+  background-color: var(--theme-surface-soft);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;

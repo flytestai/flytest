@@ -1,35 +1,31 @@
 <template>
-  <div class="report-detail">
+  <div class="report-detail fc-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-left">
-        <a-button type="text" @click="goBack" class="back-button">
+    <WorkspacePageHeader>
+        <template #title>{{ document?.title || '评审报告' }}</template>
+        <template #meta><a-button type="text" @click="goBack" class="back-button">
           <template #icon><icon-arrow-left /></template>
           返回列表
         </a-button>
-        <h1 class="page-title">{{ document?.title || '评审报告' }}</h1>
-        <a-tag v-if="selectedReport" :color="getRatingColor(selectedReport.overall_rating)" class="status-tag">
+<a-tag v-if="selectedReport" :color="getRatingColor(selectedReport.overall_rating)" class="status-tag">
           {{ selectedReport.overall_rating_display }}
         </a-tag>
-        <!-- 版本指示器 -->
-        <a-tag
+<a-tag
           v-if="reportVersions.length > 1 && selectedReportId"
           :color="isLatestVersion ? 'green' : 'blue'"
           class="version-indicator"
         >
           {{ isLatestVersion ? '最新版本' : '历史版本' }}
         </a-tag>
-        <!-- 版本选择器 -->
-        <ReportVersionSelector
+<ReportVersionSelector
           v-if="reportVersions.length > 1"
           :report-versions="reportVersions"
           :selected-report-id="selectedReportId"
           :loading="loading"
           @version-change="handleVersionChange"
           class="version-selector"
-        />
-      </div>
-      <div class="header-actions">
+        /></template>
+        <template #actions><div class="header-actions">
         <a-button type="text" @click="viewFullReport">
           <template #icon><icon-file /></template>
           完整报告
@@ -42,8 +38,8 @@
           <template #icon><icon-share-alt /></template>
           分享报告
         </a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
@@ -54,7 +50,7 @@
     <div v-else-if="document && selectedReport" class="report-content">
       <!-- 左侧：模块详情 -->
       <div class="left-panel">
-        <a-card title="📄 模块内容" class="modules-panel">
+        <a-card title="📄 模块内容" class="modules-panel fc-panel">
           <div class="modules-list">
             <div 
               v-for="(module, index) in document.modules" 
@@ -91,7 +87,7 @@
 
       <!-- 右侧：模块问题 -->
       <div class="right-panel">
-        <a-card :title="selectedModule ? `⚠️ ${selectedModule.title} - 相关问题` : '⚠️ 模块问题'" class="issues-panel">
+        <a-card :title="selectedModule ? `⚠️ ${selectedModule.title} - 相关问题` : '⚠️ 模块问题'" class="issues-panel fc-panel">
           <!-- 选中模块的评审结果 -->
           <div v-if="selectedModuleResult" class="module-review-result">
             <div class="module-rating">
@@ -188,6 +184,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
@@ -439,7 +436,7 @@ onMounted(() => {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -507,13 +504,13 @@ onMounted(() => {
 
 .modules-list {
   margin-bottom: 16px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
 }
 
 .module-item {
   padding: 12px 16px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -523,7 +520,7 @@ onMounted(() => {
 }
 
 .module-item:hover {
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
 }
 
 .module-item.active {
@@ -553,7 +550,7 @@ onMounted(() => {
 .module-title {
   flex: 1;
   margin: 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 500;
 }
@@ -565,16 +562,16 @@ onMounted(() => {
 }
 
 .module-issues {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
 /* 模块详情 */
 .module-detail {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   padding: 16px;
-  background: #fafbfc;
+  background: var(--theme-surface-soft);
 }
 
 .module-detail-header {
@@ -583,12 +580,12 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .module-detail-header h3 {
   margin: 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 16px;
   font-weight: 600;
 }
@@ -599,19 +596,19 @@ onMounted(() => {
 
 .module-content h5 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .content-text {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
   background: white;
   padding: 12px;
   border-radius: 4px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
 }
 
 /* 右侧面板 */
@@ -647,7 +644,7 @@ onMounted(() => {
 .module-review-result {
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .module-rating {
@@ -656,7 +653,7 @@ onMounted(() => {
 
 .module-rating h4 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
@@ -668,7 +665,7 @@ onMounted(() => {
 }
 
 .issues-count {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 13px;
 }
 
@@ -706,7 +703,7 @@ onMounted(() => {
 .weaknesses h5,
 .module-recommendations h5 {
   margin: 0 0 6px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 13px;
   font-weight: 600;
 }
@@ -715,7 +712,7 @@ onMounted(() => {
 .weaknesses p,
 .module-recommendations p {
   margin: 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.5;
   font-size: 12px;
 }
@@ -730,7 +727,7 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   height: 200px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 /* 报告概览 */
@@ -744,12 +741,12 @@ onMounted(() => {
   align-items: flex-start;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .report-meta h2 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 18px;
   font-weight: 600;
 }
@@ -762,7 +759,7 @@ onMounted(() => {
 
 .report-date,
 .reviewer {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 13px;
 }
 
@@ -812,7 +809,7 @@ onMounted(() => {
 
 .stat-item.medium {
   background: #fff7e8;
-  border: 1px solid #ff7d00;
+  border: 1px solid var(--theme-warning);
 }
 
 .stat-item.low {
@@ -821,8 +818,8 @@ onMounted(() => {
 }
 
 .stat-item.total {
-  background: #f2f3f5;
-  border: 1px solid #86909c;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-text-tertiary);
 }
 
 .stat-number {
@@ -833,7 +830,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 11px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-top: 4px;
 }
 
@@ -846,20 +843,20 @@ onMounted(() => {
 .report-summary h4,
 .report-recommendations h4 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .report-summary p {
   margin: 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
   font-size: 13px;
 }
 
 .recommendations-content {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
   font-size: 13px;
@@ -879,7 +876,7 @@ onMounted(() => {
 
 .issues-header h4 {
   margin: 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
@@ -898,7 +895,7 @@ onMounted(() => {
 .issue-item {
   padding: 12px;
   margin-bottom: 8px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   background: white;
 }
@@ -922,29 +919,29 @@ onMounted(() => {
 }
 
 .issue-location {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 11px;
 }
 
 .issue-title {
   margin: 0 0 6px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 13px;
   font-weight: 600;
 }
 
 .issue-description {
   margin: 0 0 6px 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .issue-suggestion {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 12px;
   line-height: 1.4;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   padding: 6px;
   border-radius: 4px;
 }

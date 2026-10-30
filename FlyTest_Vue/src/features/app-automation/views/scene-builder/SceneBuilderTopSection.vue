@@ -15,7 +15,13 @@
     @open-execute-dialog="emit('open-execute-dialog')"
   />
 
-  <SceneBuilderAiStatusCard
+  <details class="fc-status-disclosure">
+    <summary>
+      <span>AI 辅助配置</span>
+      <a-tag :color="aiStatusCard.aiStatusColor" size="small">{{ aiStatusCard.aiStatusLabel }}</a-tag>
+      <span class="fc-status-disclosure__hint">查看模型、运行能力与最近活动</span>
+    </summary>
+    <SceneBuilderAiStatusCard
     :ai-status-title="aiStatusCard.aiStatusTitle"
     :ai-status-description="aiStatusCard.aiStatusDescription"
     :ai-status-color="aiStatusCard.aiStatusColor"
@@ -37,7 +43,8 @@
     :get-ai-activity-status-label="aiStatusCard.getAiActivityStatusLabel"
     @refresh-ai-status="emit('refresh-ai-status')"
     @open-llm-config="emit('open-llm-config')"
-  />
+    />
+  </details>
 
   <SceneBuilderDraftFormCard
     :selected-case-id="selectedCaseId"

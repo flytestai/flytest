@@ -1,5 +1,5 @@
 <template>
-  <div class="user-operation-log-view">
+  <div class="user-operation-log-view fc-page">
     <div class="operation-log-header">
       <div class="operation-log-title">
         <a-button class="back-button" size="small" @click="goBack">
@@ -17,7 +17,7 @@
     </div>
 
     <div class="operation-log-table">
-      <a-table
+      <a-table class="fc-table"
         row-key="id"
         :columns="columns"
         :data="logs"

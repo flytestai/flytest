@@ -1,31 +1,31 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">设备在线</div>
       <div class="stat-value">{{ statistics.devices.online }}</div>
       <div class="stat-meta">总设备 {{ statistics.devices.total }} / 锁定 {{ statistics.devices.locked }}</div>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">应用包</div>
       <div class="stat-value">{{ statistics.packages.total }}</div>
       <div class="stat-meta">当前项目已登记应用</div>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">元素资产</div>
       <div class="stat-value">{{ statistics.elements.total }}</div>
       <div class="stat-meta">用于定位与页面编排</div>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">测试用例</div>
       <div class="stat-value">{{ statistics.test_cases.total }}</div>
       <div class="stat-meta">通过率 <span :class="'quality-' + passRateTone(statistics.executions.pass_rate)">{{ formatQualityPercent(statistics.executions.pass_rate) }}</span></div>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">激活任务</div>
       <div class="stat-value">{{ activeTaskCount }}</div>
       <div class="stat-meta">暂停 {{ pausedTaskCount }} / 失败 {{ failedTaskCount }}</div>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">AI 智能模式</div>
       <div class="stat-value">{{ aiReady ? 'ON' : aiHasConfig ? 'Fallback' : 'OFF' }}</div>
       <div class="stat-meta">{{ aiCapabilityDisplay }}</div>

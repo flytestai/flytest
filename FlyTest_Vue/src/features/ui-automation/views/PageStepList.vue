@@ -1,6 +1,6 @@
 <template>
-  <div class="page-step-list">
-    <div class="page-header">
+  <div class="page-step-list fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.page"
@@ -31,7 +31,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="pageStepData"
       :pagination="pagination"
@@ -75,14 +75,14 @@
     </a-table>
 
     <!-- 新增/编辑弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑页面步骤' : '新增页面步骤'"
       :ok-loading="submitting"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="module" label="所属模块" required>
@@ -113,7 +113,7 @@
     </a-modal>
 
     <!-- 步骤详情抽屉 -->
-    <a-drawer
+    <a-drawer class="fc-drawer"
       v-model:visible="detailDrawerVisible"
       :title="`步骤详情 - ${currentPageStep?.name || ''}`"
       width="50%"

@@ -95,7 +95,7 @@
         <header class="insights-heading">
           <div class="insights-heading-copy"><h3 id="token-heading"><icon-thunderbolt />Token 使用概况</h3><p>查看 AI 资源消耗和调用活跃度</p></div>
           <div class="insights-period" role="group" aria-label="Token 统计分组">
-            <button v-for="option in periods" :key="option.value" type="button" :aria-pressed="tokenPeriod === option.value" @click="emit('period-change', option.value)">{{ option.label }}</button>
+            <button class="fc-native-action" v-for="option in periods" :key="option.value" type="button" :aria-pressed="tokenPeriod === option.value" @click="emit('period-change', option.value)">{{ option.label }}</button>
           </div>
         </header>
         <div class="insights-token-overview">

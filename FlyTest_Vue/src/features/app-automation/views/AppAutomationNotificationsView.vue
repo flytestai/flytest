@@ -1,5 +1,5 @@
 <template>
-  <div class="page-shell">
+  <div class="page-shell fc-page">
     <NotificationsHeaderBar :loading="loading" @refresh="loadData" />
 
     <NotificationsTaskContextAlert

@@ -751,14 +751,14 @@ const formatToolMessage = (content: string) => {
 .step-separator-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, transparent, #e5e6eb 20%, #e5e6eb 80%, transparent);
+  background: linear-gradient(to right, transparent, var(--theme-border) 20%, var(--theme-border) 80%, transparent);
 }
 
 .step-separator-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--theme-accent);
-  background: linear-gradient(135deg, #e8f3ff 0%, #f2f5ff 100%);
+  background: linear-gradient(135deg, var(--theme-accent-soft) 0%, #f2f5ff 100%);
   padding: 6px 16px;
   border-radius: 20px;
   border: 1px solid #d4e6ff;
@@ -779,13 +779,13 @@ const formatToolMessage = (content: string) => {
   padding: 6px 12px;
   border-radius: 16px;
   font-size: 12px;
-  background-color: #f2f3f5;
-  color: #86909c;
+  background-color: var(--theme-surface-soft);
+  color: var(--theme-text-tertiary);
   transition: all 0.2s ease;
 }
 
 .agent-step-indicator.is-start {
-  background-color: #e8f3ff;
+  background-color: var(--theme-accent-soft);
   color: var(--theme-accent);
 }
 
@@ -826,7 +826,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .agent-step-summary {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -834,7 +834,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .agent-step-time {
-  color: #c9cdd4;
+  color: var(--theme-border);
   font-size: 11px;
 }
 
@@ -866,7 +866,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .tool-avatar {
-  background-color: #ff7d00;
+  background-color: var(--theme-warning);
 }
 
 .tool-avatar-icon {
@@ -919,14 +919,14 @@ const formatToolMessage = (content: string) => {
   gap: 8px;
   padding: 6px 10px;
   margin-bottom: 8px;
-  border: 1px dashed #c9cdd4;
+  border: 1px dashed var(--theme-border);
   border-radius: 8px;
   cursor: pointer;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   transition: background 0.2s;
 }
 .tool-image-float-placeholder:hover {
-  background: #e8f3ff;
+  background: var(--theme-accent-soft);
 }
 .float-placeholder-thumb {
   width: 48px;
@@ -936,7 +936,7 @@ const formatToolMessage = (content: string) => {
 }
 .float-placeholder-label {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .message-image {
@@ -974,7 +974,7 @@ const formatToolMessage = (content: string) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #c9cdd4;
+  background-color: var(--theme-border);
   animation: typing-bounce 1.4s infinite ease-in-out both;
 }
 
@@ -1009,14 +1009,14 @@ const formatToolMessage = (content: string) => {
 
 .ai-message .message-bubble {
   background-color: white;
-  color: #1d2129;
+  color: var(--theme-text);
   border-top-left-radius: 2px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .tool-message .message-bubble {
   background-color: #fff7e6;
-  color: #1d2129;
+  color: var(--theme-text);
   border-top-left-radius: 2px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   /* 增强工具消息的文本换行 */
@@ -1081,7 +1081,7 @@ const formatToolMessage = (content: string) => {
   background-color: rgba(255, 125, 0, 0.1);
   border: 1px solid rgba(255, 125, 0, 0.3);
   border-radius: 4px;
-  color: #ff7d00;
+  color: var(--theme-warning);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1137,12 +1137,12 @@ const formatToolMessage = (content: string) => {
   height: 24px !important;
   min-width: 24px !important;
   border-radius: 4px !important;
-  color: #86909c !important;
+  color: var(--theme-text-tertiary) !important;
   transition: all 0.2s ease !important;
 }
 
 .action-btn:hover {
-  background-color: #f2f3f5 !important;
+  background-color: var(--theme-surface-soft) !important;
   color: var(--theme-accent) !important;
 }
 
@@ -1163,7 +1163,7 @@ const formatToolMessage = (content: string) => {
 
 .message-time {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-top: 4px;
   text-align: center;
 }
@@ -1179,7 +1179,7 @@ const formatToolMessage = (content: string) => {
 .typing-indicator span {
   height: 8px;
   width: 8px;
-  background-color: #c9cdd4;
+  background-color: var(--theme-border);
   border-radius: 50%;
   display: inline-block;
   margin: 0 2px;
@@ -1231,14 +1231,14 @@ const formatToolMessage = (content: string) => {
 
 /* 流式输出中的代码块特殊样式 */
 .streaming-content :deep(pre) {
-  background-color: #f2f3f5;
+  background-color: var(--theme-surface-soft);
   border: 1px solid rgba(0, 180, 42, 0.2);
   border-left: 3px solid var(--theme-success);
 }
 
 .streaming-content :deep(code) {
   background-color: rgba(0, 180, 42, 0.1);
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 @keyframes blink {
@@ -1266,7 +1266,7 @@ const formatToolMessage = (content: string) => {
 
 .message-bubble :deep(details.message-code-collapse) {
   margin: 8px 0;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   background-color: rgba(0, 0, 0, 0.02);
 }
@@ -1278,7 +1278,7 @@ const formatToolMessage = (content: string) => {
   position: relative;
   padding: 8px 58px 10px 10px;
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1294,7 +1294,7 @@ const formatToolMessage = (content: string) => {
   top: 11px;
   left: 10px;
   font-size: 10px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .message-bubble :deep(details.message-code-collapse > summary.message-code-toggle::after) {
@@ -1303,7 +1303,7 @@ const formatToolMessage = (content: string) => {
   top: 8px;
   right: 10px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .message-bubble :deep(.message-code-toggle-header) {
@@ -1324,7 +1324,7 @@ const formatToolMessage = (content: string) => {
   overflow: hidden;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .message-bubble :deep(.message-code-preview-viewport) {
@@ -1351,7 +1351,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .message-bubble :deep(details.message-code-collapse[open] > summary.message-code-toggle) {
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .message-bubble :deep(details.message-code-collapse[open] > summary.message-code-toggle::before) {
@@ -1399,7 +1399,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .ai-message .message-bubble :deep(pre) {
-  background-color: #f2f3f5;
+  background-color: var(--theme-surface-soft);
 }
 
 .user-message .message-bubble :deep(pre) {
@@ -1536,7 +1536,7 @@ const formatToolMessage = (content: string) => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background-color: #f7f8fa;
+  background-color: var(--theme-surface-soft);
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -1586,14 +1586,14 @@ const formatToolMessage = (content: string) => {
 
 .thinking-label {
   font-weight: 500;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   flex: 1;
 }
 
 .thinking-body {
   margin-top: 8px;
   padding: 12px;
-  background-color: #f9fafb;
+  background-color: var(--theme-surface-soft);
   border-radius: 8px;
   border-left: 3px solid var(--theme-accent);
 }

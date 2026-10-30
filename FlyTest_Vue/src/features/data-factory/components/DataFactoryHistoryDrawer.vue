@@ -1,11 +1,11 @@
 <template>
-  <a-drawer
+  <a-drawer class="fc-drawer"
     :visible="visible"
     width="1100px"
     title="数据工厂记录与统计"
     @update:visible="emit('update:visible', $event)"
   >
-    <a-tabs :active-key="historyTab" @update:active-key="emit('update:history-tab', String($event))">
+    <a-tabs class="fc-tabs" :active-key="historyTab" @update:active-key="emit('update:history-tab', String($event))">
       <a-tab-pane key="records" title="使用记录">
         <div class="history-filters">
           <a-input-search
@@ -40,7 +40,7 @@
             <a-option value="temp" label="仅临时结果" />
           </a-select>
         </div>
-        <a-table
+        <a-table class="fc-table"
           :data="projectReady ? records : []"
           :loading="projectReady ? loadingRecords : false"
           :pagination="projectReady ? recordPagination : false"

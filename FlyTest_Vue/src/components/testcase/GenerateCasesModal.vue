@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="AI生成测试用例"
     :width="840"
@@ -7,7 +7,7 @@
     @cancel="handleCancel"
     @ok="handleOk"
   >
-    <a-form :model="formState" layout="vertical">
+    <a-form class="fc-form" :model="formState" layout="vertical">
       <div class="header-row">
         <div class="header-item">
           <span class="header-label">当前项目</span>
@@ -198,7 +198,7 @@
           </a-select>
         </div>
 
-        <a-table
+        <a-table class="fc-table"
           :columns="testCaseColumns"
           :data="testCaseData"
           :pagination="paginationConfig"

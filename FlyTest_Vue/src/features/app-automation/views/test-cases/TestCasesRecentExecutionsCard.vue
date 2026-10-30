@@ -1,5 +1,5 @@
 <template>
-  <a-card class="table-card">
+  <a-card class="table-card fc-panel">
     <template #title>
       <div class="card-title">
         <div class="card-title-copy">
@@ -9,7 +9,7 @@
         <span class="card-meta">最近 {{ executions.length }} 条</span>
       </div>
     </template>
-    <a-table :data="executions" :loading="loading" :pagination="false" row-key="id">
+    <a-table class="fc-table" :data="executions" :loading="loading" :pagination="false" row-key="id">
       <template #columns>
         <a-table-column title="测试用例" :width="220">
           <template #cell="{ record }">{{ record.case_name || `执行 #${record.id}` }}</template>

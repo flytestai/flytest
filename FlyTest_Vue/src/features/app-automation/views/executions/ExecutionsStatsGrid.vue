@@ -1,21 +1,21 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">执行总数</span>
       <strong>{{ statistics.total }}</strong>
       <span class="stat-desc">当前筛选范围内的执行记录数量</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">运行中 / 等待中</span>
       <strong>{{ statistics.running }}</strong>
       <span class="stat-desc">页面会自动轮询这些任务的最新状态</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">通过记录</span>
       <strong>{{ statistics.passed }}</strong>
       <span class="stat-desc">已完成且通过的执行结果</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">平均通过率</span>
       <strong><span :class="'quality-' + passRateTone(statistics.averagePassRate)">{{ formatQualityPercent(statistics.averagePassRate) }}</span></strong>
       <span class="stat-desc">按当前结果集统计步骤通过率</span>

@@ -1,11 +1,11 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="通知详情"
     width="900px"
     :footer="false"
   >
-    <div v-if="currentLog" class="detail-shell">
+    <div v-if="currentLog" class="detail-shell fc-detail-page">
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">任务名称</span>
@@ -25,7 +25,7 @@
         </div>
       </div>
 
-      <a-card class="detail-panel" title="投递信息">
+      <a-card class="detail-panel fc-panel" title="投递信息">
         <div class="meta-row">
           <span>发送者：{{ currentLog.sender_name || '-' }}</span>
           <span>发送邮箱：{{ currentLog.sender_email || '-' }}</span>
@@ -56,7 +56,7 @@
         </a-space>
       </a-card>
 
-      <a-card class="detail-panel" title="通知内容">
+      <a-card class="detail-panel fc-panel" title="通知内容">
         <div v-if="parsedContent.length" class="parsed-content">
           <div v-for="item in parsedContent" :key="`${item.label}-${item.value}`" class="parsed-row">
             <span class="parsed-label">{{ item.label }}</span>
@@ -71,7 +71,7 @@
         />
       </a-card>
 
-      <a-card class="detail-panel" title="响应 / 错误信息">
+      <a-card class="detail-panel fc-panel" title="响应 / 错误信息">
         <a-alert v-if="currentLog.error_message" type="error" class="detail-alert">
           {{ currentLog.error_message }}
         </a-alert>

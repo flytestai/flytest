@@ -1,5 +1,5 @@
 <template>
-  <div class="testbug-management-container">
+  <div class="testbug-management-container fc-page">
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>

@@ -30,7 +30,10 @@
     "test:dashboard": "node scripts/verify-dashboard-insights.cjs",
     "test:auth": "node scripts/verify-auth-pages.cjs",
     "brand:export": "node scripts/export-brand-assets.cjs",
-    "test:quality": "node scripts/verify-quality-status.cjs"
+    "test:quality": "node scripts/verify-quality-status.cjs",
+    "test:workspace:forms": "node scripts/verify-a2-workspaces.cjs",
+    "test:asset-details": "node scripts/verify-a2-asset-details.cjs",
+    "test:request-editor": "node scripts/verify-a2-request-editor.cjs"
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.57.0",

@@ -1,5 +1,5 @@
 <template>
-  <a-card class="filter-card">
+  <a-card class="filter-card fc-filter-panel fc-panel">
     <div class="filter-grid">
       <a-input-search
         v-model="searchModel"

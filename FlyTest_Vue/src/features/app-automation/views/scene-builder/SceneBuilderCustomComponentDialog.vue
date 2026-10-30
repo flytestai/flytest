@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visibleModel" width="760px">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" width="760px">
     <template #title>
       {{ mode === 'create' ? '保存为自定义组件' : '编辑自定义组件' }}
     </template>
@@ -13,7 +13,7 @@
         }}
       </a-alert>
 
-      <a-form layout="vertical" class="dialog-form">
+      <a-form layout="vertical" class="dialog-form fc-form">
         <div class="form-grid">
           <div class="field-card">
             <a-form-item field="name" label="组件名称">

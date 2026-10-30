@@ -1,5 +1,5 @@
 <template>
-  <div class="module-tree">
+  <div class="module-tree fc-page">
     <div class="tree-header">
       <span class="tree-title">模块管理</span>
       <a-button type="text" size="small" @click="showAddModal(null)">
@@ -45,14 +45,14 @@
     </a-spin>
 
     <!-- 新增/编辑弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑模块' : '新增模块'"
       :ok-loading="submitting"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item v-if="parentModule" label="父模块">
           <a-input :model-value="parentModule.name" disabled />
         </a-form-item>

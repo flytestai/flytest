@@ -40,6 +40,16 @@ npm run test:layout:interactions
 
 全局 token 和基础控件在 `src/styles/a2-workspace.css`，布局基础在 `src/workspace-theme.css`。登录注册共用 `components/auth/auth-shell.css`。卡片 16px、控件 8px、登录表面 20px，主要操作蓝 `#0066FF`、通过绿 `#008000`、风险红 `#E00000`。
 
+业务页面和 Teleport 弹层的显式样式契约位于 `src/styles/a2-components.css`，页头使用 `WorkspacePageHeader.vue`。表单通过容器查询根据实际可用宽度换列，不能只按显示器分辨率判断。
+
+补齐检查：
+
+- `npm run test:workspace:forms`：使用真实工具目录和 APP 步骤定义，检查 51 个工具、16 类编辑弹窗、27 类步骤配置及编排交互；默认 1440 / 390 / 320px。需 Python，可通过 `PYTHON` 指定可执行文件。`UI_WIDTHS` 选择宽度，`UI_TOOLS` 指定单项工具复查。
+- `npm run test:asset-details`：有数据的需求详情、专项报告、用例详情和编辑；默认 1440 / 1024 / 390 / 320px。
+- `npm run test:request-editor`：真实请求编辑弹窗中的 9 个配置页签及 8 种请求体模式，覆盖四种宽度。
+
+运行前统一设置 `UI_BASE_URL`。完整浏览器检查建议在构建完成后的 `npm run preview -- --port 5176` 上运行，避免边修改源码边采集造成热更新重载。新增脚本不会启动业务数据库或真实设备。
+
 运行 `npm run test:quality` 验证通过率/覆盖率阈值、缺失统计、真实柱图颜色和深色主题。通过率原始值必须等于 100% 才为绿色；覆盖率 ≥80% 为绿色。该逻辑由 `src/utils/qualityStatus.ts` 统一管理，显示取一位小数但不将部分通过四舍五入成 100%。
 
 首页支持可选 `automation_coverage: { rate, covered?, total? }` 数据；现有后端未提供时显示“暂无覆盖率数据”，不使用不同类型资产数量推算覆盖率。专项检查通过浏览器接口夹具验证该字段存在和不存在的场景，不变更业务数据。

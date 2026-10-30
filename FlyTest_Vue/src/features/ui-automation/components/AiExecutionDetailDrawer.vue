@@ -1,5 +1,5 @@
 <template>
-  <a-drawer
+  <a-drawer class="fc-drawer"
     :visible="visible"
     title="AI 执行详情"
     width="820px"
@@ -26,7 +26,7 @@
             </a-button>
           </a-space>
         </div>
-        <a-descriptions :column="2" bordered size="small">
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
           <a-descriptions-item label="任务名称">{{ record.case_name }}</a-descriptions-item>
           <a-descriptions-item label="执行人">{{ record.executed_by_name || '-' }}</a-descriptions-item>
           <a-descriptions-item label="执行模式">

@@ -1,7 +1,7 @@
 <template>
-  <a-modal v-model:visible="visibleModel" title="设备详情" width="760px" :footer="false">
-    <div v-if="currentDevice" class="detail-shell">
-      <div class="detail-hero">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="设备详情" width="760px" :footer="false">
+    <div v-if="currentDevice" class="detail-shell fc-detail-page">
+      <div class="detail-hero fc-dialog-intro">
         <div class="detail-hero-copy">
           <span class="detail-kicker">Device Profile</span>
           <strong>{{ currentDevice.name || currentDevice.device_id }}</strong>

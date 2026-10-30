@@ -1,22 +1,22 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">套件总数</span>
       <strong>{{ statistics.total }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">执行中</span>
       <strong>{{ statistics.running }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">执行通过</span>
       <strong>{{ statistics.passed }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">已停止</span>
       <strong>{{ statistics.stopped }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">平均健康度</span>
       <strong>{{ statistics.health }}%</strong>
     </a-card>

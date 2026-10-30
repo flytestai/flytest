@@ -1,5 +1,5 @@
 <template>
-  <div class="quick-config-panel">
+  <div class="quick-config-panel fc-section">
     <div class="quick-config-head">
       <span class="quick-config-kicker">Output</span>
       <div class="quick-config-title">提取输出配置</div>

@@ -1,11 +1,11 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="执行详情"
     width="920px"
     :footer="false"
   >
-    <div v-if="currentExecution" class="detail-shell">
+    <div v-if="currentExecution" class="detail-shell fc-detail-page">
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">执行状态</span>
@@ -25,7 +25,7 @@
         </div>
       </div>
 
-      <a-card class="detail-panel" title="执行摘要">
+      <a-card class="detail-panel fc-panel" title="执行摘要">
         <div class="summary-text">
           {{ currentExecution.report_summary || currentExecution.error_message || '暂无执行摘要。' }}
         </div>
@@ -47,7 +47,7 @@
         </a-space>
       </a-card>
 
-      <a-card class="detail-panel" title="执行证据">
+      <a-card class="detail-panel fc-panel" title="执行证据">
         <div v-if="executionArtifacts.length" class="artifact-list">
           <div v-for="item in executionArtifacts" :key="item.key" class="artifact-item">
             <div class="artifact-meta">
@@ -62,7 +62,7 @@
         <div v-else class="empty-note compact">当前执行暂无可查看的证据文件</div>
       </a-card>
 
-      <a-card class="detail-panel" title="执行日志">
+      <a-card class="detail-panel fc-panel" title="执行日志">
         <div v-if="currentExecution.logs?.length" class="log-list">
           <div v-for="(log, index) in currentExecution.logs" :key="`${log.timestamp}-${index}`" class="log-item">
             <div class="log-meta">

@@ -1,10 +1,8 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>测试套件</h3>
-      <p>组合多个 APP 用例形成可批量执行的回归套件，支持查看状态、历史、报告和套件详情。</p>
-    </div>
-    <a-space wrap>
+  <WorkspacePageHeader>
+        <template #title>测试套件</template>
+        <template #description>组合多个 APP 用例形成可批量执行的回归套件，支持查看状态、历史、报告和套件详情。</template>
+        <template #actions><a-space wrap>
       <a-input-search
         v-model="searchModel"
         allow-clear
@@ -22,11 +20,12 @@
       <a-button @click="emit('reset')">重置</a-button>
       <a-button @click="emit('refresh')">刷新</a-button>
       <a-button type="primary" @click="emit('create')">新建套件</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { SuitesHeaderBarEmits } from './suiteEventModels'
 
 const searchModel = defineModel<string>('search', { required: true })

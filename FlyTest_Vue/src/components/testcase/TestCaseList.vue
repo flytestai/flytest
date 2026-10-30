@@ -1,6 +1,6 @@
 ﻿<template>
     <div ref="testcaseContentRef" class="testcase-content">
-      <div class="page-header">
+      <div class="page-header fc-toolbar">
         <div class="search-box">
         <a-input-search
           placeholder="搜索用例名称/前置条件"
@@ -117,7 +117,7 @@
       :scroll="tableScroll"
       :row-class="getRowClassName"
       :bordered="{ cell: true }"
-      class="test-case-table"
+      class="test-case-table fc-table"
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
 
@@ -206,8 +206,8 @@
       </template>
       <template #operations="{ record }">
         <a-space v-if="record" class="operation-actions" :size="4">
-          <a-button type="primary" size="mini" @click.stop="handleViewTestCase(record)">查看</a-button>
-          <a-button type="primary" size="mini" @click.stop="handleEditTestCase(record)">编辑</a-button>
+          <a-button type="text" size="mini" @click.stop="handleViewTestCase(record)">查看</a-button>
+          <a-button type="text" size="mini" @click.stop="handleEditTestCase(record)">编辑</a-button>
           <a-dropdown
             v-if="isSuiteActionMode"
             trigger="click"
@@ -225,7 +225,7 @@
             </template>
           </a-dropdown>
           <a-button v-else type="outline" size="mini" @click.stop="openAssignModal([record.id])">分配</a-button>
-          <a-button type="primary" status="danger" size="mini" @click.stop="handleDeleteTestCase(record)">删除</a-button>
+          <a-button type="text" status="danger" size="mini" @click.stop="handleDeleteTestCase(record)">删除</a-button>
         </a-space>
       </template>
     </a-table>
@@ -245,14 +245,14 @@
       :module-tree="moduleTree"
     />
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="assignmentModalVisible"
       title="分配测试用例"
       :confirm-loading="assignmentSubmitting"
       @ok="submitAssignment"
       @cancel="closeAssignModal"
     >
-      <a-form :model="assignmentForm" layout="vertical">
+      <a-form class="fc-form" :model="assignmentForm" layout="vertical">
         <a-form-item field="suiteId" label="测试套件" required>
           <a-select v-model="assignmentForm.suiteId" :loading="assignmentLoading" placeholder="请选择测试套件" allow-search>
             <a-option v-for="suite in testSuites" :key="suite.id" :value="suite.id">
@@ -1243,9 +1243,9 @@ defineExpose({
   display: flex;
   flex-direction: column;
   border-radius: 14px;
-  --testcase-fixed-column-bg: var(--theme-table-row-bg, var(--flat-surface, var(--color-bg-2, #ffffff)));
+  --testcase-fixed-column-bg: var(--theme-table-row-bg, var(--flat-surface, var(--color-bg-2, var(--theme-surface))));
   --testcase-fixed-column-header-bg: var(--flat-surface-soft, #f8fafc);
-  --testcase-fixed-column-hover-bg: var(--theme-table-row-hover-bg, var(--flat-hover, var(--color-fill-2, #f2f3f5)));
+  --testcase-fixed-column-hover-bg: var(--theme-table-row-hover-bg, var(--flat-hover, var(--color-fill-2, var(--theme-surface-soft))));
 }
 
 :deep(.test-case-table .arco-table) {
@@ -1280,7 +1280,7 @@ defineExpose({
 }
 
 .text-gray {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 :deep(.test-case-table .arco-table-td) {
@@ -1421,7 +1421,7 @@ defineExpose({
 }
 
 :deep(.test-case-table .arco-table-th) {
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

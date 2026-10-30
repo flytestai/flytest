@@ -1,14 +1,12 @@
 <template>
-  <div class="project-deletion-log-page">
-    <div class="page-header">
-      <div>
-        <h2>项目删除记录</h2>
-        <p>管理员可在这里审核项目删除申请，并对已删除项目执行恢复。</p>
-      </div>
-      <a-button type="primary" :loading="loading" @click="fetchRecords">刷新</a-button>
-    </div>
+  <div class="project-deletion-log-page fc-page">
+    <WorkspacePageHeader>
+        <template #title>项目删除记录</template>
+        <template #description>管理员可在这里审核项目删除申请，并对已删除项目执行恢复。</template>
+        <template #actions><a-button type="primary" :loading="loading" @click="fetchRecords">刷新</a-button></template>
+      </WorkspacePageHeader>
 
-    <a-table :columns="columns" :data="records" :loading="loading" row-key="id" :pagination="false">
+    <a-table class="fc-table" :columns="columns" :data="records" :loading="loading" row-key="id" :pagination="false">
       <template #status="{ record }">
         <a-tag :color="statusColorMap[record.status] || 'gray'">{{ statusLabelMap[record.status] || record.status }}</a-tag>
       </template>
@@ -25,7 +23,7 @@
         <a-space>
           <a-button
             v-if="record.status === 'pending'"
-            type="primary"
+            type="text"
             size="mini"
             @click="approve(record)"
           >
@@ -54,6 +52,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { onMounted, ref } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 

@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="知识库统计信息"
     :width="800"
@@ -15,8 +15,8 @@
       <!-- 概览统计 -->
       <div class="stats-overview">
         <h3>概览统计</h3>
-        <div class="stats-grid">
-          <div class="stat-card">
+        <div class="stats-grid fc-metric-grid">
+          <div class="stat-card fc-metric">
             <div class="stat-icon document-icon">
               <icon-file />
             </div>
@@ -26,7 +26,7 @@
             </div>
           </div>
 
-          <div class="stat-card">
+          <div class="stat-card fc-metric">
             <div class="stat-icon chunk-icon">
               <icon-layers />
             </div>
@@ -36,7 +36,7 @@
             </div>
           </div>
 
-          <div class="stat-card">
+          <div class="stat-card fc-metric">
             <div class="stat-icon query-icon">
               <icon-search />
             </div>
@@ -254,7 +254,7 @@ const getAverageChunksPerDocument = () => {
   padding: 20px;
   background: color-mix(in srgb, var(--theme-surface-soft) 72%, white 28%);
   border-radius: 8px;
-  border-left: 4px solid #00a0e9;
+  border-left: 4px solid var(--theme-accent);
 }
 
 .stat-icon {
@@ -270,7 +270,7 @@ const getAverageChunksPerDocument = () => {
 }
 
 .document-icon {
-  background: #00a0e9;
+  background: var(--theme-accent);
 }
 
 .chunk-icon {
@@ -278,7 +278,7 @@ const getAverageChunksPerDocument = () => {
 }
 
 .query-icon {
-  background: #ff7d00;
+  background: var(--theme-warning);
 }
 
 .stat-content {
@@ -321,7 +321,7 @@ const getAverageChunksPerDocument = () => {
 }
 
 .status-item.processing {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: rgba(0, 160, 233, 0.1);
 }
 
@@ -410,7 +410,7 @@ const getAverageChunksPerDocument = () => {
 .metric-value {
   font-size: 18px;
   font-weight: bold;
-  color: #00a0e9;
+  color: var(--theme-accent);
 }
 
 .error-container {

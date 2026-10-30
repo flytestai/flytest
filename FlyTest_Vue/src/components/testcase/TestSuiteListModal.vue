@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     title="测试套件管理"
     :width="1200"
@@ -32,7 +32,7 @@
         </a-space>
       </div>
 
-      <a-table
+      <a-table class="fc-table"
         :columns="columns"
         :data="suiteData"
         :pagination="paginationConfig"
@@ -63,7 +63,7 @@
         </template>
         <template #operations="{ record }">
           <a-space :size="8">
-            <a-button type="primary" size="small" @click="handleExecute(record)">
+            <a-button type="text" size="small" @click="handleExecute(record)">
               <template #icon>
                 <icon-play-arrow />
               </template>
@@ -73,7 +73,7 @@
               编辑
             </a-button>
             <a-button
-              type="primary"
+              type="text"
               status="danger"
               size="small"
               @click="handleDelete(record)"

@@ -1,5 +1,5 @@
 <template>
-  <div class="testcase-management-container">
+  <div class="testcase-management-container fc-page">
 
     <!-- 始终显示模块管理面板 -->
     <div class="list-view-layout">

@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visible"
     :title="isEdit ? '编辑模版' : '新建模版'"
     :width="860"
@@ -39,7 +39,7 @@
       <div class="step-content">
         <!-- Step 1: 上传样例文件并解析表头 -->
         <div v-show="currentStep === 0">
-          <a-form :model="form" layout="vertical">
+          <a-form class="fc-form" :model="form" layout="vertical">
             <a-form-item label="上传样例 Excel 文件（可选）">
               <a-upload
                 :file-list="sampleFileList"
@@ -120,7 +120,7 @@
             将 Excel 列名映射到用例字段。带 * 的字段为必填。
           </a-alert>
 
-          <a-form :model="form.field_mappings" layout="vertical">
+          <a-form class="fc-form" :model="form.field_mappings" layout="vertical">
             <a-row :gutter="16">
               <a-col :span="12" v-for="field in fieldOptions" :key="field.value">
                 <a-form-item>
@@ -165,8 +165,8 @@
           </a-alert>
 
           <!-- 等级转换 -->
-          <a-card title="用例等级转换" size="small" class="transform-card">
-            <a-table
+          <a-card title="用例等级转换" size="small" class="transform-card fc-panel">
+            <a-table class="fc-table"
               :columns="transformColumns"
               :data="levelTransformData"
               :pagination="false"
@@ -202,7 +202,7 @@
 
         <!-- Step 4: 步骤解析配置 -->
         <div v-show="currentStep === 3">
-          <a-form :model="form" layout="vertical">
+          <a-form class="fc-form" :model="form" layout="vertical">
             <a-form-item label="步骤解析模式">
               <a-radio-group v-model="form.step_parsing_mode">
                 <a-radio value="single_cell">
@@ -235,7 +235,7 @@
 
         <!-- Step 5: 基本信息 -->
         <div v-show="currentStep === 4">
-          <a-form :model="form" layout="vertical">
+          <a-form class="fc-form" :model="form" layout="vertical">
             <a-form-item label="模版名称" required>
               <a-input v-model="form.name" placeholder="请输入模版名称" :max-length="255" />
             </a-form-item>

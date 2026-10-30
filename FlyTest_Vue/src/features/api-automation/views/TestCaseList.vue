@@ -1,21 +1,16 @@
 <template>
-  <div class="test-case-list">
-    <div class="page-hero">
-      <div class="page-hero__copy">
-        <div class="page-hero__eyebrow">Project / Interface / Case</div>
-        <div class="page-hero__title">测试用例</div>
-        <div class="page-hero__desc">
-          面向接口维度统一管理自动化测试用例，支持执行、批量选择、AI 生成与请求覆盖配置。
-        </div>
-        <div class="page-hero__meta">
+  <div class="test-case-list fc-page">
+    <WorkspacePageHeader>
+        <template #title>测试用例</template>
+        <template #description>面向接口维度统一管理自动化测试用例，支持执行、批量选择、AI 生成与请求覆盖配置。</template>
+        <template #meta><div class="page-hero__meta">
           <span>{{ projectName }}</span>
           <span>{{ selectedCollectionName || '未选择接口目录' }}</span>
           <span>{{ selectedRequestName || '全部接口' }}</span>
           <span>{{ groupedTestCases.length }} 个接口</span>
           <span>{{ filteredTestCases.length }} 条用例</span>
-        </div>
-      </div>
-      <div class="page-hero__tools">
+        </div></template>
+        <template #actions><div class="page-hero__tools">
         <a-input-search
           v-model="searchKeyword"
           class="tools-search"
@@ -44,8 +39,8 @@
           <a-button :disabled="!canExecuteCurrentScope" @click="executeCurrentScopeTestCases">{{ currentScopeExecuteLabel }}</a-button>
           <a-button @click="loadTestCases">刷新</a-button>
         </div>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div v-if="!selectedCollectionId" class="state-card">
       <a-empty description="请先在左侧选择接口目录或具体接口" />
@@ -79,7 +74,7 @@
           </div>
         </div>
 
-        <a-table :data="group.cases" :pagination="false" row-key="id" size="small">
+        <a-table class="fc-table" :data="group.cases" :pagination="false" row-key="id" size="small">
           <template #columns>
             <a-table-column title="选择" :width="72" align="center">
               <template #cell="{ record }">
@@ -124,7 +119,7 @@
       </section>
     </div>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editorVisible"
       title="编辑测试用例"
       width="1240px"
@@ -136,7 +131,7 @@
       @before-ok="submitTestCase"
       @cancel="resetEditor"
     >
-      <a-form :model="formState" layout="vertical">
+      <a-form class="fc-form" :model="formState" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="测试用例名称"><a-input v-model="formState.name" /></a-form-item>
@@ -195,7 +190,7 @@
       </a-form>
     </a-modal>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="detailVisible"
       title="测试用例详情"
       width="1200px"
@@ -204,7 +199,7 @@
       :body-style="{ maxHeight: '80vh', overflowY: 'auto' }"
     >
       <div v-if="currentTestCase" class="detail-panel">
-        <a-descriptions :column="2" bordered size="small">
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
           <a-descriptions-item label="测试用例">{{ currentTestCase.name }}</a-descriptions-item>
           <a-descriptions-item label="状态">
             <a-tag :color="statusColorMap[currentTestCase.status]">{{ statusLabelMap[currentTestCase.status] }}</a-tag>
@@ -235,6 +230,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, h, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
@@ -829,10 +825,10 @@ defineExpose({ refresh: loadTestCases })
 .page-hero__copy, .group-list, .case-name, .detail-panel { flex-direction: column; }
 .page-hero__copy { gap: 8px; }
 .page-hero__tools, .tools-group { align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
-.page-hero__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #2563eb; }
-.page-hero__title { font-size: 30px; font-weight: 800; line-height: 1.06; color: #0f172a; }
-.page-hero__desc { max-width: 720px; font-size: 13px; line-height: 1.8; color: #64748b; }
-.page-hero__meta, .group-card__meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #64748b; }
+.page-hero__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--theme-accent); }
+.page-hero__title { font-size: 30px; font-weight: 800; line-height: 1.06; color: var(--theme-text); }
+.page-hero__desc { max-width: 720px; font-size: 13px; line-height: 1.8; color: var(--theme-text-secondary); }
+.page-hero__meta, .group-card__meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--theme-text-secondary); }
 .tools-search { width: 320px; max-width: 100%; }
 .tools-select { width: 220px; }
 .tools-group--soft { padding: 8px 10px; border-radius: 18px; background: rgba(248,250,252,.8); border: 1px solid rgba(148,163,184,.12); }
@@ -841,15 +837,15 @@ defineExpose({ refresh: loadTestCases })
 .group-card { padding: 22px; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92)); }
 .group-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 .group-card__copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.group-card__title { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: #0f172a; }
+.group-card__title { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--theme-text); }
 .case-name { gap: 4px; }
-.case-name__title { font-size: 14px; font-weight: 700; color: #0f172a; word-break: break-word; }
-.case-name__desc, .section-note { font-size: 12px; line-height: 1.7; color: #64748b; }
+.case-name__title { font-size: 14px; font-weight: 700; color: var(--theme-text); word-break: break-word; }
+.case-name__desc, .section-note { font-size: 12px; line-height: 1.7; color: var(--theme-text-secondary); }
 .section-note { margin-bottom: 14px; padding: 12px 14px; border-radius: 14px; background: rgba(248,250,252,.9); }
 .request-body-hint { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(59,130,246,.12); background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(20,184,166,.06)); }
 .request-body-hint__copy { min-width: 0; }
-.request-body-hint__title { font-size: 14px; font-weight: 700; color: #0f172a; }
-.request-body-hint__desc { margin-top: 4px; font-size: 12px; line-height: 1.7; color: #64748b; }
+.request-body-hint__title { font-size: 14px; font-weight: 700; color: var(--theme-text); }
+.request-body-hint__desc { margin-top: 4px; font-size: 12px; line-height: 1.7; color: var(--theme-text-secondary); }
 .detail-panel { gap: 16px; }
 .json-block { margin: 0; padding: 16px; border-radius: 18px; background: rgba(15,23,42,.95); color: #e2e8f0; font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
 .group-card :deep(.arco-table-container) { overflow: hidden; border-radius: 18px; border: 1px solid rgba(148,163,184,.12); }

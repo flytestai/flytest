@@ -1,8 +1,8 @@
 <template>
-  <div class="knowledge-management">
-    <div v-if="!selectedKB" class="page-header">
-      <h1 class="page-title">知识库管理</h1>
-      <div class="header-actions">
+  <div class="knowledge-management fc-page">
+    <WorkspacePageHeader v-if="!selectedKB">
+        <template #title>知识库管理</template>
+        <template #actions><div class="header-actions">
         <a-button @click="showConfigModal" style="margin-right: 8px">
           <template #icon><icon-settings /></template>
           知识库配置
@@ -11,8 +11,8 @@
           <template #icon><icon-plus /></template>
           新建知识库
         </a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div class="content-container">
       <!-- 知识库列表 -->
@@ -27,7 +27,7 @@
               @clear="handleSearch"
             />
           </div>
-          <div class="filter-bar">
+          <div class="filter-bar fc-toolbar">
             <a-select
               v-model="statusFilter"
               placeholder="状态筛选"
@@ -41,7 +41,7 @@
           </div>
         </div>
 
-        <a-table
+        <a-table class="fc-table"
           :columns="columns"
           :data="knowledgeBases"
           :loading="loading"
@@ -127,6 +127,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, watch } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { IconPlus, IconSettings } from '@arco-design/web-vue/es/icon';
@@ -547,7 +548,7 @@ onMounted(async () => {
 
 .knowledge-base-list :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

@@ -1,6 +1,6 @@
 <template>
   <div class="structured-environment-editor">
-    <a-tabs type="rounded" size="large">
+    <a-tabs class="fc-tabs" type="rounded" size="large">
       <a-tab-pane key="headers" title="Headers">
         <div class="editor-toolbar">
           <div>
@@ -101,7 +101,10 @@ const localModel = ref<ApiEnvironmentEditorModel>(createEmptyEnvironmentEditorMo
 watch(
   () => props.modelValue,
   value => {
-    localModel.value = createEmptyEnvironmentEditorModel(cloneJson(value || {}))
+    const next = createEmptyEnvironmentEditorModel(cloneJson(value || {}))
+    if (JSON.stringify(next) !== JSON.stringify(localModel.value)) {
+      localModel.value = next
+    }
   },
   { deep: true, immediate: true }
 )
@@ -109,7 +112,11 @@ watch(
 watch(
   localModel,
   value => {
-    emit('update:modelValue', createEmptyEnvironmentEditorModel(cloneJson(value)))
+    const next = createEmptyEnvironmentEditorModel(cloneJson(value))
+    const current = createEmptyEnvironmentEditorModel(props.modelValue || {})
+    if (JSON.stringify(next) !== JSON.stringify(current)) {
+      emit('update:modelValue', next)
+    }
   },
   { deep: true }
 )
@@ -150,21 +157,21 @@ const addCookie = () => {
 .editor-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .editor-description {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.6;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .editor-empty {
   padding: 20px;
   border: 1px dashed rgba(148, 163, 184, 0.32);
   border-radius: 16px;
-  color: #94a3b8;
+  color: var(--theme-text-tertiary);
   text-align: center;
   background: rgba(255, 255, 255, 0.8);
 }
@@ -195,7 +202,7 @@ const addCookie = () => {
 
 .item-row--meta {
   justify-content: flex-end;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .item-name {

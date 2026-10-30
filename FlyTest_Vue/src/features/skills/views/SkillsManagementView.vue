@@ -1,11 +1,9 @@
 <template>
-  <div class="skills-management-view">
-    <div class="page-header">
-      <h2>Skills 管理</h2>
-      <p class="page-description">
-        管理项目的 Agent Skills。Skills 是模块化的能力扩展，包含指令和可执行脚本。
-      </p>
-    </div>
+  <div class="skills-management-view fc-page">
+    <WorkspacePageHeader>
+        <template #title>Skills 管理</template>
+        <template #description>管理项目的 Agent Skills。Skills 是模块化的能力扩展，包含指令和可执行脚本。</template>
+      </WorkspacePageHeader>
 
     <div v-if="currentProjectId" class="skills-container">
       <SkillManager :project-id="currentProjectId" :key="currentProjectId" />
@@ -18,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed } from 'vue'
 import { SkillManager } from '@/features/skills'
 import { useProjectStore } from '@/store/projectStore'

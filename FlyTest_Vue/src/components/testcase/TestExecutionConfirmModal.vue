@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     title="确认执行测试套件"
     :width="600"
@@ -15,7 +15,7 @@
         测试将在后台异步执行,您可以在执行历史中查看进度
       </a-alert>
 
-      <a-descriptions :column="1" bordered>
+      <a-descriptions class="fc-descriptions" :column="1" bordered>
         <a-descriptions-item label="测试套件">
           <strong>{{ suite?.name }}</strong>
         </a-descriptions-item>
@@ -137,7 +137,7 @@ const handleCancel = () => {
 
 .execution-confirm-content :deep(.arco-descriptions-item-label) {
   background: rgba(248, 250, 252, 0.76);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

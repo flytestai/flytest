@@ -1,19 +1,18 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>APP 自动化总控台</h3>
-      <p>集中查看当前项目的 AI 编排状态、定时任务、执行健康度和最近回归动作。</p>
-    </div>
-    <a-space wrap class="page-actions">
+  <WorkspacePageHeader>
+        <template #title>APP 自动化总控台</template>
+        <template #description>集中查看当前项目的 AI 编排状态、定时任务、执行健康度和最近回归动作。</template>
+        <template #actions><a-space wrap class="page-actions">
       <a-tag :color="serviceStatusTagColor">{{ serviceStatusTagText }}</a-tag>
       <span class="header-tip">最近刷新：{{ lastUpdatedText }}</span>
       <a-button :loading="aiStatusLoading" @click="emit('refresh-ai-status')">刷新 AI 状态</a-button>
       <a-button type="primary" :loading="loading" @click="emit('refresh-dashboard')">刷新总览</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { DashboardHeaderBarEmits } from './dashboardEventModels'
 import type { DashboardHeaderBarProps } from './dashboardViewModels'
 

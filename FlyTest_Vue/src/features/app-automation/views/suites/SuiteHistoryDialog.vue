@@ -1,11 +1,11 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="selectedSuite ? `${selectedSuite.name} 执行历史` : '套件执行历史'"
     width="980px"
     :footer="false"
   >
-    <a-table :data="history" :loading="loading" :pagination="false" row-key="id">
+    <a-table class="fc-table" :data="history" :loading="loading" :pagination="false" row-key="id">
       <template #columns>
         <a-table-column title="用例 / 设备" :width="240">
           <template #cell="{ record }">

@@ -1,6 +1,6 @@
 <template>
   <div class="panel-shell">
-    <a-card class="filter-card">
+    <a-card class="filter-card fc-filter-panel fc-panel">
       <div class="filter-grid case-filter-grid">
         <a-input-search
           v-model="filters.search"
@@ -27,27 +27,27 @@
       </div>
     </a-card>
 
-    <div class="stats-grid">
-      <a-card class="stat-card">
+    <div class="stats-grid fc-metric-grid">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">执行记录</span>
         <strong>{{ statistics.total }}</strong>
       </a-card>
-      <a-card class="stat-card">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">通过记录</span>
         <strong>{{ statistics.passed }}</strong>
       </a-card>
-      <a-card class="stat-card">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">失败记录</span>
         <strong>{{ statistics.failed }}</strong>
       </a-card>
-      <a-card class="stat-card">
+      <a-card class="stat-card fc-metric fc-panel">
         <span class="stat-label">平均通过率</span>
         <strong><span :class="'quality-' + passRateTone(statistics.passRate)">{{ formatQualityPercent(statistics.passRate) }}</span></strong>
       </a-card>
     </div>
 
-    <a-card class="table-card">
-      <a-table :data="executions" :loading="loading" :pagination="false" row-key="id">
+    <a-card class="table-card fc-panel">
+      <a-table class="fc-table" :data="executions" :loading="loading" :pagination="false" row-key="id">
         <template #columns>
           <a-table-column title="用例 / 设备" :width="260">
             <template #cell="{ record }">

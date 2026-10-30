@@ -1,5 +1,5 @@
 <template>
-  <div class="trace-viewer">
+  <div class="trace-viewer fc-page">
     <!-- 顶部标题栏 -->
     <div class="trace-header">
       <a-button type="text" size="small" @click="handleBack">
@@ -140,7 +140,7 @@
       <!-- 底部分隔条 -->
       <div class="resizer resizer-v" @mousedown="startResizeDetails"></div>
       <div class="details-panel" :style="{ height: detailsPanelHeight + 'px' }">
-        <a-tabs v-model:active-key="activeTab" size="small">
+        <a-tabs class="fc-tabs" v-model:active-key="activeTab" size="small">
           <!-- Network -->
           <a-tab-pane key="network">
             <template #title>
@@ -187,7 +187,7 @@
                 </div>
                 <!-- 右侧：请求详情 -->
                 <div class="network-main" v-if="selectedNetworkRequest">
-                  <div class="detail-header">
+                  <div class="detail-header fc-detail-heading">
                     <span class="close-btn" @click="selectedNetworkRequest = null">×</span>
                     <div class="detail-tabs">
                       <span

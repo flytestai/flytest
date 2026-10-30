@@ -1,10 +1,10 @@
 <template>
-  <a-card class="panel-card recent-card" title="最近执行">
+  <a-card class="panel-card recent-card fc-panel" title="最近执行">
     <template #extra>
       <a-button type="text" @click="emit('open-all')">查看全部</a-button>
     </template>
 
-    <a-table :data="executions" :pagination="false" size="small" :bordered="false">
+    <a-table class="fc-table" :data="executions" :pagination="false" size="small" :bordered="false">
       <template #columns>
         <a-table-column title="用例" data-index="case_name" />
         <a-table-column title="设备" data-index="device_name" />

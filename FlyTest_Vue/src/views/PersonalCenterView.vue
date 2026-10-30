@@ -1,12 +1,12 @@
 <template>
-  <div class="personal-center">
-    <div class="page-header">
-      <h2>个人中心</h2>
-      <p>维护系统用户名、姓名、登录手机号、联系邮箱与账号安全信息。</p>
-    </div>
+  <div class="personal-center fc-page">
+    <WorkspacePageHeader>
+        <template #title>个人中心</template>
+        <template #description>维护系统用户名、姓名、登录手机号、联系邮箱与账号安全信息。</template>
+      </WorkspacePageHeader>
 
     <div class="center-layout">
-      <aside class="section-sidebar">
+      <aside class="section-sidebar fc-directory">
         <a-menu
           :selected-keys="[activeSection]"
           mode="vertical"
@@ -18,7 +18,7 @@
       </aside>
 
       <section class="section-content">
-        <a-card v-if="activeSection === 'profile'" title="个人资料" class="panel-card">
+        <a-card v-if="activeSection === 'profile'" title="个人资料" class="panel-card fc-panel">
           <div class="form-shell">
             <div class="avatar-editor">
               <div class="profile-avatar-preview" :title="avatarLabel">
@@ -48,7 +48,7 @@
                 <div class="avatar-tip">支持 JPG、PNG、WEBP、GIF，最大 5MB。</div>
                 <input
                   ref="avatarInputRef"
-                  class="avatar-input"
+                  class="avatar-input fc-native-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   @change="handleAvatarFileChange"
@@ -93,7 +93,7 @@
               </div>
             </template>
 
-            <a-form v-else :model="profileForm" layout="vertical" @submit.prevent>
+            <a-form class="fc-form" v-else :model="profileForm" layout="vertical" @submit.prevent>
               <a-form-item label="系统用户名">
                 <a-input v-model="profileForm.username" placeholder="请输入系统用户名" />
                 <div class="field-tip">
@@ -150,9 +150,9 @@
           </div>
         </a-card>
 
-        <a-card v-else title="修改密码" class="panel-card">
+        <a-card v-else title="修改密码" class="panel-card fc-panel">
           <div class="form-shell password-shell">
-            <a-form :model="passwordForm" layout="vertical" @submit.prevent>
+            <a-form class="fc-form" :model="passwordForm" layout="vertical" @submit.prevent>
               <a-form-item label="当前密码">
                 <a-input-password
                   v-model="passwordForm.current_password"
@@ -191,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
@@ -500,7 +501,7 @@ onMounted(() => {
   border-radius: 8px;
   border: 1px solid var(--ui-toolbar-border);
   background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.9), rgba(14, 165, 233, 0.92));
-  color: #ffffff;
+  color: #fff;
   font-size: 24px;
   font-weight: 700;
 }

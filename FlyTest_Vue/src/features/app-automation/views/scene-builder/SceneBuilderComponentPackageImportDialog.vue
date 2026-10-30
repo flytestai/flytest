@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visibleModel" width="760px">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" width="760px">
     <template #title>导入组件包</template>
 
     <div class="dialog-shell">
@@ -7,7 +7,7 @@
         支持导入 `.json`、`.yaml`、`.yml` 组件包。导入时可以选择覆盖已有组件，也会同步安装组件包里的自定义组件。
       </a-alert>
 
-      <a-form layout="vertical" class="dialog-form">
+      <a-form layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
           <a-form-item label="覆盖已有组件">
             <a-switch v-model="overwriteModel" />

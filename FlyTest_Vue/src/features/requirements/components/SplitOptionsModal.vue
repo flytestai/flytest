@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="模块拆分配置"
     :width="600"
@@ -209,14 +209,14 @@ const handleCancel = () => {
 
 .option-group h4 {
   margin: 0 0 12px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .option-group h5 {
   margin: 12px 0 8px 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 13px;
   font-weight: 500;
 }
@@ -226,7 +226,7 @@ const handleCancel = () => {
 }
 
 .radio-desc {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
   margin-top: 2px;
 }
@@ -245,13 +245,13 @@ const handleCancel = () => {
 }
 
 .input-desc {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
   margin-top: 4px;
 }
 
 .structure-info {
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   border-radius: 4px;
   padding: 12px;
   margin-bottom: 12px;
@@ -264,18 +264,18 @@ const handleCancel = () => {
 }
 
 .structure-label {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 13px;
 }
 
 .structure-count {
-  color: #1d2129;
+  color: var(--theme-text);
   font-weight: 500;
   font-size: 13px;
 }
 
 .recommendations {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   padding: 12px;
 }
@@ -284,7 +284,7 @@ const handleCancel = () => {
   padding: 8px;
   border-radius: 4px;
   margin-bottom: 8px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
 }
 
 .recommendation-item.recommended {
@@ -308,12 +308,12 @@ const handleCancel = () => {
 }
 
 .rec-count {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
 .rec-desc {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 12px;
 }
 
@@ -324,7 +324,7 @@ const handleCancel = () => {
 }
 
 .level-desc {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
   margin-top: 8px;
 }

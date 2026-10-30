@@ -1,10 +1,8 @@
 <template>
-  <div class="page-header">
-    <div class="header-copy">
-      <h3>场景编排</h3>
-      <p>支持基础步骤、自定义组件和流程控制分支的可视化编排。</p>
-    </div>
-    <div class="header-actions">
+  <WorkspacePageHeader>
+        <template #title>场景编排</template>
+        <template #description>支持基础步骤、自定义组件和流程控制分支的可视化编排。</template>
+        <template #actions><div class="header-actions">
       <div class="header-action-group">
         <a-button type="outline" :loading="aiGenerating" @click="emit('open-ai-plan')">AI 生成场景</a-button>
         <a-button :loading="loading" @click="emit('reload-data')">刷新</a-button>
@@ -19,11 +17,12 @@
           保存并执行
         </a-button>
       </div>
-    </div>
-  </div>
+    </div></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 interface Props {
   aiGenerating: boolean
   loading: boolean

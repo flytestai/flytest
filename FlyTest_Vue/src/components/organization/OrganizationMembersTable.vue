@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="membersData"
       :pagination="pagination"
@@ -24,13 +24,13 @@
     >
       <template #operations="{ record }">
         <a-space>
-          <a-button type="primary" status="danger" size="small" @click="removeMember(record)">移除</a-button>
+          <a-button type="text" status="danger" size="small" @click="removeMember(record)">移除</a-button>
         </a-space>
       </template>
     </a-table>
 
     <!-- 添加成员模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="addMembersModalVisible"
       title="添加成员"
       @cancel="cancelAddMembers"
@@ -38,7 +38,7 @@
       :mask-closable="false"
       :width="600"
     >
-      <a-form ref="addMembersFormRef" :model="addMembersForm" layout="vertical" :auto-label-width="false">
+      <a-form class="fc-form" ref="addMembersFormRef" :model="addMembersForm" layout="vertical" :auto-label-width="false">
         <a-form-item field="userIds" label="选择用户" required>
           <a-select
             v-model="addMembersForm.userIds"

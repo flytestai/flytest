@@ -1,6 +1,6 @@
 <template>
-  <div class="batch-record-list">
-    <div class="page-header">
+  <div class="batch-record-list fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.status"
@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="recordData"
       :pagination="pagination"
@@ -72,14 +72,14 @@
     </a-table>
 
     <!-- 详情抽屉 -->
-    <a-drawer
+    <a-drawer class="fc-drawer"
       v-model:visible="drawerVisible"
       title="批量执行详情"
       width="900px"
       unmount-on-close
     >
       <template v-if="currentRecord">
-        <a-descriptions :column="2" bordered size="small">
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
           <a-descriptions-item label="批次名称">{{ currentRecord.name }}</a-descriptions-item>
           <a-descriptions-item label="执行人">{{ currentRecord.executor_name ?? '-' }}</a-descriptions-item>
           <a-descriptions-item label="执行状态">
@@ -102,7 +102,7 @@
 
         <!-- 关联的执行记录列表 -->
         <a-divider>用例执行结果</a-divider>
-        <a-table
+        <a-table class="fc-table"
           :columns="detailColumns"
           :data="currentRecord.execution_records ?? []"
           :pagination="false"
@@ -130,7 +130,7 @@
                   :data="r.step_results"
                   :pagination="false"
                   size="mini"
-                  class="step-table"
+                  class="step-table fc-table"
                 >
                   <template #step_status="{ record: step }">
                     <a-tag :color="step.status === 'success' ? 'green' : step.status === 'failed' ? 'red' : 'orange'" size="small">
@@ -362,7 +362,7 @@ watch(projectId, () => {
 }
 
 .step-table {
-  background: #fff;
+  background: var(--theme-surface);
   border-radius: 4px;
 }
 

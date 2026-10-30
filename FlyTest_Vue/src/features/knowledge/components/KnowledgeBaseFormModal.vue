@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     :title="isEdit ? '编辑知识库' : '新建知识库'"
     :width="500"
@@ -7,7 +7,7 @@
     @cancel="handleCancel"
     :confirm-loading="loading"
   >
-    <a-form
+    <a-form class="fc-form"
       ref="formRef"
       :model="formData"
       :rules="rules"

@@ -1,35 +1,31 @@
 <template>
-  <div class="review-report">
+  <div class="review-report fc-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-left">
-        <a-button type="text" @click="goBack" class="back-button">
+    <WorkspacePageHeader>
+        <template #title>{{ report?.document_title || '评审报告' }}</template>
+        <template #meta><a-button type="text" @click="goBack" class="back-button">
           <template #icon><icon-arrow-left /></template>
           返回列表
         </a-button>
-        <h1 class="page-title">{{ report?.document_title || '评审报告' }}</h1>
-        <a-tag :color="getRatingColor(report?.overall_rating)" class="status-tag">
+<a-tag :color="getRatingColor(report?.overall_rating)" class="status-tag">
           {{ report?.overall_rating_display }}
         </a-tag>
-        <!-- 版本指示器 -->
-        <a-tag
+<a-tag
           v-if="reportVersions.length > 1 && selectedReportId"
           :color="isLatestVersion ? 'green' : 'blue'"
           class="version-indicator"
         >
           {{ isLatestVersion ? '最新版本' : '历史版本' }}
         </a-tag>
-        <!-- 版本选择器 -->
-        <ReportVersionSelector
+<ReportVersionSelector
           v-if="reportVersions.length > 1"
           :report-versions="reportVersions"
           :selected-report-id="selectedReportId"
           :loading="loading"
           @version-change="handleVersionChange"
           class="version-selector"
-        />
-      </div>
-      <div class="header-actions">
+        /></template>
+        <template #actions><div class="header-actions">
         <a-button type="text" @click="switchToSpecializedReport">
           <template #icon><icon-book /></template>
           专项分析
@@ -42,14 +38,14 @@
           <template #icon><icon-share-alt /></template>
           分享报告
         </a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <!-- 评审概览 -->
     <div class="overview-section" :class="{ 'content-loading': loading }">
       <a-row :gutter="24">
         <a-col :span="6">
-          <a-card class="metric-card">
+          <a-card class="metric-card fc-panel">
             <div class="metric-content">
               <div class="metric-value">{{ report?.completion_score || 0 }}</div>
               <div class="metric-label">完整度评分</div>
@@ -61,7 +57,7 @@
           </a-card>
         </a-col>
         <a-col :span="6">
-          <a-card class="metric-card">
+          <a-card class="metric-card fc-panel">
             <div class="metric-content">
               <div class="metric-value">{{ report?.total_issues || 0 }}</div>
               <div class="metric-label">发现问题</div>
@@ -73,7 +69,7 @@
           </a-card>
         </a-col>
         <a-col :span="6">
-          <a-card class="metric-card">
+          <a-card class="metric-card fc-panel">
             <div class="metric-content">
               <div class="metric-value">{{ report?.high_priority_issues || 0 }}</div>
               <div class="metric-label">高优先级</div>
@@ -85,7 +81,7 @@
           </a-card>
         </a-col>
         <a-col :span="6">
-          <a-card class="metric-card">
+          <a-card class="metric-card fc-panel">
             <div class="metric-content">
               <div class="metric-value">{{ formatDate(report?.review_date) }}</div>
               <div class="metric-label">评审时间</div>
@@ -100,7 +96,7 @@
 
     <!-- 评审总结 -->
     <div class="summary-section" :class="{ 'content-loading': loading }">
-      <a-card title="评审总结" class="summary-card">
+      <a-card title="评审总结" class="summary-card fc-metric fc-panel">
         <div class="summary-content">
           <div class="summary-text">
             {{ report?.summary }}
@@ -117,7 +113,7 @@
 
     <!-- 问题分布 -->
     <div class="issues-distribution">
-      <a-card title="问题分布" class="distribution-card">
+      <a-card title="问题分布" class="distribution-card fc-panel">
         <div class="distribution-content">
           <div class="priority-stats">
             <div class="priority-item high">
@@ -139,7 +135,7 @@
 
     <!-- 模块评审结果 -->
     <div class="modules-section">
-      <a-card title="模块评审结果" class="modules-card">
+      <a-card title="模块评审结果" class="modules-card fc-panel">
         <div class="modules-list">
           <div 
             v-for="moduleResult in report?.module_results" 
@@ -182,7 +178,7 @@
 
     <!-- 详细问题列表 -->
     <div class="issues-section">
-      <a-card class="issues-card">
+      <a-card class="issues-card fc-panel">
         <template #title>
           <div class="issues-header">
             <span>详细问题列表 ({{ report?.issues?.length || 0 }}个)</span>
@@ -272,6 +268,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
@@ -560,7 +557,7 @@ onMounted(() => {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -605,19 +602,19 @@ onMounted(() => {
 .metric-value {
   font-size: 32px;
   font-weight: 700;
-  color: #1d2129;
+  color: var(--theme-text);
   line-height: 1;
 }
 
 .metric-label {
   font-size: 14px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-top: 4px;
 }
 
 .metric-unit {
   font-size: 14px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .metric-icon {
@@ -628,8 +625,8 @@ onMounted(() => {
   opacity: 0.1;
 }
 
-.score-icon { color: #00a0e9; }
-.issues-icon { color: #ff7d00; }
+.score-icon { color: var(--theme-accent); }
+.issues-icon { color: var(--theme-warning); }
 .high-priority-icon { color: var(--theme-danger); }
 .date-icon { color: var(--theme-success); }
 
@@ -653,17 +650,17 @@ onMounted(() => {
 
 .summary-text {
   font-size: 16px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   margin-bottom: 16px;
 }
 
 .recommendations h4 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .recommendations-text {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   white-space: pre-line;
 }
 
@@ -695,12 +692,12 @@ onMounted(() => {
 }
 
 .priority-item.high .priority-count { color: var(--theme-danger); }
-.priority-item.medium .priority-count { color: #ff7d00; }
-.priority-item.low .priority-count { color: #00a0e9; }
+.priority-item.medium .priority-count { color: var(--theme-warning); }
+.priority-item.low .priority-count { color: var(--theme-accent); }
 
 .priority-label {
   font-size: 14px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .modules-list {
@@ -710,7 +707,7 @@ onMounted(() => {
 }
 
 .module-result-item {
-  border: 1px solid #f2f3f5;
+  border: 1px solid var(--theme-surface-soft);
   border-radius: 8px;
   padding: 16px;
   background: #fafafa;
@@ -733,17 +730,17 @@ onMounted(() => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .issues-count {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .severity-score {
   font-size: 14px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .module-details {
@@ -764,7 +761,7 @@ onMounted(() => {
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .issues-header {
@@ -786,7 +783,7 @@ onMounted(() => {
 }
 
 .issue-item {
-  border: 1px solid #f2f3f5;
+  border: 1px solid var(--theme-surface-soft);
   border-radius: 8px;
   padding: 16px;
   background: white;
@@ -794,7 +791,7 @@ onMounted(() => {
 }
 
 .issue-item:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(0, 160, 233, 0.1);
 }
 
@@ -818,7 +815,7 @@ onMounted(() => {
 
 .issue-location {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .issue-content {
@@ -829,12 +826,12 @@ onMounted(() => {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .issue-description {
   margin: 0 0 12px 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .issue-suggestion {

@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visibleModel" title="设备截图预览" width="980px" :footer="false">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="设备截图预览" width="980px" :footer="false">
     <div v-if="currentScreenshot" class="screenshot-shell">
       <div class="screenshot-header">
         <div class="screenshot-copy">

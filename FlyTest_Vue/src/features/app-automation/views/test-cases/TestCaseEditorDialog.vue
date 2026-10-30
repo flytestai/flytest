@@ -1,11 +1,11 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑测试用例' : '新增测试用例'"
     width="860px"
     @ok="emit('submit')"
   >
-    <a-form :model="form" layout="vertical">
+    <a-form class="fc-form" :model="form" layout="vertical">
       <a-row :gutter="12">
         <a-col :span="12">
           <a-form-item field="name" label="用例名称">

@@ -1,12 +1,12 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="任务详情"
     width="980px"
     :footer="false"
   >
     <div v-if="detailLoading" class="modal-state">正在加载任务详情...</div>
-    <div v-else-if="currentTask" class="detail-shell">
+    <div v-else-if="currentTask" class="detail-shell fc-detail-page">
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">任务状态</span>
@@ -26,7 +26,7 @@
         </div>
       </div>
 
-      <a-card class="detail-panel" title="任务配置">
+      <a-card class="detail-panel fc-panel" title="任务配置">
         <div class="summary-text">{{ currentTask.description || '暂无任务描述。' }}</div>
         <div class="meta-row">
           <span>任务类型：{{ getTaskTypeLabel(currentTask.task_type) }}</span>
@@ -44,7 +44,7 @@
         </div>
       </a-card>
 
-      <a-card class="detail-panel" title="最近触发结果">
+      <a-card class="detail-panel fc-panel" title="最近触发结果">
         <div class="summary-text">{{ getLastResultSummary(currentTask) }}</div>
         <div class="meta-row">
           <span>最近触发时间：{{ formatDateTime(currentTask.last_run_time) }}</span>
@@ -73,7 +73,7 @@
         </a-space>
       </a-card>
 
-      <a-card class="detail-panel" title="最近通知">
+      <a-card class="detail-panel fc-panel" title="最近通知">
         <div v-if="taskNotificationsLoading" class="modal-state small">正在加载通知日志...</div>
         <div v-else-if="recentTaskNotifications.length" class="notification-list">
           <div

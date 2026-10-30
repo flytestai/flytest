@@ -1,5 +1,5 @@
 <template>
-  <div class="project-management">
+  <div class="project-management fc-page">
     <!-- 无项目权限时显示提示 -->
     <div v-if="!hasProjectPermission" class="no-permission-panel">
       <div class="no-permission-content">
@@ -16,34 +16,22 @@
 
     <!-- 有权限时显示正常内容 -->
     <div v-else>
-      <section class="workspace-hero workspace-hero--projects workspace-hero--compact workspace-hero--project-command">
-        <div class="workspace-hero-copy">
-          <span class="workspace-hero-eyebrow">Project Command</span>
-          <h2 class="workspace-hero-title">项目管理</h2>
-          <p class="workspace-hero-description">
-            管理项目、团队成员与测试资产，明确协作范围和权限。
-          </p>
-          <div class="workspace-chip-row">
-            <span class="workspace-chip">项目矩阵</span>
-            <span class="workspace-chip">权限协同</span>
-            <span class="workspace-chip">环境基线</span>
-            <span class="workspace-chip">智能编排</span>
+      <WorkspacePageHeader>
+        <template #title>项目管理</template>
+        <template #description>管理项目、团队成员与测试资产，明确协作范围和权限。</template>
+        <template #meta><div class="fc-inline-metrics">
+          <div class="fc-inline-metric">
+            <span class="fc-inline-metric-value">{{ pagination.total || projectData.length }}</span>
+            <span class="fc-inline-metric-label">项目总量</span>
           </div>
-        </div>
-        <div class="workspace-hero-stats">
-          <div class="workspace-stat-card">
-            <span class="workspace-stat-value">{{ pagination.total || projectData.length }}</span>
-            <span class="workspace-stat-label">项目总量</span>
+          <div class="fc-inline-metric">
+            <span class="fc-inline-metric-value">{{ hasProjectPermission ? 'OK' : '--' }}</span>
+            <span class="fc-inline-metric-label">管理权限</span>
           </div>
-          <div class="workspace-stat-card">
-            <span class="workspace-stat-value">{{ hasProjectPermission ? 'OK' : '--' }}</span>
-            <span class="workspace-stat-label">管理权限</span>
-          </div>
-        </div>
-        <div class="workspace-hero-orb" aria-hidden="true"></div>
-      </section>
+        </div></template>
+      </WorkspacePageHeader>
 
-      <div class="page-header">
+      <div class="page-header fc-toolbar">
         <div class="search-box">
           <a-input-search
             placeholder="搜索项目名称/描述"
@@ -57,7 +45,7 @@
         </div>
       </div>
 
-      <a-table
+      <a-table class="fc-table"
         :columns="columns"
         :data="projectData"
         :pagination="pagination"
@@ -79,16 +67,16 @@
         </template>
         <template #operations="{ record }">
           <a-space :size="4">
-            <a-button type="primary" size="mini" @click="viewProjectMembers(record, $event)">成员</a-button>
-            <a-button type="primary" size="mini" @click="editProject(record, $event)">编辑</a-button>
-            <a-button type="primary" status="danger" size="mini" @click="deleteProject(record, $event)">删除</a-button>
+            <a-button type="text" size="mini" @click="viewProjectMembers(record, $event)">成员</a-button>
+            <a-button type="text" size="mini" @click="editProject(record, $event)">编辑</a-button>
+            <a-button type="text" status="danger" size="mini" @click="deleteProject(record, $event)">删除</a-button>
           </a-space>
         </template>
       </a-table>
     </div>
 
     <!-- 项目成员管理模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="membersModalVisible"
       :title="`项目成员管理: ${selectedProject?.name || ''}`"
       :footer="false"
@@ -105,7 +93,7 @@
         <div v-if="projectMembers.length === 0" class="no-data">
           暂无成员数据
         </div>
-        <a-table
+        <a-table class="fc-table"
           v-else
           :columns="memberColumns"
           :data="projectMembers"
@@ -148,14 +136,14 @@
     </a-modal>
 
     <!-- 添加成员模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="addMemberModalVisible"
       title="添加项目成员"
       @ok="handleAddMember"
       @cancel="() => addMemberModalVisible = false"
       :mask-closable="false"
     >
-      <a-form :model="addMemberForm" layout="vertical">
+      <a-form class="fc-form" :model="addMemberForm" layout="vertical">
         <a-form-item field="userId" label="选择用户" required>
           <a-select
             v-model="addMemberForm.userId"
@@ -182,14 +170,14 @@
     </a-modal>
 
     <!-- 更新角色模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="updateRoleModalVisible"
       title="更新成员角色"
       @ok="handleUpdateRole"
       @cancel="() => updateRoleModalVisible = false"
       :mask-closable="false"
     >
-      <a-form :model="updateRoleForm" layout="vertical">
+      <a-form class="fc-form" :model="updateRoleForm" layout="vertical">
         <a-form-item field="role" label="角色" required>
           <a-select v-model="updateRoleForm.role" placeholder="请选择角色">
             <a-option value="member">成员</a-option>
@@ -201,7 +189,7 @@
     </a-modal>
 
     <!-- 添加项目模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="addProjectModalVisible"
       title="添加项目"
       @before-ok="handleAddProject"
@@ -209,7 +197,7 @@
       :mask-closable="false"
       width="700px"
     >
-      <a-form
+      <a-form class="fc-form"
         ref="addProjectFormRef"
         :model="addProjectForm"
         :rules="addProjectRules"
@@ -245,7 +233,7 @@
     </a-modal>
 
     <!-- 编辑项目模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editProjectModalVisible"
       title="编辑项目"
       @before-ok="handleEditProject"
@@ -253,7 +241,7 @@
       :mask-closable="false"
       width="700px"
     >
-      <a-form
+      <a-form class="fc-form"
         ref="editProjectFormRef"
         :model="editProjectForm"
         :rules="editProjectRules"
@@ -291,6 +279,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted, watch } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import {
@@ -994,7 +983,7 @@ const deleteProject = (project: Project, event?: Event) => {
 
 <style scoped>
 .project-management {
-  background-color: #fff;
+  background-color: var(--theme-surface);
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
@@ -1202,7 +1191,7 @@ const deleteProject = (project: Project, event?: Event) => {
 
 :deep(.arco-table-th) {
   background: #f8fafc;
-  color: #475569;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="quick-config-panel">
+  <div class="quick-config-panel fc-section">
     <div class="quick-config-head">
       <span class="quick-config-kicker">Device Action</span>
       <div class="quick-config-title">设备动作配置</div>

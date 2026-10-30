@@ -64,7 +64,7 @@
     </a-spin>
 
     <!-- 上传弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="showUploadModal"
       title="上传 Skill"
       :width="500"
@@ -72,7 +72,7 @@
       :confirm-loading="uploading"
     >
       <div class="upload-container">
-        <input
+        <input class="fc-native-input"
           ref="fileInputRef"
           type="file"
           accept=".zip"
@@ -97,7 +97,7 @@
     </a-modal>
 
     <!-- 内容查看弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="showContentModal"
       :title="currentSkillContent?.name || 'Skill 内容'"
       :width="700"
@@ -111,14 +111,14 @@
     </a-modal>
 
     <!-- Git 导入弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="showGitImportModal"
       title="从 Git 导入 Skill"
       :width="500"
       @ok="handleGitImport"
       :confirm-loading="importing"
     >
-      <a-form :model="{ gitUrl, gitBranch }" layout="vertical">
+      <a-form class="fc-form" :model="{ gitUrl, gitBranch }" layout="vertical">
         <a-form-item label="Git 仓库地址" required>
           <a-input
             v-model="gitUrl"

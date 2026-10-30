@@ -1,41 +1,37 @@
 <template>
-  <div class="specialized-report-view">
+  <div class="specialized-report-view fc-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-left">
-        <a-button type="text" @click="goBack" class="back-button">
+    <WorkspacePageHeader>
+        <template #title>{{ document?.title || '评审报告' }}</template>
+        <template #meta><a-button type="text" @click="goBack" class="back-button">
           <template #icon><icon-arrow-left /></template>
           返回列表
         </a-button>
-        <h1 class="page-title">{{ document?.title || '评审报告' }}</h1>
-        <a-tag v-if="selectedReport" :color="getRatingColor(selectedReport.overall_rating)" class="status-tag">
+<a-tag v-if="selectedReport" :color="getRatingColor(selectedReport.overall_rating)" class="status-tag">
           {{ getRatingText(selectedReport.overall_rating) }}
         </a-tag>
-        <!-- 版本指示器 -->
-        <a-tag
+<a-tag
           v-if="reportVersions.length > 1 && selectedReportId"
           :color="isLatestVersion ? 'green' : 'blue'"
           class="version-indicator"
         >
           {{ isLatestVersion ? '最新版本' : '历史版本' }}
         </a-tag>
-        <!-- 版本选择器 -->
-        <ReportVersionSelector
+<ReportVersionSelector
           v-if="reportVersions.length > 1"
           :report-versions="reportVersions"
           :selected-report-id="selectedReportId"
           :loading="loading"
           @version-change="handleVersionChange"
           class="version-selector"
-        />
-      </div>
-      <div class="header-actions">
+        /></template>
+        <template #actions><div class="header-actions">
         <a-button type="outline" @click="exportReport">
           <template #icon><icon-download /></template>
           导出报告
         </a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
@@ -46,7 +42,7 @@
     <div v-else-if="document && selectedReport" class="report-content">
       <!-- 左侧：专项分析选择器 -->
       <div class="left-panel">
-        <a-card title="📊 专项分析维度" class="analysis-selector-panel">
+        <a-card title=" 专项分析维度" class="analysis-selector-panel fc-panel">
           <!-- 总体评分卡片 -->
           <div class="overall-score-card">
             <div class="score-display">
@@ -60,9 +56,9 @@
                   {{ getRatingText(selectedReport.overall_rating) }}
                 </a-tag>
                 <div class="issues-summary">
-                  <span class="issue-stat high">🔴 {{ selectedReport.high_priority_issues || 0 }} 高</span>
-                  <span class="issue-stat medium">🟡 {{ selectedReport.medium_priority_issues || 0 }} 中</span>
-                  <span class="issue-stat low">🟢 {{ selectedReport.low_priority_issues || 0 }} 低</span>
+                  <span class="issue-stat high"> {{ selectedReport.high_priority_issues || 0 }} 高</span>
+                  <span class="issue-stat medium"> {{ selectedReport.medium_priority_issues || 0 }} 中</span>
+                  <span class="issue-stat low"> {{ selectedReport.low_priority_issues || 0 }} 低</span>
                 </div>
               </div>
             </div>
@@ -73,12 +69,13 @@
             <div
               v-for="analysis in analysisTypes"
               :key="analysis.key"
-              class="analysis-item"
+              class="analysis-item" role="button" tabindex="0"
               :class="{ active: selectedAnalysisType === analysis.key }"
               @click="selectAnalysis(analysis.key)"
+              @keydown.enter.self.prevent="selectAnalysis(analysis.key)"
+              @keydown.space.self.prevent="selectAnalysis(analysis.key)"
             >
               <div class="analysis-header">
-                <span class="analysis-icon">{{ analysis.icon }}</span>
                 <h4 class="analysis-title">{{ analysis.title }}</h4>
               </div>
               <div class="analysis-meta">
@@ -95,14 +92,14 @@
 
       <!-- 右侧：选中专项的详细信息 -->
       <div class="right-panel">
-        <a-card :title="`${getCurrentAnalysis?.icon} ${getCurrentAnalysis?.title}`" class="analysis-detail-panel">
+        <a-card :title="getCurrentAnalysis?.title || '专项分析'" class="analysis-detail-panel fc-panel">
           <template v-if="currentAnalysisData">
             <!-- 评分和总结 -->
             <div class="analysis-summary">
               <div class="summary-header">
                 <div class="summary-score">
                   <div class="score-circle-large">
-                    <span class="score-number">{{ currentAnalysisData.overall_score }}</span>
+                    <span class="score-number">{{ currentAnalysisData.overall_score ?? '—' }}</span>
                     <span class="score-label">分</span>
                   </div>
                 </div>
@@ -115,7 +112,7 @@
 
             <!-- 优势 -->
             <div v-if="currentAnalysisData.strengths && currentAnalysisData.strengths.length > 0" class="strengths-section">
-              <h4>✅ 优势</h4>
+              <h4> 优势</h4>
               <ul class="list-items">
                 <li v-for="(strength, index) in currentAnalysisData.strengths" :key="index">{{ strength }}</li>
               </ul>
@@ -123,7 +120,7 @@
 
             <!-- 改进建议 -->
             <div v-if="currentAnalysisData.recommendations && currentAnalysisData.recommendations.length > 0" class="recommendations-section">
-              <h4>💡 改进建议</h4>
+              <h4> 改进建议</h4>
               <ul class="list-items">
                 <li v-for="(rec, index) in currentAnalysisData.recommendations" :key="index">{{ rec }}</li>
               </ul>
@@ -132,7 +129,7 @@
             <!-- 问题列表 -->
             <div class="issues-section">
               <div class="issues-header">
-                <h4>⚠️ 发现的问题 ({{ currentAnalysisIssues.length }}个)</h4>
+                <h4> 发现的问题 ({{ currentAnalysisIssues.length }}个)</h4>
                 <a-select v-model="priorityFilter" placeholder="按优先级筛选" style="width: 140px" allow-clear>
                   <a-option value="high">高优先级</a-option>
                   <a-option value="medium">中优先级</a-option>
@@ -151,12 +148,12 @@
                       {{ issue.severity || issue.priority || '中' }}
                     </a-tag>
                     <span v-if="issue.category" class="issue-category">{{ issue.category }}</span>
-                    <span v-if="issue.location" class="issue-location">📍 {{ issue.location }}</span>
+                    <span v-if="issue.location" class="issue-location"> {{ issue.location }}</span>
                   </div>
                   <h5 class="issue-title">{{ issue.title || issue.description }}</h5>
                   <p v-if="issue.description && issue.title" class="issue-description">{{ issue.description }}</p>
                   <div v-if="issue.suggestion" class="issue-suggestion">
-                    <strong>💡 建议：</strong>{{ issue.suggestion }}
+                    <strong> 建议：</strong>{{ issue.suggestion }}
                   </div>
                 </div>
               </div>
@@ -182,6 +179,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
@@ -430,7 +428,7 @@ onMounted(() => {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -487,7 +485,7 @@ onMounted(() => {
 .overall-score-card {
   margin-bottom: 20px;
   padding: 20px;
-  background: linear-gradient(135deg, #00a0e9 0%, #0090d1 100%);
+  background: linear-gradient(135deg, var(--theme-accent) 0%, #0090d1 100%);
   border-radius: 12px;
   color: white;
 }
@@ -550,7 +548,7 @@ onMounted(() => {
 
 .analysis-item {
   padding: 16px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -558,13 +556,13 @@ onMounted(() => {
 }
 
 .analysis-item:hover {
-  background: #f7f8fa;
-  border-color: #00a0e9;
+  background: var(--theme-surface-soft);
+  border-color: var(--theme-accent);
 }
 
 .analysis-item.active {
   background: #e8f4ff;
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(0, 160, 233, 0.15);
 }
 
@@ -581,7 +579,7 @@ onMounted(() => {
 
 .analysis-title {
   margin: 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
@@ -601,16 +599,16 @@ onMounted(() => {
 .score-value {
   font-size: 20px;
   font-weight: bold;
-  color: #00a0e9;
+  color: var(--theme-accent);
 }
 
 .score-max {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .analysis-issues {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
@@ -634,7 +632,7 @@ onMounted(() => {
 .analysis-summary {
   margin-bottom: 24px;
   padding: 20px;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   border-radius: 8px;
 }
 
@@ -649,11 +647,11 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #00a0e9, #0090d1);
-  color: white;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--theme-accent-soft);
+  color: var(--theme-accent);
 }
 
 .summary-score .score-number {
@@ -672,14 +670,14 @@ onMounted(() => {
 
 .summary-text h3 {
   margin: 0 0 12px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 16px;
   font-weight: 600;
 }
 
 .summary-text p {
   margin: 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
 }
 
@@ -704,7 +702,7 @@ onMounted(() => {
 .strengths-section h4,
 .recommendations-section h4 {
   margin: 0 0 12px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
@@ -712,7 +710,7 @@ onMounted(() => {
 .list-items {
   margin: 0;
   padding-left: 20px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.8;
 }
 
@@ -735,7 +733,7 @@ onMounted(() => {
 
 .issues-header h4 {
   margin: 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 16px;
   font-weight: 600;
 }
@@ -749,7 +747,7 @@ onMounted(() => {
 .issue-item {
   padding: 16px;
   background: white;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   transition: all 0.2s;
 }
@@ -767,27 +765,27 @@ onMounted(() => {
 
 .issue-category {
   padding: 2px 8px;
-  background: #f2f3f5;
+  background: var(--theme-surface-soft);
   border-radius: 4px;
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .issue-location {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
 .issue-title {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .issue-description {
   margin: 0 0 12px 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
   font-size: 13px;
 }
@@ -795,15 +793,15 @@ onMounted(() => {
 .issue-suggestion {
   padding: 12px;
   background: #e8f4ff;
-  border-left: 3px solid #00a0e9;
+  border-left: 3px solid var(--theme-accent);
   border-radius: 4px;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
 }
 
 .issue-suggestion strong {
-  color: #00a0e9;
+  color: var(--theme-accent);
 }
 
 .no-issues,

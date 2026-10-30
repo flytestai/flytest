@@ -1,5 +1,5 @@
 <template>
-  <div class="diagram-container">
+  <div class="diagram-container fc-page">
     <!-- 全屏图表区域 -->
     <div class="diagram-panel">
       <div class="diagram-header">

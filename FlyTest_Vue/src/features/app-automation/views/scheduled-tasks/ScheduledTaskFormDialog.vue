@@ -1,11 +1,11 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑定时任务' : '新建定时任务'"
     width="820px"
     @before-ok="done => emit('before-ok', done)"
   >
-    <a-form :model="form" layout="vertical">
+    <a-form class="fc-form" :model="form" layout="vertical">
       <a-row :gutter="12">
         <a-col :span="12">
           <a-form-item field="name" label="任务名称">

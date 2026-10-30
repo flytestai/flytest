@@ -1,6 +1,6 @@
 <template>
-  <div class="execution-record-list">
-    <div class="page-header">
+  <div class="execution-record-list fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-select
           v-model="filters.status"
@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="recordData"
       :pagination="pagination"
@@ -71,14 +71,14 @@
       </template>
     </a-table>
 
-    <a-drawer
+    <a-drawer class="fc-drawer"
       v-model:visible="drawerVisible"
       title="执行记录详情"
       width="700px"
       unmount-on-close
     >
       <template v-if="currentRecord">
-        <a-descriptions :column="2" bordered size="small">
+        <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
           <a-descriptions-item label="用例名称">{{ currentRecord.test_case_name ?? `ID: ${currentRecord.test_case}` }}</a-descriptions-item>
           <a-descriptions-item label="执行人">{{ currentRecord.executor_name ?? '-' }}</a-descriptions-item>
           <a-descriptions-item label="执行状态">

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="configs"
       :loading="loading"
@@ -49,7 +49,7 @@
       </template>
       <template #actions="{ record }">
         <a-space>
-          <a-button type="primary" size="small" :disabled="record.can_edit === false" @click="emit('edit', record)">
+          <a-button type="text" size="small" :disabled="record.can_edit === false" @click="emit('edit', record)">
             <template #icon><icon-edit /></template>
             编辑
           </a-button>
@@ -58,7 +58,7 @@
             type="warning"
             @ok="emit('delete', record.id)"
           >
-            <a-button type="primary" status="danger" size="small" :disabled="record.can_edit === false">
+            <a-button type="text" status="danger" size="small" :disabled="record.can_edit === false">
               <template #icon><icon-delete /></template>
               删除
             </a-button>

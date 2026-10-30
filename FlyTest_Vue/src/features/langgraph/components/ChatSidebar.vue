@@ -183,15 +183,15 @@ const formatTime = (date: Date) => {
 <style scoped>
 .chat-sidebar {
   width: 280px;
-  background-color: #ffffff;
-  border-right: 1px solid #e5e6eb;
+  background-color: var(--theme-surface);
+  border-right: 1px solid var(--theme-border);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-header {
   padding: 16px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .header-row {
@@ -208,7 +208,7 @@ const formatTime = (date: Date) => {
 
 .empty-history {
   padding: 16px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   text-align: center;
 }
 
@@ -223,11 +223,11 @@ const formatTime = (date: Date) => {
 }
 
 .chat-history-item:hover {
-  background-color: #f2f3f5;
+  background-color: var(--theme-surface-soft);
 }
 
 .chat-history-item.active {
-  background-color: #e8f3ff;
+  background-color: var(--theme-accent-soft);
 }
 
 .history-item-checkbox {
@@ -245,7 +245,7 @@ const formatTime = (date: Date) => {
 
 .history-item-icon {
   font-size: 16px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   margin-right: 8px;
 }
 
@@ -257,7 +257,7 @@ const formatTime = (date: Date) => {
 .history-item-title {
   font-size: 14px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--theme-text);
   margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -266,7 +266,7 @@ const formatTime = (date: Date) => {
 
 .history-item-time {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .history-item-actions {

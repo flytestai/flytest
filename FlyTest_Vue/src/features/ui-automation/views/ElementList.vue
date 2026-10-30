@@ -1,5 +1,5 @@
 <template>
-  <div class="element-list">
+  <div class="element-list fc-page">
     <div class="element-header">
       <a-input-search
         v-model="searchKey"
@@ -15,7 +15,7 @@
       </a-button>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="elementData"
       :loading="loading"
@@ -51,7 +51,7 @@
     </a-table>
 
     <!-- 新增/编辑弹窗 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEdit ? '编辑元素' : '新增元素'"
       :ok-loading="submitting"
@@ -59,7 +59,7 @@
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" :rules="rules" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" :rules="rules" layout="vertical">
         <a-form-item field="name" label="元素名称" required>
           <a-input v-model="formData.name" placeholder="请输入元素名称" :max-length="64" />
         </a-form-item>

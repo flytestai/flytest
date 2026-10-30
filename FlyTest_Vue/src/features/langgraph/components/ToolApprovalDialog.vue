@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="props.visible"
     :mask-closable="false"
     :closable="false"
@@ -272,7 +272,7 @@ const handleReject = async () => {
 
 /* 工具信息卡片 */
 .tool-card {
-  background: linear-gradient(135deg, #f7f8fa 0%, #f2f3f5 100%);
+  background: linear-gradient(135deg, var(--theme-surface-soft) 0%, var(--theme-surface-soft) 100%);
   border: 1px solid var(--color-border-2);
   border-radius: 12px;
   padding: 16px;

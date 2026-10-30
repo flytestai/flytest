@@ -1,12 +1,9 @@
 <template>
-  <div class="page-shell">
-    <section class="settings-hero">
-      <div class="settings-hero__copy">
-        <span class="settings-hero__eyebrow">Environment Setup</span>
-        <h3>环境设置</h3>
-        <p>统一管理 ADB、运行环境与自动化服务状态，让执行链路更稳定、排查更直接。</p>
-      </div>
-      <div class="settings-hero__meta">
+  <div class="page-shell fc-page">
+    <WorkspacePageHeader>
+        <template #title>环境设置</template>
+        <template #description>统一管理 ADB、运行环境与自动化服务状态，让执行链路更稳定、排查更直接。</template>
+        <template #meta><div class="settings-hero__meta">
         <div class="settings-meta-card">
           <span>运行能力</span>
           <strong>{{ readyCapabilityCount }}</strong>
@@ -15,8 +12,8 @@
           <span>依赖组件</span>
           <strong>{{ installedDependencyCount }}</strong>
         </div>
-      </div>
-    </section>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div class="settings-shell">
       <SettingsServiceHealthCard
@@ -68,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import {
   SettingsAdbDiagnosticsCard,
   SettingsEnvironmentCard,

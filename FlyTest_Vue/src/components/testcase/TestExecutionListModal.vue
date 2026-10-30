@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     title="测试执行历史"
     :width="1400"
@@ -9,7 +9,7 @@
   >
     <div class="execution-list-container">
       <!-- 搜索和筛选 -->
-      <div class="filter-section">
+      <div class="filter-section fc-toolbar">
         <a-space>
           <a-input
             v-model="searchKeyword"
@@ -48,7 +48,7 @@
       </div>
 
       <!-- 执行列表 -->
-      <a-table
+      <a-table class="fc-table"
         :data="executionData"
         :loading="loading"
         :pagination="false"
@@ -104,7 +104,7 @@
         <template #actions="{ record }">
           <a-space>
             <a-button
-              type="primary"
+              type="text"
               size="small"
               @click="handleViewReport(record)"
             >
@@ -444,6 +444,6 @@ onUnmounted(() => {
 .rate-text {
   font-weight: 500;
   font-size: 12px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 </style>

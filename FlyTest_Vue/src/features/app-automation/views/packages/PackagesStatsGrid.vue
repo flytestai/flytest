@@ -1,21 +1,21 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">应用包总数</span>
       <strong>{{ stats.total }}</strong>
       <span class="stat-desc">当前筛选范围内可管理的 APP 包数量</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">Android 包</span>
       <strong>{{ stats.android }}</strong>
       <span class="stat-desc">适用于 Android 设备执行与调试</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">iOS 包</span>
       <strong>{{ stats.ios }}</strong>
       <span class="stat-desc">已登记的 iOS 包与启动信息</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">已配置 Activity</span>
       <strong>{{ stats.configuredActivity }}</strong>
       <span class="stat-desc">可直接用于启动或执行的应用包</span>

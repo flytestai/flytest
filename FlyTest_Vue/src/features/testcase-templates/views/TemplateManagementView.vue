@@ -1,17 +1,17 @@
 <template>
-  <div class="template-management-view">
-    <a-page-header title="用例导入导出模版管理" :show-back="true" @back="$router.back()">
-      <template #extra>
+  <div class="template-management-view fc-page">
+    <WorkspacePageHeader title="用例模板" description="维护测试用例导入导出的字段映射与文件格式。" :show-back="true" @back="$router.back()">
+      <template #actions>
         <a-button type="primary" @click="handleCreate">
           <template #icon><icon-plus /></template>
           新建模版
         </a-button>
       </template>
-    </a-page-header>
+    </WorkspacePageHeader>
 
-    <a-card class="template-list-card">
+    <a-card class="template-list-card fc-panel">
       <!-- 筛选栏 -->
-      <div class="filter-bar">
+      <div class="filter-bar fc-toolbar">
         <a-space>
           <a-select
             v-model="filters.template_type"
@@ -38,7 +38,7 @@
       </div>
 
       <!-- 模版列表 -->
-      <a-table
+      <a-table class="fc-table"
         :columns="columns"
         :data="templates"
         :loading="loading"
@@ -94,6 +94,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { IconPlus, IconFileImage } from '@arco-design/web-vue/es/icon';
@@ -309,7 +310,7 @@ onMounted(() => {
 .template-list-card :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
   font-weight: 600;
-  color: #42526d;
+  color: var(--theme-text-secondary);
 }
 
 .template-list-card :deep(.arco-table-tr:hover .arco-table-td) {

@@ -1,17 +1,16 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>执行报告</h3>
-      <p>从套件报告和执行明细两个维度查看 APP 自动化结果，支持快速定位报告、日志和执行证据。</p>
-    </div>
-    <a-space>
+  <WorkspacePageHeader>
+        <template #title>执行报告</template>
+        <template #description>从套件报告和执行明细两个维度查看 APP 自动化结果，支持快速定位报告、日志和执行证据。</template>
+        <template #actions><a-space>
       <span class="header-tip">最近刷新：{{ lastUpdatedText }}</span>
       <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { ReportsHeaderBarEmits } from './reportEventModels'
 import type { ReportsHeaderBarProps } from './reportViewModels'
 

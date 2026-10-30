@@ -1,5 +1,5 @@
 <template>
-  <a-card class="ai-status-card">
+  <a-card class="ai-status-card fc-panel">
     <div class="ai-status-header">
       <div class="ai-status-copy">
         <span class="ai-status-kicker">AI 智能模式</span>

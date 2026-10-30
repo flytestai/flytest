@@ -1,6 +1,6 @@
 <template>
-  <div class="page-shell">
-    <div v-if="!projectStore.currentProjectId" class="empty-shell">
+  <div class="page-shell fc-page">
+    <div v-if="!projectStore.currentProjectId" class="empty-shell fc-empty-state">
       <a-empty description="请选择项目后再配置 APP 定时任务" />
     </div>
     <template v-else>

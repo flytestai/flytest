@@ -1,6 +1,6 @@
 <template>
   <div class="collection-panel-wrapper">
-    <a-card class="collection-panel" :bordered="false">
+    <a-card class="collection-panel fc-directory fc-panel" :bordered="false">
       <div class="collection-panel-content">
         <div class="collection-panel-head">
           <div class="collection-panel-head__eyebrow">API Automation</div>
@@ -99,14 +99,14 @@
       </div>
     </a-card>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
       :title="isEditing ? '编辑接口目录' : '新增接口目录'"
       :ok-loading="submitLoading"
       @before-ok="handleSubmit"
       @cancel="handleCancel"
     >
-      <a-form ref="formRef" :model="formData" layout="vertical">
+      <a-form class="fc-form" ref="formRef" :model="formData" layout="vertical">
         <a-form-item v-if="parentCollection" label="父目录">
           <a-input :model-value="parentCollection.name" disabled />
         </a-form-item>
@@ -571,20 +571,20 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .collection-panel-head__title {
   font-size: 28px;
   font-weight: 800;
   line-height: 1.08;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .collection-panel-head__desc {
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .collection-overview {
@@ -605,14 +605,14 @@ defineExpose({
 
 .collection-overview__label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .collection-overview__value {
   font-size: 24px;
   font-weight: 800;
   line-height: 1;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .collection-panel-header {
@@ -718,11 +718,11 @@ defineExpose({
 
 .tree-node__count {
   background: rgba(37, 99, 235, 0.08);
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .tree-node--request .tree-node__name {
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .collection-loading-container {

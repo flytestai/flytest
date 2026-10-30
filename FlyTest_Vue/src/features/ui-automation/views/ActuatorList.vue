@@ -1,5 +1,5 @@
 <template>
-  <div class="actuator-list">
+  <div class="actuator-list fc-page">
     <div class="header">
       <div class="title">
         <h3>在线执行器</h3>
@@ -22,7 +22,7 @@
       请先启动执行器服务：`cd FlyTest_Actuator && .venv\Scripts\python.exe main.py --no-gui`
     </a-alert>
 
-    <a-table
+    <a-table class="fc-table"
       :data="actuators"
       :loading="loading"
       :pagination="false"

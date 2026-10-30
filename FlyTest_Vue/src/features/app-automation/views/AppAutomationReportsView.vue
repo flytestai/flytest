@@ -1,6 +1,6 @@
 <template>
-  <div class="page-shell">
-    <div v-if="!projectStore.currentProjectId" class="empty-shell">
+  <div class="page-shell fc-page">
+    <div v-if="!projectStore.currentProjectId" class="empty-shell fc-empty-state">
       <a-empty description="请先选择项目后再查看 APP 自动化执行报告" />
     </div>
     <template v-else>
@@ -10,7 +10,7 @@
         @refresh="loadData"
       />
 
-      <a-tabs v-model:active-key="activeTab" class="report-tabs">
+      <a-tabs v-model:active-key="activeTab" class="report-tabs fc-tabs">
         <a-tab-pane key="suite" title="套件报告">
           <ReportsSuitePanel
             :loading="loading"

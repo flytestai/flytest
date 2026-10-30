@@ -1,5 +1,5 @@
 <template>
-  <a-card class="filter-card">
+  <a-card class="filter-card fc-filter-panel fc-panel">
     <div class="filter-header">
       <div class="filter-header-copy">
         <span class="filter-kicker">Task Filter</span>

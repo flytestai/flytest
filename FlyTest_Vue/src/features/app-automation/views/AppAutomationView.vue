@@ -1,5 +1,5 @@
 <template>
-  <div class="app-automation-shell">
+  <div class="app-automation-shell fc-page">
     <div class="app-automation-layout">
       <component :is="activeDefinition.component" />
     </div>

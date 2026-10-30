@@ -1,5 +1,5 @@
 <template>
-  <a-card class="draft-form-card">
+  <a-card class="draft-form-card fc-panel">
     <template #title>
       <div class="card-title">
         <div class="card-title-copy">
@@ -10,7 +10,7 @@
       </div>
     </template>
 
-    <a-form :model="draft" layout="vertical">
+    <a-form class="fc-form" :model="draft" layout="vertical">
       <a-row :gutter="12">
         <a-col :xs="24" :md="8">
           <a-form-item field="caseId" label="加载已有用例">

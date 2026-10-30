@@ -129,7 +129,7 @@ const getRatingColor = (rating: Rating) => {
 
 .version-label {
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   flex: 1;
   white-space: nowrap;
@@ -152,13 +152,13 @@ const getRatingColor = (rating: Rating) => {
 }
 
 .version-date {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .version-score {
-  color: #00a0e9;
+  color: var(--theme-accent);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -172,7 +172,7 @@ const getRatingColor = (rating: Rating) => {
 }
 
 .issues-count {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .high-priority {
@@ -193,7 +193,7 @@ const getRatingColor = (rating: Rating) => {
 }
 
 :deep(.arco-select-option:hover) {
-  background-color: #f2f3f5;
+  background-color: var(--theme-surface-soft);
 }
 
 :deep(.arco-select-option-content) {

@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleProxy"
     title="从设备截图创建元素"
     width="1180px"
@@ -44,7 +44,7 @@
       </div>
 
       <div class="capture-sidebar">
-        <a-form :model="form" layout="vertical">
+        <a-form class="fc-form" :model="form" layout="vertical">
           <a-form-item label="选择设备" required>
             <a-select v-model="selectedDeviceId" :loading="devicesLoading" placeholder="请选择设备" allow-search>
               <a-option v-for="device in devices" :key="device.id" :value="device.id">
@@ -96,11 +96,11 @@
             </a-form-item>
 
             <div class="summary-grid">
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">匹配阈值</span>
                 <a-input-number v-model="form.threshold" :min="0.5" :max="1" :step="0.05" />
               </div>
-              <div class="summary-card summary-card-switch">
+              <div class="summary-card summary-card-switch fc-metric">
                 <span class="summary-label">颜色模式</span>
                 <label class="switch-row">
                   <a-switch v-model="form.rgb" />
@@ -112,11 +112,11 @@
 
           <template v-else-if="form.element_type === 'pos'">
             <div class="summary-grid">
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">坐标 X</span>
                 <strong>{{ pointNatural?.x ?? '-' }}</strong>
               </div>
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">坐标 Y</span>
                 <strong>{{ pointNatural?.y ?? '-' }}</strong>
               </div>
@@ -125,15 +125,15 @@
 
           <template v-else>
             <div class="summary-grid summary-grid-region">
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">左上角</span>
                 <strong>{{ regionSummary.start }}</strong>
               </div>
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">右下角</span>
                 <strong>{{ regionSummary.end }}</strong>
               </div>
-              <div class="summary-card">
+              <div class="summary-card fc-metric">
                 <span class="summary-label">尺寸</span>
                 <strong>{{ regionSummary.size }}</strong>
               </div>

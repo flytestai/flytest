@@ -8,7 +8,7 @@
       :popup-translate="[0, 12]"
       @popup-visible-change="handlePopupVisibleChange"
     >
-      <button type="button" class="notification-button" aria-label="站内通知" title="站内通知">
+      <button type="button" class="notification-button fc-native-action" aria-label="站内通知" title="站内通知">
         <a-badge :count="unreadCount" :max-count="99">
           <icon-notification class="notification-icon" />
         </a-badge>
@@ -31,7 +31,7 @@
               v-for="item in notifications"
               :key="item.id"
               type="button"
-              class="notification-item"
+              class="notification-item fc-native-action"
               :class="{ 'notification-item--unread': !item.is_read }"
               @click="openNotificationDetail(item)"
             >
@@ -56,7 +56,7 @@
       </template>
     </a-trigger>
 
-    <a-drawer :visible="detailVisible" :width="720" unmount-on-close @cancel="closeDetail">
+    <a-drawer class="fc-drawer" :visible="detailVisible" :width="720" unmount-on-close @cancel="closeDetail">
       <template #title>通知详情</template>
       <div v-if="detailLoading" class="notification-detail__state">正在加载通知内容...</div>
       <div v-else-if="detailItem" class="notification-detail">
@@ -113,7 +113,7 @@
       </div>
     </a-drawer>
 
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="sendModalVisible"
       title="发送站内通知"
       :width="680"
@@ -121,7 +121,7 @@
       @before-ok="handleSubmitNotification"
       @close="resetForm"
     >
-      <a-form :model="sendForm" layout="vertical">
+      <a-form class="fc-form" :model="sendForm" layout="vertical">
         <a-form-item field="scope" label="通知范围">
           <a-radio-group v-model="sendForm.scope" @change="handleScopeChange">
             <a-radio value="all">通知所有人</a-radio>

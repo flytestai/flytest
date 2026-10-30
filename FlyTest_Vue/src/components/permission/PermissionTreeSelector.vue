@@ -486,13 +486,13 @@ defineExpose({
   align-items: center;
   margin-bottom: 16px;
   padding: 16px;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   border-radius: 6px;
 }
 
 .tree-container {
   flex: 1;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   padding: 16px;
   min-height: 0;
@@ -510,7 +510,7 @@ defineExpose({
 }
 
 .permission-count {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="AI生成用例"
     :confirm-loading="generating"
@@ -12,7 +12,7 @@
       会自动带入当前模块的已有测试用例和需求来源，按追加方式生成新用例，并尽量避免与现有列表重复。
     </a-alert>
 
-    <a-form :model="formState" layout="vertical">
+    <a-form class="fc-form" :model="formState" layout="vertical">
       <a-form-item label="当前模块">
         <a-input :model-value="moduleName || '未选择模块'" disabled />
       </a-form-item>

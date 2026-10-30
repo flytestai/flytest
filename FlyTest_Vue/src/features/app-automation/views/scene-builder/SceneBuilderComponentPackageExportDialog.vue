@@ -1,15 +1,15 @@
 <template>
-  <a-modal v-model:visible="visibleModel" width="560px">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" width="560px">
     <template #title>导出组件包</template>
 
     <div class="dialog-shell">
-      <div class="dialog-intro">
+      <div class="dialog-intro fc-dialog-intro">
         <span class="dialog-kicker">Package Export</span>
         <strong>导出可复用的场景组件集合</strong>
         <p>补充组件包名称、版本和说明后，可以导出为 JSON 或 YAML，在其他环境中直接复用。</p>
       </div>
 
-      <a-form layout="vertical" class="dialog-form">
+      <a-form layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
           <a-form-item label="组件包名称">
             <a-input v-model="form.name" placeholder="例如 app-component-pack" />

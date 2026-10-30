@@ -1,6 +1,6 @@
 <template>
-  <a-modal v-model:visible="visibleModel" title="执行测试套件" @ok="emit('run')">
-    <a-form :model="runForm" layout="vertical">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="执行测试套件" @ok="emit('run')">
+    <a-form class="fc-form" :model="runForm" layout="vertical">
       <a-form-item field="device_id" label="执行设备">
         <a-select v-model="runForm.device_id" placeholder="请选择可用设备">
           <a-option v-for="item in availableDevices" :key="item.id" :value="item.id">

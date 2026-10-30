@@ -1,21 +1,21 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">日志总数</span>
       <strong>{{ statistics.total }}</strong>
       <span class="stat-desc">当前筛选范围内的通知记录数量</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">发送成功</span>
       <strong>{{ statistics.success }}</strong>
       <span class="stat-desc">成功送达邮箱或 Webhook 的记录</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">发送失败</span>
       <strong>{{ statistics.failed }}</strong>
       <span class="stat-desc">失败记录可进入详情查看投递上下文</span>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">历史重试</span>
       <strong>{{ statistics.retried }}</strong>
       <span class="stat-desc">保留历史上的已重试记录统计</span>

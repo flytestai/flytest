@@ -30,7 +30,7 @@
       ref="fileInputRef"
       type="file"
       multiple
-      class="hidden-file-input"
+      class="hidden-file-input fc-native-input"
       accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.zip,.rar,.7z"
       @change="handleFileChange"
     />
@@ -197,7 +197,7 @@ const handleFileChange = (event: Event) => {
   max-width: 100%;
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
-  background: var(--ui-panel-bg, #fff);
+  background: var(--ui-panel-bg, var(--theme-surface));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
   box-sizing: border-box;
   overflow: hidden;

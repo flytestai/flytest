@@ -1,6 +1,6 @@
 <template>
-  <div class="organization-management">
-    <div class="page-header">
+  <div class="organization-management fc-page">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-input-search
           placeholder="搜索组织名称/代码"
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="organizationData"
       :pagination="pagination"
@@ -25,16 +25,16 @@
     >
       <template #operations="{ record }">
         <a-space :size="4">
-          <a-button type="primary" size="mini" @click="viewOrganizationMembers(record, $event)">成员</a-button>
-          <a-button type="primary" size="mini" @click="viewOrganizationPermissions(record, $event)">权限</a-button>
-          <a-button type="primary" size="mini" @click="editOrganization(record, $event)">编辑</a-button>
-          <a-button type="primary" status="danger" size="mini" @click="deleteOrganization(record, $event)">删除</a-button>
+          <a-button type="text" size="mini" @click="viewOrganizationMembers(record, $event)">成员</a-button>
+          <a-button type="text" size="mini" @click="viewOrganizationPermissions(record, $event)">权限</a-button>
+          <a-button type="text" size="mini" @click="editOrganization(record, $event)">编辑</a-button>
+          <a-button type="text" status="danger" size="mini" @click="deleteOrganization(record, $event)">删除</a-button>
         </a-space>
       </template>
     </a-table>
 
     <!-- 组织成员管理 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="membersModalVisible"
       title="组织成员管理"
       :footer="false"
@@ -48,7 +48,7 @@
     </a-modal>
 
     <!-- 组织权限管理 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="permissionsModalVisible"
       title="组织权限管理"
       :footer="false"
@@ -65,7 +65,7 @@
     </a-modal>
 
     <!-- 添加组织模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="addOrganizationModalVisible"
       title="添加组织"
       @cancel="cancelAddOrganization"
@@ -73,7 +73,7 @@
       :mask-closable="false"
       :width="600"
     >
-      <a-form ref="addOrganizationFormRef" :model="addOrganizationForm" :rules="addOrganizationRules" layout="vertical" :auto-label-width="false">
+      <a-form class="fc-form" ref="addOrganizationFormRef" :model="addOrganizationForm" :rules="addOrganizationRules" layout="vertical" :auto-label-width="false">
         <a-row :gutter="16">
           <a-col :span="24">
             <a-form-item field="name" label="组织名称" required>
@@ -85,7 +85,7 @@
     </a-modal>
 
     <!-- 编辑组织模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editOrganizationModalVisible"
       title="编辑组织"
       @cancel="cancelEditOrganization"
@@ -93,7 +93,7 @@
       :mask-closable="false"
       :width="600"
     >
-      <a-form ref="editOrganizationFormRef" :model="editOrganizationForm" :rules="editOrganizationRules" layout="vertical" :auto-label-width="false">
+      <a-form class="fc-form" ref="editOrganizationFormRef" :model="editOrganizationForm" :rules="editOrganizationRules" layout="vertical" :auto-label-width="false">
         <a-row :gutter="16">
           <a-col :span="24">
             <a-form-item field="name" label="组织名称" required>
@@ -479,7 +479,7 @@ const deleteOrganization = (organization: Organization, event?: Event) => {
 
 .organization-management :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

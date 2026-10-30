@@ -1,27 +1,24 @@
 <template>
-  <div class="document-detail">
+  <div class="document-detail fc-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-left">
-        <a-button type="text" @click="goBack" class="back-button">
+    <WorkspacePageHeader>
+        <template #title>{{ document?.title || '文档详情' }}</template>
+        <template #meta><a-button type="text" @click="goBack" class="back-button">
           <template #icon><icon-arrow-left /></template>
           返回列表
         </a-button>
-        <h1 class="page-title">{{ document?.title || '文档详情' }}</h1>
-        <a-tag :color="getStatusColor(document?.status)" class="status-tag">
+<a-tag :color="getStatusColor(document?.status)" class="status-tag">
           {{ getStatusText(document?.status) }}
         </a-tag>
-        <!-- 评审进度展示 -->
-        <div v-if="document?.status === 'reviewing' && reviewProgress" class="review-progress">
+<div v-if="document?.status === 'reviewing' && reviewProgress" class="review-progress">
           <a-progress
             :percent="reviewProgress.progress"
             :stroke-width="8"
             :style="{ width: '180px' }"
           />
           <span class="progress-step">{{ reviewProgress.current_step }}</span>
-        </div>
-      </div>
-      <div class="header-actions">
+        </div></template>
+        <template #actions><div class="header-actions">
         <!-- 上传状态优先拆分 -->
         <a-button
           v-if="document?.status === 'uploaded'"
@@ -84,12 +81,12 @@
           <template #icon><icon-refresh /></template>
           重新评审
         </a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <!-- 文档信息卡片 -->
-    <div class="info-section">
-      <a-card title="文档信息" class="info-card">
+    <div class="info-section fc-section">
+      <a-card title="文档信息" class="info-card fc-panel">
         <div class="info-grid">
           <div class="info-item">
             <span class="label">文档类型：</span>
@@ -147,7 +144,7 @@
 
     <!-- 工作流程指示器 -->
     <div v-if="document" class="workflow-indicator">
-      <a-card title="📋 评审工作流程" class="workflow-card">
+      <a-card title="📋 评审工作流程" class="workflow-card fc-panel">
         <a-steps :current="getCurrentStep(document.status)" size="small">
           <a-step title="文档上传" description="上传需求文档">
             <template #icon>
@@ -181,7 +178,7 @@
 
     <!-- 模块管理区域 -->
     <div v-if="document?.modules && document.modules.length > 0" class="modules-section">
-      <a-card class="modules-card">
+      <a-card class="modules-card fc-panel">
         <template #title>
           <div class="modules-header">
             <span>{{ document.status === 'review_completed' ? '模块详情' : '模块管理' }} ({{ document.modules.length }}个)</span>
@@ -295,7 +292,7 @@
           </div>
 
           <!-- 标题编辑模态框 -->
-          <a-modal
+          <a-modal class="fc-dialog"
             v-model:visible="titleEditVisible"
             title="编辑模块标题"
             width="400px"
@@ -359,14 +356,14 @@
     </div>
 
     <!-- 模块编辑模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editModalVisible"
       title="编辑模块"
       width="800px"
       @ok="saveModule"
       @cancel="cancelModalEdit"
     >
-      <a-form
+      <a-form class="fc-form"
         ref="editFormRef"
         :model="editForm"
         layout="vertical"
@@ -398,7 +395,7 @@
     />
 
     <!-- 评审配置模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="reviewConfigVisible"
       :title="reviewAction === 'restart' ? '重新评审配置' : '评审配置'"
       @ok="confirmReview"
@@ -408,7 +405,7 @@
         重新评审将创建新的评审报告，原有报告将保留。
       </a-alert>
       
-      <a-form :model="reviewConfig" layout="vertical">
+      <a-form class="fc-form" :model="reviewConfig" layout="vertical">
         <a-form-item label="并发分析数量" field="max_workers">
           <a-select v-model="reviewConfig.max_workers" placeholder="请选择并发数量">
             <a-option :value="1">1 (串行分析 - 最慢但最稳定)</a-option>
@@ -426,6 +423,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, h, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Message, Modal, Input as AInput } from '@arco-design/web-vue';
@@ -1224,7 +1222,7 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   flex: 1; /* 标题占据剩余空间 */
   min-width: 0; /* 允许标题收缩 */
   white-space: nowrap;
@@ -1285,21 +1283,21 @@ onBeforeUnmount(() => {
 
 .label {
   font-weight: 500;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 14px;
   white-space: nowrap;
 }
 
 .info-item span:not(.label) {
   font-size: 14px;
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .description {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  border-top: 1px solid #f2f3f5;
+  border-top: 1px solid var(--theme-surface-soft);
   padding-top: 16px;
   max-width: 100%;
   overflow: hidden; /* 确保容器不溢出 */
@@ -1357,7 +1355,7 @@ onBeforeUnmount(() => {
 }
 
 .module-item {
-  border: 1px solid #f2f3f5;
+  border: 1px solid var(--theme-surface-soft);
   border-radius: 8px;
   padding: 16px;
   background: #fafafa;
@@ -1366,19 +1364,19 @@ onBeforeUnmount(() => {
 }
 
 .module-item:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(0, 160, 233, 0.1);
 }
 
 
 
 .module-item.editing {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: #f0f8ff;
 }
 
 .module-item.selected {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: #e6f4ff;
 }
 
@@ -1406,7 +1404,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #00a0e9;
+  background: var(--theme-accent);
   color: white;
   border-radius: 50%;
   font-size: 12px;
@@ -1423,7 +1421,7 @@ onBeforeUnmount(() => {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--theme-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1438,7 +1436,7 @@ onBeforeUnmount(() => {
   opacity: 0;
   transition: opacity 0.2s;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .title-edit {
@@ -1454,7 +1452,7 @@ onBeforeUnmount(() => {
 
 .page-range {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 .module-actions {
@@ -1470,7 +1468,7 @@ onBeforeUnmount(() => {
   max-height: 100px;
   overflow: hidden;
   line-height: 1.6;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   white-space: pre-wrap;
   transition: max-height 0.3s;
 }
@@ -1504,19 +1502,19 @@ onBeforeUnmount(() => {
   padding: 12px;
   background: white;
   border-radius: 6px;
-  border: 1px solid #f2f3f5;
+  border: 1px solid var(--theme-surface-soft);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .content-display:hover {
-  border-color: #00a0e9;
+  border-color: var(--theme-accent);
   background: #f8faff;
 }
 
 .content-text {
   line-height: 1.6;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   white-space: pre-wrap;
   margin-bottom: 8px;
 }
@@ -1526,7 +1524,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -1613,7 +1611,7 @@ onBeforeUnmount(() => {
 }
 
 .unified-content.editing-mode {
-  background: #fafbfc;
+  background: var(--theme-surface-soft);
 }
 
 .content-segment {
@@ -1624,7 +1622,7 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   padding: 16px;
   border: 2px solid #e9ecef;
-  background: #fafbfc;
+  background: var(--theme-surface-soft);
   min-height: 60px;
 }
 
@@ -1646,8 +1644,8 @@ onBeforeUnmount(() => {
 }
 
 .content-segment.editing {
-  background: #fff;
-  border: 2px solid #00a0e9;
+  background: var(--theme-surface);
+  border: 2px solid var(--theme-accent);
   box-shadow: 0 4px 16px rgba(0, 160, 233, 0.25);
 }
 
@@ -1693,7 +1691,7 @@ onBeforeUnmount(() => {
 
 /* 模块标题框内的按钮样式 - 白色主题 */
 .label-actions .module-action-btn {
-  color: #ffffff !important; /* 按钮颜色为白色，使用important强制覆盖 */
+  color: #fff !important; /* 按钮颜色为白色，使用important强制覆盖 */
   background-color: rgba(255, 255, 255, 0.2) !important; /* 半透明白色背景 */
   border-radius: 4px;
   padding: 4px 8px;
@@ -1702,7 +1700,7 @@ onBeforeUnmount(() => {
 }
 
 .label-actions .module-action-btn:hover {
-  color: #ffffff !important; /* 悬停时保持白色 */
+  color: #fff !important; /* 悬停时保持白色 */
   background-color: rgba(255, 255, 255, 0.3) !important; /* 悬停时背景色加深 */
   border-color: rgba(255, 255, 255, 0.5) !important; /* 悬停时边框颜色加深 */
   transform: translateY(-1px); /* 悬停时轻微上浮 */
@@ -1720,29 +1718,29 @@ onBeforeUnmount(() => {
 .label-actions .module-action-btn i,
 .label-actions .edit-btn .arco-icon-edit,
 .label-actions .split-btn .arco-icon-scissor {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-  stroke: #ffffff !important;
+  color: #fff !important;
+  fill: var(--theme-surface) !important;
+  stroke: var(--theme-surface) !important;
 }
 
 /* 确保所有子元素都继承白色 */
 .label-actions .module-action-btn * {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-  stroke: #ffffff !important;
+  color: #fff !important;
+  fill: var(--theme-surface) !important;
+  stroke: var(--theme-surface) !important;
 }
 
 /* 针对编辑按钮和拆分按钮的统一白色样式 */
 .label-actions .edit-btn,
 .label-actions .split-btn {
-  color: #ffffff !important;
+  color: #fff !important;
   background-color: rgba(255, 255, 255, 0.2) !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 .label-actions .edit-btn:hover,
 .label-actions .split-btn:hover {
-  color: #ffffff !important;
+  color: #fff !important;
   background-color: rgba(255, 255, 255, 0.3) !important;
   border-color: rgba(255, 255, 255, 0.5) !important;
 }
@@ -1809,13 +1807,13 @@ onBeforeUnmount(() => {
 
 .segment-content.markdown-body :deep(th),
 .segment-content.markdown-body :deep(td) {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   padding: 8px 12px;
   text-align: left;
 }
 
 .segment-content.markdown-body :deep(th) {
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   font-weight: 600;
 }
 
@@ -1841,7 +1839,7 @@ onBeforeUnmount(() => {
 }
 
 .segment-content.markdown-body :deep(blockquote) {
-  border-left: 4px solid #e5e6eb;
+  border-left: 4px solid var(--theme-border);
   padding-left: 16px;
   margin: 1em 0;
   color: var(--theme-text-secondary);
@@ -1869,7 +1867,7 @@ onBeforeUnmount(() => {
 
 .edit-hint {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-top: 4px;
   text-align: right;
 }
@@ -1908,12 +1906,12 @@ onBeforeUnmount(() => {
 }
 
 .workflow-card {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
 }
 
 .workflow-card :deep(.arco-card-header) {
-  background: #f7f8fa;
-  border-bottom: 1px solid #e5e6eb;
+  background: var(--theme-surface-soft);
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .workflow-card :deep(.arco-steps-item-title) {
@@ -1922,14 +1920,14 @@ onBeforeUnmount(() => {
 
 .workflow-card :deep(.arco-steps-item-description) {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
 }
 
 /* 上传提示样式 */
 .upload-hint {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e5e6eb;
+  border-top: 1px solid var(--theme-border);
 }
 
 /* 调整警告提示框的布局，确保图标和文字完美对齐并垂直居中 */
@@ -2012,7 +2010,7 @@ onBeforeUnmount(() => {
 }
 
 .review-report-card {
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
 }
 
 .report-overview {
@@ -2025,12 +2023,12 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e5e6eb;
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .report-meta h2 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 20px;
 }
 
@@ -2041,7 +2039,7 @@ onBeforeUnmount(() => {
 }
 
 .report-date {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 14px;
 }
 
@@ -2102,7 +2100,7 @@ onBeforeUnmount(() => {
 
 .stat-item.medium {
   background: #fff7e8;
-  border: 1px solid #ff7d00;
+  border: 1px solid var(--theme-warning);
 }
 
 .stat-item.low {
@@ -2111,8 +2109,8 @@ onBeforeUnmount(() => {
 }
 
 .stat-item.total {
-  background: #f2f3f5;
-  border: 1px solid #86909c;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-text-tertiary);
 }
 
 .stat-number {
@@ -2123,7 +2121,7 @@ onBeforeUnmount(() => {
 
 .stat-label {
   font-size: 12px;
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   margin-top: 4px;
 }
 
@@ -2135,18 +2133,18 @@ onBeforeUnmount(() => {
 .report-summary h4,
 .report-recommendations h4 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
 }
 
 .report-summary p {
   margin: 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
 }
 
 .recommendations-content {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -2158,7 +2156,7 @@ onBeforeUnmount(() => {
 
 .filtered-issues h4 {
   margin-bottom: 16px;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 16px;
   font-weight: 600;
 }
@@ -2176,8 +2174,8 @@ onBeforeUnmount(() => {
 }
 
 .issue-item {
-  background: #fff;
-  border: 1px solid #e5e6eb;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   padding: 16px;
   transition: all 0.2s ease;
@@ -2196,28 +2194,28 @@ onBeforeUnmount(() => {
 
 .issue-content h5 {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .issue-content p {
   margin: 0 0 8px 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   line-height: 1.5;
 }
 
 .issue-suggestion {
   margin-top: 8px;
   padding: 8px 12px;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   border-radius: 4px;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
 }
 
 .issue-suggestion strong {
-  color: #1d2129;
+  color: var(--theme-text);
 }
 
 .module-results,
@@ -2228,7 +2226,7 @@ onBeforeUnmount(() => {
 .module-results h4,
 .issues-list h4 {
   margin: 0 0 16px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 16px;
   font-weight: 600;
 }
@@ -2241,9 +2239,9 @@ onBeforeUnmount(() => {
 
 .module-result-item {
   padding: 16px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
 }
 
 .module-result-header {
@@ -2255,18 +2253,18 @@ onBeforeUnmount(() => {
 
 .module-result-header h5 {
   margin: 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .issues-count {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
 .module-analysis {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -2279,7 +2277,7 @@ onBeforeUnmount(() => {
 
 .issue-item {
   padding: 16px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   background: white;
 }
@@ -2303,29 +2301,29 @@ onBeforeUnmount(() => {
 }
 
 .issue-location {
-  color: #86909c;
+  color: var(--theme-text-tertiary);
   font-size: 12px;
 }
 
 .issue-title {
   margin: 0 0 8px 0;
-  color: #1d2129;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .issue-description {
   margin: 0 0 8px 0;
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .issue-suggestion {
-  color: #4e5969;
+  color: var(--theme-text-secondary);
   font-size: 13px;
   line-height: 1.5;
-  background: #f7f8fa;
+  background: var(--theme-surface-soft);
   padding: 8px;
   border-radius: 4px;
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-view">
+  <div class="dashboard-view fc-page">
     <div v-if="!isApproved" class="approval-pending-card">
       <div class="approval-shell">
         <div class="approval-kicker">Workspace Access</div>

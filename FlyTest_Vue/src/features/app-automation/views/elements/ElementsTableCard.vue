@@ -1,5 +1,5 @@
 <template>
-  <a-card class="table-card">
+  <a-card class="table-card fc-panel">
     <div v-if="selectedElementIdsModel.length" class="batch-bar">
       <span>已选择 <strong>{{ selectedElementIdsModel.length }}</strong> 个元素</span>
       <a-space wrap>
@@ -10,7 +10,7 @@
       </a-space>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       v-model:selectedKeys="selectedElementIdsModel"
       :data="elements"
       :loading="loading"

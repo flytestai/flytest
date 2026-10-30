@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     :visible="visible"
     title="知识库全局配置"
     :width="modalWidth"
@@ -9,7 +9,7 @@
     :modal-style="{ maxWidth: '95vw' }"
   >
     <a-spin :loading="fetchLoading">
-      <a-form
+      <a-form class="fc-form"
         ref="formRef"
         :model="formData"
         :rules="rules"

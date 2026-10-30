@@ -1,18 +1,15 @@
 <template>
-  <div class="data-factory-page">
-    <section class="hero panel">
-      <div>
-        <div class="hero__eyebrow">知识 / 数据工厂</div>
-        <h1 class="hero__title">{{ pageTitle }}</h1>
-        <p class="hero__desc">{{ pageDescription }}</p>
-        <div class="hero__meta">
+  <div class="data-factory-page fc-page">
+    <WorkspacePageHeader>
+        <template #title>{{ pageTitle }}</template>
+        <template #description>{{ pageDescription }}</template>
+        <template #meta><div class="hero__meta">
           <span>{{ projectName }}</span>
           <span>{{ heroToolCount }} 个工具</span>
           <span>{{ tags.length }} 个标签</span>
           <span>{{ statistics.total_records }} 条记录</span>
-        </div>
-      </div>
-      <div class="hero__actions">
+        </div></template>
+        <template #actions><div class="hero__actions">
         <a-radio-group v-if="!isCategoryMenuView" v-model="viewMode" type="button" size="small">
           <a-radio value="category">分类导航</a-radio>
           <a-radio value="scenario">场景导航</a-radio>
@@ -24,31 +21,31 @@
           <a-button :disabled="!projectReady" @click="tagManagerVisible = true"><template #icon><icon-tags /></template>标签管理</a-button>
           <a-button @click="refreshAll"><template #icon><icon-refresh /></template>刷新</a-button>
         </a-space>
-      </div>
-    </section>
+      </div></template>
+      </WorkspacePageHeader>
 
     <section v-if="!projectReady" class="panel banner">
       <strong>当前未选择项目</strong>
       <span>{{ projectLockMessage }}</span>
     </section>
 
-    <section v-if="!isCategoryMenuView" class="stats-grid">
-      <div class="stat-card panel"><span>总使用记录</span><strong>{{ statistics.total_records }}</strong></div>
-      <div class="stat-card panel"><span>已保存记录</span><strong>{{ statistics.saved_records }}</strong></div>
-      <div class="stat-card panel"><span>标签数量</span><strong>{{ tags.length }}</strong></div>
-      <div class="stat-card panel"><span>可用工具</span><strong>{{ catalog.tools.length }}</strong></div>
+    <section v-if="!isCategoryMenuView" class="stats-grid fc-metric-grid">
+      <div class="stat-card panel fc-metric"><span>总使用记录</span><strong>{{ statistics.total_records }}</strong></div>
+      <div class="stat-card panel fc-metric"><span>已保存记录</span><strong>{{ statistics.saved_records }}</strong></div>
+      <div class="stat-card panel fc-metric"><span>标签数量</span><strong>{{ tags.length }}</strong></div>
+      <div class="stat-card panel fc-metric"><span>可用工具</span><strong>{{ catalog.tools.length }}</strong></div>
     </section>
 
     <section v-if="!isCategoryMenuView" class="panel">
       <div class="section-title">场景筛选</div>
       <div class="section-desc">点击场景后会立即过滤下方分类模块与工具卡片。</div>
       <div class="pill-row">
-        <button type="button" class="pill" :class="{ active: selectedScenario === 'all' }" @click="applyScenarioFilter('all')">全部场景</button>
+        <button type="button" class="pill fc-native-action" :class="{ active: selectedScenario === 'all' }" @click="applyScenarioFilter('all')">全部场景</button>
         <button
           v-for="scenario in catalog.scenarios"
           :key="scenario.scenario"
           type="button"
-          class="pill"
+          class="pill fc-native-action"
           :class="{ active: selectedScenario === scenario.scenario }"
           @click="applyScenarioFilter(scenario.scenario)"
         >
@@ -83,7 +80,7 @@
       <div class="panel" :class="{ locked: !projectReady }">
         <div class="section-title">最近使用</div>
         <div v-if="projectReady && recentRecords.length" class="recent-list">
-          <button v-for="record in recentRecords" :key="record.id" type="button" class="recent" @click="showRecordResult(record)">
+          <button v-for="record in recentRecords" :key="record.id" type="button" class="recent fc-native-action" @click="showRecordResult(record)">
             <div class="recent__title">{{ record.tool_display_name }}</div>
             <div class="recent__meta">{{ formatDate(record.created_at) }}</div>
             <div class="recent__preview">{{ record.preview }}</div>
@@ -137,7 +134,7 @@
             v-for="record in referenceRecords"
             :key="record.id"
             type="button"
-            class="reference-item reference-item--interactive"
+            class="reference-item reference-item--interactive fc-native-action"
             @click="showRecordResult(record)"
           >
             <div class="reference-item__head">
@@ -157,7 +154,7 @@
 
     <section v-if="isCategoryMenuView" id="data-factory-tools" ref="toolWorkspaceSection" class="workspace-panel workspace-panel--category-only">
       <div v-if="categoryMenuTools.length" class="tool-grid">
-        <button v-for="tool in categoryMenuTools" :key="tool.name" type="button" class="tool-card" @click="openToolDialog(tool)">
+        <button v-for="tool in categoryMenuTools" :key="tool.name" type="button" class="tool-card fc-native-action" @click="openToolDialog(tool)">
           <div class="tool-card__icon"><component :is="categoryIcon(tool.category)" /></div>
           <div class="tool-card__body">
             <div class="tool-card__title">{{ tool.display_name }}</div>
@@ -174,7 +171,7 @@
       </section>
     </section>
 
-    <a-modal :visible="toolDialogVisible" :title="currentTool?.display_name || '工具执行'" width="1160px" :footer="false" unmount-on-close @cancel="toolDialogVisible = false">
+    <a-modal class="fc-dialog" :visible="toolDialogVisible" :title="currentTool?.display_name || '工具执行'" width="1160px" :footer="false" unmount-on-close @cancel="toolDialogVisible = false">
       <div v-if="currentTool" class="tool-modal">
         <div class="tool-modal__banner">
           <div>
@@ -363,7 +360,7 @@
                 </div>
                 <div class="upload-wrap">
                   <a-textarea v-model="toolForm.image_data" :placeholder="fieldPlaceholder('image_data', '可粘贴 Data URL、原始 Base64，或直接上传图片')" :auto-size="{ minRows: 10, maxRows: 18 }" />
-                  <input :ref="element => registerUploadInput('image_data', element as HTMLInputElement | null)" type="file" class="hidden-input" accept="image/*" @change="event => handleImagePicked('image_data', event)" />
+                  <input :ref="element => registerUploadInput('image_data', element as HTMLInputElement | null)" type="file" class="hidden-input fc-native-input" accept="image/*" @change="event => handleImagePicked('image_data', event)" />
                   <a-button size="small" @click="triggerImagePicker('image_data')">上传图片</a-button>
                 </div>
 
@@ -406,7 +403,7 @@
                 <a-textarea v-else-if="field.type === 'json'" v-model="toolForm[field.name]" :placeholder="field.placeholder || '请输入 JSON 内容'" :auto-size="{ minRows: field.rows || 5, maxRows: 12 }" />
                 <div v-else-if="field.type === 'upload-base64'" class="upload-wrap">
                   <a-textarea v-model="toolForm[field.name]" :placeholder="field.placeholder || '支持粘贴 Base64 / Data URL，或直接上传图片'" :auto-size="{ minRows: 5, maxRows: 12 }" />
-                  <input :ref="element => registerUploadInput(field.name, element as HTMLInputElement | null)" type="file" class="hidden-input" accept="image/*" @change="event => handleImagePicked(field.name, event)" />
+                  <input :ref="element => registerUploadInput(field.name, element as HTMLInputElement | null)" type="file" class="hidden-input fc-native-input" accept="image/*" @change="event => handleImagePicked(field.name, event)" />
                   <a-button size="small" @click="triggerImagePicker(field.name)">上传图片</a-button>
                 </div>
                 <div v-if="fieldActionItems(field).length" class="field-actions">
@@ -834,6 +831,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, defineAsyncComponent, nextTick, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
@@ -2058,7 +2056,7 @@ watch(() => projectId.value, () => void refreshAll(), { immediate: true })
 watch(
   visibleCategories,
   categories => {
-    if (focusedCategory.value !== 'all' && !categories.some(category => category.category === focusedCategory.value)) {
+    if (routeCategory.value === 'all' && focusedCategory.value !== 'all' && !categories.some(category => category.category === focusedCategory.value)) {
       focusedCategory.value = 'all'
     }
   },

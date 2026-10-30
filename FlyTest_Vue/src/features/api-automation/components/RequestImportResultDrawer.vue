@@ -1,5 +1,5 @@
 <template>
-  <a-drawer
+  <a-drawer class="fc-drawer"
     :visible="visible"
     width="920px"
     title="文档导入结果"
@@ -18,7 +18,7 @@
         <div v-if="alertActionHint" class="import-result-alert__hint">{{ alertActionHint }}</div>
       </a-alert>
 
-      <a-descriptions :column="2" bordered size="small">
+      <a-descriptions class="fc-descriptions" :column="{ xs: 1, sm: 1, md: 2 }" bordered size="small">
         <a-descriptions-item label="导入来源">{{ result.source_type || '-' }}</a-descriptions-item>
         <a-descriptions-item label="使用 Marker">
           <a-tag :color="result.marker_used ? 'arcoblue' : 'gray'">
@@ -54,7 +54,7 @@
         <a-descriptions-item label="解析说明" :span="2">{{ result.note || '-' }}</a-descriptions-item>
       </a-descriptions>
 
-      <a-tabs type="rounded">
+      <a-tabs class="fc-tabs" type="rounded">
         <a-tab-pane key="scripts" title="接口脚本">
           <a-empty v-if="!result.generated_scripts?.length" description="暂无生成脚本" />
           <a-collapse v-else>

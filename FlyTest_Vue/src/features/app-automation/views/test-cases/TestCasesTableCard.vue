@@ -1,6 +1,6 @@
 <template>
-  <a-card class="table-card">
-    <a-table
+  <a-card class="table-card fc-panel">
+    <a-table class="fc-table"
       v-model:selectedKeys="selectedCaseIdsModel"
       :data="cases"
       :loading="loading"

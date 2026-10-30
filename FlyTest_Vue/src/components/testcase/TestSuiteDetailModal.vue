@@ -1,5 +1,5 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="modalVisible"
     title="测试套件详情"
     width="760px"
@@ -8,7 +8,7 @@
   >
     <a-spin :loading="loading" style="width: 100%">
       <div v-if="suiteDetail" class="suite-detail-content">
-        <a-descriptions :column="2" bordered class="suite-descriptions">
+        <a-descriptions :column="{ xs: 1, sm: 1, md: 2 }" bordered class="suite-descriptions fc-descriptions">
           <a-descriptions-item label="套件名称">
             {{ suiteDetail.name }}
           </a-descriptions-item>
@@ -137,7 +137,7 @@ watch(
 
 .suite-detail-content :deep(.arco-descriptions-item-label) {
   background: rgba(248, 250, 252, 0.76);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

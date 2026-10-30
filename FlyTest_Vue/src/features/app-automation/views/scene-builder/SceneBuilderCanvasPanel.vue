@@ -1,5 +1,5 @@
 <template>
-  <a-card class="canvas-panel">
+  <a-card class="canvas-panel fc-panel">
     <template #title>场景步骤</template>
     <template #extra>
       <a-space>

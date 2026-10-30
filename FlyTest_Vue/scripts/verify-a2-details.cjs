@@ -22,7 +22,7 @@ const output = process.env.UI_OUTPUT_DIR || path.resolve(__dirname, '../playwrig
         checks.push({route,width,passed:true});
       }
       await page.goto(base+'/projects');await page.getByRole('button',{name:'添加项目',exact:true}).waitFor();
-      const danger=page.getByRole('button',{name:'删除',exact:true}).first();assert.equal(await danger.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(224, 0, 0)');
+      const danger=page.getByRole('button',{name:'删除',exact:true}).first();assert.equal(await danger.evaluate(e=>getComputedStyle(e).color),'rgb(224, 0, 0)');
       await page.getByRole('button',{name:'添加项目',exact:true}).click();const modal=page.locator('.arco-modal:visible');await modal.waitFor();
       const clipped=await modal.evaluate(root=>[...root.querySelectorAll('input,button,textarea')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&(r.left<0||r.right>innerWidth+1)}).map(e=>e.outerHTML.slice(0,100)));
       assert.deepEqual(clipped,[],`modal controls at ${width}`);

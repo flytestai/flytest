@@ -1,17 +1,16 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>执行记录</h3>
-      <p>集中查看 APP 自动化执行状态、进度、步骤结果和诊断日志，执行中的任务会自动刷新。</p>
-    </div>
-    <a-space>
+  <WorkspacePageHeader>
+        <template #title>执行记录</template>
+        <template #description>集中查看 APP 自动化执行状态、进度、步骤结果和诊断日志，执行中的任务会自动刷新。</template>
+        <template #actions><a-space>
       <span class="header-tip">最近刷新：{{ lastUpdatedText }}</span>
       <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { ExecutionsHeaderBarEmits } from './executionEventModels'
 import type { ExecutionsHeaderBarProps } from './executionViewModels'
 

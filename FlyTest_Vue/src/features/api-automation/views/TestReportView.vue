@@ -1,19 +1,14 @@
 <template>
-  <div class="test-report-view">
-    <div class="report-hero">
-      <div class="report-hero__copy">
-        <div class="report-hero__eyebrow">AI Report Center</div>
-        <div class="report-hero__title">测试报告</div>
-        <div class="report-hero__desc">
-          结合执行批次、失败用例、接口维度统计与 AI 摘要，快速生成适合测试回顾和质量同步的报告视图。
-        </div>
-        <div class="report-hero__meta">
+  <div class="test-report-view fc-page">
+    <WorkspacePageHeader>
+        <template #title>测试报告</template>
+        <template #description>结合执行批次、失败用例、接口维度统计与 AI 摘要，快速生成适合测试回顾和质量同步的报告视图。</template>
+        <template #meta><div class="report-hero__meta">
           <span>{{ projectName }}</span>
           <span>{{ selectedCollectionName || '当前项目全部接口目录' }}</span>
           <span>{{ report?.summary.total_count || 0 }} 条执行记录</span>
-        </div>
-      </div>
-      <div class="report-hero__actions">
+        </div></template>
+        <template #actions><div class="report-hero__actions">
         <a-radio-group v-model="days" type="button" @change="loadReport">
           <a-radio :value="7">7天</a-radio>
           <a-radio :value="30">30天</a-radio>
@@ -23,8 +18,8 @@
           {{ aiSummary ? '重新获取 AI 摘要' : '生成 AI 摘要' }}
         </a-button>
         <a-button @click="loadReport">刷新</a-button>
-      </div>
-    </div>
+      </div></template>
+      </WorkspacePageHeader>
 
     <div v-if="!projectId" class="state-card">
       <a-empty description="请先选择项目" />
@@ -40,29 +35,29 @@
 
     <template v-else>
       <div class="report-grid summary-grid">
-        <div class="summary-card summary-card-primary">
+        <div class="summary-card summary-card-primary fc-metric">
           <div class="summary-label">总执行数</div>
           <div class="summary-value">{{ report.summary.total_count }}</div>
           <div class="summary-meta">最近执行：{{ formatDate(report.summary.latest_executed_at) }}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card fc-metric">
           <div class="summary-label">通过率</div>
           <div class="summary-value"><span :class="'quality-' + passRateTone(report.summary.pass_rate)">{{ formatQualityPercent(report.summary.pass_rate) }}</span></div>
           <a-progress :percent="progressFraction(report.summary.pass_rate)" :show-text="false" :color="passRateColor(report.summary.pass_rate)" />
         </div>
-        <div class="summary-card">
+        <div class="summary-card fc-metric">
           <div class="summary-label">执行批次</div>
           <div class="summary-value">{{ report.hierarchy_summary?.run_count || runGroups.length }}</div>
           <div class="summary-meta">展示最近 {{ runGroups.length }} 个批次</div>
         </div>
-        <div class="summary-card summary-card-danger">
+        <div class="summary-card summary-card-danger fc-metric">
           <div class="summary-label">失败用例</div>
           <div class="summary-value">{{ report.hierarchy_summary?.failed_test_case_count || 0 }}</div>
           <div class="summary-meta">失败接口 {{ report.hierarchy_summary?.failed_interface_count || 0 }} 个</div>
         </div>
       </div>
 
-      <a-card class="report-card ai-summary-report-card" :bordered="false" title="AI 报告摘要">
+      <a-card class="report-card ai-summary-report-card fc-panel" :bordered="false" title="AI 报告摘要">
         <div class="ai-summary-report-toolbar">
           <a-button type="primary" size="small" :loading="aiSummaryLoading" @click="loadAiSummary">
             {{ aiSummary ? '重新生成摘要' : '生成摘要' }}
@@ -128,7 +123,7 @@
         </template>
       </a-card>
 
-      <a-card class="report-card" :bordered="false" title="执行汇总">
+      <a-card class="report-card fc-panel" :bordered="false" title="执行汇总">
         <div class="run-report-list">
           <div v-for="run in runGroups" :key="run.run_id" class="run-report-card">
             <div class="run-report-card__header">
@@ -217,8 +212,8 @@
       </a-card>
 
       <div class="report-grid two-column-grid">
-        <a-card class="report-card" :bordered="false" title="按请求方法统计">
-          <a-table :data="methodTableData" :pagination="false" row-key="method" size="small">
+        <a-card class="report-card fc-panel" :bordered="false" title="按请求方法统计">
+          <a-table class="fc-table" :data="methodTableData" :pagination="false" row-key="method" size="small">
             <template #columns>
               <a-table-column title="方法" data-index="method" :width="100">
                 <template #cell="{ record }">
@@ -236,8 +231,8 @@
           </a-table>
         </a-card>
 
-        <a-card class="report-card" :bordered="false" title="按接口目录统计">
-          <a-table :data="collectionTableData" :pagination="false" row-key="name" size="small">
+        <a-card class="report-card fc-panel" :bordered="false" title="按接口目录统计">
+          <a-table class="fc-table" :data="collectionTableData" :pagination="false" row-key="name" size="small">
             <template #columns>
               <a-table-column title="目录" data-index="name" ellipsis tooltip />
               <a-table-column title="总数" data-index="total" :width="80" />
@@ -253,9 +248,9 @@
       </div>
 
       <div class="report-grid two-column-grid">
-        <a-card class="report-card" :bordered="false" title="高频失败接口">
+        <a-card class="report-card fc-panel" :bordered="false" title="高频失败接口">
           <a-empty v-if="!failingRequestData.length" description="最近没有失败接口" />
-          <a-table v-else :data="failingRequestData" :pagination="false" row-key="request_name" size="small">
+          <a-table class="fc-table" v-else :data="failingRequestData" :pagination="false" row-key="request_name" size="small">
             <template #columns>
               <a-table-column title="接口" data-index="request_name" ellipsis tooltip />
               <a-table-column title="目录" data-index="collection_name" :width="140" ellipsis tooltip />
@@ -268,7 +263,7 @@
           </a-table>
         </a-card>
 
-        <a-card class="report-card" :bordered="false" title="执行趋势">
+        <a-card class="report-card fc-panel" :bordered="false" title="执行趋势">
           <a-empty v-if="!trendData.length" description="暂无趋势数据" />
           <div v-else class="trend-list">
             <div v-for="item in trendData" :key="item.day" class="trend-item">
@@ -287,8 +282,8 @@
         </a-card>
       </div>
 
-      <a-card class="report-card" :bordered="false" title="最近执行记录">
-        <a-table :data="report.recent_records" :pagination="false" row-key="id" size="small">
+      <a-card class="report-card fc-panel" :bordered="false" title="最近执行记录">
+        <a-table class="fc-table" :data="report.recent_records" :pagination="false" row-key="id" size="small">
           <template #columns>
             <a-table-column title="接口" :width="220" ellipsis tooltip>
               <template #cell="{ record }">{{ record.interface_name || record.request_name }}</template>
@@ -320,7 +315,7 @@
 
     <a-modal
       v-model:visible="detailVisible"
-      class="detail-modal detail-modal--wide"
+      class="detail-modal detail-modal--wide fc-dialog"
       title="失败详情"
       width="1120px"
       :footer="false"
@@ -333,6 +328,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateColor, passRateTone, formatQualityPercent, progressFraction } from '@/utils/qualityStatus'
 import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -562,13 +558,13 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--theme-accent);
 }
 
 .report-hero__title {
   font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--theme-text);
   line-height: 1.06;
 }
 
@@ -576,7 +572,7 @@ defineExpose({
   max-width: 760px;
   font-size: 13px;
   line-height: 1.8;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .report-hero__meta {
@@ -584,7 +580,7 @@ defineExpose({
   gap: 12px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .report-hero__actions {
@@ -635,20 +631,20 @@ defineExpose({
 
 .summary-label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .summary-value {
   margin-top: 10px;
   font-size: 34px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .summary-meta {
   margin-top: 10px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .ai-summary-report-toolbar {
@@ -661,7 +657,7 @@ defineExpose({
 
 .ai-summary-report-toolbar__meta {
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .ai-report-summary-card {
@@ -685,14 +681,14 @@ defineExpose({
 .ai-report-summary-card__value {
   font-size: 16px;
   line-height: 1.7;
-  color: #0f172a;
+  color: var(--theme-text);
   font-weight: 700;
 }
 
 .ai-report-summary-card__meta {
   font-size: 12px;
   line-height: 1.7;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .ai-report-grid {
@@ -713,7 +709,7 @@ defineExpose({
 .ai-report-block__title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .ai-report-list {
@@ -736,13 +732,13 @@ defineExpose({
   flex-wrap: wrap;
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .ai-report-list-item__detail {
   font-size: 13px;
   line-height: 1.7;
-  color: #475569;
+  color: var(--theme-text-secondary);
 }
 
 .run-report-list,
@@ -810,7 +806,7 @@ defineExpose({
   flex-wrap: wrap;
   font-size: 17px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .run-report-card__meta,
@@ -821,7 +817,7 @@ defineExpose({
   gap: 12px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #64748b;
+  color: var(--theme-text-secondary);
 }
 
 .failed-case-card__error {
@@ -845,7 +841,7 @@ defineExpose({
 .trend-day {
   font-size: 13px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--theme-text);
 }
 
 .trend-bars {

@@ -1,22 +1,22 @@
 <template>
-  <div class="stats-grid">
-    <a-card class="stat-card">
+  <div class="stats-grid fc-metric-grid">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">设备总数</span>
       <strong>{{ stats.total }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">可用设备</span>
       <strong>{{ stats.available }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">锁定中</span>
       <strong>{{ stats.locked }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">正在停止</span>
       <strong>{{ stats.stopping }}</strong>
     </a-card>
-    <a-card class="stat-card">
+    <a-card class="stat-card fc-metric fc-panel">
       <span class="stat-label">离线设备</span>
       <strong>{{ stats.offline }}</strong>
     </a-card>

@@ -1,5 +1,5 @@
 <template>
-  <a-card class="library-panel">
+  <a-card class="library-panel fc-panel">
     <template #title>步骤组件库</template>
     <template #extra>
       <a-space size="small">
@@ -14,14 +14,18 @@
       allow-clear
       placeholder="搜索组件名称或类型"
     />
-    <a-tabs v-model:active-key="paletteTabModel" lazy-load>
+    <a-tabs class="fc-tabs" v-model:active-key="paletteTabModel" lazy-load>
       <a-tab-pane key="base" title="基础组件">
         <div v-if="filteredComponents.length" class="component-grid">
           <div
             v-for="item in filteredComponents"
             :key="item.id"
             class="component-item"
+            role="button"
+            tabindex="0"
             @click="emit('append-base', item)"
+            @keydown.enter.self.prevent="emit('append-base', item)"
+            @keydown.space.self.prevent="emit('append-base', item)"
           >
             <div class="component-copy">
               <span class="component-name">{{ item.name }}</span>
@@ -39,7 +43,11 @@
             v-for="item in filteredCustomComponents"
             :key="item.id"
             class="component-item component-item-custom"
+            role="button"
+            tabindex="0"
             @click="emit('append-custom', item)"
+            @keydown.enter.self.prevent="emit('append-custom', item)"
+            @keydown.space.self.prevent="emit('append-custom', item)"
           >
             <div class="component-copy">
               <span class="component-name">{{ item.name }}</span>

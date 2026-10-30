@@ -1,5 +1,5 @@
 <template>
-  <div class="user-management">
+  <div class="user-management fc-page">
     <div class="approval-filter-bar">
       <a-radio-group
         v-model="approvalFilter"
@@ -13,7 +13,7 @@
       </a-radio-group>
     </div>
 
-    <div class="page-header">
+    <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-input-search
           placeholder="搜索系统用户名/姓名/手机号/邮箱"
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <a-table
+    <a-table class="fc-table"
       :columns="columns"
       :data="userData"
       :pagination="pagination"
@@ -73,7 +73,7 @@
         <a-space :size="4">
           <a-button
             v-if="record.approval_status !== 'approved'"
-            type="primary"
+            type="text"
             size="mini"
             @click="approvePendingUser(record)"
           >
@@ -81,22 +81,22 @@
           </a-button>
           <a-button
             v-if="record.approval_status !== 'rejected'"
-            type="primary"
+            type="text"
             status="warning"
             size="mini"
             @click="rejectPendingUser(record)"
           >
             驳回
           </a-button>
-          <a-button type="primary" size="mini" @click="viewUserPermissions(record)">权限</a-button>
-          <a-button type="primary" size="mini" @click="editUser(record)">编辑</a-button>
-          <a-button type="primary" status="danger" size="mini" @click="deleteUser(record)">删除</a-button>
+          <a-button type="text" size="mini" @click="viewUserPermissions(record)">权限</a-button>
+          <a-button type="text" size="mini" @click="editUser(record)">编辑</a-button>
+          <a-button type="text" status="danger" size="mini" @click="deleteUser(record)">删除</a-button>
         </a-space>
       </template>
     </a-table>
 
     <!-- 用户权限管理模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="permissionsModalVisible"
       title="用户权限管理"
       :footer="false"
@@ -113,7 +113,7 @@
     </a-modal>
 
     <!-- 添加用户模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="addUserModalVisible"
       title="添加用户"
       @cancel="cancelAddUser"
@@ -121,7 +121,7 @@
       :mask-closable="false"
       :width="600"
     >
-      <a-form ref="addUserFormRef" :model="addUserForm" :rules="addUserRules" layout="vertical" :auto-label-width="false">
+      <a-form class="fc-form" ref="addUserFormRef" :model="addUserForm" :rules="addUserRules" layout="vertical" :auto-label-width="false">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="username" label="系统用户名" required>
@@ -191,7 +191,7 @@
     </a-modal>
 
     <!-- 编辑用户模态框 -->
-    <a-modal
+    <a-modal class="fc-dialog"
       v-model:visible="editUserModalVisible"
       title="编辑用户"
       @cancel="cancelEditUser"
@@ -199,9 +199,9 @@
       :mask-closable="false"
       :width="1000"
     >
-      <a-tabs default-active-key="basic" @change="onEditUserTabChange">
+      <a-tabs class="fc-tabs" default-active-key="basic" @change="onEditUserTabChange">
         <a-tab-pane key="basic" title="基本信息">
-          <a-form ref="editUserFormRef" :model="editUserForm" :rules="editUserRules" layout="vertical" :auto-label-width="false">
+          <a-form class="fc-form" ref="editUserFormRef" :model="editUserForm" :rules="editUserRules" layout="vertical" :auto-label-width="false">
             <a-row :gutter="16">
               <a-col :span="12">
                 <a-form-item field="username" label="系统用户名">
@@ -978,7 +978,7 @@ const deleteUser = (user: User) => {
 
 .user-management :deep(.arco-table-th) {
   background: rgba(248, 250, 252, 0.92);
-  color: #42526d;
+  color: var(--theme-text-secondary);
   font-weight: 600;
 }
 

@@ -1,17 +1,16 @@
 <template>
-  <div class="page-header">
-    <div>
-      <h3>应用包</h3>
-      <p>集中维护 APP 包名、启动 Activity、平台信息与更新时间，方便设备执行与场景复用。</p>
-    </div>
-    <a-space wrap class="page-actions">
+  <WorkspacePageHeader>
+        <template #title>应用包</template>
+        <template #description>集中维护 APP 包名、启动 Activity、平台信息与更新时间，方便设备执行与场景复用。</template>
+        <template #actions><a-space wrap class="page-actions">
       <a-button :loading="loading" @click="emit('refresh')">刷新</a-button>
       <a-button type="primary" @click="emit('create')">新增应用包</a-button>
-    </a-space>
-  </div>
+    </a-space></template>
+      </WorkspacePageHeader>
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import type { PackagesHeaderBarEmits } from './packageEventModels'
 import type { PackagesHeaderBarProps } from './packageViewModels'
 

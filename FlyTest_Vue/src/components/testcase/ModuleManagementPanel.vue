@@ -1,6 +1,6 @@
 <template>
   <div class="module-panel-wrapper">
-    <a-card class="module-panel" :bordered="false" :title="panelTitle">
+    <a-card class="module-panel fc-directory fc-panel" :bordered="false" :title="panelTitle">
       <div class="module-panel-content">
         <div class="module-panel-header">
           <a-input-search
@@ -90,7 +90,7 @@
         @close="closeModuleModal"
       />
 
-      <a-modal
+      <a-modal class="fc-dialog"
         v-model:visible="testCaseTransferModalVisible"
         :title="testCaseTransferMode === 'move' ? '移动测试用例' : '复制测试用例'"
         :confirm-loading="testCaseTransferSubmitting"
@@ -123,7 +123,7 @@
 
           <div class="testcase-transfer-body">
             <div class="testcase-transfer-table">
-              <a-table
+              <a-table class="fc-table"
                 :columns="testCaseTransferColumns"
                 :data="moduleTestCaseOptions"
                 :loading="testCaseTransferLoading"
@@ -148,7 +148,7 @@
             </div>
 
             <div class="testcase-transfer-target">
-              <a-form layout="vertical">
+              <a-form class="fc-form" layout="vertical">
                 <a-form-item label="目标模块" required>
                   <a-select
                     v-model="targetTransferModuleId"
@@ -726,7 +726,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--ui-panel-bg, #fff);
+  background: var(--ui-panel-bg, var(--theme-surface));
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
   box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));

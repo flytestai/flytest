@@ -1,5 +1,5 @@
 <template>
-  <a-card class="settings-card diagnostics-card">
+  <a-card class="settings-card diagnostics-card fc-panel">
     <template #title>运行能力诊断</template>
 
     <div class="diagnostics-header">

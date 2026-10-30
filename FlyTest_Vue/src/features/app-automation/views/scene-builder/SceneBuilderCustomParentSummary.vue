@@ -8,7 +8,7 @@
       <div class="summary-badge">{{ countChildSteps(selectedParentStep) }} 个子步骤</div>
     </div>
 
-    <a-form layout="vertical" class="summary-form">
+    <a-form layout="vertical" class="summary-form fc-form">
       <div class="field-card">
         <a-form-item label="组件名称">
           <a-input v-model="selectedParentStep!.name" />

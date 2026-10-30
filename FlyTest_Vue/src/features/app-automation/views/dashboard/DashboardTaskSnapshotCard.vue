@@ -1,5 +1,5 @@
 <template>
-  <a-card class="panel-card task-card" title="定时任务快照">
+  <a-card class="panel-card task-card fc-panel" title="定时任务快照">
     <template #extra>
       <a-button type="text" @click="emit('open-all')">查看全部</a-button>
     </template>

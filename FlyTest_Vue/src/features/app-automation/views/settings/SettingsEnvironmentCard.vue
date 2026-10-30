@@ -1,7 +1,7 @@
 <template>
-  <a-card class="settings-card">
+  <a-card class="settings-card fc-panel">
     <template #title>APP 自动化环境设置</template>
-    <a-form :model="form" layout="vertical">
+    <a-form class="fc-form" :model="form" layout="vertical">
       <a-form-item field="adb_path" label="ADB 路径">
         <a-input v-model="form.adb_path" placeholder="默认使用 adb，也可以填写绝对路径" />
       </a-form-item>

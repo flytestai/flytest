@@ -1,6 +1,6 @@
 <template>
-  <div class="page-shell">
-    <div v-if="!projectStore.currentProjectId" class="empty-shell">
+  <div class="page-shell fc-page">
+    <div v-if="!projectStore.currentProjectId" class="empty-shell fc-empty-state">
       <a-empty description="请先选择项目后管理 APP 应用包" />
     </div>
     <template v-else>

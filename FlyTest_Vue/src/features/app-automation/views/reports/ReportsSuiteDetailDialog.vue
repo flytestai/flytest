@@ -1,11 +1,11 @@
 <template>
-  <a-modal
+  <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="套件详情"
     width="880px"
     :footer="false"
   >
-    <div v-if="selectedSuite" class="detail-shell">
+    <div v-if="selectedSuite" class="detail-shell fc-detail-page">
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">最近状态</span>
@@ -25,7 +25,7 @@
         </div>
       </div>
 
-      <a-card class="detail-panel" title="套件说明">
+      <a-card class="detail-panel fc-panel" title="套件说明">
         <div class="summary-text">{{ selectedSuite.description || '暂无套件说明。' }}</div>
         <div class="meta-row">
           <span>创建人：{{ selectedSuite.created_by || '-' }}</span>
@@ -34,7 +34,7 @@
         </div>
       </a-card>
 
-      <a-card class="detail-panel" title="套件用例清单">
+      <a-card class="detail-panel fc-panel" title="套件用例清单">
         <div v-if="selectedSuite.suite_cases?.length" class="case-list">
           <div v-for="item in selectedSuite.suite_cases" :key="item.id" class="case-item">
             <strong>#{{ item.order }} {{ item.test_case.name }}</strong>
