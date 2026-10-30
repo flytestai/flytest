@@ -1129,7 +1129,7 @@ const handleImageError = (_event: Event) => {
 
   .drag-handle:hover {
     background-color: #e5e6eb;
-    color: #165dff;
+    color: var(--theme-accent);
   }
 
   .drag-handle:active {
@@ -1173,7 +1173,7 @@ const handleImageError = (_event: Event) => {
   }
 
   .field-error {
-    color: #f53f3f;
+    color: var(--theme-danger);
     font-size: 12px;
     margin-top: 4px;
   }
@@ -1232,7 +1232,7 @@ const handleImageError = (_event: Event) => {
   }
 
   .screenshot-item:hover {
-    border-color: #165dff;
+    border-color: var(--theme-accent);
     box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
   }
 
@@ -1474,12 +1474,12 @@ const handleImageError = (_event: Event) => {
 }
 
 .thumbnail-item:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   transform: scale(1.05);
 }
 
 .thumbnail-item.active {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3);
 }
 

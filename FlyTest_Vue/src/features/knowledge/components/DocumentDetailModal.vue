@@ -354,7 +354,7 @@ watch(
 }
 
 .url-link {
-  color: #165dff;
+  color: var(--theme-accent);
   text-decoration: none;
   word-break: break-all;
 }
@@ -413,7 +413,7 @@ watch(
   padding: 8px 12px;
   background-color: color-mix(in srgb, var(--theme-surface-soft) 72%, white 28%);
   border-radius: 4px;
-  border-left: 3px solid #165dff;
+  border-left: 3px solid var(--theme-accent);
 }
 
 .chunks-summary {
@@ -463,7 +463,7 @@ watch(
 }
 
 .chunk-length {
-  color: #165dff;
+  color: var(--theme-accent);
   font-weight: 500;
 }
 

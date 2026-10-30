@@ -1169,12 +1169,12 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .screenshot-item:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
 }
 
 .screenshot-item.selected {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.2);
 }
 
@@ -1199,7 +1199,7 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .screenshot-item:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
 }
 
@@ -1353,7 +1353,7 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .upload-area:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
 }
 
 .upload-content {
@@ -1520,12 +1520,12 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .thumbnail-item:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   transform: scale(1.05);
 }
 
 .thumbnail-item.active {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3);
 }
 

@@ -198,14 +198,7 @@ export function useAppAutomationExecutions() {
       item => getExecutionState(item) === 'passed',
     ).length
     const averagePassRate = filteredExecutions.value.length
-      ? Math.round(
-          (filteredExecutions.value.reduce(
-            (total, item) => total + Number(item.pass_rate || 0),
-            0,
-          ) /
-            filteredExecutions.value.length) *
-            10,
-        ) / 10
+      ? filteredExecutions.value.reduce((sum, item) => sum + Number(item.pass_rate || 0), 0) / filteredExecutions.value.length
       : 0
 
     return {

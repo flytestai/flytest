@@ -630,8 +630,8 @@ onMounted(() => {
 
 .score-icon { color: #00a0e9; }
 .issues-icon { color: #ff7d00; }
-.high-priority-icon { color: #f53f3f; }
-.date-icon { color: #00b42a; }
+.high-priority-icon { color: var(--theme-danger); }
+.date-icon { color: var(--theme-success); }
 
 .summary-section,
 .issues-distribution,
@@ -694,7 +694,7 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 
-.priority-item.high .priority-count { color: #f53f3f; }
+.priority-item.high .priority-count { color: var(--theme-danger); }
 .priority-item.medium .priority-count { color: #ff7d00; }
 .priority-item.low .priority-count { color: #00a0e9; }
 
@@ -850,7 +850,7 @@ onMounted(() => {
   background: #f0f9f0;
   border-radius: 4px;
   font-size: 14px;
-  color: #00b42a;
+  color: var(--theme-success);
 }
 
 .loading-state {

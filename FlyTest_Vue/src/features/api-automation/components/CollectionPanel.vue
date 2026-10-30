@@ -712,7 +712,7 @@ defineExpose({
 
 .tree-node__method {
   background: rgba(15, 118, 110, 0.1);
-  color: #0f766e;
+  color: var(--theme-success);
   font-weight: 700;
 }
 

@@ -528,7 +528,7 @@ onMounted(() => {
 
 .module-item.active {
   background: #e8f4ff;
-  border-color: #165dff;
+  border-color: var(--theme-accent);
 }
 
 .module-header {
@@ -543,7 +543,7 @@ onMounted(() => {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #165dff;
+  background: var(--theme-accent);
   color: white;
   border-radius: 50%;
   font-size: 12px;
@@ -774,7 +774,7 @@ onMounted(() => {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #165dff, #722ed1);
+  background: linear-gradient(135deg, var(--theme-accent), #722ed1);
   color: white;
 }
 
@@ -807,7 +807,7 @@ onMounted(() => {
 
 .stat-item.high {
   background: #ffece8;
-  border: 1px solid #f53f3f;
+  border: 1px solid var(--theme-danger);
 }
 
 .stat-item.medium {
@@ -817,7 +817,7 @@ onMounted(() => {
 
 .stat-item.low {
   background: #e8f7ff;
-  border: 1px solid #165dff;
+  border: 1px solid var(--theme-accent);
 }
 
 .stat-item.total {

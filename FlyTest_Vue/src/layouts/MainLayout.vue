@@ -37,10 +37,7 @@
         </div>
       </div>
       <div class="workspace-status" aria-live="polite">
-        <div class="workspace-badge" :class="`workspace-badge--${aiStatus.state}`" :title="aiStatusTooltip">
-          <span class="workspace-dot"></span>
-          <span>{{ aiStatusLabel }}</span>
-        </div>
+
         <div
           v-if="aiActivityStore.generationJobVisible"
           class="workspace-badge workspace-badge--case-generation"
@@ -120,7 +117,7 @@
     <a-layout class="inner-layout">
       <!-- 左侧菜单栏 -->
       <a-layout-sider
-        :width="232"
+        :width="216"
         :collapsed-width="64"
         :collapsed="collapsed"
         :trigger="null"
@@ -494,6 +491,10 @@
         </a-menu>
         <!-- 侧边栏底部收起/展开按钮 -->
         <div class="sider-footer">
+        <div v-if="!collapsed" class="workspace-badge sider-ai-status" :class="`workspace-badge--${aiStatus.state}`" :title="aiStatusTooltip">
+          <span class="workspace-dot"></span>
+          <span>{{ aiStatusLabel }}</span>
+        </div>
           <a-button
             type="text"
             size="small"

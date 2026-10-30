@@ -36,6 +36,16 @@ npm run test:layout:interactions
 
 结果默认保存到 `FlyTest_Vue/playwright-screenshots/layout/`，受仓库现有忽略规则管理。夹具主要覆盖布局与空数据状态，不能替代真实后端、权限组合、AI 执行及复杂编辑流程的业务验收。
 
+## A2 明亮工作台
+
+全局 token 和基础控件在 `src/styles/a2-workspace.css`，布局基础在 `src/workspace-theme.css`。登录注册共用 `components/auth/auth-shell.css`。卡片 16px、控件 8px、登录表面 20px，主要操作蓝 `#0066FF`、通过绿 `#008000`、风险红 `#E00000`。
+
+运行 `npm run test:quality` 验证通过率/覆盖率阈值、缺失统计、真实柱图颜色和深色主题。通过率原始值必须等于 100% 才为绿色；覆盖率 ≥80% 为绿色。该逻辑由 `src/utils/qualityStatus.ts` 统一管理，显示取一位小数但不将部分通过四舍五入成 100%。
+
+首页支持可选 `automation_coverage: { rate, covered?, total? }` 数据；现有后端未提供时显示“暂无覆盖率数据”，不使用不同类型资产数量推算覆盖率。专项检查通过浏览器接口夹具验证该字段存在和不存在的场景，不变更业务数据。
+
+导航展开宽度为 216px、折叠为 64px。手机使用临时抽屉，不覆盖桌面偏好。自动化目录与内容区在桌面共用完整工作面，小屏分区堆叠，表格横向滚动限制在自身范围。
+
 ## 首页下半部分专项检查
 
 `npm run test:dashboard` 覆盖待处理事项、缺陷风险、自动化矩阵、审核分布、Token、趋势与运营七个区块。检查 1440/1024/390/320px、有数据/零数据、大数字/长用户名和深色主题，共 10 个场景，并验证日/周/月分组的鼠标与键盘操作。

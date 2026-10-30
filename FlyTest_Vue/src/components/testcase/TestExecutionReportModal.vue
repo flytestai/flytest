@@ -50,7 +50,7 @@
           <a-statistic title="错误" :value="report.statistics.error" />
         </a-card>
         <a-card :bordered="false" class="stat-card pass-rate">
-          <a-statistic title="通过率" :value="report.statistics.pass_rate" :precision="1" suffix="%" />
+          <a-statistic title="通过率" :value="report.statistics.pass_rate" :value-style="{ color: passRateColor(report.statistics.pass_rate) }" :formatter="() => formatQualityPercent(report.statistics.pass_rate).replace('%', '')" suffix="%" />
         </a-card>
       </div>
 
@@ -254,6 +254,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateColor, formatQualityPercent } from '@/utils/qualityStatus'
 import { ref, computed, watch } from 'vue';
 import { IconCalendar, IconClockCircle, IconLeft, IconRight } from '@arco-design/web-vue/es/icon';
 import {
@@ -613,7 +614,7 @@ watch(
 .execution-log-container :deep(.log-ai-header) {
   padding: 10px 12px;
   cursor: pointer;
-  color: #165dff;
+  color: var(--theme-accent);
   font-weight: 600;
   user-select: none;
   display: flex;
@@ -626,7 +627,7 @@ watch(
 }
 
 .execution-log-container :deep(.log-ai-header::marker) {
-  color: #165dff;
+  color: var(--theme-accent);
 }
 
 .execution-log-container :deep(.log-ai-content) {
@@ -635,7 +636,7 @@ watch(
 }
 
 .execution-log-container :deep(.log-line.step) {
-  color: #165dff;
+  color: var(--theme-accent);
   font-weight: 600;
   margin-top: 8px;
   padding: 6px 8px;
@@ -658,11 +659,11 @@ watch(
 }
 
 .execution-log-container :deep(.log-line.success) {
-  color: #00b42a;
+  color: var(--theme-success);
 }
 
 .execution-log-container :deep(.log-line.error) {
-  color: #f53f3f;
+  color: var(--theme-danger);
 }
 
 .execution-log-container :deep(.log-line.warning) {
@@ -689,18 +690,18 @@ watch(
 
 .execution-log-container :deep(.log-line.step-result.pass) {
   background-color: rgba(0, 180, 42, 0.1);
-  color: #00b42a;
-  border-left: 3px solid #00b42a;
+  color: var(--theme-success);
+  border-left: 3px solid var(--theme-success);
 }
 
 .execution-log-container :deep(.log-line.step-result.fail) {
   background-color: rgba(245, 63, 63, 0.1);
-  color: #f53f3f;
-  border-left: 3px solid #f53f3f;
+  color: var(--theme-danger);
+  border-left: 3px solid var(--theme-danger);
 }
 
 .execution-log-container :deep(.log-line.step-error) {
-  color: #f53f3f;
+  color: var(--theme-danger);
   padding-left: 32px;
   font-size: 12px;
 }
@@ -727,13 +728,13 @@ watch(
 
 .execution-log-container :deep(.log-result-status.pass) {
   background: linear-gradient(135deg, rgba(0, 180, 42, 0.15) 0%, rgba(0, 180, 42, 0.08) 100%);
-  color: #00b42a;
+  color: var(--theme-success);
   border: 1px solid rgba(0, 180, 42, 0.3);
 }
 
 .execution-log-container :deep(.log-result-status.fail) {
   background: linear-gradient(135deg, rgba(245, 63, 63, 0.15) 0%, rgba(245, 63, 63, 0.08) 100%);
-  color: #f53f3f;
+  color: var(--theme-danger);
   border: 1px solid rgba(245, 63, 63, 0.3);
 }
 

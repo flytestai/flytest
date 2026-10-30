@@ -238,11 +238,7 @@ export function useAppAutomationReports() {
     passed: filteredExecutions.value.filter(item => getExecutionState(item) === 'passed').length,
     failed: filteredExecutions.value.filter(item => getExecutionState(item) === 'failed').length,
     passRate: filteredExecutions.value.length
-      ? Math.round(
-          (filteredExecutions.value.reduce((sum, item) => sum + Number(item.pass_rate || 0), 0) /
-            filteredExecutions.value.length) *
-            10,
-        ) / 10
+      ? filteredExecutions.value.reduce((sum, item) => sum + Number(item.pass_rate || 0), 0) / filteredExecutions.value.length
       : 0,
   }))
 

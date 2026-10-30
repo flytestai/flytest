@@ -62,11 +62,7 @@
 }
 
 /* 进度条主色调 */
-.arco-progress-circle-path,
-.arco-progress-line-bar {
-  stroke: var(--theme-accent) !important;
-  background-color: var(--theme-accent) !important;
-}
+/* Progress uses its component color prop so success/danger remain meaningful. */
 
 /* 选择器、输入框等组件的焦点色 */
 .arco-input-wrapper:focus-within,
@@ -362,8 +358,6 @@
   border-color: rgba(var(--theme-accent-rgb), 0.28) !important;
 }
 
-:root[data-theme='black'] body[arco-theme='dark'] .arco-progress-circle-path,
-:root[data-theme='black'] body[arco-theme='dark'] .arco-progress-line-bar,
 :root[data-theme='black'] body[arco-theme='dark'] .arco-checkbox-checked .arco-checkbox-icon,
 :root[data-theme='black'] body[arco-theme='dark'] .arco-radio-checked .arco-radio-icon::before,
 :root[data-theme='black'] body[arco-theme='dark'] .arco-radio-checked .arco-radio-icon,

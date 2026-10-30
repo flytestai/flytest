@@ -190,7 +190,7 @@ const topModels = computed(() => (props.stats?.by_model || []).slice(0, 10));
 
 const computePercent = (value: number, maxValue: number) => {
   if (!maxValue) return 0;
-  return Math.max(2, Math.min(100, Number(((value / maxValue) * 100).toFixed(2))));
+  return Math.max(0, Math.min(1, value / maxValue));
 };
 </script>
 

@@ -3,9 +3,9 @@
     <section class="workspace-hero workspace-hero--requirements workspace-hero--compact workspace-hero--requirement-command">
       <div class="workspace-hero-copy">
         <span class="workspace-hero-eyebrow">Requirement Intelligence</span>
-        <h2 class="workspace-hero-title">{{ projectStore.currentProject?.name || '当前项目' }} 需求评审中心</h2>
+        <h2 class="workspace-hero-title">需求管理</h2>
         <p class="workspace-hero-description">
-          让需求文档接入 AI 理解、结构化拆解与评审闭环，在上传、分析、复审到报告沉淀之间形成更专业的测试输入中台。
+          上传和评审需求文档，跟踪分析结果，为测试设计提供依据。
         </p>
         <div class="workspace-chip-row">
           <span class="workspace-chip">AI 语义理解</span>

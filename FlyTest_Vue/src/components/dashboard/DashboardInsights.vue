@@ -1,15 +1,24 @@
 <template>
-  <section class="dashboard-insights" aria-labelledby="insights-heading">
-    <div class="insights-intro">
-      <div>
-        <h2 id="insights-heading">项目质量洞察</h2>
-        <p>关注待办与风险，持续跟进测试资产和执行质量。</p>
-      </div>
-      <span class="insights-context"><span></span>当前项目</span>
-    </div>
-
+  <section class="dashboard-insights" aria-label="项目质量洞察">
     <div class="insights-row insights-primary">
-      <article class="insights-block" aria-labelledby="backlog-heading">
+<article class="insights-block" aria-labelledby="trend-heading">
+        <header class="insights-heading">
+          <div class="insights-heading-copy"><h3 id="trend-heading"><icon-bar-chart />近 7 天执行趋势</h3><p>每日通过与失败的用例结果</p></div>
+          <div class="insights-chart-legend"><span><i class="insights-dot tone-success"></i>通过</span><span><i class="insights-dot tone-danger"></i>失败</span></div>
+        </header>
+        <div class="insights-trend-summary"><span>近 30 天执行 <strong>{{ number(stats?.execution_trend?.summary_30d?.execution_count) }}</strong><small>次</small></span><span>通过 <b class="insights-success-text">{{ number(stats?.execution_trend?.summary_30d?.passed) }}</b></span><span>失败 <b class="insights-danger-text">{{ number(stats?.execution_trend?.summary_30d?.failed) }}</b></span></div>
+        <figure v-if="hasTrendData" class="insights-chart" aria-labelledby="trend-heading">
+          <div class="insights-chart-scale" aria-hidden="true"><span>{{ number(trendMax) }}</span><span>{{ number(Math.round(trendMax / 2)) }}</span><span>0</span></div>
+          <div class="insights-chart-plot">
+            <div v-for="day in trendDays" :key="day.date" class="insights-chart-day">
+              <div class="insights-chart-slot"><span class="insights-chart-count">{{ number(day.passed + day.failed) }}</span><div class="insights-chart-stack" role="img" :title="`${formatDate(day.date)}：通过 ${number(day.passed)}，失败 ${number(day.failed)}`" :aria-label="`${formatDate(day.date)}：通过 ${day.passed}，失败 ${day.failed}`"><span class="tone-success" :style="{ height: `${day.passed / trendMax * 100}%` }"></span><span class="tone-danger" :style="{ height: `${day.failed / trendMax * 100}%` }"></span></div></div>
+              <span class="insights-chart-date">{{ formatDate(day.date) }}</span>
+            </div>
+          </div>
+        </figure>
+        <div v-else class="insights-empty"><icon-bar-chart /><strong>暂无执行趋势</strong><span>完成测试执行后，这里将展示每日结果变化。</span></div>
+      </article>
+<article class="insights-block" aria-labelledby="backlog-heading">
         <header class="insights-heading">
           <div class="insights-heading-copy">
             <h3 id="backlog-heading"><icon-check-circle />待处理事项</h3>
@@ -18,16 +27,17 @@
           <span class="insights-badge">{{ number(backlogTotal) }} 项</span>
         </header>
         <div class="insights-queue">
-          <div v-for="item in backlogItems" :key="item.label" class="insights-queue-item">
+          <router-link v-for="item in backlogItems" :key="item.label" :to="item.to" class="insights-queue-item">
             <span :class="['insights-symbol', `tone-${item.tone}`]"><component :is="item.icon" /></span>
             <div class="insights-item-copy"><h4>{{ item.label }}</h4><p>{{ item.description }}</p></div>
             <div class="insights-item-number"><strong>{{ number(item.value) }}</strong><span>{{ item.unit }}</span></div>
-          </div>
+          </router-link>
         </div>
         <footer class="insights-note">待办数量按事项类型分别统计</footer>
       </article>
-
-      <article class="insights-block" aria-labelledby="risk-heading">
+    </div>
+    <div class="insights-row insights-resources">
+<article class="insights-block" aria-labelledby="risk-heading">
         <header class="insights-heading">
           <div class="insights-heading-copy"><h3 id="risk-heading"><icon-bug />缺陷风险</h3><p>识别重点风险，跟踪修复闭环</p></div>
           <span :class="['insights-badge', bugs.open ? 'tone-danger' : 'tone-success']">{{ bugs.open ? '需关注' : '无未关闭缺陷' }}</span>
@@ -47,8 +57,7 @@
         </div>
         <footer class="insights-note">分布按全部缺陷计算，高优先级与处理状态可重叠</footer>
       </article>
-
-      <article class="insights-block" aria-labelledby="automation-heading">
+<article class="insights-block" aria-labelledby="automation-heading">
         <header class="insights-heading">
           <div class="insights-heading-copy"><h3 id="automation-heading"><icon-apps />自动化矩阵</h3><p>统一查看各类自动化的资产与运行概况</p></div>
           <span class="insights-badge">{{ activeAutomationCount }}/3 有数据</span>
@@ -58,17 +67,14 @@
             <span class="insights-platform">{{ item.key }}</span>
             <div class="insights-item-copy">
               <div class="insights-automation-name"><h4>{{ item.label }}</h4><span :class="['insights-state', `tone-${item.tone}`]">{{ item.state }}</span></div>
-              <p>{{ item.details }}</p>
+              <p>{{ item.details }}</p><p v-if="item.rate !== null" class="insights-automation-rate" :class="`quality-${passRateTone(item.rate)}`">运行通过率 <b>{{ formatQualityPercent(item.rate) }}</b></p>
             </div>
             <div class="insights-item-number"><strong>{{ item.total === null ? '—' : number(item.total) }}</strong><span>用例</span></div>
           </div>
         </div>
         <footer class="insights-note"><icon-info-circle />APP 汇总统计暂未接入，执行数据可在工作区查看</footer>
       </article>
-    </div>
-
-    <div class="insights-row insights-resources">
-      <article class="insights-block" aria-labelledby="review-heading">
+<article class="insights-block" aria-labelledby="review-heading">
         <header class="insights-heading">
           <div class="insights-heading-copy"><h3 id="review-heading"><icon-file />测试用例审核分布</h3><p>掌握测试资产的审核与可用情况</p></div>
           <span class="insights-badge">{{ number(stats?.testcases?.total) }} 条</span>
@@ -83,8 +89,9 @@
           </div>
         </div>
       </article>
-
-      <article class="insights-block insights-token" aria-labelledby="token-heading">
+    </div>
+    <div class="insights-row insights-execution">
+<article class="insights-block insights-token" aria-labelledby="token-heading">
         <header class="insights-heading">
           <div class="insights-heading-copy"><h3 id="token-heading"><icon-thunderbolt />Token 使用概况</h3><p>查看 AI 资源消耗和调用活跃度</p></div>
           <div class="insights-period" role="group" aria-label="Token 统计分组">
@@ -107,28 +114,7 @@
           <div v-else class="insights-ranking-empty">暂无用户使用记录，AI 调用后将在这里展示消耗分布。</div>
         </div>
       </article>
-    </div>
-
-    <div class="insights-row insights-execution">
-      <article class="insights-block" aria-labelledby="trend-heading">
-        <header class="insights-heading">
-          <div class="insights-heading-copy"><h3 id="trend-heading"><icon-bar-chart />近 7 天执行趋势</h3><p>每日通过与失败的用例结果</p></div>
-          <div class="insights-chart-legend"><span><i class="insights-dot tone-success"></i>通过</span><span><i class="insights-dot tone-danger"></i>失败</span></div>
-        </header>
-        <div class="insights-trend-summary"><span>近 30 天执行 <strong>{{ number(stats?.execution_trend?.summary_30d?.execution_count) }}</strong><small>次</small></span><span>通过 <b class="insights-success-text">{{ number(stats?.execution_trend?.summary_30d?.passed) }}</b></span><span>失败 <b class="insights-danger-text">{{ number(stats?.execution_trend?.summary_30d?.failed) }}</b></span></div>
-        <figure v-if="hasTrendData" class="insights-chart" aria-labelledby="trend-heading">
-          <div class="insights-chart-scale" aria-hidden="true"><span>{{ number(trendMax) }}</span><span>{{ number(Math.round(trendMax / 2)) }}</span><span>0</span></div>
-          <div class="insights-chart-plot">
-            <div v-for="day in trendDays" :key="day.date" class="insights-chart-day">
-              <div class="insights-chart-slot"><span class="insights-chart-count">{{ number(day.passed + day.failed) }}</span><div class="insights-chart-stack" role="img" :title="`${formatDate(day.date)}：通过 ${number(day.passed)}，失败 ${number(day.failed)}`" :aria-label="`${formatDate(day.date)}：通过 ${day.passed}，失败 ${day.failed}`" :style="{ height: `${(day.passed + day.failed) / trendMax * 100}%` }"><span class="tone-danger" :style="{ flexGrow: day.failed }"></span><span class="tone-success" :style="{ flexGrow: day.passed }"></span></div></div>
-              <span class="insights-chart-date">{{ formatDate(day.date) }}</span>
-            </div>
-          </div>
-        </figure>
-        <div v-else class="insights-empty"><icon-bar-chart /><strong>暂无执行趋势</strong><span>完成测试执行后，这里将展示每日结果变化。</span></div>
-      </article>
-
-      <article class="insights-block" aria-labelledby="operations-heading">
+<article class="insights-block" aria-labelledby="operations-heading">
         <header class="insights-heading"><div class="insights-heading-copy"><h3 id="operations-heading"><icon-dashboard />项目运营看板</h3><p>协作效率与资源活跃度</p></div></header>
         <dl class="insights-operations">
           <div v-for="item in operationItems" :key="item.label"><div><dt>{{ item.label }}</dt><p>{{ item.description }}</p></div><dd>{{ number(item.value) }}</dd></div>
@@ -143,6 +129,7 @@ import { computed } from 'vue'
 import { IconApps, IconBarChart, IconBug, IconCheckCircle, IconDashboard, IconFile, IconHistory, IconInfoCircle, IconRefresh, IconThunderbolt } from '@arco-design/web-vue/es/icon'
 import type { ProjectStatistics, TokenUsageStats } from '@/services/projectService'
 import { getUserDisplayName } from '@/utils/userDisplay'
+import { calculatePassRate, passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 
 type TokenPeriod = 'day' | 'week' | 'month'
 const props = defineProps<{ stats: ProjectStatistics | null; tokenStats: TokenUsageStats | null; tokenPeriod: TokenPeriod }>()
@@ -154,10 +141,10 @@ const percent = (value: number, total: number | undefined) => Math.round(ratio(v
 const formatDate = (date: string) => { const [, month, day] = date.split('T')[0].split('-'); return `${Number(month)}/${Number(day)}` }
 const bugs = computed(() => ({ total: 0, open: 0, high_severity: 0, pending_retest: 0, closed: 0, ...props.stats?.bugs }))
 const backlogItems = computed(() => [
-  { label: '待审核用例', description: '等待评审确认', value: props.stats?.testcases?.by_review_status?.pending_review || 0, unit: '条', icon: IconCheckCircle, tone: 'warning' },
-  { label: '待优化用例', description: '完善描述与覆盖范围', value: props.stats?.testcases?.by_review_status?.needs_optimization || 0, unit: '条', icon: IconFile, tone: 'info' },
-  { label: '待回归缺陷', description: '修复后等待验证', value: bugs.value.pending_retest, unit: '个', icon: IconRefresh, tone: 'warning' },
-  { label: 'UI 失败记录', description: '排查脚本与运行环境', value: props.stats?.ui_automation?.by_status?.failed || 0, unit: '次', icon: IconHistory, tone: 'danger' },
+  { label: '待审核用例', to: '/testcases', description: '等待评审确认', value: props.stats?.testcases?.by_review_status?.pending_review || 0, unit: '条', icon: IconCheckCircle, tone: 'warning' },
+  { label: '待优化用例', to: '/testcases', description: '完善描述与覆盖范围', value: props.stats?.testcases?.by_review_status?.needs_optimization || 0, unit: '条', icon: IconFile, tone: 'info' },
+  { label: '待回归缺陷', to: '/test-bugs', description: '修复后等待验证', value: bugs.value.pending_retest, unit: '个', icon: IconRefresh, tone: 'danger' },
+  { label: 'UI 失败记录', to: '/ui-automation?tab=execution-records', description: '排查脚本与运行环境', value: props.stats?.ui_automation?.by_status?.failed || 0, unit: '次', icon: IconHistory, tone: 'danger' },
 ])
 const backlogTotal = computed(() => backlogItems.value.reduce((sum, item) => sum + item.value, 0))
 const riskItems = computed(() => [
@@ -167,9 +154,9 @@ const riskItems = computed(() => [
   { label: '已关闭', value: bugs.value.closed, tone: 'success' },
 ])
 const automationItems = computed(() => [
-  { key: 'API', label: '接口自动化', total: props.stats?.api_automation?.test_cases || 0, state: props.stats?.api_automation?.test_cases ? '已接入' : '待建设', tone: props.stats?.api_automation?.test_cases ? 'success' : 'neutral', details: `请求 ${number(props.stats?.api_automation?.requests)} · 执行 ${number(props.stats?.api_automation?.executions)}` },
-  { key: 'UI', label: 'Web 自动化', total: props.stats?.ui_automation?.total_cases || 0, state: props.stats?.ui_automation?.total_cases ? '已接入' : '待建设', tone: props.stats?.ui_automation?.total_cases ? 'success' : 'neutral', details: `成功 ${number(props.stats?.ui_automation?.by_status?.success)} · 失败 ${number(props.stats?.ui_automation?.by_status?.failed)}` },
-  { key: 'APP', label: '移动端自动化', total: null, state: '统计待接入', tone: 'neutral', details: '设备与执行详情请查看工作区' },
+  { key: 'API', rate: null, label: '接口自动化', total: props.stats?.api_automation?.test_cases || 0, state: props.stats?.api_automation?.test_cases ? '已接入' : '待建设', tone: props.stats?.api_automation?.test_cases ? 'success' : 'neutral', details: `请求 ${number(props.stats?.api_automation?.requests)} · 执行 ${number(props.stats?.api_automation?.executions)}` },
+  { key: 'UI', rate: calculatePassRate(props.stats?.ui_automation?.by_status?.success || 0, props.stats?.ui_automation?.total_executions || 0), label: 'Web 自动化', total: props.stats?.ui_automation?.total_cases || 0, state: props.stats?.ui_automation?.total_cases ? '已接入' : '待建设', tone: props.stats?.ui_automation?.total_cases ? 'success' : 'neutral', details: `成功 ${number(props.stats?.ui_automation?.by_status?.success)} · 失败 ${number(props.stats?.ui_automation?.by_status?.failed)}` },
+  { key: 'APP', rate: null, label: '移动端自动化', total: null, state: '统计待接入', tone: 'neutral', details: '设备与执行详情请查看工作区' },
 ])
 const activeAutomationCount = computed(() => automationItems.value.filter(item => item.total !== null && item.total > 0).length)
 const reviewItems = computed(() => [
@@ -182,7 +169,7 @@ const reviewItems = computed(() => [
 const averageTokens = computed(() => props.tokenStats?.total?.request_count ? Math.round(props.tokenStats.total.total_tokens / props.tokenStats.total.request_count) : 0)
 const rankedUsers = computed(() => [...(props.tokenStats?.by_user || [])].sort((a, b) => b.total_tokens - a.total_tokens).slice(0, 3))
 const trendDays = computed(() => props.stats?.execution_trend?.daily_7d || [])
-const trendMax = computed(() => Math.max(1, ...trendDays.value.map(day => day.passed + day.failed)))
+const trendMax = computed(() => Math.max(1, ...trendDays.value.flatMap(day => [day.passed, day.failed])))
 const hasTrendData = computed(() => trendDays.value.some(day => day.passed + day.failed > 0))
 const operationItems = computed(() => [
   { label: '审核积压', description: '待进入正式可执行状态', value: props.stats?.testcases?.by_review_status?.pending_review || 0 },
@@ -194,16 +181,16 @@ const operationItems = computed(() => [
 
 <style scoped>
 .dashboard-insights {
-  --insight-success: #188267;
+  --insight-success: var(--theme-success);
   --insight-warning: #b87916;
-  --insight-danger: #d14d5c;
-  --insight-info: #426ce1;
+  --insight-danger: var(--theme-danger);
+  --insight-info: var(--theme-accent);
   --insight-subtle: #8391ac;
   --insight-success-soft: #eaf6f1;
   --insight-warning-soft: #fff5e4;
   --insight-danger-soft: #fceef0;
   --insight-info-soft: #edf2ff;
-  display: flex; flex-direction: column; gap: 20px; min-width: 0;
+  display: flex; flex-direction: column; gap: 16px; min-width: 0;
   color: var(--theme-text); font-variant-numeric: tabular-nums;
 }
 .dashboard-insights *, .dashboard-insights *::before, .dashboard-insights *::after { box-sizing: border-box; }
@@ -212,9 +199,9 @@ const operationItems = computed(() => [
 .insights-intro p { margin: 5px 0 0; color: var(--theme-text-tertiary); font-size: 12px; }
 .insights-context { display: inline-flex; align-items: center; gap: 7px; flex: none; color: var(--theme-text-tertiary); font-size: 11px; }
 .insights-context > span { width: 6px; height: 6px; border-radius: 50%; background: var(--theme-accent); }
-.insights-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.insights-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
 .insights-block { display: flex; flex-direction: column; min-width: 0; padding: 22px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); box-shadow: var(--theme-card-shadow); }
-.insights-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; min-height: 53px; margin-bottom: 18px; }
+.insights-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; min-height: 44px; margin-bottom: 12px; }
 .insights-heading-copy { min-width: 0; }
 .insights-heading h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; line-height: 1.5; font-weight: 700; }
 .insights-heading h3 > svg { width: 17px; height: 17px; color: var(--theme-text-tertiary); flex: none; }
@@ -224,7 +211,7 @@ const operationItems = computed(() => [
 .insights-note { display: flex; align-items: flex-start; gap: 6px; margin-top: auto; padding-top: 16px; color: var(--theme-text-tertiary); font-size: 10px; line-height: 1.6; }
 .insights-note svg { margin-top: 2px; flex: none; }
 .insights-queue, .insights-risk-list, .insights-automation-list { display: flex; flex-direction: column; }
-.insights-queue-item { display: flex; align-items: center; gap: 12px; padding: 13px 0; }
+.insights-queue-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
 .insights-queue-item:first-child { padding-top: 0; }
 .insights-queue-item + .insights-queue-item, .insights-automation-item + .insights-automation-item { border-top: 1px solid var(--theme-border); }
 .insights-symbol { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 9px; }
@@ -287,7 +274,7 @@ const operationItems = computed(() => [
 .insights-execution { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .insights-chart-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 3px; }
 .insights-chart-legend > span { display: flex; align-items: center; gap: 7px; color: var(--theme-text-secondary); font-size: 11px; }
-.insights-trend-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 24px; color: var(--theme-text-tertiary); font-size: 11px; }
+.insights-trend-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px 20px; margin: 0 0 15px; color: var(--theme-text-tertiary); font-size: 11px; }
 .insights-trend-summary strong { margin: 0 5px 0 7px; color: var(--theme-text); font-size: 23px; font-weight: 700; }
 .insights-trend-summary small { font-size: 10px; }
 .insights-trend-summary b { margin-left: 5px; font-size: 13px; }
@@ -296,8 +283,8 @@ const operationItems = computed(() => [
 .insights-chart-plot { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; width: 100%; min-width: 0; }
 .insights-chart-day { display: flex; flex-direction: column; min-width: 0; gap: 10px; }
 .insights-chart-slot { position: relative; display: flex; justify-content: flex-end; align-items: center; flex-direction: column; height: 155px; border-bottom: 1px solid var(--theme-border); background: repeating-linear-gradient(to top, transparent 0, transparent calc(50% - 1px), var(--theme-border) calc(50% - 1px), var(--theme-border) 50%); }
-.insights-chart-stack { display: flex; flex-direction: column; width: min(32px, 60%); max-height: 100%; flex: 0 0 auto; overflow: hidden; border-radius: 4px 4px 0 0; }
-.insights-chart-stack > span { flex-basis: 0; min-height: 0; }
+.insights-chart-stack { display: flex; flex-direction: row; align-items: flex-end; gap: 4px; width: min(34px, 90%); height: 100%; max-height: 100%; flex: 0 0 auto; overflow: visible; }
+.insights-chart-stack > span { flex: 1; min-width: 1px; min-height: 0; border-radius: 3px 3px 0 0; }
 .insights-chart-count { position: absolute; top: -17px; color: var(--theme-text-secondary); font-size: 10px; }
 .insights-chart-date { color: var(--theme-text-tertiary); font-size: 10px; text-align: center; white-space: nowrap; }
 .insights-empty { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; flex: 1; min-height: 190px; color: var(--theme-text-tertiary); text-align: center; font-size: 11px; }
@@ -326,7 +313,7 @@ const operationItems = computed(() => [
 @container workspace (max-width: 1050px) {
   .insights-row { gap: 16px; }
   .insights-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .insights-primary > :last-child { grid-column: 1 / -1; }
+
   .insights-primary .insights-automation-list { flex-direction: row; gap: 20px; }
   .insights-automation-item { flex: 1; min-width: 0; padding: 6px 0; align-items: flex-start; }
   .insights-automation-item + .insights-automation-item { padding-left: 20px; border-top: 0; border-left: 1px solid var(--theme-border); }

@@ -6,6 +6,7 @@ import '@arco-design/web-vue/dist/arco.css'
 import './style.css'
 import './arco-theme-override.css'
 import './workspace-theme.css'
+import './styles/a2-workspace.css'
 
 import App from './App.vue'
 import router, { preloadPrivateRouteComponents } from './router'

@@ -602,7 +602,7 @@ const toggleKeyVisibility = (record: ApiKeyItem) => {
 .new-apikey-title {
   font-weight: bold;
   margin-bottom: 8px;
-  color: #f5222d;
+  color: var(--theme-danger);
 }
 
 .new-apikey-content {

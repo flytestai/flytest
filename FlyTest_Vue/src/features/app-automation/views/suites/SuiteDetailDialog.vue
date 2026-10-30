@@ -162,13 +162,13 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
 .success-chip {
   background: rgba(0, 180, 42, 0.1);
   border-color: rgba(0, 180, 42, 0.18);
-  color: #00b42a;
+  color: var(--theme-success);
 }
 
 .danger-chip {
   background: rgba(245, 63, 63, 0.1);
   border-color: rgba(245, 63, 63, 0.18);
-  color: #f53f3f;
+  color: var(--theme-danger);
 }
 
 .warning-chip {

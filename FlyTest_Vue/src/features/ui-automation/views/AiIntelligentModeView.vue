@@ -375,6 +375,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { computed, defineAsyncComponent, h, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { IconDelete, IconEdit, IconEye, IconFile, IconPlayArrow, IconPlus, IconRefresh, IconStop } from '@arco-design/web-vue/es/icon'
@@ -533,7 +534,7 @@ const performanceCards = computed(() => {
     { label: '平均步骤耗时', value: `${metrics.avg_step_duration.toFixed(2)}s` },
     { label: '最大步骤耗时', value: `${metrics.max_step_duration.toFixed(2)}s` },
     { label: '最小步骤耗时', value: `${metrics.min_step_duration.toFixed(2)}s` },
-    { label: '步骤通过率', value: `${metrics.pass_rate}%` },
+    { label: '步骤通过率', value: formatQualityPercent(metrics.pass_rate), tone: passRateTone(metrics.pass_rate) },
   ]
 })
 const reportActionDistribution = computed(() => currentReport.value?.action_distribution || [])
@@ -1305,7 +1306,7 @@ onUnmounted(() => stopPolling())
 .distribution-item { display: grid; grid-template-columns: 72px 1fr 40px; align-items: center; gap: 12px; }
 .distribution-label, .distribution-count { color: var(--color-text-1); }
 .distribution-bar { height: 8px; border-radius: 999px; background: var(--color-fill-2); overflow: hidden; }
-.distribution-bar__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #165dff, #36cfc9); }
+.distribution-bar__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--theme-accent), #36cfc9); }
 .step-media { margin-top: 12px; }
 .gif-preview { overflow: hidden; border-radius: 10px; border: 1px solid var(--color-border-2); background: var(--color-fill-1); }
 .gif-preview img { display: block; width: 100%; max-height: 360px; object-fit: contain; }

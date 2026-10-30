@@ -616,7 +616,7 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--theme-success);
 }
 
 .run-card__title {

@@ -43,8 +43,8 @@
         <span class="progress-text">{{ record.passed_cases + record.failed_cases }}/{{ record.total_cases }}</span>
       </template>
       <template #success_rate="{ record }">
-        <span :style="{ color: record.success_rate >= 80 ? 'green' : record.success_rate >= 50 ? 'orange' : 'red' }">
-          {{ record.success_rate?.toFixed(1) ?? 0 }}%
+        <span :style="{ color: passRateColor(record.success_rate) }">
+          {{ formatQualityPercent(record.success_rate) }}
         </span>
       </template>
       <template #duration="{ record }">
@@ -88,8 +88,8 @@
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="成功率">
-            <span :style="{ color: (currentRecord.success_rate ?? 0) >= 80 ? 'green' : (currentRecord.success_rate ?? 0) >= 50 ? 'orange' : 'red' }">
-              {{ currentRecord.success_rate?.toFixed(1) ?? 0 }}%
+            <span :style="{ color: passRateColor(currentRecord.success_rate) }">
+              {{ formatQualityPercent(currentRecord.success_rate) }}
             </span>
           </a-descriptions-item>
           <a-descriptions-item label="用例统计">
@@ -169,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateColor, formatQualityPercent } from '@/utils/qualityStatus'
 import { ref, reactive, computed, watch } from 'vue'
 import { IconRefresh, IconEye, IconDelete } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'

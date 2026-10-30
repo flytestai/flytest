@@ -27,7 +27,7 @@
         </article>
         <article class="summary-card summary-card--success">
           <span class="summary-label">通过率</span>
-          <strong class="summary-value">{{ report.summary.pass_rate }}%</strong>
+          <strong class="summary-value"><span :class="'quality-' + passRateTone(report.summary.pass_rate)">{{ formatQualityPercent(report.summary.pass_rate) }}</span></strong>
           <span class="summary-note">通过 {{ report.summary.passed_count }} 次</span>
         </article>
         <article class="summary-card">
@@ -157,6 +157,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateColor, passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'

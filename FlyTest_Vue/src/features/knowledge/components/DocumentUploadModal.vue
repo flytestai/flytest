@@ -88,13 +88,14 @@
     </a-form>
 
     <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
-      <a-progress :percent="uploadProgress" />
+      <a-progress :percent="progressFraction(uploadProgress)" />
       <div class="progress-text">正在上传文档...</div>
     </div>
   </a-modal>
 </template>
 
 <script setup lang="ts">
+import { progressFraction } from '@/utils/qualityStatus';
 import { ref, reactive, computed, watch } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { IconUpload, IconFile, IconClose } from '@arco-design/web-vue/es/icon';

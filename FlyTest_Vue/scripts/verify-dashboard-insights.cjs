@@ -99,16 +99,16 @@ async function run() {
         const heights = geometry.primary.map(rect => Math.round(rect.height));
         assert.equal(new Set(heights).size, 1, 'First row cards must align');
         assert.equal(Math.round(geometry.resources[0].y), Math.round(geometry.resources[1].y));
-        assert(geometry.resources[1].width > geometry.resources[0].width * 1.8, 'Resource row should use the full width');
+        assert(Math.abs(geometry.resources[1].width - geometry.resources[0].width) < 2, 'Risk, automation and asset cards use equal columns');
       }
       if (scenario.dark) {
         assert.notEqual(geometry.background, 'rgb(255, 255, 255)');
-        assert.equal(await page.locator('.dashboard-insights').evaluate(el => getComputedStyle(el).getPropertyValue('--insight-danger-soft').trim()), '#3e2834');
+        assert.equal(await page.locator('.dashboard-insights').evaluate(el => getComputedStyle(el).getPropertyValue('--insight-danger-soft').trim()), '#462b34');
       }
       if (['desktop', 'tablet', 'mobile', 'dark', 'empty', 'large-values', 'large-values-mobile'].includes(scenario.name)) {
         const blocks = scenario.width < 680 ? page.locator('.insights-block') : page.locator('.insights-row');
         for (let i = 0; i < await blocks.count(); i++) await blocks.nth(i).screenshot({ path: path.join(output, `${scenario.name}-${i + 1}.png`), animations: 'disabled' });
-        await page.locator('.insights-intro').scrollIntoViewIfNeeded();
+        await page.locator('.dashboard-insights').scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(output, `${scenario.name}-overview.png`), animations: 'disabled' });
       }
       if (scenario.name === 'desktop') {

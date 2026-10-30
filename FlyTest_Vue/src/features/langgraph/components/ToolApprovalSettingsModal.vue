@@ -322,7 +322,7 @@ const handleCancel = () => {
 }
 
 .group-icon.mcp {
-  color: #52c41a;
+  color: var(--theme-success);
 }
 
 .group-name {

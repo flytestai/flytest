@@ -731,12 +731,12 @@ const handlePromptTypeChange = (type: PromptType) => {
 }
 
 .prompt-item:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   background: #f2f3ff;
 }
 
 .prompt-item.is-default {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   background: #f2f3ff;
 }
 
@@ -820,7 +820,7 @@ const handlePromptTypeChange = (type: PromptType) => {
 }
 
 .type-info-icon {
-  color: #165dff;
+  color: var(--theme-accent);
   font-size: 16px;
   cursor: help;
   flex-shrink: 0;

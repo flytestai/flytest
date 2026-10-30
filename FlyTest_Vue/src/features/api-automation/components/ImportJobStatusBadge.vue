@@ -269,7 +269,7 @@ watch(
 }
 
 .import-job-dot.is-error {
-  background: linear-gradient(135deg, #fb7185, #ef4444);
+  background: linear-gradient(135deg, #fb7185, var(--theme-danger));
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
 }
 
@@ -383,11 +383,11 @@ watch(
 }
 
 .import-task-step.is-finished {
-  color: #16a34a;
+  color: var(--theme-success);
 }
 
 .import-task-step.is-finished .import-task-step-dot {
-  background: #22c55e;
+  background: var(--theme-success);
 }
 
 .import-task-step.is-active {
@@ -400,11 +400,11 @@ watch(
 }
 
 .import-task-step.is-failed {
-  color: #dc2626;
+  color: var(--theme-danger);
 }
 
 .import-task-step.is-failed .import-task-step-dot {
-  background: #ef4444;
+  background: var(--theme-danger);
 }
 
 .import-task-error {

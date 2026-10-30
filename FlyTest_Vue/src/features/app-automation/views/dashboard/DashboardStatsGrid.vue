@@ -18,7 +18,7 @@
     <a-card class="stat-card">
       <div class="stat-label">测试用例</div>
       <div class="stat-value">{{ statistics.test_cases.total }}</div>
-      <div class="stat-meta">通过率 {{ statistics.executions.pass_rate }}%</div>
+      <div class="stat-meta">通过率 <span :class="'quality-' + passRateTone(statistics.executions.pass_rate)">{{ formatQualityPercent(statistics.executions.pass_rate) }}</span></div>
     </a-card>
     <a-card class="stat-card">
       <div class="stat-label">激活任务</div>
@@ -34,6 +34,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { DashboardStatsGridProps } from './dashboardViewModels'
 
 defineProps<DashboardStatsGridProps>()

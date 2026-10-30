@@ -85,12 +85,12 @@
         <template #pass-rate="{ record }">
           <div class="pass-rate">
             <a-progress
-              :percent="record.pass_rate"
+              :percent="progressFraction(record.pass_rate)"
               :color="getPassRateColor(record.pass_rate)"
               :show-text="false"
               size="small"
             />
-            <span class="rate-text">{{ record.pass_rate.toFixed(1) }}%</span>
+            <span class="rate-text" :style="{ color: passRateColor(record.pass_rate) }">{{ formatQualityPercent(record.pass_rate) }}</span>
           </div>
         </template>
 
@@ -150,6 +150,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateColor, formatQualityPercent, progressFraction } from '@/utils/qualityStatus'
 import { ref, computed, watch, onUnmounted } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import {
@@ -350,11 +351,7 @@ const getStatusText = (status: string) => {
 };
 
 // 获取通过率颜色
-const getPassRateColor = (rate: number) => {
-  if (rate >= 90) return '#00b42a';
-  if (rate >= 70) return '#ff7d00';
-  return '#f53f3f';
-};
+const getPassRateColor = passRateColor;
 
 // 格式化时长
 const formatDuration = (seconds: number) => {

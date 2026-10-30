@@ -483,7 +483,7 @@ onMounted(() => {
 
 .details-header i {
   font-size: 24px;
-  color: #165dff;
+  color: var(--theme-accent);
 }
 
 .details-header .entity-details h3 {

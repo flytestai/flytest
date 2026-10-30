@@ -19,9 +19,9 @@
       <section class="workspace-hero workspace-hero--projects workspace-hero--compact workspace-hero--project-command">
         <div class="workspace-hero-copy">
           <span class="workspace-hero-eyebrow">Project Command</span>
-          <h2 class="workspace-hero-title">FeiCe 飞测项目中枢</h2>
+          <h2 class="workspace-hero-title">项目管理</h2>
           <p class="workspace-hero-description">
-            将项目、成员、环境与测试资产统一纳入智能测试驾驶舱，让 AI 生成、自动化执行与协同治理从一开始就拥有清晰的组织边界。
+            管理项目、团队成员与测试资产，明确协作范围和权限。
           </p>
           <div class="workspace-chip-row">
             <span class="workspace-chip">项目矩阵</span>
@@ -204,7 +204,7 @@
     <a-modal
       v-model:visible="addProjectModalVisible"
       title="添加项目"
-      @ok="handleAddProject"
+      @before-ok="handleAddProject"
       @cancel="cancelAddProject"
       :mask-closable="false"
       width="700px"
@@ -248,7 +248,7 @@
     <a-modal
       v-model:visible="editProjectModalVisible"
       title="编辑项目"
-      @ok="handleEditProject"
+      @before-ok="handleEditProject"
       @cancel="cancelEditProject"
       :mask-closable="false"
       width="700px"
@@ -394,7 +394,7 @@ const columns = [
   {
     title: '操作',
     slotName: 'operations',
-    width: 180,
+    width: 210,
     fixed: 'right',
   },
 ];
@@ -834,10 +834,11 @@ const cancelAddProject = () => {
 const handleAddProject = async () => {
   // 验证表单
   try {
-    await addProjectFormRef.value.validate();
+    const errors = await addProjectFormRef.value.validate();
+    if (errors) return false;
   } catch (errors) {
     console.error('表单验证失败:', errors);
-    return;
+    return false;
   }
 
   // 创建项目数据对象
@@ -854,6 +855,7 @@ const handleAddProject = async () => {
       fetchProjectList();
       // 关闭模态框
       addProjectModalVisible.value = false;
+      return true;
     } else {
       Message.error(response.error || '创建项目失败');
     }
@@ -861,6 +863,7 @@ const handleAddProject = async () => {
     console.error('创建项目出错:', error);
     Message.error('创建项目时发生错误');
   }
+  return false;
 };
 
 // 编辑项目模态框相关
@@ -927,10 +930,11 @@ const cancelEditProject = () => {
 // 处理编辑项目
 const handleEditProject = async () => {
   try {
-    await editProjectFormRef.value.validate();
+    const errors = await editProjectFormRef.value.validate();
+    if (errors) return false;
   } catch (errors) {
     console.error('表单验证失败:', errors);
-    return;
+    return false;
   }
 
   // 更新项目数据对象
@@ -946,6 +950,7 @@ const handleEditProject = async () => {
       Message.success('项目更新成功');
       fetchProjectList();
       editProjectModalVisible.value = false;
+      return true;
     } else {
       Message.error(response.error || '更新项目失败');
     }
@@ -953,6 +958,7 @@ const handleEditProject = async () => {
     console.error('更新项目出错:', error);
     Message.error('更新项目时发生错误');
   }
+  return false;
 };
 
 // 删除项目

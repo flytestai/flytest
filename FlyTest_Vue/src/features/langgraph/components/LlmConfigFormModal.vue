@@ -1017,7 +1017,7 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ef4444;
+  background: var(--theme-danger);
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
   flex-shrink: 0;
 }

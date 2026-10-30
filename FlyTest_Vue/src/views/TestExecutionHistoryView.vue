@@ -399,7 +399,7 @@
               <div class="decision-focus-footnote">
                 已执行 {{ reportData.report_standard.activity_summary.workload.executed_cases }} /
                 {{ reportData.report_standard.activity_summary.workload.total_cases }} 条，当前通过率
-                {{ reportData.report_standard.result_details.case_execution.pass_rate }}%。
+                <span :class="'quality-' + passRateTone(reportData.report_standard.result_details.case_execution.pass_rate)">{{ formatQualityPercent(reportData.report_standard.result_details.case_execution.pass_rate) }}</span>。
               </div>
             </div>
             <div class="decision-focus-card">
@@ -537,7 +537,7 @@
                   失败：{{ reportData.report_standard.result_details.case_execution.failed }}<br />
                   阻塞：{{ reportData.report_standard.result_details.case_execution.blocked }}<br />
                   未执行：{{ reportData.report_standard.result_details.case_execution.not_executed }}<br />
-                  通过率：{{ reportData.report_standard.result_details.case_execution.pass_rate }}%
+                  通过率：<span :class="'quality-' + passRateTone(reportData.report_standard.result_details.case_execution.pass_rate)">{{ formatQualityPercent(reportData.report_standard.result_details.case_execution.pass_rate) }}</span>
                 </p>
               </div>
               <div class="item-card">
@@ -924,6 +924,7 @@
 
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { computed, onMounted, ref, watch } from 'vue';
 import { Message, Modal, type TreeNodeData } from '@arco-design/web-vue';
 import { useRoute } from 'vue-router';
@@ -1220,7 +1221,7 @@ const buildFallbackStandardReport = (report: any) => {
   const blockedCount = Number(report?.execution_status_distribution?.not_applicable || 0);
   const notExecutedCount = Number(report?.execution_status_distribution?.not_executed || 0);
   const executedCases = Math.max(totalCases - notExecutedCount, 0);
-  const passRate = executedCases > 0 ? Math.round((passedCount / executedCases) * 100) : 0;
+  const passRate = executedCases > 0 ? (passedCount / executedCases) * 100 : 0;
   const traceableCount = Number(report?.requirement_summary?.traceable_testcase_count || 0);
   const unlinkedCount = Number(report?.requirement_summary?.unlinked_testcase_count || 0);
 
@@ -3156,11 +3157,11 @@ watch(
 }
 
 .compare-item-delta.up {
-  color: #165dff;
+  color: var(--theme-accent);
 }
 
 .compare-item-delta.down {
-  color: #f53f3f;
+  color: var(--theme-danger);
 }
 
 .compare-item-delta.flat {
@@ -3180,11 +3181,11 @@ watch(
 }
 
 .compare-item-delta.positive {
-  color: #00b42a;
+  color: var(--theme-success);
 }
 
 .compare-item-delta.negative {
-  color: #f53f3f;
+  color: var(--theme-danger);
 }
 
 .compare-item-delta.neutral {
@@ -3252,7 +3253,7 @@ watch(
 }
 
 .snapshot-item.active {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   background: #eff4ff;
   box-shadow: 0 10px 24px rgba(22, 93, 255, 0.12);
 }
@@ -3382,7 +3383,7 @@ watch(
   font-weight: 700;
   line-height: 1;
   letter-spacing: 1.2px;
-  color: #165dff;
+  color: var(--theme-accent);
 }
 
 .report-title-row {
@@ -3679,7 +3680,7 @@ watch(
   height: 28px;
   border-radius: 999px;
   background: #eff4ff;
-  color: #165dff;
+  color: var(--theme-accent);
   font-size: 13px;
   font-weight: 600;
   display: flex;
@@ -3974,7 +3975,7 @@ watch(
   width: 4px;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #165dff 0%, #36a9ff 100%);
+  background: linear-gradient(180deg, var(--theme-accent) 0%, #36a9ff 100%);
 }
 
 .section-text,

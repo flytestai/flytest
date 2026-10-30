@@ -247,7 +247,7 @@ const handleCancel = () => {
   flex-shrink: 0;
   padding: 8px 10px;
   text-align: center;
-  color: #165dff;
+  color: var(--theme-accent);
   font-weight: 500;
   border-right: 1px solid #f2f3f5;
 }
@@ -272,7 +272,7 @@ const handleCancel = () => {
 .col-expected {
   flex: 1;
   padding: 8px 12px;
-  color: #00b42a;
+  color: var(--theme-success);
   word-break: break-word;
 }
 
@@ -325,7 +325,7 @@ const handleCancel = () => {
   padding: 8px 12px;
   background-color: #e8f3ff;
   border-radius: 4px;
-  color: #165dff;
+  color: var(--theme-accent);
   font-size: 12px;
 }
 </style>

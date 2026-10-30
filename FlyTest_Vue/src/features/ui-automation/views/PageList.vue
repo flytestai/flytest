@@ -372,7 +372,7 @@ defineExpose({ refresh })
 }
 .url-text {
   max-width: 180px;
-  color: #1890ff;
+  color: var(--theme-accent);
 }
 .empty-text {
   color: #c0c4cc;

@@ -181,7 +181,7 @@ onUnmounted(() => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #00b42a;
+  background: var(--theme-success);
   box-shadow: 0 0 8px rgba(0, 180, 42, 0.5);
   display: inline-block;
 }

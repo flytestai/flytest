@@ -176,7 +176,7 @@ const getRatingColor = (rating: Rating) => {
 }
 
 .high-priority {
-  color: #f53f3f;
+  color: var(--theme-danger);
   font-weight: 500;
 }
 

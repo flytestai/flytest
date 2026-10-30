@@ -274,7 +274,7 @@ const getAverageChunksPerDocument = () => {
 }
 
 .chunk-icon {
-  background: #00b42a;
+  background: var(--theme-success);
 }
 
 .query-icon {
@@ -316,7 +316,7 @@ const getAverageChunksPerDocument = () => {
 }
 
 .status-item.completed {
-  border-color: #00b42a;
+  border-color: var(--theme-success);
   background: rgba(0, 180, 42, 0.1);
 }
 
@@ -326,7 +326,7 @@ const getAverageChunksPerDocument = () => {
 }
 
 .status-item.failed {
-  border-color: #f53f3f;
+  border-color: var(--theme-danger);
   background: rgba(245, 63, 63, 0.1);
 }
 

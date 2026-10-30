@@ -275,6 +275,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, watch, toRefs, nextTick } from 'vue';
 import axios from 'axios';
+import { useMediaQuery } from '@vueuse/core';
 import { Message, Modal } from '@arco-design/web-vue';
 import { IconFolder, IconDownload, IconUpload, IconDown } from '@arco-design/web-vue/es/icon';
 import { useAuthStore } from '@/store/authStore';
@@ -373,6 +374,7 @@ const hasSelection = computed(() => selectedTestCaseIds.value.length > 0);
 
 // 鍝嶅簲寮忓睆骞曞搴︽娴?
 const isSmallScreen = ref(window.innerWidth < 1222);
+const isMobileTable = useMediaQuery('(max-width: 767px)');
 const tableContainerHeight = ref(400); // 榛樿楂樺害
 const handleResize = () => {
   isSmallScreen.value = window.innerWidth < 1222;
@@ -559,7 +561,7 @@ const columns = computed(() => {
     dataIndex: 'operations',
     slotName: 'operations',
     width: isSuiteActionMode.value ? 224 : 208,
-    fixed: 'right',
+    fixed: isMobileTable.value ? undefined : 'right',
     align: 'center',
     headerCellClass: 'operation-column',
     cellClass: 'operation-column',
@@ -568,7 +570,7 @@ const columns = computed(() => {
     title: '',
     dataIndex: '__tail__',
     width: 8,
-    fixed: 'right',
+    fixed: isMobileTable.value ? undefined : 'right',
     align: 'center',
     render: () => '',
     headerCellClass: 'resize-tail-column',

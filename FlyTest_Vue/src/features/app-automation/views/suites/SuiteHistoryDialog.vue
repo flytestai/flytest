@@ -19,7 +19,7 @@
           <template #cell="{ record }">
             <div class="stack">
               <a-tag :color="getExecutionStatusMeta(record).color">{{ getExecutionStatusMeta(record).label }}</a-tag>
-              <small>通过率 {{ formatRate(record.pass_rate) }}%</small>
+              <small>通过率 <span :class="'quality-' + passRateTone(record.pass_rate)">{{ formatQualityPercent(record.pass_rate) }}</span></small>
             </div>
           </template>
         </a-table-column>
@@ -46,6 +46,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { SuiteHistoryDialogEmits } from './suiteEventModels'
 import type { SuiteHistoryDialogProps } from './suiteViewModels'
 

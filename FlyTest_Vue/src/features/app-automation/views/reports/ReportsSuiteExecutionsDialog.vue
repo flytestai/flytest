@@ -15,7 +15,7 @@
           </template>
         </a-table-column>
         <a-table-column title="通过率">
-          <template #cell="{ record }">{{ formatRate(record.pass_rate) }}%</template>
+          <template #cell="{ record }"><span :class="'quality-' + passRateTone(record.pass_rate)">{{ formatQualityPercent(record.pass_rate) }}</span></template>
         </a-table-column>
         <a-table-column title="操作" :width="180">
           <template #cell="{ record }">
@@ -31,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ReportsSuiteExecutionsDialogEmits } from './reportEventModels'
 import type { ReportsSuiteExecutionsDialogProps } from './reportViewModels'
 

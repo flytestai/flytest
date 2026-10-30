@@ -1249,7 +1249,7 @@ onBeforeUnmount(() => {
 
 .progress-step {
   font-size: 13px;
-  color: #1890ff;
+  color: var(--theme-accent);
   white-space: nowrap;
   font-weight: 500;
 }
@@ -1549,7 +1549,7 @@ onBeforeUnmount(() => {
 
 .batch-info {
   font-size: 14px;
-  color: #1677ff;
+  color: var(--theme-accent);
   font-weight: 500;
 }
 
@@ -1886,7 +1886,7 @@ onBeforeUnmount(() => {
 
 .selection-details {
   font-size: 14px;
-  color: #1677ff;
+  color: var(--theme-accent);
   font-weight: 500;
 }
 
@@ -2053,7 +2053,7 @@ onBeforeUnmount(() => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #165dff, #722ed1);
+  background: linear-gradient(135deg, var(--theme-accent), #722ed1);
   color: white;
 }
 
@@ -2097,7 +2097,7 @@ onBeforeUnmount(() => {
 
 .stat-item.high {
   background: #ffece8;
-  border: 1px solid #f53f3f;
+  border: 1px solid var(--theme-danger);
 }
 
 .stat-item.medium {
@@ -2107,7 +2107,7 @@ onBeforeUnmount(() => {
 
 .stat-item.low {
   background: #e8f7ff;
-  border: 1px solid #165dff;
+  border: 1px solid var(--theme-accent);
 }
 
 .stat-item.total {
@@ -2184,7 +2184,7 @@ onBeforeUnmount(() => {
 }
 
 .issue-item:hover {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   box-shadow: 0 2px 8px rgba(22, 93, 255, 0.1);
 }
 

@@ -26,7 +26,7 @@
           <template #cell="{ record }">
             <div class="case-copy">
               <span>进度 {{ formatProgress(record.progress) }}%</span>
-              <small>通过率 {{ formatRate(record.pass_rate) }}%</small>
+              <small>通过率 <span :class="'quality-' + passRateTone(record.pass_rate)">{{ formatQualityPercent(record.pass_rate) }}</span></small>
             </div>
           </template>
         </a-table-column>
@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { TestCasesRecentExecutionsCardEmits } from './testCaseEventModels'
 import type { TestCasesRecentExecutionsCardProps } from './testCaseViewModels'
 

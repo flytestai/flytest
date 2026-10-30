@@ -27,7 +27,7 @@
         <div class="report-summary">
           <div v-for="item in reportStats" :key="item.label" class="summary-card">
             <span class="summary-label">{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
+            <strong :class="item.tone ? `quality-${item.tone}` : undefined">{{ item.value }}</strong>
           </div>
         </div>
         <a-descriptions :column="2" bordered size="small">
@@ -61,7 +61,7 @@
             <div class="metric-grid">
               <div v-for="item in overviewCards" :key="item.label" class="metric-card">
                 <span class="summary-label">{{ item.label }}</span>
-                <strong>{{ item.value }}</strong>
+                <strong :class="item.tone ? `quality-${item.tone}` : undefined">{{ item.value }}</strong>
               </div>
             </div>
           </template>
@@ -162,7 +162,7 @@
             <div class="metric-grid">
               <div v-for="item in performanceCards" :key="item.label" class="metric-card">
                 <span class="summary-label">{{ item.label }}</span>
-                <strong>{{ item.value }}</strong>
+                <strong :class="item.tone ? `quality-${item.tone}` : undefined">{{ item.value }}</strong>
               </div>
             </div>
           </template>
@@ -249,6 +249,7 @@ type StatusAlert = {
 type SummaryItem = {
   label: string
   value: string | number
+  tone?: 'success' | 'danger' | 'neutral'
 }
 
 const props = defineProps<{
@@ -422,7 +423,7 @@ const distributionWidth = computed(() => {
 .distribution-bar__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #165dff, #36cfc9);
+  background: linear-gradient(90deg, var(--theme-accent), #36cfc9);
 }
 
 .step-media {

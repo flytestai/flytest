@@ -92,7 +92,7 @@ const normalizeTab = (value: unknown): ApiAutomationTab => {
 }
 
 const activeTab = computed<ApiAutomationTab>(() => normalizeTab(route.query.tab))
-const mountedTabs = ref<ApiAutomationTab[]>(['requests'])
+const mountedTabs = ref<ApiAutomationTab[]>([activeTab.value])
 
 const onCollectionSelect = (selection: ApiAutomationSelection) => {
   selectedCollectionId.value = selection.collection?.id

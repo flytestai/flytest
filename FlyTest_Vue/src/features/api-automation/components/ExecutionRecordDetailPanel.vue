@@ -357,7 +357,7 @@ watch(
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--theme-success);
 }
 
 .ai-summary-card__value {

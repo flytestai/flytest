@@ -327,7 +327,7 @@ onMounted(() => {
 .suite-name-link {
   display: inline-block;
   max-width: 180px;
-  color: #1890ff;
+  color: var(--theme-accent);
   cursor: pointer;
   text-decoration: none;
   transition: color 0.2s;

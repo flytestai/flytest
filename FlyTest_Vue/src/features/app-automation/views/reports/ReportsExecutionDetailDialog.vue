@@ -17,7 +17,7 @@
         </div>
         <div class="detail-card">
           <span class="detail-label">步骤通过率</span>
-          <strong>{{ formatRate(currentExecution.pass_rate) }}%</strong>
+          <strong><span :class="'quality-' + passRateTone(currentExecution.pass_rate)">{{ formatQualityPercent(currentExecution.pass_rate) }}</span></strong>
         </div>
         <div class="detail-card">
           <span class="detail-label">执行耗时</span>
@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ReportsExecutionDetailDialogEmits } from './reportEventModels'
 import type { ReportsExecutionDetailDialogProps } from './reportViewModels'
 

@@ -566,6 +566,8 @@ export const updateProjectMemberRole = async (projectId: number, userId: number,
 
 // 项目统计数据接口
 export interface ProjectStatistics {
+    /** Optional server-defined coverage; independent asset counts are not coverage. */
+    automation_coverage?: { rate: number | null; covered?: number; total?: number };
   project: {
     id: number;
     name: string;

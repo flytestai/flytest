@@ -17,13 +17,14 @@
     </a-card>
     <a-card class="stat-card">
       <span class="stat-label">触发成功率</span>
-      <strong>{{ statistics.successRate }}%</strong>
+      <strong><span :class="'quality-' + passRateTone(statistics.successRate)">{{ formatQualityPercent(statistics.successRate) }}</span></strong>
       <span class="stat-desc">成功 {{ statistics.successfulRuns }} / 总触发 {{ statistics.totalRuns }}</span>
     </a-card>
   </div>
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ScheduledTaskStatsGridProps } from './scheduledTaskViewModels'
 
 defineProps<ScheduledTaskStatsGridProps>()

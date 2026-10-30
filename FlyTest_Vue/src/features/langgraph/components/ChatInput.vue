@@ -339,12 +339,12 @@ const handlePaste = (e: ClipboardEvent) => {
   gap: 8px;
   padding: 8px 12px;
   background: linear-gradient(135deg, #f0f5ff 0%, #e8f3ff 100%);
-  border-left: 3px solid #165dff;
+  border-left: 3px solid var(--theme-accent);
   border-radius: 0 8px 8px 0;
 }
 
 .quote-icon {
-  color: #165dff;
+  color: var(--theme-accent);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -364,7 +364,7 @@ const handlePaste = (e: ClipboardEvent) => {
 }
 
 .quote-close-btn:hover {
-  color: #f53f3f !important;
+  color: var(--theme-danger) !important;
 }
 
 /* 图片预览区域 */
@@ -460,7 +460,7 @@ const handlePaste = (e: ClipboardEvent) => {
   right: 0;
   bottom: 0;
   background: linear-gradient(135deg, rgba(22, 93, 255, 0.1), rgba(22, 93, 255, 0.05));
-  border: 2px dashed #165dff;
+  border: 2px dashed var(--theme-accent);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -474,12 +474,12 @@ const handlePaste = (e: ClipboardEvent) => {
 
 .drag-icon {
   font-size: 32px;
-  color: #165dff;
+  color: var(--theme-accent);
 }
 
 .drag-overlay span {
   font-size: 14px;
-  color: #165dff;
+  color: var(--theme-accent);
   font-weight: 500;
 }
 

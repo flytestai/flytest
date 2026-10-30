@@ -757,7 +757,7 @@ const formatToolMessage = (content: string) => {
 .step-separator-label {
   font-size: 13px;
   font-weight: 600;
-  color: #165dff;
+  color: var(--theme-accent);
   background: linear-gradient(135deg, #e8f3ff 0%, #f2f5ff 100%);
   padding: 6px 16px;
   border-radius: 20px;
@@ -786,17 +786,17 @@ const formatToolMessage = (content: string) => {
 
 .agent-step-indicator.is-start {
   background-color: #e8f3ff;
-  color: #165dff;
+  color: var(--theme-accent);
 }
 
 .agent-step-indicator.is-complete {
   background-color: #e8ffea;
-  color: #00b42a;
+  color: var(--theme-success);
 }
 
 .agent-step-indicator.is-error {
   background-color: #ffece8;
-  color: #f53f3f;
+  color: var(--theme-danger);
 }
 
 .agent-step-icon {
@@ -857,7 +857,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .user-avatar {
-  background-color: #165dff;
+  background-color: var(--theme-accent);
 }
 
 .ai-avatar {
@@ -1002,7 +1002,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .user-message .message-bubble {
-  background-color: #165dff;
+  background-color: var(--theme-accent);
   color: white;
   border-top-right-radius: 2px;
 }
@@ -1143,12 +1143,12 @@ const formatToolMessage = (content: string) => {
 
 .action-btn:hover {
   background-color: #f2f3f5 !important;
-  color: #165dff !important;
+  color: var(--theme-accent) !important;
 }
 
 .action-btn-danger:hover {
   background-color: #ffece8 !important;
-  color: #f53f3f !important;
+  color: var(--theme-danger) !important;
 }
 
 .user-message .action-btn:hover {
@@ -1213,7 +1213,7 @@ const formatToolMessage = (content: string) => {
 /* 流式内容样式 */
 .streaming-content {
   position: relative;
-  border-left: 3px solid #00b42a;
+  border-left: 3px solid var(--theme-success);
   background: linear-gradient(90deg, rgba(0, 180, 42, 0.05) 0%, transparent 20%);
   padding-left: 8px;
 }
@@ -1223,7 +1223,7 @@ const formatToolMessage = (content: string) => {
   display: inline-block;
   width: 2px;
   height: 1.2em;
-  background-color: #00b42a;
+  background-color: var(--theme-success);
   margin-left: 2px;
   animation: blink 1s infinite;
   vertical-align: text-bottom;
@@ -1233,7 +1233,7 @@ const formatToolMessage = (content: string) => {
 .streaming-content :deep(pre) {
   background-color: #f2f3f5;
   border: 1px solid rgba(0, 180, 42, 0.2);
-  border-left: 3px solid #00b42a;
+  border-left: 3px solid var(--theme-success);
 }
 
 .streaming-content :deep(code) {
@@ -1595,6 +1595,6 @@ const formatToolMessage = (content: string) => {
   padding: 12px;
   background-color: #f9fafb;
   border-radius: 8px;
-  border-left: 3px solid #165dff;
+  border-left: 3px solid var(--theme-accent);
 }
 </style>

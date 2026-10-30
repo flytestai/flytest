@@ -1422,12 +1422,12 @@ defineExpose({
 }
 
 .import-progress-step.is-finished .import-progress-step-marker {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, var(--theme-success), #14b8a6);
   color: #fff;
 }
 
 .import-progress-step.is-error .import-progress-step-marker {
-  background: linear-gradient(135deg, #dc2626, #f97316);
+  background: linear-gradient(135deg, var(--theme-danger), #f97316);
   color: #fff;
 }
 
@@ -1475,7 +1475,7 @@ defineExpose({
   padding: 6px 12px;
   border-radius: 999px;
   background: rgba(13, 148, 136, 0.12);
-  color: #0f766e;
+  color: var(--theme-success);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1549,7 +1549,7 @@ defineExpose({
   width: 68px;
   height: 68px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, var(--theme-success), #14b8a6);
   color: #fff;
   font-size: 22px;
   font-weight: 800;
@@ -1641,7 +1641,7 @@ defineExpose({
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(13, 148, 136, 0.08);
-  color: #0f766e;
+  color: var(--theme-success);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1817,7 +1817,7 @@ defineExpose({
 }
 
 .import-task-step.is-finished {
-  color: #0f766e;
+  color: var(--theme-success);
 }
 
 .import-task-step.is-finished .import-task-step-dot {
@@ -1834,11 +1834,11 @@ defineExpose({
 }
 
 .import-task-step.is-failed {
-  color: #dc2626;
+  color: var(--theme-danger);
 }
 
 .import-task-step.is-failed .import-task-step-dot {
-  background: #dc2626;
+  background: var(--theme-danger);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
 }
 

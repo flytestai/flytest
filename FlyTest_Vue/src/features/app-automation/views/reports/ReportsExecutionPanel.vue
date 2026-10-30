@@ -42,7 +42,7 @@
       </a-card>
       <a-card class="stat-card">
         <span class="stat-label">平均通过率</span>
-        <strong>{{ statistics.passRate }}%</strong>
+        <strong><span :class="'quality-' + passRateTone(statistics.passRate)">{{ formatQualityPercent(statistics.passRate) }}</span></strong>
       </a-card>
     </div>
 
@@ -73,7 +73,7 @@
             <template #cell="{ record }">
               <div class="stack">
                 <a-tag :color="getExecutionStatus(record).color">{{ getExecutionStatus(record).label }}</a-tag>
-                <small>通过率 {{ formatRate(record.pass_rate) }}%</small>
+                <small>通过率 <span :class="'quality-' + passRateTone(record.pass_rate)">{{ formatQualityPercent(record.pass_rate) }}</span></small>
               </div>
             </template>
           </a-table-column>
@@ -116,6 +116,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ReportsExecutionPanelEmits } from './reportEventModels'
 import type { ReportsExecutionPanelProps } from './reportViewModels'
 

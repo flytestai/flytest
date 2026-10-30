@@ -354,17 +354,17 @@ const handleReject = async () => {
 }
 
 .btn-reject:hover {
-  border-color: #ff4d4f;
-  color: #ff4d4f;
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
 }
 
 .btn-approve {
-  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  background: linear-gradient(135deg, var(--theme-success) 0%, #389e0d 100%);
   border: none;
 }
 
 .btn-approve:hover {
-  background: linear-gradient(135deg, #73d13d 0%, #52c41a 100%);
+  background: linear-gradient(135deg, #73d13d 0%, var(--theme-success) 100%);
 }
 
 /* 参数详情 */
@@ -420,7 +420,7 @@ const handleReject = async () => {
 }
 
 .arg-value.type-number {
-  color: #1890ff;
+  color: var(--theme-accent);
 }
 
 .arg-value.type-boolean {

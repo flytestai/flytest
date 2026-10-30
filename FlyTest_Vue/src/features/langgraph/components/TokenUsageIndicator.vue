@@ -93,7 +93,7 @@ const statusClass = computed(() => {
 
 /* 安全状态 - 绿色 */
 .status-safe .circle-progress {
-  stroke: #00b42a;
+  stroke: var(--theme-success);
 }
 
 /* 警告状态 - 黄色 */
@@ -103,7 +103,7 @@ const statusClass = computed(() => {
 
 /* 危险状态 - 红色 */
 .status-critical .circle-progress {
-  stroke: #f53f3f;
+  stroke: var(--theme-danger);
 }
 
 .percentage-text {
@@ -114,7 +114,7 @@ const statusClass = computed(() => {
 }
 
 .status-safe .percentage-text {
-  color: #00b42a;
+  color: var(--theme-success);
 }
 
 .status-warning .percentage-text {
@@ -122,6 +122,6 @@ const statusClass = computed(() => {
 }
 
 .status-critical .percentage-text {
-  color: #f53f3f;
+  color: var(--theme-danger);
 }
 </style>

@@ -290,7 +290,7 @@ const handleReject = async () => {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #165dff 0%, #0e42d2 100%);
+  background: linear-gradient(135deg, var(--theme-accent) 0%, #0e42d2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -386,19 +386,19 @@ const handleReject = async () => {
 }
 
 .btn-reject:hover {
-  border-color: #f53f3f;
-  color: #f53f3f;
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
   background: #fff1f0;
 }
 
 .btn-approve {
   flex: 1;
-  background: linear-gradient(135deg, #00b42a 0%, #009a29 100%);
+  background: linear-gradient(135deg, var(--theme-success) 0%, #009a29 100%);
   border: none;
 }
 
 .btn-approve:hover {
-  background: linear-gradient(135deg, #23c343 0%, #00b42a 100%);
+  background: linear-gradient(135deg, #23c343 0%, var(--theme-success) 100%);
 }
 </style>
 

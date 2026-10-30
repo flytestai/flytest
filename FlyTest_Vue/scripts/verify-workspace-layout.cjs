@@ -5,6 +5,8 @@ const baseUrl = process.env.UI_BASE_URL || 'http://127.0.0.1:5174';
 const user = { id: 1, username: 'layout-review', real_name: '测试管理员', email: 'review@example.test', is_staff: true, is_superuser: true, is_active: true, approval_status: 'approved', groups: [] };
 const project = { id: 1, name: '飞测 · 产品质量中心', description: '需求、用例与自动化测试的团队协作空间', creator: 1, creator_detail: user, created_at: '2026-10-30T08:00:00Z', updated_at: '2026-10-30T08:00:00Z' };
 async function installFixtures(context, { authenticated = true } = {}) {
+  // Isolate external diagram hosting from local layout checks.
+  await context.route('https://embed.diagrams.net/**', route => route.fulfill({contentType:'text/html',body:'<!doctype html><html><body style="margin:0;background:#f5f8ff">Diagram integration fixture</body></html>'}));
   if(authenticated) await context.addInitScript(({user}) => {
     sessionStorage.setItem('auth-isAuthenticated','true');
     sessionStorage.setItem('auth-user',JSON.stringify(user));
@@ -24,6 +26,7 @@ async function installFixtures(context, { authenticated = true } = {}) {
     else if (/\/projects\/1\/$/.test(url.pathname)) data = project;
     else if (/notifications\/inbox/.test(url.pathname)) data = {items:[],unread_count:0,total_count:0};
     else if (/\/projects\/1\/statistics\//.test(url.pathname)) data = {testcases:{total:248, by_review_status:{approved:192,pending_review:36,needs_optimization:20}},executions:{total_executions:64,case_results:{total:200,passed:184,failed:12,skipped:4,error:0}},bugs:{total:28,open:8,high_severity:2,pending_retest:4},ui_automation:{total_cases:48,total_executions:36,by_status:{success:32,failed:4}},mcp:{active:2,total:3},skills:{active:8,total:10}};
+    else if (/api-automation\/execution-records\/report\//.test(url.pathname)) data = {summary:{total_count:0,success_count:0,passed_count:0,failed_count:0,error_count:0,pass_rate:0,avg_response_time:null,latest_executed_at:null},method_breakdown:[],collection_breakdown:[],failing_requests:[],trend:[],recent_records:[],run_groups:[]};
     else if (/statistics|stats|summary/.test(url.pathname)) data = {};
     else if (/accounts\/me/.test(url.pathname)) data = user;
     else if (/permissions/.test(url.pathname)) data = [];
@@ -53,6 +56,11 @@ async function run() {
     errors.length=0;
     await page.goto(baseUrl+path,{waitUntil:'domcontentloaded'});
     if(!process.env.UI_PUBLIC) await page.waitForFunction(()=>document.querySelector('.content')?.textContent.trim().length > 5,{},{timeout:20000});
+    if(path.startsWith('/api-automation')) {
+      const tab = new URL(path,baseUrl).searchParams.get('tab') || 'requests';
+      const roots = {requests:'.request-list','test-cases':'.test-case-list',environments:'.environment-list','execution-records':'.execution-record-list','execution-report':'.test-report-view'};
+      await page.locator(roots[tab] || roots.requests).waitFor({state:'visible'});
+    }
     await page.waitForTimeout(1600);
     for(const close of await page.locator('.arco-modal-close-btn').all()) { if(await close.isVisible()) await close.click(); }
     await page.waitForTimeout(300);

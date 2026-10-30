@@ -2,15 +2,15 @@
   "name": "FeiCe 飞测 AI 智能测试平台",
   "short_name": "FeiCe",
   "description": "FeiCe 飞测，连接需求、用例、知识与自动化执行的 AI 测试协作平台。",
-  "theme_color": "#f5f7fb",
-  "background_color": "#f5f7fb",
+  "theme_color": "#f0f5fd",
+  "background_color": "#f0f5fd",
   "display": "standalone",
   "orientation": "portrait-primary",
   "scope": "/",
   "start_url": "/",
   "icons": [
     {
-      "src": "/app-icon.png?v=20261030-feice-3",
+      "src": "/app-icon.png?v=20261030-feice-a2-4",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

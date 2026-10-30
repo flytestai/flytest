@@ -38,8 +38,8 @@ const sizes = [[1440, 900], [1920, 1080], [1024, 768], [768, 1024], [390, 844], 
         });
         assert.deepEqual(state.overflow, [], `${route} ${width}: no clipped controls or copy`);
         assert(state.documentWidth <= width, 'No page horizontal overflow');
-        assert.equal(state.background, 'rgb(245, 247, 251)');
-        assert.equal(state.buttonColor, 'rgb(53, 99, 233)');
+        assert.equal(state.background, 'rgb(240, 245, 253)');
+        assert.equal(state.buttonColor, 'rgb(0, 102, 255)');
         assert(state.fontMatchesWorkspace, 'Authentication and workspace must share the same font');
         assert(state.logo.includes('feice-logo.svg'));
         assert.equal(state.imageErrors, 0);
@@ -86,7 +86,7 @@ const sizes = [[1440, 900], [1920, 1080], [1024, 768], [768, 1024], [390, 844], 
         await page.goto(`${baseUrl}/login`);
         assert.equal(await page.getByLabel('用户名 / 手机号', { exact: true }).inputValue(), 'remembered-user');
         assert.equal(await page.getByLabel('记住我', { exact: true }).isChecked(), true);
-        assert.equal(await page.locator('.feice-auth').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(17, 24, 35)');
+        assert.equal(await page.locator('.feice-auth').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(18, 29, 46)');
         assert.equal(await page.locator('.feice-auth-logo-dark').isVisible(), true);
         console.log('PASS remembered username and saved dark theme');
       }

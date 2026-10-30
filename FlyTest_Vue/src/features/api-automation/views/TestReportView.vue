@@ -47,8 +47,8 @@
         </div>
         <div class="summary-card">
           <div class="summary-label">通过率</div>
-          <div class="summary-value">{{ report.summary.pass_rate }}%</div>
-          <a-progress :percent="report.summary.pass_rate" :show-text="false" color="#0f766e" />
+          <div class="summary-value"><span :class="'quality-' + passRateTone(report.summary.pass_rate)">{{ formatQualityPercent(report.summary.pass_rate) }}</span></div>
+          <a-progress :percent="progressFraction(report.summary.pass_rate)" :show-text="false" :color="passRateColor(report.summary.pass_rate)" />
         </div>
         <div class="summary-card">
           <div class="summary-label">执行批次</div>
@@ -245,7 +245,7 @@
               <a-table-column title="失败" data-index="failed" :width="80" />
               <a-table-column title="异常" data-index="error" :width="80" />
               <a-table-column title="通过率" :width="120">
-                <template #cell="{ record }">{{ record.passRate }}%</template>
+                <template #cell="{ record }"><span :class="'quality-' + passRateTone(record.passRate)">{{ formatQualityPercent(record.passRate) }}</span></template>
               </a-table-column>
             </template>
           </a-table>
@@ -333,6 +333,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateColor, passRateTone, formatQualityPercent, progressFraction } from '@/utils/qualityStatus'
 import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
@@ -428,7 +429,7 @@ const methodTableData = computed(() => report.value?.method_breakdown || [])
 const collectionTableData = computed(() => {
   return (report.value?.collection_breakdown || []).map(item => {
     const total = item.total || 0
-    const passRate = total ? Number(((item.passed / total) * 100).toFixed(2)) : 0
+    const passRate = total ? item.passed / total * 100 : 0
     return {
       ...item,
       name: item.request__collection__name || '未分组',
@@ -678,7 +679,7 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--theme-success);
 }
 
 .ai-report-summary-card__value {
@@ -797,7 +798,7 @@ defineExpose({
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--theme-success);
 }
 
 .run-report-card__title,
@@ -868,7 +869,7 @@ defineExpose({
 }
 
 .trend-bar-pass {
-  background: linear-gradient(90deg, #14b8a6, #0f766e);
+  background: linear-gradient(90deg, #14b8a6, var(--theme-success));
 }
 
 .report-card :deep(.arco-card-body) {

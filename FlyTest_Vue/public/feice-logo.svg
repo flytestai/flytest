@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="300" height="64" viewBox="0 0 300 64" fill="none">
   <title>FeiCe 飞测</title>
-  <rect width="64" height="64" rx="18" fill="#3563E9"/>
+  <rect width="64" height="64" rx="18" fill="#0066FF"/>
   <path d="M18 16H48L42 25H27V32H40L34 41H27V49H18V16Z" fill="#FFFFFF"/>
   <path d="M39 42L44 47L55 32" stroke="#B7D5FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="80" y="47" fill="#1C2940" font-family="Segoe UI, Avenir Next, sans-serif" font-size="46" font-weight="650" letter-spacing="-1.8">FeiCe</text>

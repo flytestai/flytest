@@ -50,7 +50,7 @@
             <div class="stats-cell">
               <span class="success-text">通过 {{ record.passed_steps || 0 }}</span>
               <span class="danger-text">失败 {{ record.failed_steps || 0 }}</span>
-              <small>总计 {{ record.total_steps || 0 }} 步 / 通过率 {{ formatRate(record.pass_rate) }}%</small>
+              <small>总计 {{ record.total_steps || 0 }} 步 / 通过率 <span :class="'quality-' + passRateTone(record.pass_rate)">{{ formatQualityPercent(record.pass_rate) }}</span></small>
             </div>
           </template>
         </a-table-column>
@@ -100,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ExecutionsTableCardEmits } from './executionEventModels'
 import type { ExecutionsTableCardProps } from './executionViewModels'
 

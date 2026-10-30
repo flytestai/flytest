@@ -1264,7 +1264,7 @@ onUnmounted(() => {
 }
 
 .detail-section.error .detail-content {
-  color: #f53f3f;
+  color: var(--theme-danger);
   background: #fff1f0;
   border-color: #ffd6d6;
 }
@@ -1555,8 +1555,8 @@ onUnmounted(() => {
 }
 
 .frame-dot.active {
-  background: #1890ff;
-  box-shadow: 0 0 4px #1890ff;
+  background: var(--theme-accent);
+  box-shadow: 0 0 4px var(--theme-accent);
 }
 
 .frame-info {

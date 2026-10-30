@@ -232,7 +232,7 @@ const handleCancel = () => {
 }
 
 .recommend-tag {
-  background: #00b42a;
+  background: var(--theme-success);
   color: white;
   font-size: 11px;
   padding: 1px 6px;
@@ -288,7 +288,7 @@ const handleCancel = () => {
 }
 
 .recommendation-item.recommended {
-  border-color: #165dff;
+  border-color: var(--theme-accent);
   background: #f2f7ff;
 }
 
@@ -300,7 +300,7 @@ const handleCancel = () => {
 }
 
 .rec-badge {
-  background: #165dff;
+  background: var(--theme-accent);
   color: white;
   font-size: 11px;
   padding: 2px 6px;

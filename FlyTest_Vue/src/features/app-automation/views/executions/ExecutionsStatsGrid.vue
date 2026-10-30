@@ -17,13 +17,14 @@
     </a-card>
     <a-card class="stat-card">
       <span class="stat-label">平均通过率</span>
-      <strong>{{ statistics.averagePassRate }}%</strong>
+      <strong><span :class="'quality-' + passRateTone(statistics.averagePassRate)">{{ formatQualityPercent(statistics.averagePassRate) }}</span></strong>
       <span class="stat-desc">按当前结果集统计步骤通过率</span>
     </a-card>
   </div>
 </template>
 
 <script setup lang="ts">
+import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ExecutionsStatsGridProps } from './executionViewModels'
 
 defineProps<ExecutionsStatsGridProps>()
