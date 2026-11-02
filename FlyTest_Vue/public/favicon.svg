@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-  <title>FeiCe 飞测</title>
-  <rect width="64" height="64" rx="18" fill="#0066FF"/>
-  <path d="M18 16H48L42 25H27V32H40L34 41H27V49H18V16Z" fill="#FFFFFF"/>
-  <path d="M39 42L44 47L55 32" stroke="#B7D5FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="4 4 56 56" fill="none"><title>FeiCe 飞测</title><path d="M17.4 10H55.2C56.8 10 57.5 11.2 56.6 12.6L52 20C51.6 20.6 51 21 50.2 21H29L27.3 29H46C47.6 29 48.3 30.2 47.4 31.6L42.8 39C42.4 39.6 41.8 40 41 40H24.9L22.2 52.4C22 53.4 21.2 54 20.2 54H10.5C9.1 54 8.3 53 8.6 51.6L16 11.6C16.2 10.7 16.6 10 17.4 10Z" fill="#0066FF"/></svg>

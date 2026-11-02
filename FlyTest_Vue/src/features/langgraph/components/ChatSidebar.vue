@@ -1,61 +1,8 @@
 <template>
   <div class="chat-sidebar">
-    <div class="sidebar-header">
-      <!-- 未选中任何对话时:新对话和全选在同一行,各占一半 -->
-      <div v-if="selectedSessions.length === 0" class="header-row">
-        <a-button type="primary" style="flex: 1; margin-right: 8px;" @click="$emit('create-new-chat')">
-          <template #icon>
-            <icon-plus />
-          </template>
-          新对话
-        </a-button>
-        <a-button
-          v-if="sessions.length > 0"
-          style="flex: 1;"
-          @click="toggleSelectAll"
-        >
-          <template #icon>
-            <icon-check-circle />
-          </template>
-          全选
-        </a-button>
-      </div>
-      
-      <!-- 选中对话后:新对话在第一行,全选/批量删除在第二行 -->
-      <template v-else>
-        <div class="header-row">
-          <a-button type="primary" block style="width: 100%;" @click="$emit('create-new-chat')">
-            <template #icon>
-              <icon-plus />
-            </template>
-            新对话
-          </a-button>
-        </div>
-        <div class="header-row" style="margin-top: 12px;">
-          <a-space>
-            <a-button
-              size="small"
-              @click="toggleSelectAll"
-            >
-              <template #icon>
-                <icon-close-circle />
-              </template>
-              取消全选
-            </a-button>
-            <a-button
-              type="primary"
-              status="danger"
-              size="small"
-              @click="handleBatchDelete"
-            >
-              <template #icon>
-                <icon-delete />
-              </template>
-              批量删除 ({{ selectedSessions.length }})
-            </a-button>
-          </a-space>
-        </div>
-      </template>
+    <div v-if="sessions.length" class="fc-session-selection-tools">
+      <a-button size="small" @click="toggleSelectAll">{{ selectedSessions.length ? '取消全选' : '全选' }}</a-button>
+      <a-button v-if="selectedSessions.length" type="text" status="danger" size="small" @click="handleBatchDelete">删除选中 ({{ selectedSessions.length }})</a-button>
     </div>
 
     <div class="chat-history-list">

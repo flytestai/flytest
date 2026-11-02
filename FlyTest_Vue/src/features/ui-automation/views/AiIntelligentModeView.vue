@@ -1,5 +1,6 @@
 <template>
   <div class="ai-mode-view fc-page">
+    <WorkspacePageHeader title="AI 智能模式" description="规划测试任务，配置运行条件并查看执行结果。" />
     <a-alert class="mode-tip" type="info" show-icon>
       AI 智能模式会优先使用当前已启用的模型进行任务规划与真实浏览器执行；文本模式可直接使用，视觉模式需要支持图片能力的模型。
     </a-alert>
@@ -375,6 +376,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { computed, defineAsyncComponent, h, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'

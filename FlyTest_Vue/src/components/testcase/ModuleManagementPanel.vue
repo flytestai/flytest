@@ -1,39 +1,10 @@
 <template>
   <div class="module-panel-wrapper">
-    <a-card class="module-panel fc-directory fc-panel" :bordered="false" :title="panelTitle">
+    <a-card class="module-panel fc-directory fc-panel" :bordered="false" >
       <div class="module-panel-content">
-        <div class="module-panel-header">
-          <a-input-search
-            v-model="moduleSearchKeyword"
-            placeholder="请输入模块名称"
-            allow-clear
-            @search="onModuleSearch"
-            @input="onModuleSearch"
-          />
-          <div class="module-actions">
-            <a-dropdown
-              trigger="hover"
-              position="bottom"
-              :popup-max-width="false"
-              class="module-dropdown"
-              @select="handleModuleAction"
-            >
-              <a-button type="primary" size="small" class="module-action-button">
-                操作
-              </a-button>
-              <template #content>
-                <a-doption
-                  v-for="item in moduleActionMenuItems"
-                  :key="item.value"
-                  :value="item.value"
-                  :disabled="item.requiresSelection && !selectedModuleKey"
-                  class="centered-dropdown-item"
-                >
-                  {{ item.label }}
-                </a-doption>
-              </template>
-            </a-dropdown>
-          </div>
+        <div class="fc-directory-search-row">
+          <a-input-search v-model="moduleSearchKeyword" placeholder="搜索模块" allow-clear />
+          <button class="fc-directory-add" type="button" aria-label="新增根模块" title="新增根模块" @click="handleModuleAction('addRoot')">＋</button>
         </div>
 
         <div class="tree-container">
@@ -52,28 +23,11 @@
             @expand="onTreeExpand"
           >
             <template #title="nodeData">
-              <a-dropdown
-                trigger="contextMenu"
-                position="br"
-                :popup-max-width="false"
-                @select="handleModuleAction"
-              >
-                <span class="module-node-title" @contextmenu="handleModuleNodeContextMenu(nodeData)">
-                  <span>{{ nodeData.name }}</span>
-                  <span class="module-count">({{ nodeData.testcase_count || nodeData.test_case_count || 0 }})</span>
-                </span>
-                <template #content>
-                  <a-doption
-                    v-for="item in moduleActionMenuItems"
-                    :key="item.value"
-                    :value="item.value"
-                    :disabled="item.requiresSelection && !selectedModuleKey"
-                    class="centered-dropdown-item"
-                  >
-                    {{ item.label }}
-                  </a-doption>
-                </template>
-              </a-dropdown>
+              <div class="fc-directory-node">
+                <span class="fc-directory-node__label">{{ nodeData.name }}</span>
+                <span class="fc-directory-node__count">{{ nodeData.testcase_count || nodeData.test_case_count || 0 }}</span>
+                <DirectoryNodeMenu :label="nodeData.name" :items="moduleActionMenuItems.filter(item => item.value !== 'addRoot')" @action="value => handleNodeAction(nodeData, value)" />
+              </div>
             </template>
           </a-tree>
           <a-empty v-else description="暂无模块数据" />
@@ -181,6 +135,11 @@
 </template>
 
 <script setup lang="ts">
+import DirectoryNodeMenu from '@/components/workspace/DirectoryNodeMenu.vue'
+import { inject } from 'vue'
+import { workspaceDirectoryKey } from '@/components/workspace/workspaceContext'
+const directory = inject(workspaceDirectoryKey, undefined)
+
 import { computed, onMounted, reactive, ref, toRefs, watch } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import type { TreeNodeData } from '@arco-design/web-vue';
@@ -200,6 +159,7 @@ import ModuleEditModal from './ModuleEditModal.vue';
 
 const props = withDefaults(defineProps<{
   currentProjectId: number | null;
+  selectedId?: number | null;
   panelTitle?: string;
   entityName?: string;
 }>(), {
@@ -219,6 +179,10 @@ const moduleSearchKeyword = ref('');
 const testCaseModules = ref<TestCaseModule[]>([]);
 const selectedModuleKey = ref<number | null>(null);
 const selectedModuleKeys = ref<(number | string)[]>([]);
+watch(() => props.selectedId, id => {
+  selectedModuleKey.value = id ?? null;
+  selectedModuleKeys.value = id ? [id] : [];
+});
 const expandedKeys = ref<(number | string)[]>([]);
 const moduleActionMenuItems = computed(() => [
   { value: 'addRoot', label: `添加根${props.entityName}`, requiresSelection: false },
@@ -544,7 +508,8 @@ const onModuleSelect = (
   data: { selected?: boolean; node?: TreeNodeData }
 ) => {
   if (data.selected && data.node) {
-    setSelectedModule(data.node.key as number);
+    setSelectedModule(Number(data.node.key ?? data.node.id));
+    directory?.selected();
   } else {
     setSelectedModule(null);
   }
@@ -560,6 +525,8 @@ const handleModuleNodeContextMenu = (nodeData: TreeNodeData) => {
     setSelectedModule(nodeKey);
   }
 };
+
+const handleNodeAction = (node: TreeNodeData, value: string) => { handleModuleNodeContextMenu(node); handleModuleAction(value) }
 
 const handleModuleAction = (action: string | number | Record<string, any> | undefined) => {
   const actionValue = action as string;

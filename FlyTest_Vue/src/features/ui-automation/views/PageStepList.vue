@@ -1,6 +1,6 @@
 <template>
   <div class="page-step-list fc-page">
-    <div class="page-header fc-toolbar">
+    <WorkspacePageHeader title="页面步骤"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.page"
@@ -29,7 +29,7 @@
           新增步骤
         </a-button>
       </div>
-    </div>
+    </div></template></WorkspacePageHeader>
 
     <a-table class="fc-table"
       :columns="columns"
@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconEdit, IconDelete, IconSettings } from '@arco-design/web-vue/es/icon'
@@ -380,7 +381,7 @@ watch(() => props.selectedModuleId, (newVal) => {
   filters.module = newVal
   pagination.current = 1
   fetchPageSteps()
-})
+}, { immediate: true })
 
 // 监听项目变化，重新加载数据
 watch(projectId, () => {

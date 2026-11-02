@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const assert = require('node:assert/strict');
 
 const base = process.env.UI_BASE_URL || 'http://127.0.0.1:5175';
+const builderOnly = process.env.UI_SCOPE === 'builder';
 const output = process.env.UI_OUTPUT_DIR || path.resolve(__dirname, '../playwright-screenshots/a2-workspaces');
 const catalogFile = path.resolve(__dirname, '../../FlyTest_Django/data_factory/catalog.py');
 // Use the actual, pure-data tool catalog without loading Django or accessing its database.
@@ -75,6 +76,7 @@ async function inspectModal(page, width) {
       let errors = [];
       page.on('pageerror', error => errors.push(error.message));
       for (const category of catalog.categories) {
+        if (builderOnly) continue;
         if (selectedTools && !category.tools.some(tool => selectedTools.has(tool.name))) continue;
         await page.goto(`${base}/data-factory?category=${category.category}`);
         await page.locator('.tool-card').first().waitFor();
@@ -101,7 +103,7 @@ async function inspectModal(page, width) {
         }
         console.log(`TOOLS ${width} ${category.category}: ${category.tools.length}`);
       }
-      for (const [route, button] of selectedTools ? [] : dialogs) {
+      for (const [route, button] of selectedTools || builderOnly ? [] : dialogs) {
         errors = [];
         try {
           await page.goto(base + route);
@@ -145,6 +147,8 @@ async function inspectModal(page, width) {
         await page.getByRole('button', { name: '添加变量', exact: true }).click();
         await page.getByPlaceholder('变量名', { exact: true }).fill('customerId');
         assert.equal(await page.getByPlaceholder('变量名', { exact: true }).inputValue(), 'customerId');
+        const libraryToggle = page.getByRole('button', { name: '组件库', exact: true });
+        if (await libraryToggle.getAttribute('aria-expanded') === 'false') await libraryToggle.click();
         for (const component of components) {
           errors = [];
           const item = page.locator('.library-panel .component-item').filter({ has: page.getByText(component.name, { exact: true }) });

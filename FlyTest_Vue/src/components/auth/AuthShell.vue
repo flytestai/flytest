@@ -3,8 +3,8 @@
     <div class="feice-auth-atmosphere" aria-hidden="true"></div>
     <header class="feice-auth-header">
       <router-link to="/login" aria-label="FeiCe 飞测首页" class="feice-auth-brand">
-        <img class="feice-auth-logo-light" :src="brandFullLogoUrl" alt="FeiCe 飞测" width="210" height="45" />
-        <img class="feice-auth-logo-dark" :src="brandFullLogoLoginWhiteUrl" alt="FeiCe 飞测" width="210" height="45" />
+        <img class="feice-auth-logo-light" :src="brandFullLogoUrl" alt="FeiCe 飞测" width="180" height="46" />
+        <img class="feice-auth-logo-dark" :src="brandFullLogoLoginWhiteUrl" alt="FeiCe 飞测" width="180" height="46" />
       </router-link>
       <span class="feice-auth-header-note"><icon-apps aria-hidden="true" />测试管理与自动化协作</span>
     </header>

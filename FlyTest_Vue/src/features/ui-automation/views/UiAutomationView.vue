@@ -1,60 +1,66 @@
 <template>
-  <div class="ui-automation-layout fc-page">
-    <ModulePanel ref="modulePanelRef" @select="onModuleSelect" @updated="onModuleUpdated" />
-    <div class="layout-content">
+  <div class="ui-automation-shell fc-page">
+    <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="ui-automation" :directory="needsDirectory" directory-label="模块目录"
+      :selection="needsDirectory ? selectedModuleName : ''" :clearable="needsDirectory" @clear="clearSelection">
+      <template #directory>
+        <ModulePanel ref="modulePanelRef" :selected-id="selectedModuleId" @select="onModuleSelect" @navigate="workspaceRef?.closeDirectory()" @updated="onModuleUpdated" />
+      </template>
+      <WorkspacePane v-if="isTabReady('pages')" :active="activeTab === 'pages'">
       <PageList
-        v-if="isTabReady('pages')"
-        v-show="activeTab === 'pages'"
         ref="pageListRef"
         :selected-module-id="selectedModuleId"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('page-steps')" :active="activeTab === 'page-steps'">
       <PageStepList
-        v-if="isTabReady('page-steps')"
-        v-show="activeTab === 'page-steps'"
         ref="pageStepListRef"
         :selected-module-id="selectedModuleId"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('testcases')" :active="activeTab === 'testcases'">
       <TestCaseList
-        v-if="isTabReady('testcases')"
-        v-show="activeTab === 'testcases'"
         ref="testCaseListRef"
         :selected-module-id="selectedModuleId"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('ai-intelligent')" :active="activeTab === 'ai-intelligent'">
       <AiIntelligentModeView
-        v-if="isTabReady('ai-intelligent')"
-        v-show="activeTab === 'ai-intelligent'"
         ref="aiIntelligentModeRef"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('execution-records')" :active="activeTab === 'execution-records'">
       <ExecutionRecordList
-        v-if="isTabReady('execution-records')"
-        v-show="activeTab === 'execution-records'"
         ref="executionRecordListRef"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('batch-records')" :active="activeTab === 'batch-records'">
       <BatchRecordList
-        v-if="isTabReady('batch-records')"
-        v-show="activeTab === 'batch-records'"
         ref="batchRecordListRef"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('public-data')" :active="activeTab === 'public-data'">
       <PublicDataList
-        v-if="isTabReady('public-data')"
-        v-show="activeTab === 'public-data'"
         ref="publicDataListRef"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('env-config')" :active="activeTab === 'env-config'">
       <EnvConfigList
-        v-if="isTabReady('env-config')"
-        v-show="activeTab === 'env-config'"
         ref="envConfigListRef"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="isTabReady('actuators')" :active="activeTab === 'actuators'">
       <ActuatorList
-        v-if="isTabReady('actuators')"
-        v-show="activeTab === 'actuators'"
         ref="actuatorListRef"
       />
-    </div>
+      </WorkspacePane>
+    </WorkspaceDirectoryLayout>
   </div>
 </template>
 
 <script setup lang="ts">
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
+
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ModulePanel from '../components/ModulePanel.vue'
@@ -96,6 +102,13 @@ const envConfigListRef = ref()
 const actuatorListRef = ref()
 
 const selectedModuleId = ref<number | undefined>(undefined)
+const selectedModuleName = ref('')
+const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>()
+const needsDirectory = computed(() => ['pages', 'page-steps', 'testcases'].includes(activeTab.value))
+const clearSelection = () => { selectedModuleId.value = undefined; selectedModuleName.value = '' }
+import { useProjectStore } from '@/store/projectStore'
+const projectStore = useProjectStore()
+watch(() => projectStore.currentProject?.id, clearSelection)
 
 const normalizeTab = (value: unknown): UiAutomationTab => {
   const tab = String(value || 'pages')
@@ -153,6 +166,7 @@ watch(
 
 const onModuleSelect = (module: UiModule | null) => {
   selectedModuleId.value = module?.id
+  selectedModuleName.value = module?.name || ''
 }
 
 const onModuleUpdated = () => {
@@ -163,36 +177,5 @@ const onModuleUpdated = () => {
 </script>
 
 <style scoped>
-.ui-automation-layout {
-  display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
-  align-items: start;
-  width: 100%;
-  height: auto;
-  min-height: 0;
-  gap: 20px;
-  overflow: visible;
-}
-
-.layout-content {
-  min-width: 0;
-  min-height: 0;
-  height: auto;
-  overflow: visible;
-  display: block;
-}
-
-@media (max-width: 1200px) {
-  .ui-automation-layout {
-    grid-template-columns: 272px minmax(0, 1fr);
-    gap: 16px;
-  }
-}
-
-@media (max-width: 900px) {
-  .ui-automation-layout {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-}
+.ui-automation-shell { min-width: 0; min-height: 0; }
 </style>

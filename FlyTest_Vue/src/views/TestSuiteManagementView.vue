@@ -4,31 +4,20 @@
       <a-empty description="请先选择项目" />
     </div>
 
-    <div v-else class="list-view-layout">
-      <div class="suite-panel-resizable-shell" :style="suitePanelShellStyle">
-        <TestSuiteTreePanel
+    <WorkspaceDirectoryLayout v-else storage-key="testsuites" directory-label="套件目录" :prioritize-content="viewMode !== 'list'"
+      :selection="selectedSuiteDetail?.name">
+      <template #directory><TestSuiteTreePanel
           ref="suitePanelRef"
           :current-project-id="currentProjectId"
           @suite-selected="handleSuiteSelected"
           @suite-updated="handleSuiteUpdated"
-        />
-      </div>
+        /></template>
+<template v-if="!selectedSuiteId" #heading><WorkspacePageHeader local title="测试套件" description="从套件目录选择需要查看的内容" /></template>
 
-      <div class="suite-panel-resizer" @mousedown="startSuitePanelResize"
-        role="separator" tabindex="0" aria-label="调整目录宽度" aria-orientation="vertical"
-        :aria-valuenow="panelWidth" :aria-valuemin="panelMinWidth" :aria-valuemax="panelMaxWidth"
-        @keydown="resizeWithKeyboard" />
-
-      <div class="right-content-area">
         <template v-if="selectedSuiteId">
-          <div class="suite-toolbar">
-            <div class="suite-toolbar-info">
-              <div class="suite-title">{{ selectedSuiteDetail?.name || '测试套件' }}</div>
-              <div class="suite-subtitle">
-                {{ selectedSuiteDetail?.description || '当前套件中的测试用例列表' }}
-              </div>
-            </div>
-            <div class="suite-toolbar-actions">
+          <WorkspacePageHeader v-if="viewMode === 'list'" :title="selectedSuiteDetail?.name || '测试套件'">
+<template #meta>{{ selectedSuiteDetail?.description || '查看并执行套件中的用例' }}</template>
+<template #actions><div class="suite-toolbar-actions">
               <a-button @click="goToTestReport">测试报告</a-button>
               <a-button @click="showDetailModal = true">套件详情</a-button>
               <a-button
@@ -39,10 +28,11 @@
                 执行套件
               </a-button>
             </div>
-          </div>
+          </template>
+</WorkspacePageHeader>
 
-          <div v-show="viewMode === 'list'" class="suite-list-stack">
-            <TestCaseList
+          <WorkspacePane :active="viewMode === 'list'" class="suite-list-stack">
+            <TestCaseList :local-heading="true"
               ref="testCaseListRef"
               :current-project-id="currentProjectId"
               :selected-suite-id="selectedSuiteId"
@@ -58,7 +48,7 @@
               @module-filter-change="handleModuleFilterChange"
               @request-optimization="handleRequestOptimization"
             />
-          </div>
+          </WorkspacePane>
 
           <TestCaseForm
             v-if="viewMode === 'edit'"
@@ -89,10 +79,9 @@
         </template>
 
         <div v-else class="suite-empty">
-          <a-empty description="点击左侧根套件或子套件后，这里会显示套件中的测试用例列表" />
+          <a-empty description="通过套件目录选择一个套件后，这里会显示套件中的测试用例列表" />
         </div>
-      </div>
-    </div>
+    </WorkspaceDirectoryLayout>
 
     <OptimizationSuggestionModal
       v-if="isOptimizationModalVisible"
@@ -118,8 +107,11 @@
 </template>
 
 <script setup lang="ts">
-import { useResizablePanel } from '@/composables/useResizablePanel';
-import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue';
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
+
+import { computed, defineAsyncComponent, h, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message, Notification } from '@arco-design/web-vue';
 import type { TreeNodeData } from '@arco-design/web-vue';
@@ -164,7 +156,6 @@ const testCaseIdsForNavigation = ref<number[]>([]);
 const isOptimizationModalVisible = ref(false);
 const pendingOptimizationTestCase = ref<TestCase | null>(null);
 
-const { panelWidth, minWidth: panelMinWidth, maxWidth: panelMaxWidth, shellStyle: suitePanelShellStyle, startResize: startSuitePanelResize, stopResize: stopSuitePanelResize, resizeWithKeyboard } = useResizablePanel();
 
 
 const buildModuleTree = (modules: TestCaseModule[], parentId: number | null = null): TreeNodeData[] =>
@@ -418,9 +409,6 @@ onMounted(async () => {
   }
 });
 
-onUnmounted(() => {
-  stopSuitePanelResize();
-});
 </script>
 
 <style scoped>

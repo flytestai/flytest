@@ -2,30 +2,9 @@
   <div class="module-panel-wrapper">
     <a-card class="module-panel fc-directory fc-panel" :bordered="false">
       <div class="module-panel-content">
-        <div class="module-panel-head">
-          <div class="module-panel-head__title">模块目录</div>
-        </div>
-
-        <div class="module-panel-header">
-          <a-input-search
-            v-model="searchKeyword"
-            class="module-search"
-            placeholder="搜索模块名称"
-            allow-clear
-            @search="onSearch"
-            @input="onSearch"
-          />
-          <div class="module-actions">
-            <a-dropdown @select="handleAction" trigger="hover" position="bottom">
-              <a-button type="primary" size="small" class="module-action-button">操作</a-button>
-              <template #content>
-                <a-doption value="addRoot">新增根模块</a-doption>
-                <a-doption value="addChild" :disabled="!selectedModuleId">新增子模块</a-doption>
-                <a-doption value="edit" :disabled="!selectedModuleId">编辑模块</a-doption>
-                <a-doption value="delete" :disabled="!selectedModuleId">删除模块</a-doption>
-              </template>
-            </a-dropdown>
-          </div>
+        <div class="fc-directory-search-row">
+          <a-input-search v-model="searchKeyword" placeholder="搜索模块" allow-clear @search="onSearch" @input="onSearch" />
+          <button class="fc-directory-add" type="button" aria-label="新增根模块" title="新增根模块" @click="handleAction('addRoot')">＋</button>
         </div>
 
         <div class="tree-container">
@@ -43,8 +22,9 @@
             @select="onSelect"
           >
             <template #title="nodeData">
-              <div class="tree-node">
-                <span class="tree-node__name">{{ nodeData.name }}</span>
+              <div class="fc-directory-node">
+                <span class="fc-directory-node__label">{{ nodeData.name }}</span>
+                <DirectoryNodeMenu :label="nodeData.name" :items="[{value:'addChild',label:'新增子模块'},{value:'edit',label:'编辑模块'},{value:'delete',label:'删除模块'}]" @action="value => handleNodeAction(nodeData, value)" />
               </div>
             </template>
           </a-tree>
@@ -73,15 +53,19 @@
 </template>
 
 <script setup lang="ts">
+import DirectoryNodeMenu from '@/components/workspace/DirectoryNodeMenu.vue'
+
 import { computed, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
 import { moduleApi } from '../api'
 import type { UiModule, UiModuleForm } from '../types'
 
+const props = defineProps<{ selectedId?: number }>()
 const emit = defineEmits<{
   (e: 'select', module: UiModule | null): void
   (e: 'updated'): void
+  (e: 'navigate'): void
 }>()
 
 const projectStore = useProjectStore()
@@ -158,12 +142,15 @@ const fetchModules = async () => {
   }
 }
 
+watch(() => props.selectedId, id => { selectedModuleId.value = id || null; selectedKeys.value = id ? [id] : [] }, { immediate: true })
+const handleNodeAction = (node: UiModule, value: string) => { selectedModuleId.value = node.id; selectedKeys.value = [node.id]; void handleAction(value) }
 const onSearch = () => {}
 
 const onSelect = (keys: (string | number)[], data: { node?: UiModule }) => {
   selectedModuleId.value = keys.length > 0 ? Number(keys[0]) : null
   selectedKeys.value = keys
-  emit('select', data.node || null)
+  emit('select', selectedModuleId.value ? data.node || null : null)
+  emit('navigate')
 }
 
 const resetForm = () => {

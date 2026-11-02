@@ -1,14 +1,6 @@
 <template>
   <div class="testcase-form-container fc-detail-page">
-    <div class="form-header fc-detail-heading">
-      <div class="form-title">
-        <a-button type="text" size="small" @click="handleBackToList">
-          <template #icon><icon-arrow-left /></template>
-          返回列表
-        </a-button>
-        <h2>{{ isEditing ? '编辑测试用例' : '添加测试用例' }}</h2>
-      </div>
-      <div class="form-actions">
+    <WorkspacePageHeader :title="isEditing ? '编辑测试用例' : '添加测试用例'" show-back @back="handleBackToList"><template #actions><div class="form-actions">
         <a-space>
           <!-- 用例导航按钮（仅在编辑模式且有用例列表时显示） -->
           <template v-if="isEditing && totalTestCases > 0">
@@ -32,8 +24,7 @@
             保存
           </a-button>
         </a-space>
-      </div>
-    </div>
+      </div></template></WorkspacePageHeader>
 
     <a-form
       ref="testCaseFormRef"
@@ -373,6 +364,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { defineAsyncComponent, ref, reactive, watch, toRefs, onMounted, computed } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { IconArrowLeft, IconPlus, IconEye, IconLeft, IconRight, IconDragDotVertical } from '@arco-design/web-vue/es/icon';

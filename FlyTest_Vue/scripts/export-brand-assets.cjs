@@ -1,4 +1,5 @@
 // Export compatibility PNGs from the same editable FeiCe SVG sources.
+require('./generate-brand-assets.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -10,12 +11,12 @@ const publicDir = path.resolve(__dirname, '../public');
     const page = await browser.newPage({ viewport: { width: 1400, height: 600 }, reducedMotion: 'reduce' });
     const assets = [
       ['feice-mark.svg', 'logo.png', 256, 256],
-      ['feice-mark.svg', 'favicon.png', 64, 64],
+      ['favicon.svg', 'favicon.png', 64, 64],
       ['feice-mark.svg', 'app-icon.png', 512, 512],
       ['feice-mark.svg', 'FlyTest.png', 256, 256],
-      ['feice-logo.svg', 'full-logo.png', 1200, 256],
-      ['feice-logo.svg', 'wordmark.png', 1200, 256],
-      ['feice-logo-light.svg', 'full-logo-login-white.png', 1200, 256],
+      ['feice-logo.svg', 'full-logo.png', 944, 256],
+      ['feice-wordmark.svg', 'wordmark.png', 632, 192],
+      ['feice-logo-light.svg', 'full-logo-login-white.png', 944, 256],
     ];
     for (const [source, destination, width, height] of assets) {
       const svg = fs.readFileSync(path.join(publicDir, source), 'utf8').replace(/width="\d+" height="\d+"/, `width="${width}" height="${height}"`);

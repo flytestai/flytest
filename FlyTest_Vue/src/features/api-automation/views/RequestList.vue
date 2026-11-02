@@ -28,18 +28,17 @@
           </a-select>
         </div>
         <div class="toolbar-group toolbar-group--actions">
-          <a-button :disabled="!selectedRequestIds.length" @click="executeSelectedRequests">
-            执行选中
-          </a-button>
-          <a-button :disabled="!selectedCollectionId" @click="executeCollectionRequests">
-            执行当前集合
-          </a-button>
-          <a-button :disabled="!projectId" @click="executeProjectRequests">
-            执行当前项目
-          </a-button>
+          <a-dropdown trigger="click" position="br">
+            <a-button :disabled="!projectId">执行测试</a-button>
+            <template #content>
+              <a-doption :disabled="!selectedRequestIds.length" @click="executeSelectedRequests">执行选中</a-doption>
+              <a-doption :disabled="!selectedCollectionId" @click="executeCollectionRequests">执行当前集合</a-doption>
+              <a-doption :disabled="!projectId" @click="executeProjectRequests">执行当前项目</a-doption>
+            </template>
+          </a-dropdown>
           <a-dropdown trigger="click" @select="handleSelectedCaseGenerationAction">
             <a-button :disabled="!selectedRequestIds.length">
-              AI生成用例
+              AI 用例
             </a-button>
             <template #content>
               <a-doption value="generate" :disabled="!selectedRequestIds.length">批量生成</a-doption>

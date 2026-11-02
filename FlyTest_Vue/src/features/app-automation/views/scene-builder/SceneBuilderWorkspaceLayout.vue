@@ -1,5 +1,14 @@
 <template>
-  <div class="builder-grid">
+  <div class="fc-builder-workspace">
+    <div class="fc-builder-viewbar">
+      <span>场景工作区</span>
+      <div>
+        <button type="button" class="fc-directory-toggle" :aria-expanded="libraryOpen" aria-controls="scene-library" @click="libraryOpen = !libraryOpen">组件库</button>
+        <button type="button" class="fc-directory-toggle" :aria-expanded="configOpen" aria-controls="scene-config" @click="configOpen = !configOpen">步骤属性</button>
+      </div>
+    </div>
+    <div class="builder-grid fc-builder-grid" :class="{ 'fc-builder-grid--library': libraryOpen, 'fc-builder-grid--config': configOpen }">
+    <aside id="scene-library" v-show="libraryOpen" class="fc-builder-library" aria-label="步骤组件库">
     <SceneBuilderLibraryPanel
       :component-search="componentSearch"
       :palette-tab="paletteTab"
@@ -14,6 +23,8 @@
       @edit-custom="emit('edit-custom', $event)"
       @delete-custom="emit('delete-custom', $event)"
     />
+
+    </aside>
 
     <SceneBuilderCanvasPanel
       :steps="steps"
@@ -38,6 +49,7 @@
       @update-step-group-items="emit('update-step-group-items', $event)"
     />
 
+    <aside id="scene-config" v-show="configOpen" class="fc-builder-config" aria-label="步骤属性">
     <SceneBuilderConfigPanel
       :step-config-text="stepConfigText"
       :selected-scene-step="configPanel.selectedSceneStep"
@@ -83,10 +95,18 @@
       @reset-selected-step-config="emit('reset-selected-step-config')"
       @apply-step-config="emit('apply-step-config')"
     />
+    </aside>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+import { useWindowSize } from '@vueuse/core'
+const { width } = useWindowSize()
+const libraryOpen = ref(width.value >= 1440)
+const configOpen = ref(width.value >= 1440)
+
 import type { AppComponent, AppCustomComponent, AppSceneStep } from '../../types'
 import SceneBuilderCanvasPanel from './SceneBuilderCanvasPanel.vue'
 import SceneBuilderConfigPanel from './SceneBuilderConfigPanel.vue'
@@ -112,7 +132,8 @@ interface Props {
   configPanel: SceneBuilderConfigPanelBindings
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+watch(() => props.canvasPanel.selectedStepIndex, index => { if (index >= 0) configOpen.value = true })
 
 const emit = defineEmits<SceneBuilderWorkspaceLayoutEmits>()
 </script>

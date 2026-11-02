@@ -1,15 +1,17 @@
 ﻿<template>
   <div class="chat-layout fc-page">
-    <!-- 左侧历史对话列表 -->
-    <ChatSidebar
+    <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="ai-chat" directory-label="历史会话" selection-label="当前会话" :selection="chatSessions.find(item => item.id === sessionId)?.title || '新对话'">
+      <template #directory><ChatSidebar
       :sessions="chatSessions"
       :current-session-id="sessionId"
       :is-loading="isLoading"
       @create-new-chat="createNewChat"
-      @switch-session="switchSession"
+      @switch-session="id => { switchSession(id); workspaceRef?.closeDirectory() }"
       @delete-session="deleteSession"
       @batch-delete-sessions="batchDeleteSessions"
-    />
+    /></template>
+    <!-- 左侧历史对话列表 -->
+
 
     <!-- 右侧聊天区域 -->
     <div class="chat-container">
@@ -26,6 +28,7 @@
             <span class="fc-inline-metric-label">知识增强</span>
           </div>
         </div></template>
+        <template #actions><a-button type="primary" @click="createNewChat"><template #icon><icon-plus /></template>新对话</a-button></template>
       </WorkspacePageHeader>
 
       <ChatHeader
@@ -98,6 +101,8 @@
       />
     </div>
 
+    </WorkspaceDirectoryLayout>
+
     <!-- 系统提示词管理弹窗 -->
     <SystemPromptModal
       :visible="isSystemPromptModalVisible"
@@ -164,6 +169,8 @@
 </template>
 
 <script setup lang="ts">
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, onActivated, watch, onUnmounted, computed, nextTick } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
@@ -188,7 +195,7 @@ import type { LlmConfig } from '@/features/langgraph/types/llmConfig';
 import { useProjectStore } from '@/store/projectStore';
 import { useLlmConfigRefresh } from '@/composables/useLlmConfigRefresh';
 import { marked } from 'marked';
-import { IconFullscreen, IconFullscreenExit } from '@arco-design/web-vue/es/icon';
+import { IconFullscreen, IconFullscreenExit, IconPlus } from '@arco-design/web-vue/es/icon';
 
 // 导入子组件
 import ChatSidebar from '../components/ChatSidebar.vue';
@@ -199,6 +206,8 @@ import SystemPromptModal from '../components/SystemPromptModal.vue';
 import ToolApprovalCard from '../components/ToolApprovalCard.vue';
 import ToolApprovalSettingsModal from '../components/ToolApprovalSettingsModal.vue';
 import type { InterruptEvent } from '../components/ToolApprovalCard.vue';
+
+const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>()
 
 // 配置marked
 marked.setOptions({
@@ -671,7 +680,7 @@ const loadSessionsFromServer = async () => {
     if (response.status === 'success' && response.data) {
       // 优先使用 sessions_detail（包含标题和时间），避免 N+1 查询
       const sessionsDetail = response.data.sessions_detail;
-      
+
       if (sessionsDetail && sessionsDetail.length > 0) {
         // 直接使用后端返回的会话详情
         const tempSessions: ChatSession[] = sessionsDetail.map(detail => {
@@ -731,7 +740,7 @@ const enrichMessagesWithSeparators = (rawHistory: ChatHistoryMessage[], formatHi
     // 这样可以支持多轮对话中步骤编号重复的情况(例如两次对话都从Step 1开始)
     if (historyItem.agent === 'agent_loop' && historyItem.step !== undefined) {
       const currentStep = historyItem.step;
-      
+
       // 插入分隔符: 仅当步骤号与上一条不同,或者这是第一条agent_loop消息
       if (lastAgentLoopStep === null || currentStep !== lastAgentLoopStep) {
         result.push({
@@ -740,11 +749,11 @@ const enrichMessagesWithSeparators = (rawHistory: ChatHistoryMessage[], formatHi
           time: formatHistoryTime(historyItem.timestamp),
           messageType: 'step_separator'
         });
-        
+
         lastAgentLoopStep = currentStep;
       }
     }
-    
+
     // ✅ 如果遇到非agent_loop消息,重置步骤追踪
     // 这样下一次agent_loop调用会从新的步骤序列开始
     if (historyItem.agent !== 'agent_loop') {
@@ -791,13 +800,13 @@ const enrichMessagesWithSeparators = (rawHistory: ChatHistoryMessage[], formatHi
 // 加载聊天历史记录
 const loadChatHistory = async () => {
   const storedSessionId = getSessionIdFromStorage();
-  
+
   // 🔧 修复：静默处理无会话ID的情况，不显示任何提示
   if (!storedSessionId) {
     console.log('💭 没有保存的会话ID，显示空白对话界面');
     return;
   }
-  
+
   // 如果没有项目ID，也静默返回（watch会在项目加载完成后重新调用）
   if (!projectStore.currentProjectId) {
     console.log('⏳ 等待项目加载完成...');
@@ -829,10 +838,10 @@ const loadChatHistory = async () => {
 
       // ✅ 使用纯函数处理历史记录,自动插入步骤分隔符
       const tempMessages = enrichMessagesWithSeparators(data.history, formatHistoryTime);
-      
+
       // 🎨 合并连续的思考过程消息
       messages.value = mergeThinkingProcessMessages(tempMessages);
-      
+
       console.log('🔍 [Debug] messages.value最终数量:', messages.value.length);
       console.log('🔍 [Debug] 最终step_separator数量:', messages.value.filter(m => m.messageType === 'step_separator').length);
 
@@ -842,7 +851,7 @@ const loadChatHistory = async () => {
         const firstHumanMessage = data.history.find(msg => msg.type === 'human')?.content;
         updateSessionInList(data.session_id, firstHumanMessage, false);
       }
-      
+
       console.log(`✅ 成功加载会话历史: ${sessionId.value}, ${messages.value.length} 条消息`);
     } else {
       // 🔧 修复：获取历史失败时静默处理，不显示错误提示
@@ -934,7 +943,7 @@ const mergeThinkingProcessMessages = (messages: ChatMessage[]): ChatMessage[] =>
 
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
-    
+
     if (msg.isThinkingProcess) {
       thinkingBuffer.push(msg);
     } else {
@@ -1015,12 +1024,12 @@ const formatHistoryTime = (timestamp: string) => {
 // 切换工具消息或思考过程的展开/收起状态
 const toggleExpand = (message: ChatMessage) => {
   // 首先尝试在历史消息中查找并更新
-  const index = messages.value.findIndex(m => 
-    m.content === message.content && 
-    m.time === message.time && 
+  const index = messages.value.findIndex(m =>
+    m.content === message.content &&
+    m.time === message.time &&
     m.messageType === message.messageType
   );
-  
+
   if (index !== -1) {
     // 使用响应式方式更新消息
     if (message.isThinkingProcess) {
@@ -1041,11 +1050,11 @@ const toggleExpand = (message: ChatMessage) => {
   const stream = sessionId.value ? activeStreams.value[sessionId.value] : null;
   if (stream?.messages && stream.messages.length > 0) {
     const streamMsgIndex = stream.messages.findIndex(
-      m => m.content === message.content && 
-           m.time === message.time && 
+      m => m.content === message.content &&
+           m.time === message.time &&
            m.type === message.messageType
     );
-    
+
     if (streamMsgIndex !== -1) {
       // 直接修改 activeStreams 中的消息对象
       if (message.isThinkingProcess) {
@@ -1302,7 +1311,7 @@ const updateSessionInList = (id: string, firstMessage?: string, updateTime: bool
     if (chatSessions.value[existingIndex].messageCount !== undefined && updateTime) {
       chatSessions.value[existingIndex].messageCount += 1;
     }
-    
+
     // 🆕 更新时间后，重新按时间倒序排序会话列表
     if (updateTime) {
       chatSessions.value.sort((a, b) => b.lastTime.getTime() - a.lastTime.getTime());
@@ -1315,7 +1324,7 @@ const updateSessionInList = (id: string, firstMessage?: string, updateTime: bool
       console.warn(`updateSessionInList: Session ${id} already exists, skipping duplicate addition`);
       return;
     }
-    
+
     // 添加新会话
     chatSessions.value.unshift({
       id,
@@ -1370,7 +1379,7 @@ const switchSession = async (id: string) => {
 
       // ✅ 使用纯函数处理历史记录,自动插入步骤分隔符
       const tempMessages = enrichMessagesWithSeparators(response.data.history, formatHistoryTime);
-      
+
       // 🎨 合并连续的思考过程消息
       messages.value = mergeThinkingProcessMessages(tempMessages);
 
@@ -1460,7 +1469,7 @@ const batchDeleteSessions = async (sessionIds: string[]) => {
 
     if (response.status === 'success' && response.data) {
       const { processed_sessions, failed_sessions } = response.data;
-      
+
       // 从列表中移除已删除的会话
       chatSessions.value = chatSessions.value.filter(s => !sessionIds.includes(s.id));
       saveSessionsToStorage();
@@ -1583,7 +1592,7 @@ const handleSendMessage = async (data: { message: string; image?: string; imageD
     session_id: sessionId.value || undefined,
     project_id: String(projectStore.currentProjectId), // 转换为string类型
   };
-  
+
   // 如果有图片，添加到请求中
   if (image) {
     (requestData as any).image = image; // 临时使用any，稍后更新ChatRequest类型
@@ -1894,7 +1903,7 @@ const showSystemPromptModal = async () => {
 // 关闭系统提示词弹窗
 const closeSystemPromptModal = async () => {
   isSystemPromptModalVisible.value = false;
-  
+
   // 检查关闭弹窗后是否还没有提示词
   await checkPromptStatusAfterClose();
 };
@@ -1910,7 +1919,7 @@ const checkPromptStatusAfterClose = async () => {
     if (response.status === 'success') {
       const prompts = Array.isArray(response.data) ? response.data : response.data.results || [];
       hasPrompts.value = prompts.length > 0;
-      
+
       // 如果还是没有提示词，提示用户
       if (!hasPrompts.value) {
         Message.warning('请添加或初始化提示词后才能开始对话');
@@ -1959,7 +1968,7 @@ const checkPromptStatus = async () => {
       const prompts = Array.isArray(response.data) ? response.data : response.data.results || [];
       hasPrompts.value = prompts.length > 0;
       console.log('📝 提示词状态检查完成:', { hasPrompts: hasPrompts.value, count: prompts.length });
-      
+
       // 如果没有提示词，自动弹出管理弹窗
       if (!hasPrompts.value) {
         console.log('⚠️ 没有提示词，自动弹出管理弹窗');
@@ -2069,11 +2078,11 @@ watch(
 // 🔧 修复：监听项目ID变化，当项目加载完成后自动加载会话数据
 watch(() => projectStore.currentProjectId, async (newProjectId, oldProjectId) => {
   console.log(`📊 项目ID变化: ${oldProjectId} -> ${newProjectId}`);
-  
+
   if (newProjectId && newProjectId !== oldProjectId) {
     // 项目切换或首次加载完成
     console.log('🔄 项目已切换，重新加载会话数据...');
-    
+
     // 只有在onMounted完成后才通过watch加载（避免重复）
     // 或者如果onMounted时没有项目，现在项目加载完成了，也需要加载
     if (isMountedLoadComplete || !oldProjectId) {
@@ -2115,10 +2124,10 @@ onMounted(async () => {
 
   // ⭐加载保存的提示词ID
   loadSavedPromptId();
-  
+
   // 加载知识库设置
   loadKnowledgeBaseSettings();
-  
+
   // 🔧 修复：确保项目已选择
   // 如果没有当前项目，等待项目store加载完成
   if (!projectStore.currentProjectId) {
@@ -2131,7 +2140,7 @@ onMounted(async () => {
         console.error('❌ 加载项目列表失败:', error);
       }
     }
-    
+
     // 如果还是没有项目，提示用户
     // 注意：不直接return，因为watch会在项目加载后自动加载会话数据
     if (!projectStore.currentProjectId) {
@@ -2139,7 +2148,7 @@ onMounted(async () => {
       // 不显示提示，因为MainLayout会处理项目选择
     }
   }
-  
+
   // 只有在有项目时才加载会话数据（避免watch中重复加载）
   if (projectStore.currentProjectId) {
     // 🔧 修复：先加载会话列表，再加载当前会话历史
@@ -2152,10 +2161,10 @@ onMounted(async () => {
 
   // 加载当前LLM配置（不依赖项目）
   await loadCurrentLlmConfig();
-  
+
   // 检查提示词状态（如果没有会自动弹出管理弹窗）
   await checkPromptStatus();
-  
+
   // 标记onMounted完成
   isMountedLoadComplete = true;
 });

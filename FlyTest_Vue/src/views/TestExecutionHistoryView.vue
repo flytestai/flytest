@@ -4,17 +4,17 @@
       <a-empty description="请先选择项目" />
     </div>
 
-    <div v-else class="report-layout">
-      <section class="report-sidebar fc-directory">
-        <div class="sidebar-header">
-          <div>
-            <div class="sidebar-title">测试报告</div>
-            <div class="sidebar-subtitle">
-              选择一个或多个根套件、子套件，基于测试用例、BUG 与执行记录生成当前迭代测试报告。
-            </div>
-          </div>
-          <a-button size="small" @click="fetchSuites">刷新</a-button>
-        </div>
+    <WorkspaceDirectoryLayout v-else storage-key="test-executions" drawer-only directory-label="报告范围与快照" :selection="checkedSuiteIds.length ? '已选 ' + checkedSuiteIds.length + ' 个套件' : '尚未选择套件'">
+      <template #heading>
+        <WorkspacePageHeader local title="测试报告" description="选择测试范围，查看本轮质量结论与执行结果。">
+          <template #actions>
+            <a-button type="primary" :loading="reportLoading" :disabled="checkedSuiteIds.length === 0" @click="handleGenerateReport">{{ currentGenerateButtonText }}</a-button>
+          </template>
+        </WorkspacePageHeader>
+      </template>
+      <template #directory>
+      <section class="report-scope-tools">
+        <div class="fc-report-scope-heading"><strong>测试套件</strong><a-button size="small" @click="fetchSuites">刷新</a-button></div>
 
         <a-input-search
           v-model="searchKeyword"
@@ -56,20 +56,7 @@
           </a-spin>
         </div>
 
-        <div class="sidebar-actions">
-          <a-button
-            type="primary"
-            long
-            :loading="reportLoading"
-            :disabled="checkedSuiteIds.length === 0"
-            @click="handleGenerateReport"
-          >
-            {{ currentGenerateButtonText }}
-          </a-button>
-          <div class="sidebar-note">
-            生成时会带入所选套件及其子套件下的测试用例、BUG 列表和执行状态数据。
-          </div>
-        </div>
+        <p class="fc-report-scope-note">生成报告将包含所选套件及子套件的用例、缺陷和执行状态。</p>
 
         <div v-if="latestGenerationRecord" class="generation-record-panel">
           <div class="generation-record-header">
@@ -252,6 +239,7 @@
           </div>
         </div>
       </section>
+      </template>
 
       <section class="report-content">
         <div v-if="reportData" class="report-body">
@@ -918,12 +906,14 @@
           <a-empty description="请选择套件后生成测试报告" />
         </div>
       </section>
-    </div>
+    </WorkspaceDirectoryLayout>
   </div>
 </template>
 
 
 <script setup lang="ts">
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { computed, onMounted, ref, watch } from 'vue';
 import { Message, Modal, type TreeNodeData } from '@arco-design/web-vue';

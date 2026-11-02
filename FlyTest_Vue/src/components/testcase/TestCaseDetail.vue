@@ -1,14 +1,6 @@
 <template>
   <div class="testcase-form-container fc-detail-page"> <!-- 复用form的容器样式 -->
-    <div class="form-header fc-detail-heading">
-      <div class="form-title">
-        <a-button type="text" size="small" @click="handleBackToList">
-          <template #icon><icon-arrow-left /></template>
-          返回列表
-        </a-button>
-        <h2>测试用例详情</h2>
-      </div>
-      <div class="form-actions" v-if="testCaseDetail">
+    <WorkspacePageHeader title="测试用例详情" show-back @back="handleBackToList"><template #actions><div class="form-actions" v-if="testCaseDetail">
         <a-space>
           <!-- 用例导航按钮（当有用例列表时显示） -->
           <template v-if="totalTestCases > 0">
@@ -28,10 +20,9 @@
             <a-divider direction="vertical" />
           </template>
           <a-button type="primary" @click="handleEdit">编辑</a-button>
-          <a-button type="primary" status="danger" @click="handleDelete">删除</a-button>
+          <a-button type="outline" status="danger" @click="handleDelete">删除</a-button>
         </a-space>
-      </div>
-    </div>
+      </div></template></WorkspacePageHeader>
 
     <div v-if="loading" class="loading-container">
       <a-spin />
@@ -328,6 +319,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, onUnmounted, watch, toRefs, computed } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { IconArrowLeft, IconPlus, IconUpload, IconEye, IconLeft, IconRight } from '@arco-design/web-vue/es/icon';

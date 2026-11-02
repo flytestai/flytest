@@ -1,18 +1,7 @@
 <template>
   <div class="page-management fc-page">
-    <div class="page-header fc-toolbar">
+    <WorkspacePageHeader title="页面管理"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
-        <a-select
-          v-model="filters.module"
-          placeholder="选择模块"
-          allow-clear
-          style="width: 180px; margin-right: 12px"
-          @change="onSearch"
-        >
-          <a-option v-for="mod in moduleOptions" :key="mod.id" :value="mod.id">
-            {{ mod.name }}
-          </a-option>
-        </a-select>
         <a-input-search
           v-model="filters.search"
           placeholder="搜索页面名称/URL"
@@ -28,7 +17,7 @@
           新增页面
         </a-button>
       </div>
-    </div>
+    </div></template></WorkspacePageHeader>
 
     <a-table class="fc-table"
       :columns="columns"
@@ -118,6 +107,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconEdit, IconDelete, IconEye } from '@arco-design/web-vue/es/icon'
@@ -332,7 +322,7 @@ watch(() => props.selectedModuleId, (newVal) => {
   filters.module = newVal
   pagination.current = 1
   fetchPages()
-})
+}, { immediate: true })
 
 // 监听项目变化，重新加载数据
 watch(projectId, () => {

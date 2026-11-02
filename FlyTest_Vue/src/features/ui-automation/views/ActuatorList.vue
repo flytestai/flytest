@@ -1,17 +1,6 @@
 <template>
   <div class="actuator-list fc-page">
-    <div class="header">
-      <div class="title">
-        <h3>在线执行器</h3>
-        <span class="count">共 {{ actuators.length }} 个</span>
-      </div>
-      <div class="actions">
-        <a-button @click="loadActuators" :loading="loading">
-          <template #icon><icon-refresh /></template>
-          刷新
-        </a-button>
-      </div>
-    </div>
+    <WorkspacePageHeader title="在线执行器"><template #meta>共 {{ actuators.length }} 个</template><template #actions><a-button @click="loadActuators" :loading="loading"><template #icon><icon-refresh /></template>刷新</a-button></template></WorkspacePageHeader>
 
     <a-alert
       v-if="!loading && actuators.length === 0"
@@ -72,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { IconRefresh } from '@arco-design/web-vue/es/icon'
 import { actuatorApi, type ActuatorInfo } from '../api'

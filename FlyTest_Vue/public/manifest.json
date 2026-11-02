@@ -10,10 +10,10 @@
   "start_url": "/",
   "icons": [
     {
-      "src": "/app-icon.png?v=20261030-feice-a2-4",
+      "src": "/app-icon.png?v=20261031-feice-refined-2",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": [

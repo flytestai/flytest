@@ -1,6 +1,6 @@
 ﻿<template>
     <div ref="testcaseContentRef" class="testcase-content">
-      <div class="page-header fc-toolbar">
+      <WorkspacePageHeader title="测试用例" :local="localHeading"><template #actions><div class="fc-workspace-tools">
         <div class="search-box">
         <a-input-search
           placeholder="搜索用例名称/前置条件"
@@ -10,6 +10,9 @@
           :style="{ width: isSmallScreen ? '84px' : '132px' }"
           v-model="localSearchKeyword"
         />
+        <a-popover trigger="click" position="bottom" title="筛选条件">
+          <a-button :type="activeFilterCount ? 'outline' : 'secondary'">筛选<span v-if="activeFilterCount" class="fc-filter-count">{{ activeFilterCount }}</span></a-button>
+          <template #content><div class="fc-filter-popover">
         <a-select
           v-model="selectedLevel"
           placeholder="优先级"
@@ -66,20 +69,17 @@
             {{ getUserDisplayName(member.user_detail) }}
           </a-option>
         </a-select>
-        <a-button v-if="!isSuiteActionMode" type="outline" class="io-btn" @click="handleImport">
-          <template #icon>
-            <icon-upload />
+          </div></template>
+        </a-popover>
+        <a-dropdown trigger="click" position="br">
+          <a-button>导入 / 导出</a-button>
+          <template #content>
+            <a-doption v-if="!isSuiteActionMode" @click="handleImport">导入用例</a-doption>
+            <a-doption @click="handleExport">导出用例</a-doption>
           </template>
-          <span class="io-btn-text">导入</span>
-        </a-button>
-        <a-button type="outline" class="io-btn" @click="handleExport">
-          <template #icon>
-            <icon-download />
-          </template>
-          <span class="io-btn-text">导出</span>
-        </a-button>
+        </a-dropdown>
         <template v-if="showCreateActions && !isSuiteActionMode">
-          <a-button type="primary" @click="handleGenerateTestCases">AI生成用例</a-button>
+          <a-button type="outline" @click="handleGenerateTestCases">AI生成用例</a-button>
           <a-button type="primary" @click="handleAddTestCase">添加用例</a-button>
         </template>
       </div>
@@ -87,17 +87,17 @@
         <template v-if="hasSelection">
           <a-button type="primary" status="danger" @click="handleBatchDelete">批量删除</a-button>
           <a-dropdown trigger="click" @select="(value: string) => handleBatchExecutionStatusChange(value as ExecutionStatus)">
-            <a-button type="primary">执行状态</a-button>
+            <a-button>执行状态</a-button>
             <template #content>
               <a-doption v-for="option in EXECUTION_STATUS_OPTIONS" :key="option.value" :value="option.value">
                 <a-tag :color="option.color" size="small">{{ option.label }}</a-tag>
               </a-doption>
             </template>
           </a-dropdown>
-          <a-button v-if="!isSuiteActionMode" type="primary" @click="openAssignModal(selectedTestCaseIds)">批量分配</a-button>
+          <a-button v-if="!isSuiteActionMode" type="outline" @click="openAssignModal(selectedTestCaseIds)">批量分配</a-button>
         </template>
       </div>
-    </div>
+    </div></template></WorkspacePageHeader>
 
     <div v-if="!currentProjectId" class="no-project-selected">
       <a-empty description="请在顶部选择一个项目">
@@ -273,11 +273,12 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, onMounted, onUnmounted, computed, watch, toRefs, nextTick } from 'vue';
 import axios from 'axios';
 import { useMediaQuery } from '@vueuse/core';
 import { Message, Modal } from '@arco-design/web-vue';
-import { IconFolder, IconDownload, IconUpload, IconDown } from '@arco-design/web-vue/es/icon';
+import { IconFolder, IconDown } from '@arco-design/web-vue/es/icon';
 import { useAuthStore } from '@/store/authStore';
 import { getUserDisplayName } from '@/utils/userDisplay';
 import { API_BASE_URL } from '@/config/api';
@@ -308,6 +309,7 @@ type TestCaseListItem = TestCase & {
 };
 
 const props = withDefaults(defineProps<{
+  localHeading?: boolean;
   currentProjectId: number | null;
   selectedModuleId?: number | null; // 鍙€夌殑妯″潡ID锛岀敤浜庣瓫閫?
   selectedSuiteId?: number | null;
@@ -356,6 +358,7 @@ const selectedTestType = ref<string>('');
 const highlightedGeneratedCaseIds = ref<number[]>([]);
 const selectedReviewStatuses = ref<ReviewStatus[]>([]);
 const selectedAssigneeIds = ref<number[]>([]);
+const activeFilterCount = computed(() => Number(!!selectedLevel.value) + Number(!!selectedTestType.value) + Number(selectedReviewStatuses.value.length > 0) + Number(selectedAssigneeIds.value.length > 0));
 const testCaseData = ref<TestCaseListItem[]>([]);
 const selectedTestCaseIds = ref<number[]>([]);
 const importModalRef = ref<InstanceType<typeof ImportModal> | null>(null);

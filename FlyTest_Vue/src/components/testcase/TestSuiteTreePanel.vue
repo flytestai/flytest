@@ -1,37 +1,10 @@
 <template>
   <div class="suite-panel-wrapper">
-    <a-card class="suite-panel fc-panel" :bordered="false" title="套件管理">
+    <a-card class="suite-panel fc-directory fc-panel" :bordered="false" >
       <div class="suite-panel-content">
-        <div class="suite-panel-header">
-          <a-input-search
-            v-model="searchKeyword"
-            placeholder="请输入套件名称"
-            allow-clear
-          />
-          <div class="suite-actions">
-            <a-dropdown
-              trigger="hover"
-              position="bottom"
-              :popup-max-width="false"
-              class="suite-dropdown"
-              @select="handleSuiteAction"
-            >
-              <a-button type="primary" size="small" class="suite-action-button">
-                操作
-              </a-button>
-              <template #content>
-                <a-doption
-                  v-for="item in suiteActionMenuItems"
-                  :key="item.value"
-                  :value="item.value"
-                  :disabled="item.requiresSelection && !selectedSuiteKey"
-                  class="centered-dropdown-item"
-                >
-                  {{ item.label }}
-                </a-doption>
-              </template>
-            </a-dropdown>
-          </div>
+        <div class="fc-directory-search-row">
+          <a-input-search v-model="searchKeyword" placeholder="搜索套件" allow-clear />
+          <button class="fc-directory-add" type="button" aria-label="新增根套件" title="新增根套件" @click="handleSuiteAction('addRoot')">＋</button>
         </div>
 
         <div class="tree-container">
@@ -50,28 +23,11 @@
             @expand="onTreeExpand"
           >
             <template #title="nodeData">
-              <a-dropdown
-                trigger="contextMenu"
-                position="br"
-                :popup-max-width="false"
-                @select="handleSuiteAction"
-              >
-                <span class="suite-node-title" @contextmenu="handleContextMenu(nodeData)">
-                  <span>{{ nodeData.name }}</span>
-                  <span class="suite-count">({{ nodeData.testcase_count || 0 }})</span>
-                </span>
-                <template #content>
-                  <a-doption
-                    v-for="item in suiteActionMenuItems"
-                    :key="item.value"
-                    :value="item.value"
-                    :disabled="item.requiresSelection && !selectedSuiteKey"
-                    class="centered-dropdown-item"
-                  >
-                    {{ item.label }}
-                  </a-doption>
-                </template>
-              </a-dropdown>
+              <div class="fc-directory-node">
+                <span class="fc-directory-node__label">{{ nodeData.name }}</span>
+                <span class="fc-directory-node__count">{{ nodeData.testcase_count || nodeData.test_case_count || 0 }}</span>
+                <DirectoryNodeMenu :label="nodeData.name" :items="suiteActionMenuItems.filter(item => item.value !== 'addRoot')" @action="value => handleNodeAction(nodeData, value)" />
+              </div>
             </template>
           </a-tree>
           <a-empty v-else description="暂无套件数据" />
@@ -177,6 +133,11 @@
 </template>
 
 <script setup lang="ts">
+import DirectoryNodeMenu from '@/components/workspace/DirectoryNodeMenu.vue'
+import { inject } from 'vue'
+import { workspaceDirectoryKey } from '@/components/workspace/workspaceContext'
+const directory = inject(workspaceDirectoryKey, undefined)
+
 import { computed, onMounted, ref, watch } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import type { TreeNodeData } from '@arco-design/web-vue';
@@ -544,6 +505,8 @@ const handleFormSuccess = async () => {
   emit('suiteUpdated');
 };
 
+const handleNodeAction = (node: TreeNodeData, value: string) => { handleContextMenu(node); handleSuiteAction(value) }
+
 const handleSuiteAction = (action: string | number | Record<string, any> | undefined) => {
   const actionValue = action as string;
 
@@ -632,10 +595,12 @@ const onTreeSelect = (
   data: { selected?: boolean; node?: TreeNodeData },
 ) => {
   if (data.selected && data.node) {
-    setSelectedSuite(Number(data.node.key));
+    setSelectedSuite(Number(data.node.key ?? data.node.id));
+    directory?.selected();
     return;
   }
   setSelectedSuite(null);
+  directory?.selected();
 };
 
 const onTreeExpand = (keys: (string | number)[]) => {

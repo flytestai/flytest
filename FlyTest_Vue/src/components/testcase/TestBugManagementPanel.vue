@@ -1,16 +1,13 @@
 <template>
   <div class="bug-panel">
     <template v-if="viewMode === 'list'">
-      <div class="bug-panel-header">
-        <div class="bug-panel-heading">
-          <div class="bug-panel-title">BUG 管理</div>
-          <div class="bug-panel-subtitle">围绕当前测试套件查看、筛选、处理和追踪缺陷。</div>
-        </div>
-        <div class="bug-panel-actions">
+      <WorkspacePageHeader title="缺陷管理">
+        <template #meta>围绕当前测试套件查看、筛选、处理和追踪缺陷。</template>
+        <template #actions><div class="bug-panel-actions">
           <a-button @click="fetchBugs">刷新</a-button>
           <a-button type="primary" @click="openCreateDetail">提 BUG</a-button>
-        </div>
-      </div>
+        </div></template>
+      </WorkspacePageHeader>
 
       <div class="bug-status-grid">
         <button
@@ -383,18 +380,14 @@
 
     <template v-else>
       <div class="bug-detail-page">
-        <div class="bug-detail-page-header">
-          <div class="bug-detail-page-title-wrap">
-            <a-button type="text" size="small" @click="backToList">返回列表</a-button>
-            <h2>{{ detailDraftType === 'create' ? '新建 BUG' : detailDraftType === 'copy' ? '复制 BUG' : 'BUG 详情' }}</h2>
-          </div>
-          <div class="bug-detail-page-actions">
+        <WorkspacePageHeader :title="detailDraftType === 'create' ? '新建缺陷' : detailDraftType === 'copy' ? '复制缺陷' : '缺陷详情'" show-back @back="backToList">
+          <template #actions><div class="bug-detail-page-actions">
             <template v-if="detailEditMode">
               <a-button @click="cancelDetailEdit">取消</a-button>
               <a-button type="primary" :loading="detailSaving" @click="saveDetailEdit">保存</a-button>
             </template>
-          </div>
-        </div>
+          </div></template>
+        </WorkspacePageHeader>
 
         <div v-if="detailLoading" class="bug-detail-loading-panel">
           <a-spin class="bug-detail-spin" tip="正在加载 BUG 详情..." />
@@ -911,6 +904,7 @@
 
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { IconCheckCircle, IconClose, IconCopy, IconDelete, IconDown, IconEdit, IconSettings, IconUp, IconUser } from '@arco-design/web-vue/es/icon';
@@ -1004,6 +998,7 @@ const props = defineProps<{
   currentProjectId: number | null;
   selectedSuiteId: number | null;
 }>();
+const emit = defineEmits<{ 'view-mode-change': [value: 'list' | 'detail'] }>();
 
 const BUG_COLUMN_STORAGE_KEY_PREFIX = 'flytest_bug_management_visible_columns';
 const BUG_FILTER_STORAGE_KEY_PREFIX = 'flytest_bug_management_filters';
@@ -1059,6 +1054,7 @@ const batchSubmitting = ref(false);
 const batchVisible = ref(false);
 const saveFilterViewVisible = ref(false);
 const viewMode = ref<'list' | 'detail'>('list');
+watch(viewMode, value => emit('view-mode-change', value));
 const detailDraftType = ref<'create' | 'copy' | null>(null);
 const filterViewImportRef = ref<HTMLInputElement | null>(null);
 const bugList = ref<TestBug[]>([]);
@@ -3206,11 +3202,9 @@ defineExpose({
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  padding: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.1));
-  border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
-  border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));
+  min-width: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .bug-panel-header {
@@ -3246,30 +3240,27 @@ defineExpose({
 .bug-status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .status-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-  padding: 16px 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.12));
-  border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
-  border-radius: var(--ui-radius-md, 10px);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .status-card:hover,
 .status-card--active {
-  border-color: rgb(var(--arcoblue-6));
-  background: linear-gradient(180deg, rgba(var(--arcoblue-6), 0.08), rgba(var(--arcoblue-6), 0.03));
-  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.12);
-  transform: translateY(-1px);
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-soft);
 }
 
 .status-card-label {
@@ -3286,11 +3277,10 @@ defineExpose({
 
 .bug-toolbar {
   margin-bottom: 14px;
-  padding: 14px;
-  background: var(--ui-toolbar-bg, var(--color-fill-1));
-  border: 1px solid var(--ui-toolbar-border, var(--color-neutral-3));
-  border-radius: var(--ui-radius-md, 10px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  padding: 12px;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
 }
 
 .quick-view-list {
@@ -3319,15 +3309,19 @@ defineExpose({
 }
 
 .bug-filter-grid {
-  display: grid;
-  grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(120px, 1fr)) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
 
 .bug-filter-search {
+  flex: 2 1 220px;
   min-width: 0;
 }
+.bug-filter-grid :deep(.arco-select-view) { flex: 1 1 110px; min-width: 0; }
+.bug-filter-grid > .arco-btn { flex: none; }
+.bug-toolbar-sort-label { white-space: nowrap; }
 
 .bug-toolbar-footer {
   display: flex;
@@ -3435,6 +3429,9 @@ defineExpose({
 
 .bug-toolbar-sort {
   display: flex;
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
 }
@@ -3446,6 +3443,9 @@ defineExpose({
 
 .bug-sort-select {
   width: 180px;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .bug-summary-bar {
@@ -4168,7 +4168,6 @@ defineExpose({
   .bug-detail-page-header,
   .bug-form-grid,
   .bug-detail-grid,
-  .bug-status-grid,
   .bug-filter-grid {
     grid-template-columns: 1fr;
   }

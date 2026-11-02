@@ -1,6 +1,6 @@
 <template>
   <div class="env-config-list fc-page">
-    <div class="page-header fc-toolbar">
+    <WorkspacePageHeader title="环境配置"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.browser"
@@ -28,7 +28,7 @@
           新增环境
         </a-button>
       </div>
-    </div>
+    </div></template></WorkspacePageHeader>
 
     <a-table class="fc-table"
       :columns="columns"
@@ -170,6 +170,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconEdit, IconDelete, IconCheck } from '@arco-design/web-vue/es/icon'

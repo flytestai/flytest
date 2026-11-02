@@ -63,6 +63,15 @@ async function checkPage(page, label) {
         assert.deepEqual(errors, [], url + ' runtime');
         assert(await page.getByRole('button', { name: '返回列表', exact: true }).isVisible(), 'Back navigation is preserved');
         await page.screenshot({ path: path.join(output, `requirement${url.endsWith('report') ? '-report' : ''}-${width}.png`) });
+        if (url.endsWith('report')) {
+          const toggle = page.getByRole('button', { name: '分析维度', exact: true });
+          if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+          const directory = page.locator('.fc-workspace-directory:visible');
+          const analysis = directory.locator('.analysis-item').nth(1);
+          await analysis.focus(); await page.keyboard.press('Enter');
+          if (width < 1024) assert.equal(await page.locator('.fc-workspace-directory:visible').count(), 0, 'Selecting an analysis closes the drawer');
+          assert.equal(await page.locator('.fc-workspace-heading .fc-page-heading:visible').count(), 1);
+        }
         results.push({ url, width, passed: true });
       }
       errors = [];

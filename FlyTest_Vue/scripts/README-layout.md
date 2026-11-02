@@ -44,7 +44,7 @@ npm run test:layout:interactions
 
 补齐检查：
 
-- `npm run test:workspace:forms`：使用真实工具目录和 APP 步骤定义，检查 51 个工具、16 类编辑弹窗、27 类步骤配置及编排交互；默认 1440 / 390 / 320px。需 Python，可通过 `PYTHON` 指定可执行文件。`UI_WIDTHS` 选择宽度，`UI_TOOLS` 指定单项工具复查。
+- `npm run test:workspace:forms`：使用真实工具目录和 APP 步骤定义，检查 51 个工具、16 类编辑弹窗、27 类步骤配置及编排交互；默认 1440 / 390 / 320px。需 Python，可通过 `PYTHON` 指定可执行文件。`UI_WIDTHS` 选择宽度，`UI_TOOLS` 指定单项工具复查，`UI_SCOPE=builder` 仅复查 27 类 APP 步骤和编排交互。
 - `npm run test:asset-details`：有数据的需求详情、专项报告、用例详情和编辑；默认 1440 / 1024 / 390 / 320px。
 - `npm run test:request-editor`：真实请求编辑弹窗中的 9 个配置页签及 8 种请求体模式，覆盖四种宽度。
 
@@ -54,9 +54,13 @@ npm run test:layout:interactions
 
 首页支持可选 `automation_coverage: { rate, covered?, total? }` 数据；现有后端未提供时显示“暂无覆盖率数据”，不使用不同类型资产数量推算覆盖率。专项检查通过浏览器接口夹具验证该字段存在和不存在的场景，不变更业务数据。
 
-导航展开宽度为 216px、折叠为 64px。手机使用临时抽屉，不覆盖桌面偏好。自动化目录与内容区在桌面共用完整工作面，小屏分区堆叠，表格横向滚动限制在自身范围。
+导航展开宽度为 216px、折叠为 64px。手机使用临时抽屉，不覆盖桌面偏好。业务目录由 `WorkspaceDirectoryLayout.vue` 统一管理：仅资源页保留目录；环境、执行器、公共数据等页面使用全宽内容；执行记录与报告通过顶部目录筛选。目录在 ≥1440px 默认展开，1024–1439px 默认收起，窄于 1024px 使用抽屉，不再堆叠到正文上方。用户展开/收起偏好按工作区保存。详情与编辑使用完整内容区，目录可临时打开。
+
+`npm run test:workspace:directories` 使用浏览器接口夹具覆盖目录的出现条件、布局边界、节点菜单、键盘操作、筛选保留、Tab 标题切换、深色抽屉、焦点回归、慢速加载、缺陷编辑、个人中心、对话历史及 APP 编排面板；默认 1440 / 1280 / 1024 / 768 / 390 / 320px。使用 `UI_WIDTHS` 可缩小宽度范围，`UI_CHECKS` 可通过检查名称的正则表达式选择场景。结果位于 `playwright-screenshots/contextual-workspaces/`。测试不会修改业务数据库。
 
 ## 首页下半部分专项检查
+
+`npm run test:workspace:density` 检查紧凑工作区在 1440 / 1024 / 390 / 320px 的表格起始位置、控件边界、用例筛选状态和导入导出入口，结果位于 `playwright-screenshots/density/`。设置 `UI_POPULATED=1` 可使用 30 条模拟环境数据检查长列表；`UI_WIDTHS` 可选择宽度。筛选条件位于用例页“筛选”面板，按钮显示已启用数量。
 
 `npm run test:dashboard` 覆盖待处理事项、缺陷风险、自动化矩阵、审核分布、Token、趋势与运营七个区块。检查 1440/1024/390/320px、有数据/零数据、大数字/长用户名和深色主题，共 10 个场景，并验证日/周/月分组的鼠标与键盘操作。
 
@@ -66,4 +70,4 @@ npm run test:layout:interactions
 
 `npm run test:auth` 检查 1440、1920、1024、768、390、320px 及手机横屏两种页面，共 14 个布局场景；另验证密码可见性、登录错误提示、注册校验/成功状态、账号记忆和已保存的深色主题。接口在浏览器内隔离模拟，不会向业务库注册用户。结果保存到 `playwright-screenshots/auth/`。
 
-品牌源文件为 `public/feice-mark.svg`、`feice-logo.svg`、`feice-logo-light.svg`。`npm run brand:export` 用同一组矢量文件导出兼容 PNG（需配置可用的 Playwright 和浏览器）。保留旧图片路径以兼容外部引用，实际内容均为 FeiCe 标识；应用通过 `assetUrl.ts` 使用 SVG 和资源版本号。
+品牌几何源为 `scripts/generate-brand-assets.cjs`：生成斜切 F 图形、自定义轮廓字标和深浅色组合 SVG，不依赖系统字体。`npm run brand:export` 先生成 SVG，再导出兼容 PNG（需配置可用的 Playwright 和浏览器）。`feice-mark.svg` 用于独立图标，`feice-wordmark.svg` 用于导航字标，`feice-logo.svg` / `feice-logo-light.svg` 用于完整组合。旧图片路径保持可用；应用通过 `assetUrl.ts` 使用 SVG 和资源版本号。

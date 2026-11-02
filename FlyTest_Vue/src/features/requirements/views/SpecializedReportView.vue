@@ -1,68 +1,11 @@
 <template>
   <div class="specialized-report-view fc-page">
-    <!-- 页面头部 -->
-    <WorkspacePageHeader>
-        <template #title>{{ document?.title || '评审报告' }}</template>
-        <template #meta><a-button type="text" @click="goBack" class="back-button">
-          <template #icon><icon-arrow-left /></template>
-          返回列表
-        </a-button>
-<a-tag v-if="selectedReport" :color="getRatingColor(selectedReport.overall_rating)" class="status-tag">
-          {{ getRatingText(selectedReport.overall_rating) }}
-        </a-tag>
-<a-tag
-          v-if="reportVersions.length > 1 && selectedReportId"
-          :color="isLatestVersion ? 'green' : 'blue'"
-          class="version-indicator"
-        >
-          {{ isLatestVersion ? '最新版本' : '历史版本' }}
-        </a-tag>
-<ReportVersionSelector
-          v-if="reportVersions.length > 1"
-          :report-versions="reportVersions"
-          :selected-report-id="selectedReportId"
-          :loading="loading"
-          @version-change="handleVersionChange"
-          class="version-selector"
-        /></template>
-        <template #actions><div class="header-actions">
-        <a-button type="outline" @click="exportReport">
-          <template #icon><icon-download /></template>
-          导出报告
-        </a-button>
-      </div></template>
-      </WorkspacePageHeader>
-
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-container">
-      <a-spin size="large" />
-    </div>
-
-    <!-- 主要内容区域 -->
-    <div v-else-if="document && selectedReport" class="report-content">
-      <!-- 左侧：专项分析选择器 -->
-      <div class="left-panel">
+    <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="specialized-report" :directory="!!(document && selectedReport)" directory-label="分析维度"
+      selection-label="当前分析" :selection="getCurrentAnalysis?.title">
+      <template #directory><div class="fc-report-directory">
         <a-card title=" 专项分析维度" class="analysis-selector-panel fc-panel">
           <!-- 总体评分卡片 -->
-          <div class="overall-score-card">
-            <div class="score-display">
-              <div class="score-circle">
-                <span class="score-number">{{ selectedReport.completion_score || selectedReport.overall_score }}</span>
-                <span class="score-label">总分</span>
-              </div>
-              <div class="score-details">
-                <h3>总体评价</h3>
-                <a-tag :color="getRatingColor(selectedReport.overall_rating)" size="large">
-                  {{ getRatingText(selectedReport.overall_rating) }}
-                </a-tag>
-                <div class="issues-summary">
-                  <span class="issue-stat high"> {{ selectedReport.high_priority_issues || 0 }} 高</span>
-                  <span class="issue-stat medium"> {{ selectedReport.medium_priority_issues || 0 }} 中</span>
-                  <span class="issue-stat low"> {{ selectedReport.low_priority_issues || 0 }} 低</span>
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           <!-- 专项分析列表 -->
           <div class="analysis-list">
@@ -88,7 +31,50 @@
             </div>
           </div>
         </a-card>
-      </div>
+      </div></template>
+    <!-- 页面头部 -->
+    <WorkspacePageHeader>
+        <template #title>{{ document?.title || '评审报告' }}</template>
+        <template #meta><a-button type="text" @click="goBack" class="back-button">
+          <template #icon><icon-arrow-left /></template>
+          返回列表
+        </a-button>
+<a-tag v-if="selectedReport" :color="getRatingColor(selectedReport.overall_rating)" class="status-tag">
+          {{ getRatingText(selectedReport.overall_rating) }}
+        </a-tag>
+<a-tag
+          v-if="reportVersions.length > 1 && selectedReportId"
+          :color="isLatestVersion ? 'green' : 'blue'"
+          class="version-indicator"
+        >
+          {{ isLatestVersion ? '最新版本' : '历史版本' }}
+        </a-tag>
+<span v-if="selectedReport">总体评分 {{ selectedReport.completion_score ?? selectedReport.overall_score ?? '—' }}</span>
+<ReportVersionSelector
+          v-if="reportVersions.length > 1"
+          :report-versions="reportVersions"
+          :selected-report-id="selectedReportId"
+          :loading="loading"
+          @version-change="handleVersionChange"
+          class="version-selector"
+        /></template>
+        <template #actions><div class="header-actions">
+        <a-button type="outline" @click="exportReport">
+          <template #icon><icon-download /></template>
+          导出报告
+        </a-button>
+      </div></template>
+      </WorkspacePageHeader>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <a-spin size="large" />
+    </div>
+
+    <!-- 主要内容区域 -->
+    <div v-else-if="document && selectedReport" class="report-content">
+      <!-- 左侧：专项分析选择器 -->
+
 
       <!-- 右侧：选中专项的详细信息 -->
       <div class="right-panel">
@@ -175,10 +161,13 @@
     <div v-else class="empty-state">
       <a-empty description="暂无评审报告数据" />
     </div>
+    </WorkspaceDirectoryLayout>
   </div>
 </template>
 
 <script setup lang="ts">
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -192,6 +181,7 @@ import ReportVersionSelector from '../components/ReportVersionSelector.vue';
 import type { DocumentDetail, ReviewReport } from '../types';
 
 // 路由
+const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>()
 const route = useRoute();
 const router = useRouter();
 
@@ -295,7 +285,7 @@ const loadDocument = async () => {
 
     if (response.status === 'success') {
       document.value = response.data;
-      
+
       // 如果有历史报告，默认选择最新的
       if (reportVersions.value.length > 0) {
         // 如果没有指定版本，选择最新版本
@@ -303,7 +293,7 @@ const loadDocument = async () => {
           selectedReportId.value = reportVersions.value[0].id;
         }
       }
-      
+
       console.log('Document loaded:', document.value);  // 调试日志
       console.log('Selected report:', selectedReport.value);  // 调试日志
     } else {
@@ -318,6 +308,7 @@ const loadDocument = async () => {
 };
 
 const selectAnalysis = (type: string) => {
+  workspaceRef.value?.closeDirectory()
   selectedAnalysisType.value = type;
   priorityFilter.value = ''; // 重置筛选
 };

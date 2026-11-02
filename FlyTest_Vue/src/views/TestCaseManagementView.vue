@@ -1,32 +1,20 @@
 <template>
   <div class="testcase-management-container fc-page">
 
-    <!-- 始终显示模块管理面板 -->
-    <div class="list-view-layout">
-      <div
-        class="module-panel-resizable-shell"
-        :style="modulePanelShellStyle"
-      >
-        <ModuleManagementPanel
+    <!-- 目录仅辅助资源切换，详情与编辑优先使用完整内容区。 -->
+    <WorkspaceDirectoryLayout storage-key="testcases" directory-label="模块目录" :prioritize-content="viewMode !== 'list'"
+      :selection="selectedModuleName" clearable @clear="handleModuleSelected(null)">
+      <template #directory><ModuleManagementPanel
+          :selected-id="selectedModuleId"
           :current-project-id="currentProjectId"
           @module-selected="handleModuleSelected"
           @module-updated="handleModuleUpdated"
           ref="modulePanelRef"
-        />
-      </div>
-      <div
-        class="module-panel-resizer"
-        @mousedown="startModulePanelResize"
-        role="separator" tabindex="0" aria-label="调整目录宽度" aria-orientation="vertical"
-        :aria-valuenow="panelWidth" :aria-valuemin="panelMinWidth" :aria-valuemax="panelMaxWidth"
-        @keydown="resizeWithKeyboard"
-      />
+        /></template>
 
-      <!-- 右侧内容区域 - 根据视图模式动态切换 -->
-      <div class="right-content-area">
+
         <!-- 列表视图 - 使用 v-show 保持组件状态（筛选条件等） -->
-        <TestCaseList
-          v-show="viewMode === 'list'"
+        <WorkspacePane :active="viewMode === 'list'"><TestCaseList
           :current-project-id="currentProjectId"
           :selected-module-id="selectedModuleId"
           :module-tree="moduleTreeForForm"
@@ -39,7 +27,7 @@
           @module-filter-change="handleModuleSelected"
           @request-optimization="handleRequestOptimization"
           ref="testCaseListRef"
-        />
+        /></WorkspacePane>
 
         <!-- 添加/编辑测试用例表单 -->
         <TestCaseForm
@@ -69,8 +57,7 @@
           @navigate="handleNavigateViewTestCase"
           @review-status-changed="handleReviewStatusChanged"
         />
-      </div>
-    </div>
+    </WorkspaceDirectoryLayout>
 
     <GenerateCasesModal
       v-if="isGenerateCasesModalVisible"
@@ -99,7 +86,9 @@
 </template>
 
 <script setup lang="ts">
-import { useResizablePanel } from '@/composables/useResizablePanel';
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
+
 import { defineAsyncComponent, h, ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProjectStore } from '@/store/projectStore';
@@ -203,8 +192,8 @@ const generationDraftMap = ref<GenerateDraftMap>({});
 const pendingExecuteTestCase = ref<TestCase | null>(null);
 const pendingOptimizationTestCase = ref<TestCase | null>(null);
 const testCaseIdsForNavigation = ref<number[]>([]); // 用于编辑页面导航的用例ID列表
-const { panelWidth, minWidth: panelMinWidth, maxWidth: panelMaxWidth, shellStyle: modulePanelShellStyle, startResize: startModulePanelResize, stopResize: stopModulePanelResize, resizeWithKeyboard } = useResizablePanel();
 
+const selectedModuleName = computed(() => allModules.value.find(item => item.id === selectedModuleId.value)?.name || '')
 const modulePanelRef = ref<InstanceType<typeof ModuleManagementPanel> | null>(null);
 const testCaseListRef = ref<InstanceType<typeof TestCaseList> | null>(null);
 
@@ -1156,10 +1145,6 @@ onMounted(() => {
     fetchAllModulesForForm();
   }
   syncRouteTestCaseDetail();
-});
-
-onUnmounted(() => {
-  stopModulePanelResize();
 });
 
 </script>

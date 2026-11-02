@@ -1,0 +1,20 @@
+// Canonical geometry: editable outlines, no runtime font dependencies.
+const fs = require('node:fs');
+const path = require('node:path');
+const publicDir = path.resolve(__dirname, '../public');
+// Moderate forward lean and small optical corner radii keep the silhouette calm at navigation sizes.
+const mark = '<path d="M17.4 10H55.2C56.8 10 57.5 11.2 56.6 12.6L52 20C51.6 20.6 51 21 50.2 21H29L27.3 29H46C47.6 29 48.3 30.2 47.4 31.6L42.8 39C42.4 39.6 41.8 40 41 40H24.9L22.2 52.4C22 53.4 21.2 54 20.2 54H10.5C9.1 54 8.3 53 8.6 51.6L16 11.6C16.2 10.7 16.6 10 17.4 10Z" fill="#0066FF"/>';
+const e = 'M141.5 39H120.5C121.3 44 124.8 47 130 47C133.8 47 137.1 45.8 139.8 43.9V50C136.8 52 133.2 53 129.1 53C119.2 53 113 47 113 38C113 29 119.1 23 128 23C136.8 23 141.5 28.9 141.5 37.5V39ZM120.7 33.5H134.6C134 30.1 131.7 28.4 128 28.4C124.4 28.4 121.8 30.4 120.7 33.5Z';
+const letters = `<path d="M80 12H107V19H87.5V29H104V36H87.5V52H80Z"/><path fill-rule="evenodd" d="${e}"/><path d="M148 24H155V52H148ZM148 12H155V19H148Z"/><path d="M198 15V22.7C194.5 19.6 191 18 186.7 18C177.7 18 172 23.8 172 32C172 40.8 177.7 46 186.7 46C191 46 194.7 44.5 198 41.8V49.5C194.6 51.8 190.7 53 186.2 53C172.8 53 164 44.6 164 32C164 19.5 172.8 11 186.2 11C190.9 11 194.9 12.4 198 15Z"/><path fill-rule="evenodd" d="${e}" transform="translate(91)"/>`;
+const svg = (width, height, viewBox, content) => `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${viewBox}" fill="none"><title>FeiCe 飞测</title>${content}</svg>\n`;
+const assets = {
+  'feice-mark.svg': svg(64, 64, '0 0 64 64', mark),
+  // Optical crop: small browser icons need less surrounding space than navigation marks.
+  'favicon.svg': svg(64, 64, '4 4 56 56', mark),
+  'logo.svg': svg(64, 64, '0 0 64 64', mark),
+  'app-icon.svg': svg(64, 64, '0 0 64 64', mark),
+  'feice-logo.svg': svg(236, 64, '0 0 236 64', `${mark}<g fill="#1D3151" transform="translate(-6)">${letters}</g>`),
+  'feice-logo-light.svg': svg(236, 64, '0 0 236 64', `${mark}<g fill="#FFFFFF" transform="translate(-6)">${letters}</g>`),
+  'feice-wordmark.svg': svg(158, 48, '78 8 158 48', `<g fill="#1D3151">${letters}</g>`),
+};
+for (const [name, content] of Object.entries(assets)) fs.writeFileSync(path.join(publicDir, name), content);

@@ -1,5 +1,31 @@
 <template>
   <div class="report-detail fc-page">
+    <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="requirement-review" :directory="!!(document && selectedReport)" directory-label="评审模块"
+      selection-label="当前模块" :selection="selectedModule?.title">
+      <template #directory><div class="fc-report-directory">
+        <a-card title="模块内容" class="modules-panel fc-panel">
+          <div class="modules-list">
+            <div
+              v-for="(module, index) in document?.modules || []"
+              :key="module.id"
+              class="module-item"
+              :class="{ active: selectedModuleId === module.id }"
+              role="button" tabindex="0" @click="selectModule(module.id)" @keydown.enter.self.prevent="selectModule(module.id)" @keydown.space.self.prevent="selectModule(module.id)"
+            >
+              <div class="module-header">
+                <span class="module-index">{{ index + 1 }}</span>
+                <h4 class="module-title">{{ module.title }}</h4>
+                <div class="module-meta">
+                  <span class="module-issues">{{ getModuleIssuesCount(module.id) }} 问题</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 选中模块的详细内容 -->
+
+        </a-card>
+      </div></template>
     <!-- 页面头部 -->
     <WorkspacePageHeader>
         <template #title>{{ document?.title || '评审报告' }}</template>
@@ -49,28 +75,11 @@
     <!-- 主要内容区域 -->
     <div v-else-if="document && selectedReport" class="report-content">
       <!-- 左侧：模块详情 -->
-      <div class="left-panel">
-        <a-card title="📄 模块内容" class="modules-panel fc-panel">
-          <div class="modules-list">
-            <div 
-              v-for="(module, index) in document.modules" 
-              :key="module.id"
-              class="module-item"
-              :class="{ active: selectedModuleId === module.id }"
-              @click="selectModule(module.id)"
-            >
-              <div class="module-header">
-                <span class="module-index">{{ index + 1 }}</span>
-                <h4 class="module-title">{{ module.title }}</h4>
-                <div class="module-meta">
-                  <span class="module-issues">{{ getModuleIssuesCount(module.id) }} 问题</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- 选中模块的详细内容 -->
-          <div v-if="selectedModule" class="module-detail">
+
+      <!-- 右侧：模块问题 -->
+      <div class="right-panel">
+<div v-if="selectedModule" class="module-detail">
             <div class="module-detail-header">
               <h3>{{ selectedModule.title }}</h3>
               <a-tag v-if="selectedModuleResult" :color="getRatingColor(selectedModuleResult.module_rating)">
@@ -78,20 +87,15 @@
               </a-tag>
             </div>
             <div class="module-content">
-              <h5>📝 模块内容</h5>
+              <h5>模块内容</h5>
               <div class="content-text">{{ selectedModule.content }}</div>
             </div>
           </div>
-        </a-card>
-      </div>
-
-      <!-- 右侧：模块问题 -->
-      <div class="right-panel">
-        <a-card :title="selectedModule ? `⚠️ ${selectedModule.title} - 相关问题` : '⚠️ 模块问题'" class="issues-panel fc-panel">
+        <a-card :title="selectedModule ? `${selectedModule.title} - 相关问题` : '模块问题'" class="issues-panel fc-panel">
           <!-- 选中模块的评审结果 -->
           <div v-if="selectedModuleResult" class="module-review-result">
             <div class="module-rating">
-              <h4>📊 模块评级</h4>
+              <h4>模块评级</h4>
               <div class="rating-display">
                 <a-tag :color="getRatingColor(selectedModuleResult.module_rating)" size="large">
                   {{ selectedModuleResult.module_rating_display }}
@@ -105,15 +109,15 @@
             <!-- 优势和不足 -->
             <div class="strengths-weaknesses">
               <div v-if="selectedModuleResult.strengths" class="strengths">
-                <h5>✅ 优势</h5>
+                <h5>优势</h5>
                 <p>{{ selectedModuleResult.strengths }}</p>
               </div>
               <div v-if="selectedModuleResult.weaknesses" class="weaknesses">
-                <h5>⚠️ 不足</h5>
+                <h5>不足</h5>
                 <p>{{ selectedModuleResult.weaknesses }}</p>
               </div>
               <div v-if="selectedModuleResult.recommendations" class="module-recommendations">
-                <h5>💡 改进建议</h5>
+                <h5>改进建议</h5>
                 <p>{{ selectedModuleResult.recommendations }}</p>
               </div>
             </div>
@@ -122,7 +126,7 @@
           <!-- 模块相关问题 -->
           <div class="module-issues-section">
             <div class="issues-header">
-              <h4>⚠️ 相关问题 ({{ selectedModuleIssues.length }}个)</h4>
+              <h4>相关问题 ({{ selectedModuleIssues.length }}个)</h4>
               <div class="issues-filters">
                 <a-select v-model="priorityFilter" placeholder="优先级" style="width: 120px" allow-clear>
                   <a-option value="high">高优先级</a-option>
@@ -180,10 +184,13 @@
     <div v-else class="empty-state">
       <a-empty description="暂无评审报告数据" />
     </div>
+    </WorkspaceDirectoryLayout>
   </div>
 </template>
 
 <script setup lang="ts">
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -199,6 +206,7 @@ import type { DocumentDetail, DocumentModule, ModuleReviewResult, ReviewIssue, R
 import ReportVersionSelector from '../components/ReportVersionSelector.vue';
 
 // 路由
+const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>()
 const route = useRoute();
 const router = useRouter();
 
@@ -300,6 +308,7 @@ const loadDocument = async () => {
 };
 
 const selectModule = (moduleId: string) => {
+  workspaceRef.value?.closeDirectory()
   selectedModuleId.value = moduleId;
 };
 

@@ -6,18 +6,17 @@
       </WorkspacePageHeader>
 
     <div class="center-layout">
-      <aside class="section-sidebar fc-directory">
-        <a-menu
-          :selected-keys="[activeSection]"
-          mode="vertical"
-          @menu-item-click="handleSectionChange"
-        >
-          <a-menu-item key="profile">个人资料</a-menu-item>
-          <a-menu-item key="password">修改密码</a-menu-item>
-        </a-menu>
-      </aside>
+      <nav class="fc-settings-tabs" aria-label="个人中心设置">
+        <div role="tablist" aria-label="账号设置" class="fc-settings-tablist">
+          <button v-for="section in [{ key: 'profile', label: '个人资料' }, { key: 'password', label: '修改密码' }]"
+            :id="`personal-tab-${section.key}`" :key="section.key" type="button" role="tab" aria-controls="personal-section"
+            :aria-selected="activeSection === section.key" :tabindex="activeSection === section.key ? 0 : -1"
+            @click="handleSectionChange(section.key)" @keydown.right.prevent="focusSection('password')" @keydown.left.prevent="focusSection('profile')"
+            @keydown.home.prevent="focusSection('profile')" @keydown.end.prevent="focusSection('password')">{{ section.label }}</button>
+        </div>
+      </nav>
 
-      <section class="section-content">
+      <section id="personal-section" role="tabpanel" :aria-labelledby="`personal-tab-${activeSection}`" class="section-content">
         <a-card v-if="activeSection === 'profile'" title="个人资料" class="panel-card fc-panel">
           <div class="form-shell">
             <div class="avatar-editor">
@@ -192,7 +191,7 @@
 
 <script setup lang="ts">
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
@@ -296,6 +295,11 @@ const loadProfile = async () => {
 
 const handleSectionChange = (key: string) => {
   activeSection.value = key as 'profile' | 'password'
+}
+const focusSection = async (key: 'profile' | 'password') => {
+  handleSectionChange(key)
+  await nextTick()
+  document.getElementById(`personal-tab-${key}`)?.focus()
 }
 
 const triggerAvatarPicker = () => {
@@ -449,8 +453,8 @@ onMounted(() => {
 }
 
 .center-layout {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
@@ -481,6 +485,7 @@ onMounted(() => {
 
 .avatar-editor {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   margin-bottom: 18px;
@@ -514,6 +519,7 @@ onMounted(() => {
 }
 
 .avatar-actions {
+  flex: 1 1 150px;
   min-width: 0;
   display: flex;
   flex-direction: column;

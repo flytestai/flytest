@@ -1,24 +1,27 @@
 <template>
   <div class="api-automation-shell fc-page">
-    <div class="api-automation-layout">
-      <CollectionPanel ref="collectionPanelRef" @select="onCollectionSelect" @updated="onCollectionUpdated" />
-      <div class="layout-content">
-        <div class="layout-content__inner">
-          <div class="layout-content__glow layout-content__glow--primary"></div>
-          <div class="layout-content__glow layout-content__glow--secondary"></div>
-        </div>
+    <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="api-automation" :directory="needsDirectory" directory-label="接口目录"
+      :selection="activeTab === 'environments' ? '' : selectedCollection?.name" :clearable="activeTab !== 'environments'" @clear="clearSelection">
+      <template #directory>
+        <CollectionPanel ref="collectionPanelRef" :selected-collection-id="selectedCollectionId" @select="onCollectionSelect" @navigate="workspaceRef?.closeDirectory()" @updated="onCollectionUpdated" />
+      </template>
+      <template v-if="isSummaryTab" #filters>
+        <a-select :model-value="selectedCollectionId" aria-label="筛选接口目录" placeholder="全部接口目录" allow-clear allow-search :loading="catalogLoading" class="fc-context-filter"
+          @change="selectCollectionFilter">
+          <a-option v-for="item in collectionOptions" :key="item.id" :value="item.id" :label="item.name" />
+        </a-select>
+      </template>
+      <WorkspacePane v-if="mountedTabs.includes('requests')" :active="activeTab === 'requests'">
       <RequestList
-        v-if="mountedTabs.includes('requests')"
-        v-show="activeTab === 'requests'"
         ref="requestListRef"
         :selected-collection-id="selectedCollectionId"
         :selected-collection-name="selectedCollection?.name"
         @executed="handleExecutionUpdated"
         @updated="onRequestUpdated"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="mountedTabs.includes('test-cases')" :active="activeTab === 'test-cases'">
       <TestCaseList
-        v-if="mountedTabs.includes('test-cases')"
-        v-show="activeTab === 'test-cases'"
         ref="testCaseListRef"
         :selected-collection-id="selectedCollectionId"
         :selected-collection-name="selectedCollection?.name"
@@ -26,37 +29,42 @@
         :selected-request-name="selectedRequest?.name"
         @executed="handleExecutionUpdated"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="mountedTabs.includes('environments')" :active="activeTab === 'environments'">
       <EnvironmentList
-        v-if="mountedTabs.includes('environments')"
-        v-show="activeTab === 'environments'"
         ref="environmentListRef"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="mountedTabs.includes('execution-records')" :active="activeTab === 'execution-records'">
       <ExecutionRecordList
-        v-if="mountedTabs.includes('execution-records')"
-        v-show="activeTab === 'execution-records'"
         ref="executionRecordListRef"
         :selected-collection-id="selectedCollectionId"
         :selected-collection-name="selectedCollection?.name"
       />
+      </WorkspacePane>
+      <WorkspacePane v-if="mountedTabs.includes('execution-report')" :active="activeTab === 'execution-report'">
       <TestReportView
-        v-if="mountedTabs.includes('execution-report')"
-        v-show="activeTab === 'execution-report'"
         ref="testReportViewRef"
         :project-id="currentProjectId"
         :selected-collection-id="selectedCollectionId"
         :selected-collection-name="selectedCollection?.name"
       />
-      </div>
-    </div>
+      </WorkspacePane>
+    </WorkspaceDirectoryLayout>
   </div>
 </template>
 
 <script setup lang="ts">
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
+
 import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '@/store/projectStore'
 import type { ApiAutomationSelection, ApiCollection, ApiRequest } from '../types'
 import CollectionPanel from '../components/CollectionPanel.vue'
+import { collectionApi } from '../api'
+import { Message } from '@arco-design/web-vue'
 
 const EnvironmentList = defineAsyncComponent(() => import('./EnvironmentList.vue'))
 const ExecutionRecordList = defineAsyncComponent(() => import('./ExecutionRecordList.vue'))
@@ -92,6 +100,39 @@ const normalizeTab = (value: unknown): ApiAutomationTab => {
 }
 
 const activeTab = computed<ApiAutomationTab>(() => normalizeTab(route.query.tab))
+const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>()
+const needsDirectory = computed(() => activeTab.value === 'requests' || activeTab.value === 'test-cases')
+const isSummaryTab = computed(() => activeTab.value === 'execution-records' || activeTab.value === 'execution-report')
+const collectionOptions = ref<ApiCollection[]>([])
+const catalogLoading = ref(false)
+let catalogProject: number | undefined
+let catalogRequest = 0
+const clearSelection = () => { selectedCollectionId.value = undefined; selectedCollection.value = null; selectedRequestId.value = undefined; selectedRequest.value = null }
+const selectCollectionFilter = (value: unknown) => {
+  const item = collectionOptions.value.find(item => item.id === Number(value))
+  clearSelection()
+  selectedCollectionId.value = item?.id
+  selectedCollection.value = item || null
+}
+async function loadCollectionOptions() {
+  const project = currentProjectId.value
+  const request = ++catalogRequest
+  if (!project) { collectionOptions.value = []; return }
+  catalogLoading.value = true
+  try {
+    const response = await collectionApi.tree(project)
+    if (request !== catalogRequest || project !== currentProjectId.value) return
+    const flatten = (items: ApiCollection[], prefix = ''): ApiCollection[] => items.flatMap(item => [{ ...item, name: prefix + item.name }, ...flatten(item.children || [], prefix + item.name + ' / ')])
+    collectionOptions.value = flatten(Array.isArray(response.data?.data) ? response.data.data : [])
+    catalogProject = project
+  } catch { if (request === catalogRequest) Message.error('加载接口目录失败，请重试') }
+  finally { if (request === catalogRequest) catalogLoading.value = false }
+}
+watch([currentProjectId, isSummaryTab], ([project, summary], previous) => {
+  if (previous && previous[0] !== project) { clearSelection(); catalogProject = undefined; collectionOptions.value = [] }
+  if (summary && project && catalogProject !== project) void loadCollectionOptions()
+}, { immediate: true })
+
 const mountedTabs = ref<ApiAutomationTab[]>([activeTab.value])
 
 const onCollectionSelect = (selection: ApiAutomationSelection) => {
@@ -112,6 +153,8 @@ const onCollectionSelect = (selection: ApiAutomationSelection) => {
 }
 
 const onCollectionUpdated = () => {
+  catalogProject = undefined
+  if (isSummaryTab.value) void loadCollectionOptions()
   requestListRef.value?.refresh?.()
   testCaseListRef.value?.refresh?.()
   testReportViewRef.value?.refresh?.()
@@ -154,113 +197,5 @@ watch(activeTab, newTab => {
 </script>
 
 <style scoped>
-.api-automation-shell {
-  position: relative;
-  height: 100%;
-  min-height: 0;
-  padding: 4px;
-}
-
-.api-automation-shell::before,
-.api-automation-shell::after {
-  content: '';
-  position: absolute;
-  inset: auto;
-  border-radius: 999px;
-  filter: blur(56px);
-  opacity: 0.28;
-  pointer-events: none;
-}
-
-.api-automation-shell::before {
-  top: -32px;
-  right: 12%;
-  width: 240px;
-  height: 240px;
-  background: rgba(59, 130, 246, 0.2);
-}
-
-.api-automation-shell::after {
-  bottom: -28px;
-  left: 8%;
-  width: 220px;
-  height: 220px;
-  background: rgba(20, 184, 166, 0.16);
-}
-
-.api-automation-layout {
-  position: relative;
-  display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  gap: 20px;
-  overflow: hidden;
-}
-
-.layout-content {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  overflow: auto;
-  display: block;
-  padding: 2px;
-}
-
-.layout-content__inner {
-  position: sticky;
-  inset: 0;
-  width: 0;
-  height: 0;
-  z-index: 0;
-}
-
-.layout-content__glow {
-  position: absolute;
-  border-radius: 999px;
-  pointer-events: none;
-  filter: blur(48px);
-  opacity: 0.18;
-}
-
-.layout-content__glow--primary {
-  top: 48px;
-  right: 32px;
-  width: 180px;
-  height: 180px;
-  background: rgba(37, 99, 235, 0.22);
-}
-
-.layout-content__glow--secondary {
-  top: 240px;
-  left: 14%;
-  width: 160px;
-  height: 160px;
-  background: rgba(14, 165, 233, 0.18);
-}
-
-.layout-content > :deep(*) {
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 1200px) {
-  .api-automation-layout {
-    grid-template-columns: 272px minmax(0, 1fr);
-    gap: 16px;
-  }
-}
-
-@media (max-width: 900px) {
-  .api-automation-shell {
-    padding: 0;
-  }
-
-  .api-automation-layout {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-}
+.api-automation-shell { min-width: 0; min-height: 0; }
 </style>

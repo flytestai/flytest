@@ -68,6 +68,8 @@ npm run dev -- --port 5173
 | `src/services/`、`src/store/` | 业务接口与 Pinia 状态 |
 | `src/workspace-theme.css` | 工作区布局基础 |
 | `src/styles/a2-workspace.css` | A2 主题 token、公共控件和响应式覆盖 |
+| `src/styles/workspace-layout.css` | 业务目录、全宽工作区、抽屉和编排面板布局 |
+| `src/components/workspace/` | 页面标题、目录节点菜单及可保留状态的工作区组件 |
 | `src/components/auth/auth-shell.css` | 登录和注册样式 |
 | `src/utils/qualityStatus.ts` | 通过率、覆盖率、颜色与百分比转换 |
 | `public/feice-*.svg` | FeiCe 品牌矢量源文件 |

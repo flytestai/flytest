@@ -1,6 +1,6 @@
 <template>
   <div class="public-data-list fc-page">
-    <div class="page-header fc-toolbar">
+    <WorkspacePageHeader title="公共数据"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.type"
@@ -28,7 +28,7 @@
           新增数据
         </a-button>
       </div>
-    </div>
+    </div></template></WorkspacePageHeader>
 
     <a-table class="fc-table"
       :columns="columns"
@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconEdit, IconDelete } from '@arco-design/web-vue/es/icon'

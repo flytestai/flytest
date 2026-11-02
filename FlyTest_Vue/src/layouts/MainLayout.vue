@@ -129,7 +129,7 @@
         <div class="sider-brand">
           <img :src="brandLogoUrl" class="sider-brand-mark" alt="" width="34" height="34" />
           <div class="sider-brand-copy">
-            <strong>FeiCe</strong>
+            <img :src="brandWordmarkUrl" class="sider-brand-wordmark" alt="FeiCe" width="82" height="25" />
             <span>飞测 · AI 测试平台</span>
           </div>
           <button v-if="isMobile" type="button" class="navigation-close fc-native-action" aria-label="关闭导航" @click="closeNavigation"><icon-close /></button>
@@ -532,7 +532,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useAiActivityStore } from '@/store/aiActivityStore';
 import { useWorkspaceNavigation } from '@/composables/useWorkspaceNavigation';
-import { brandFullLogoUrl, brandLogoUrl } from '@/utils/assetUrl';
+import { brandFullLogoUrl, brandLogoUrl, brandWordmarkUrl } from '@/utils/assetUrl';
 import NotificationCenter from '@/components/notifications/NotificationCenter.vue';
 import ImportJobStatusBadge from '@/features/api-automation/components/ImportJobStatusBadge.vue';
 import { fetchModels, getActiveLlmConfig, testLlmConnection } from '@/features/langgraph/services/llmConfigService';

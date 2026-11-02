@@ -4,34 +4,20 @@
       <a-empty description="请先选择项目" />
     </div>
 
-    <div v-else class="list-view-layout">
-      <div class="suite-panel-resizable-shell" :style="suitePanelShellStyle">
-        <TestSuiteTreePanel
+    <WorkspaceDirectoryLayout v-else storage-key="test-bugs" directory-label="套件目录" :prioritize-content="bugViewMode !== 'list'"
+      :selection="selectedSuiteDetail?.name">
+      <template #directory><TestSuiteTreePanel
           ref="suitePanelRef"
           :current-project-id="currentProjectId"
           @suite-selected="handleSuiteSelected"
           @suite-updated="handleSuiteUpdated"
-        />
-      </div>
+        /></template>
+<template v-if="!selectedSuiteId" #heading><WorkspacePageHeader local title="缺陷管理" description="从套件目录选择需要查看的内容" /></template>
 
-      <div class="suite-panel-resizer" @mousedown="startSuitePanelResize"
-        role="separator" tabindex="0" aria-label="调整目录宽度" aria-orientation="vertical"
-        :aria-valuenow="panelWidth" :aria-valuemin="panelMinWidth" :aria-valuemax="panelMaxWidth"
-        @keydown="resizeWithKeyboard" />
-
-      <div class="right-content-area">
         <template v-if="selectedSuiteId">
-          <div class="bug-toolbar">
-            <div class="bug-toolbar-info">
-              <div class="bug-title">{{ selectedSuiteDetail?.name || 'BUG管理' }}</div>
-              <div class="bug-subtitle">
-                {{ selectedSuiteDetail?.description || '当前套件中的 BUG 列表与处理流转' }}
-              </div>
-            </div>
-          </div>
-
           <div class="bug-panel-shell">
             <TestBugManagementPanel
+              @view-mode-change="bugViewMode = $event"
               :current-project-id="currentProjectId"
               :selected-suite-id="selectedSuiteId"
             />
@@ -39,16 +25,17 @@
         </template>
 
         <div v-else class="suite-empty">
-          <a-empty description="点击左侧根套件或子套件后，这里会显示对应套件中的 BUG 列表" />
+          <a-empty description="通过套件目录选择一个套件后，这里会显示对应套件中的 BUG 列表" />
         </div>
-      </div>
-    </div>
+    </WorkspaceDirectoryLayout>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useResizablePanel } from '@/composables/useResizablePanel';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
+
+import { computed, onMounted, ref, watch } from 'vue';
 import TestBugManagementPanel from '@/components/testcase/TestBugManagementPanel.vue';
 import TestSuiteTreePanel from '@/components/testcase/TestSuiteTreePanel.vue';
 import { getTestSuiteDetail, type TestSuite } from '@/services/testSuiteService';
@@ -59,8 +46,8 @@ const currentProjectId = computed(() => projectStore.currentProjectId || null);
 
 const suitePanelRef = ref<InstanceType<typeof TestSuiteTreePanel> | null>(null);
 const selectedSuiteId = ref<number | null>(null);
+const bugViewMode = ref<'list' | 'detail'>('list');
 const selectedSuiteDetail = ref<TestSuite | null>(null);
-const { panelWidth, minWidth: panelMinWidth, maxWidth: panelMaxWidth, shellStyle: suitePanelShellStyle, startResize: startSuitePanelResize, stopResize: stopSuitePanelResize, resizeWithKeyboard } = useResizablePanel();
 
 
 const fetchSelectedSuiteDetail = async () => {
@@ -107,9 +94,6 @@ onMounted(async () => {
   await syncSelectedSuiteFromPanel();
 });
 
-onUnmounted(() => {
-  stopSuitePanelResize();
-});
 </script>
 
 <style scoped>

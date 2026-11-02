@@ -1,0 +1,8 @@
+/* The mark is an open silhouette; inherited app-icon tiles would obscure it. */
+html body:has(.main-layout) .main-layout .sider-brand-mark { border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+.main-layout .sider-brand-wordmark { display: block; width: 82px; height: 25px; object-fit: contain; object-position: left center; }
+.main-layout .avatar img.avatar-img { border-radius: 0; object-fit: contain; }
+html body:has(.main-layout) .main-layout .empty-logo { filter: none; }
+:root[data-theme=black] .main-layout .sider-brand-wordmark { filter: brightness(0) invert(1); }
+.feice-auth .feice-auth-brand img { width: 180px; height: auto; }
+@media (max-width:420px) { .feice-auth .feice-auth-brand img { width: 152px; height: auto; } }

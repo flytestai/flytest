@@ -1,18 +1,7 @@
 <template>
   <div class="testcase-list fc-page">
-    <div class="page-header fc-toolbar">
+    <WorkspacePageHeader title="测试用例"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
-        <a-select
-          v-model="filters.module"
-          placeholder="选择模块"
-          allow-clear
-          style="width: 160px; margin-right: 12px"
-          @change="onSearch"
-        >
-          <a-option v-for="mod in moduleOptions" :key="mod.id" :value="mod.id">
-            {{ mod.name }}
-          </a-option>
-        </a-select>
         <a-select
           v-model="filters.level"
           placeholder="用例等级"
@@ -64,7 +53,7 @@
           </a-option>
         </a-select>
         <a-button
-          type="primary"
+          type="outline"
           status="success"
           :disabled="selectedRowKeys.length === 0 || executingIds.length > 0"
           :loading="executingIds.length > 0"
@@ -75,11 +64,12 @@
           批量执行{{ selectedRowKeys.length > 0 ? ` (${selectedRowKeys.length})` : '' }}
         </a-button>
         <a-popconfirm
+          v-if="selectedRowKeys.length"
           content="确定要删除选中的用例吗？此操作不可恢复。"
           @ok="batchDeleteTestCases"
         >
           <a-button
-            type="primary"
+            type="outline"
             status="danger"
             :disabled="selectedRowKeys.length === 0"
             style="margin-right: 12px"
@@ -93,7 +83,7 @@
           新增用例
         </a-button>
       </div>
-    </div>
+    </div></template></WorkspacePageHeader>
 
     <a-table class="fc-table"
       :columns="columns"
@@ -201,6 +191,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, onMounted, watch, onUnmounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconEdit, IconDelete, IconOrderedList, IconPlayArrow, IconThunderbolt } from '@arco-design/web-vue/es/icon'
@@ -667,7 +658,7 @@ watch(() => props.selectedModuleId, (newVal) => {
   filters.module = newVal
   pagination.current = 1
   fetchTestCases()
-})
+}, { immediate: true })
 
 /** 监听项目变化，重新加载数据 */
 watch(projectId, async (newVal) => {

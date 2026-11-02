@@ -37,6 +37,9 @@ async function bounds(modal, label) {
       let errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.goto(base + '/api-automation');
+      const directoryToggle = page.getByRole('button', { name: '接口目录', exact: true });
+      await directoryToggle.waitFor();
+      if (await directoryToggle.getAttribute('aria-expanded') === 'false') await directoryToggle.click();
       await page.getByText('支付接口目录', { exact: true }).click();
       await page.getByRole('button', { name: '新增接口', exact: true }).click();
       const modal = page.locator('.arco-modal:visible').last();

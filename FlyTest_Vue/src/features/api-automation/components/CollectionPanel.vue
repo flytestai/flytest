@@ -2,45 +2,9 @@
   <div class="collection-panel-wrapper">
     <a-card class="collection-panel fc-directory fc-panel" :bordered="false">
       <div class="collection-panel-content">
-        <div class="collection-panel-head">
-          <div class="collection-panel-head__eyebrow">API Automation</div>
-          <div class="collection-panel-head__title">接口目录</div>
-          <div class="collection-panel-head__desc">
-            目录与接口在这里统一组织。点击接口后，右侧会自动切换到该接口对应的测试用例与执行视图。
-          </div>
-        </div>
-
-        <div class="collection-overview">
-          <div class="collection-overview__item">
-            <span class="collection-overview__label">目录数</span>
-            <strong class="collection-overview__value">{{ collectionCount }}</strong>
-          </div>
-          <div class="collection-overview__item">
-            <span class="collection-overview__label">接口数</span>
-            <strong class="collection-overview__value">{{ requestCount }}</strong>
-          </div>
-        </div>
-
-        <div class="collection-panel-header">
-          <a-input-search
-            v-model="searchKeyword"
-            class="collection-search"
-            placeholder="搜索目录或接口名称"
-            allow-clear
-            @search="onSearch"
-            @input="onSearch"
-          />
-          <div class="collection-actions">
-            <a-dropdown @select="handleAction" trigger="click" position="bottom">
-              <a-button type="primary" size="small" class="collection-action-button">目录操作</a-button>
-              <template #content>
-                <a-doption value="addRoot">新增根目录</a-doption>
-                <a-doption value="addChild" :disabled="!actionCollectionId">新增子目录</a-doption>
-                <a-doption value="edit" :disabled="!actionCollectionId">编辑目录</a-doption>
-                <a-doption value="delete" :disabled="!actionCollectionId">删除目录</a-doption>
-              </template>
-            </a-dropdown>
-          </div>
+        <div class="fc-directory-search-row">
+          <a-input-search v-model="searchKeyword" placeholder="搜索目录或接口" allow-clear @search="onSearch" @input="onSearch" />
+          <button class="fc-directory-add" type="button" aria-label="新增根目录" title="新增根目录" @click="handleAction('addRoot')">＋</button>
         </div>
 
         <div class="tree-container">
@@ -58,39 +22,13 @@
             @select="onSelect"
           >
             <template #title="nodeData">
-              <a-dropdown
-                v-if="nodeData.type === 'collection'"
-                trigger="contextMenu"
-                position="br"
-                :popup-max-width="false"
-                class="collection-node-dropdown"
-                @select="value => handleCollectionContextAction(nodeData, value)"
-              >
-                <div
-                  class="tree-node"
-                  :class="`tree-node--${nodeData.type}`"
-                  @contextmenu="handleCollectionNodeContextMenu(nodeData)"
-                >
-                  <div class="tree-node__copy">
-                    <span class="tree-node__name">{{ nodeData.name }}</span>
-                  </div>
-                  <span class="tree-node__count">
-                    {{ nodeData.requestCount || 0 }} 个接口
-                  </span>
-                </div>
-                <template #content>
-                  <a-doption v-if="!nodeData.parent" value="addChild" class="centered-dropdown-item">新增子目录</a-doption>
-                  <a-doption value="edit" class="centered-dropdown-item">编辑目录</a-doption>
-                  <a-doption value="delete" class="centered-dropdown-item">删除目录</a-doption>
-                </template>
-              </a-dropdown>
-              <div v-else class="tree-node" :class="`tree-node--${nodeData.type}`">
-                <div class="tree-node__copy">
-                  <span class="tree-node__name">{{ nodeData.name }}</span>
-                  <span class="tree-node__method">
-                    {{ nodeData.method }}
-                  </span>
-                </div>
+              <div class="fc-directory-node">
+                <span class="fc-directory-node__label">{{ nodeData.name }}</span>
+                <span v-if="nodeData.type === 'request'" class="fc-directory-node__method">{{ nodeData.method }}</span>
+                <span v-else class="fc-directory-node__count">{{ nodeData.requestCount || 0 }}</span>
+                <DirectoryNodeMenu v-if="nodeData.type === 'collection'" :label="nodeData.name"
+                  :items="[{ value: 'addChild', label: '新增子目录' }, { value: 'edit', label: '编辑目录' }, { value: 'delete', label: '删除目录' }]"
+                  @action="value => handleCollectionContextAction(nodeData, value)" />
               </div>
             </template>
           </a-tree>
@@ -119,6 +57,8 @@
 </template>
 
 <script setup lang="ts">
+import DirectoryNodeMenu from '@/components/workspace/DirectoryNodeMenu.vue'
+
 import { computed, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
@@ -140,9 +80,11 @@ interface CollectionTreeRequestNode extends ApiRequest {
 
 type CollectionTreeNode = CollectionTreeCollectionNode | CollectionTreeRequestNode
 
+const props = defineProps<{ selectedCollectionId?: number }>()
 const emit = defineEmits<{
   (e: 'select', selection: ApiAutomationSelection): void
   (e: 'updated'): void
+  (e: 'navigate'): void
 }>()
 
 const projectStore = useProjectStore()
@@ -296,7 +238,12 @@ const emitSelection = (node: CollectionTreeNode | null) => {
   })
 }
 
+watch(() => props.selectedCollectionId, id => {
+  if (!id) { selectedKeys.value = []; currentTreeSelection.value = null }
+  else if (currentTreeSelection.value?.id !== id) { selectedKeys.value = ['collection-' + id]; currentTreeSelection.value = findNodeByKey(treeData.value, selectedKeys.value[0]) }
+})
 const syncSelectionState = () => {
+  if (!selectedKeys.value.length && props.selectedCollectionId) selectedKeys.value = ['collection-' + props.selectedCollectionId]
   const currentSelectedKey = selectedKeys.value[0]
   const nextSelectedNode = currentSelectedKey ? findNodeByKey(treeData.value, currentSelectedKey) : null
   currentTreeSelection.value = nextSelectedNode
@@ -352,10 +299,11 @@ const onSearch = () => {}
 
 const onSelect = (keys: (string | number)[], data: { node?: CollectionTreeNode }) => {
   const selectedKey = keys.length > 0 ? String(keys[0]) : ''
-  const node = data.node || (selectedKey ? findNodeByKey(treeData.value, selectedKey) : null)
+  const node = selectedKey ? (data.node || findNodeByKey(treeData.value, selectedKey)) : null
   selectedKeys.value = selectedKey ? [selectedKey] : []
   currentTreeSelection.value = node || null
   emitSelection(node || null)
+  emit('navigate')
 }
 
 const selectCollectionNode = (node: CollectionTreeCollectionNode) => {
