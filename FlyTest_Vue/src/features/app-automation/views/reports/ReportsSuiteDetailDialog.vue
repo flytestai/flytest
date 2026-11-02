@@ -65,7 +65,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
 }
 
 .detail-panel {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -101,11 +101,10 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
 .detail-card,
 .case-item {
   padding: 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.025)),
-    rgba(var(--theme-accent-rgb), 0.04);
+    var(--theme-surface);
 }
 
 .detail-label {
@@ -150,7 +149,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   align-items: center;
   justify-content: center;
   color: var(--theme-text-secondary);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.14);
   background: rgba(var(--theme-accent-rgb), 0.04);
 }

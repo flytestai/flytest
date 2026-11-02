@@ -1,5 +1,17 @@
 # 工作台布局回归
 
+## 当前深蓝青绿界面
+
+`npm run test:workbench:completion` 验证 Web/APP/测试资产页内导航、系统表单、权限键盘操作、有数据的知识库详情/上传/创建、Trace 详情与滚动隔离、深色知识面板；默认 1440 / 1024 / 390 / 320px，输出到 `playwright-screenshots/completion-interactions/`。
+
+`npm run test:workbench:navigation` 验证四个主模块直接导航、手机导航自动收起、桌面折叠导航、当前标签自动滚动，以及只有单项 APP 权限时的标签可见范围。
+
+`npm run test:workbench` 检查质量工作台、用例详情审核和接口工作区，默认覆盖 1920 / 1440 / 1280 / 1024 / 768 / 390 / 320px。通过 `UI_WIDTHS` 可选择宽度。验证实际请求载荷、审核状态、执行环境切换与 AI 草稿人工确认；截图和报告在 `playwright-screenshots/navy-workbench/`。
+
+`npm run test:workbench:state` 验证高风险缺陷详情跳转、取消离开保留未保存配置、执行错误不显示旧结果、深色主题与折叠导航。两个脚本均使用隔离接口，不写业务数据库。
+
+`test:dashboard` 现覆盖执行趋势、高风险缺陷、我的待办、运行状态、缺陷风险、审核分布、Token 和运营八个区块。历史 A2 脚本文件名继续保留；旧密度脚本的表格起点阈值适用于此前布局，新设计的页面标题与模块标签使用当前工作区检查。
+
 脚本使用 Playwright 和独立浏览器上下文，通过拦截本地 `/api/` 请求提供布局夹具。它们不登录真实账号，也不向业务服务写入数据。
 
 需要可用的 Playwright 包和浏览器。若运行环境已提供 Playwright，可通过 `PLAYWRIGHT_MODULE` 指定包的绝对路径，无须修改生产依赖。`UI_BROWSER_CHANNEL=msedge` 可使用已安装的 Edge；省略时使用 Playwright Chromium。
@@ -60,9 +72,11 @@ npm run test:layout:interactions
 
 ## 首页下半部分专项检查
 
+`npm run test:workbench:scrollbars` 在 1440 / 390px、深浅两种主题下检查工作台、APP、知识库及权限页的透明滚动条，并验证横向、纵向滚轮滚动仍可使用，共 16 个场景。仅改变轨道/滑块绘制，不禁用滚动、不改变滚动容器尺寸。
+
 `npm run test:workspace:density` 检查紧凑工作区在 1440 / 1024 / 390 / 320px 的表格起始位置、控件边界、用例筛选状态和导入导出入口，结果位于 `playwright-screenshots/density/`。设置 `UI_POPULATED=1` 可使用 30 条模拟环境数据检查长列表；`UI_WIDTHS` 可选择宽度。筛选条件位于用例页“筛选”面板，按钮显示已启用数量。
 
-`npm run test:dashboard` 覆盖待处理事项、缺陷风险、自动化矩阵、审核分布、Token、趋势与运营七个区块。检查 1440/1024/390/320px、有数据/零数据、大数字/长用户名和深色主题，共 10 个场景，并验证日/周/月分组的鼠标与键盘操作。
+`npm run test:dashboard` 覆盖执行趋势、高风险缺陷、我的待办、自动化运行状态、缺陷风险、审核分布、Token 与运营八个区块。检查 1440/1024/390/320px、有数据/零数据、大数字/长用户名和深色主题，共 10 个场景，并验证日/周/月分组的鼠标与键盘操作。
 
 截图及报告默认保存到 `playwright-screenshots/dashboard-insights/`，每一行及手机端每张卡片都单独截图，避免只检查首页首屏。可使用同样的 `PLAYWRIGHT_MODULE`、`UI_BROWSER_CHANNEL`、`UI_BASE_URL` 和 `UI_OUTPUT_DIR` 配置。
 
@@ -70,4 +84,4 @@ npm run test:layout:interactions
 
 `npm run test:auth` 检查 1440、1920、1024、768、390、320px 及手机横屏两种页面，共 14 个布局场景；另验证密码可见性、登录错误提示、注册校验/成功状态、账号记忆和已保存的深色主题。接口在浏览器内隔离模拟，不会向业务库注册用户。结果保存到 `playwright-screenshots/auth/`。
 
-品牌几何源为 `scripts/generate-brand-assets.cjs`：生成斜切 F 图形、自定义轮廓字标和深浅色组合 SVG，不依赖系统字体。`npm run brand:export` 先生成 SVG，再导出兼容 PNG（需配置可用的 Playwright 和浏览器）。`feice-mark.svg` 用于独立图标，`feice-wordmark.svg` 用于导航字标，`feice-logo.svg` / `feice-logo-light.svg` 用于完整组合。旧图片路径保持可用；应用通过 `assetUrl.ts` 使用 SVG 和资源版本号。
+品牌几何源为 `scripts/generate-brand-assets.cjs`：生成三片青绿飞翼、自定义轮廓字标和深浅色组合 SVG，不依赖系统字体。`npm run brand:export` 先生成 SVG，再导出兼容 PNG（需配置可用的 Playwright 和浏览器）。`feice-mark.svg` 用于独立图标，`feice-wordmark.svg` 用于导航字标，`feice-logo.svg` / `feice-logo-light.svg` 用于完整组合。旧图片路径保持可用；应用通过 `assetUrl.ts` 使用 SVG 和资源版本号。

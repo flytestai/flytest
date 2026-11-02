@@ -79,7 +79,7 @@
           </template>
         </a-dropdown>
         <template v-if="showCreateActions && !isSuiteActionMode">
-          <a-button type="outline" @click="handleGenerateTestCases">AI生成用例</a-button>
+          <a-button class="fc-ai-action" type="outline" @click="handleGenerateTestCases">AI生成用例</a-button>
           <a-button type="primary" @click="handleAddTestCase">添加用例</a-button>
         </template>
       </div>
@@ -111,7 +111,7 @@
       v-else
       :columns="columns"
       :data="testCaseData"
-      :pagination="paginationConfig"
+      :pagination="compact ? {...paginationConfig,showJumper:false} : paginationConfig"
       column-resizable
       :loading="loading"
       :scroll="tableScroll"
@@ -144,10 +144,10 @@
       </template>
       <template #name="{ record }">
         <a-tooltip :content="record.name">
-          <span class="testcase-name-link" @click.stop="handleViewTestCase(record)">
+          <button type="button" class="testcase-name-link fc-case-title-button" @click.stop="handleViewTestCase(record)">
             <span v-if="isHighlightedGeneratedCase(record.id)" class="generated-case-badge">新生成</span>
-            {{ record.name }}
-          </span>
+            {{ record.name }}<small v-if="compact" class="fc-case-code">TC-{{ record.id }}</small>
+          </button>
         </a-tooltip>
       </template>
       <template #level="{ record }">
@@ -310,6 +310,8 @@ type TestCaseListItem = TestCase & {
 
 const props = withDefaults(defineProps<{
   localHeading?: boolean;
+  compact?: boolean;
+  selectedCaseId?: number | null;
   currentProjectId: number | null;
   selectedModuleId?: number | null; // 鍙€夌殑妯″潡ID锛岀敤浜庣瓫閫?
   selectedSuiteId?: number | null;
@@ -387,7 +389,7 @@ const handleResize = () => {
 
 // 琛ㄦ牸婊氬姩閰嶇疆
 const tableScroll = computed(() => ({
-  x: 900,
+  x: props.compact ? 540 : 900,
   y: tableContainerHeight.value,
 }));
 
@@ -463,7 +465,7 @@ const isHighlightedGeneratedCase = (id?: number | null) =>
   typeof id === 'number' && highlightedGeneratedCaseIds.value.includes(id);
 
 const getRowClassName = ({ record }: { record?: TestCase }) =>
-  isHighlightedGeneratedCase(record?.id) ? 'generated-case-row' : '';
+  [isHighlightedGeneratedCase(record?.id) ? 'generated-case-row' : '',record?.id === props.selectedCaseId ? 'fc-selected-row' : ''].filter(Boolean).join(' ');
 
 // 澶勭悊鍗曚釜澶嶉€夋鍙樺寲
 const handleCheckboxChange = (id: number, checked: boolean) => {
@@ -581,6 +583,10 @@ const columns = computed(() => {
   },
   ];
 
+  if (props.compact) {
+    const keys = ['selection','name','level','review_status','execution_status','assignee_detail'];
+    return keys.flatMap(key => baseColumns.filter(column => column.dataIndex === key).map(column => ({...column,title: key === 'execution_status' ? '最近执行' : column.title,width: key === 'selection' ? 34 : key === 'name' ? 198 : key === 'level' ? 60 : key === 'assignee_detail' ? 80 : 84,align: key === 'name' ? 'left' : 'center'})));
+  }
   if (!showReviewStatus.value) {
     return baseColumns.filter((column) => column.dataIndex !== 'review_status' && column.slotName !== 'reviewStatus');
   }
@@ -1114,11 +1120,11 @@ defineExpose({
 <style scoped>
 .testcase-content {
   flex: 1;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.08));
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
   padding: 18px;
-  box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -1139,7 +1145,7 @@ defineExpose({
   border: 1px solid var(--ui-toolbar-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
   background: var(--ui-toolbar-bg, var(--color-fill-1));
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
   overflow: visible;
 }
 
@@ -1245,15 +1251,15 @@ defineExpose({
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 14px;
+  border-radius: 12px;
   --testcase-fixed-column-bg: var(--theme-table-row-bg, var(--flat-surface, var(--color-bg-2, var(--theme-surface))));
-  --testcase-fixed-column-header-bg: var(--flat-surface-soft, #f8fafc);
+  --testcase-fixed-column-header-bg: var(--flat-surface-soft, var(--theme-surface-soft));
   --testcase-fixed-column-hover-bg: var(--theme-table-row-hover-bg, var(--flat-hover, var(--color-fill-2, var(--theme-surface-soft))));
 }
 
 :deep(.test-case-table .arco-table) {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -1294,10 +1300,10 @@ defineExpose({
   height: 100% !important;
   display: flex;
   flex-direction: column;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(226, 232, 240, 0.92);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 /* 寮哄埗鏄剧ず鍗曞厓鏍间笅杈规 */
@@ -1307,7 +1313,7 @@ defineExpose({
 
 :deep(.test-case-table .arco-table-header) {
   flex-shrink: 0;
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
 }
 
 :deep(.test-case-table .arco-table-body) {
@@ -1338,10 +1344,10 @@ defineExpose({
   gap: 6px;
   position: sticky;
   bottom: 16px;
-  background-color: rgba(255, 255, 255, 0.96);
+  background-color: var(--theme-surface);
   z-index: 1;
   padding: 10px 0 2px;
-  box-shadow: 0 -6px 14px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 :deep(.test-case-table .arco-table-cell-fixed-right) {
@@ -1420,7 +1426,7 @@ defineExpose({
 }
 
 :deep(.test-case-table .generated-case-row td) {
-  background: linear-gradient(180deg, rgba(240, 253, 244, 0.92), rgba(236, 253, 245, 0.92));
+  background: var(--theme-surface);
 }
 
 :deep(.test-case-table .arco-table-th) {

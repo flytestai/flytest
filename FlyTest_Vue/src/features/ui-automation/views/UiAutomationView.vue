@@ -1,5 +1,6 @@
 <template>
   <div class="ui-automation-shell fc-page">
+    <WorkspaceModuleHeader title="Web 自动化" description="从页面元素、步骤设计到执行与回归验证" :tabs="moduleTabs" :active-key="activeTab" />
     <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="ui-automation" :directory="needsDirectory" directory-label="模块目录"
       :selection="needsDirectory ? selectedModuleName : ''" :clearable="needsDirectory" @clear="clearSelection">
       <template #directory>
@@ -58,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspaceModuleHeader from '@/components/workspace/WorkspaceModuleHeader.vue'
 import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
 import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
 
@@ -87,6 +89,7 @@ type UiAutomationTab =
   | 'env-config'
   | 'actuators'
 
+const moduleTabs = [["pages","页面管理"],["page-steps","页面步骤"],["testcases","测试用例"],["ai-intelligent","AI 智能模式"],["execution-records","执行记录"],["batch-records","批量执行"],["public-data","公共数据"],["env-config","环境配置"],["actuators","执行器"]].map(([key,label])=>({key,label,to:{path:'/ui-automation',query:{tab:key}}}))
 const route = useRoute()
 const router = useRouter()
 

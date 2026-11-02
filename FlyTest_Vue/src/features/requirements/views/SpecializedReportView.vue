@@ -398,7 +398,7 @@ onMounted(() => {
   padding: 24px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   gap: 24px;
 }
 
@@ -476,7 +476,7 @@ onMounted(() => {
 .overall-score-card {
   margin-bottom: 20px;
   padding: 20px;
-  background: linear-gradient(135deg, var(--theme-accent) 0%, #0090d1 100%);
+  background: var(--theme-surface);
   border-radius: 12px;
   color: white;
 }
@@ -495,7 +495,7 @@ onMounted(() => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--theme-surface);
   backdrop-filter: blur(10px);
 }
 
@@ -527,7 +527,7 @@ onMounted(() => {
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--theme-surface);
 }
 
 /* 专项分析列表 */
@@ -552,9 +552,9 @@ onMounted(() => {
 }
 
 .analysis-item.active {
-  background: #e8f4ff;
+  background: var(--theme-accent-soft);
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(0, 160, 233, 0.15);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .analysis-header {
@@ -686,7 +686,7 @@ onMounted(() => {
 }
 
 .recommendations-section {
-  background: #e6f7ff;
+  background: var(--theme-accent-soft);
   border: 1px solid #91d5ff;
 }
 
@@ -744,7 +744,7 @@ onMounted(() => {
 }
 
 .issue-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .issue-header-row {
@@ -783,7 +783,7 @@ onMounted(() => {
 
 .issue-suggestion {
   padding: 12px;
-  background: #e8f4ff;
+  background: var(--theme-accent-soft);
   border-left: 3px solid var(--theme-accent);
   border-radius: 4px;
   font-size: 13px;

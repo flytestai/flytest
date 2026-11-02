@@ -1,5 +1,6 @@
 <template>
   <div class="apikey-management fc-page">
+    <WorkspacePageHeader title="API 凭据" description="集中管理接口凭据、访问范围与使用状态" />
     <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-input-search
@@ -136,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, computed, watch } from 'vue';
 import {
   Message,
@@ -582,21 +584,20 @@ const toggleKeyVisibility = (record: ApiKeyItem) => {
   justify-content: space-between;
   align-items: center;
   padding: 18px 20px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--ui-panel-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
-  box-shadow: var(--ui-panel-shadow);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .new-apikey-box {
   margin-top: 16px;
   padding: 16px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.92));
+  background: var(--theme-surface);
   border: 1px solid rgba(149, 161, 187, 0.14);
   border-radius: 12px;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .new-apikey-title {
@@ -649,7 +650,7 @@ const toggleKeyVisibility = (record: ApiKeyItem) => {
 .apikey-management :deep(.arco-table) {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .apikey-management :deep(.arco-table-container) {
@@ -674,14 +675,14 @@ const toggleKeyVisibility = (record: ApiKeyItem) => {
 }
 
 .apikey-management :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .apikey-management :deep(.arco-modal-header) {
   padding: 18px 24px;
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+  background: var(--theme-surface);
 }
 
 .apikey-management :deep(.arco-modal-body) {

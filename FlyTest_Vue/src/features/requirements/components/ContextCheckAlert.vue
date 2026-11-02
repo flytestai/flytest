@@ -30,7 +30,7 @@
           <a-button @click="$emit('directReview')">
             直接分析
           </a-button>
-          <a-button type="primary" @click="$emit('showSplitOptions')">
+          <a-button class="fc-ai-action" type="primary" @click="$emit('showSplitOptions')">
             智能拆分
           </a-button>
         </a-space>
@@ -84,7 +84,7 @@ defineEmits<Emits>();
 
 .recommendations h4 {
   margin: 0 0 8px 0;
-  color: #586069;
+  color: var(--theme-text-secondary);
   font-size: 14px;
 }
 
@@ -95,7 +95,7 @@ defineEmits<Emits>();
 
 .recommendations li {
   margin-bottom: 4px;
-  color: #586069;
+  color: var(--theme-text-secondary);
   font-size: 13px;
 }
 </style>

@@ -215,7 +215,7 @@ const {
 
 .panel {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--color-border-2);
   background: var(--color-fill-1);
 }
@@ -249,11 +249,11 @@ const {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(var(--primary-6), 0.55), rgb(var(--primary-6)));
+  background: var(--theme-surface);
 }
 
 .metric__bar--soft {
-  background: linear-gradient(90deg, rgba(54, 127, 255, 0.35), rgba(54, 127, 255, 0.9));
+  background: var(--theme-surface);
 }
 
 @media (max-width: 1320px) {

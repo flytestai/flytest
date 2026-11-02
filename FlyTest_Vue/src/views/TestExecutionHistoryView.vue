@@ -1,5 +1,6 @@
 <template>
   <div class="test-report-view fc-page">
+    <AssetModuleHeader />
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
@@ -912,6 +913,7 @@
 
 
 <script setup lang="ts">
+import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
 import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
@@ -2903,8 +2905,7 @@ watch(
 .test-report-view {
   height: 100%;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.07), transparent 18%),
-    linear-gradient(180deg, #f4f7fd 0%, #f8fafd 220px, #f1f5fa 100%);
+    var(--theme-surface);
 }
 
 .empty-state,
@@ -2916,7 +2917,7 @@ watch(
   background: var(--ui-panel-bg);
   border-radius: var(--ui-radius-md);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .report-layout {
@@ -2933,7 +2934,7 @@ watch(
   border: 1px solid var(--ui-panel-border);
   border-radius: var(--ui-radius-md);
   padding: 20px;
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(16px);
 }
 
@@ -2964,7 +2965,7 @@ watch(
   border-radius: var(--ui-radius-sm);
   background: var(--ui-toolbar-bg);
   backdrop-filter: blur(12px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .sidebar-title,
@@ -3245,7 +3246,7 @@ watch(
 .snapshot-item.active {
   border-color: var(--theme-accent);
   background: #eff4ff;
-  box-shadow: 0 10px 24px rgba(22, 93, 255, 0.12);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .snapshot-item.pinned {
@@ -3302,7 +3303,7 @@ watch(
 .report-content {
   overflow: auto;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+    var(--theme-surface);
 }
 
 .report-body {
@@ -3312,7 +3313,7 @@ watch(
 }
 
 .generation-alert {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .report-nav-panel {
@@ -3324,7 +3325,7 @@ watch(
   padding: 10px 12px;
   border: 1px solid var(--theme-border);
   border-radius: 12px;
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #f8fbff 100%);
+  background: var(--theme-surface);
 }
 
 .report-nav-title {
@@ -3350,11 +3351,11 @@ watch(
   grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
   gap: 16px;
   padding: 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(199, 210, 254, 0.7);
   background:
-    linear-gradient(135deg, rgba(236, 242, 255, 0.96) 0%, rgba(255, 255, 255, 0.96) 42%, rgba(238, 244, 255, 0.96) 100%);
-  box-shadow: 0 14px 32px rgba(59, 130, 246, 0.07);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .hero-main,
@@ -3394,12 +3395,12 @@ watch(
 }
 
 .hero-description {
-  color: #334155;
+  color: var(--theme-text-secondary);
   font-size: 14px;
   line-height: 1.9;
   padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(219, 234, 254, 0.9);
 }
 
@@ -3413,7 +3414,7 @@ watch(
 .hero-status-card {
   border-radius: 12px;
   border: 1px solid rgba(226, 232, 240, 0.95);
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--theme-surface);
 }
 
 .hero-meta-item {
@@ -3483,9 +3484,9 @@ watch(
 
 .conclusion-overview-card {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #f8fbff 100%);
+  background: var(--theme-surface);
 }
 
 .conclusion-overview-label {
@@ -3498,7 +3499,7 @@ watch(
   font-size: 24px;
   font-weight: 600;
   line-height: 1.15;
-  color: #111827;
+  color: var(--theme-text);
 }
 
 .conclusion-overview-footnote {
@@ -3517,9 +3518,9 @@ watch(
 
 .risk-overview-card {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfcff 100%);
+  background: var(--theme-surface);
 }
 
 .risk-overview-label {
@@ -3532,7 +3533,7 @@ watch(
   font-size: 24px;
   font-weight: 600;
   line-height: 1.15;
-  color: #111827;
+  color: var(--theme-text);
 }
 
 .risk-overview-footnote {
@@ -3545,9 +3546,9 @@ watch(
 .conclusion-reason-panel {
   margin: 12px 0;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, #fbfcff 0%, var(--theme-surface) 100%);
+  background: var(--theme-surface);
 }
 
 .conclusion-reason-header {
@@ -3579,7 +3580,7 @@ watch(
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.9);
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--theme-surface);
 }
 
 .conclusion-reason-item.danger {
@@ -3620,9 +3621,9 @@ watch(
 .release-checklist-panel {
   margin: 12px 0;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #f9fbff 100%);
+  background: var(--theme-surface);
 }
 
 .release-checklist-header,
@@ -3660,7 +3661,7 @@ watch(
   gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--theme-surface);
   border: 1px solid rgba(229, 230, 235, 0.85);
 }
 
@@ -3691,24 +3692,24 @@ watch(
 
 .criteria-summary-card {
   border: 1px solid rgba(229, 230, 235, 0.95);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--theme-surface);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
   padding: 16px;
 }
 
 .criteria-summary-card.danger {
-  background: linear-gradient(180deg, rgba(255, 247, 247, 0.96) 0%, var(--theme-surface) 100%);
+  background: var(--theme-surface);
   border-color: rgba(245, 63, 63, 0.2);
 }
 
 .criteria-summary-card.warning {
-  background: linear-gradient(180deg, rgba(255, 250, 240, 0.96) 0%, var(--theme-surface) 100%);
+  background: var(--theme-surface);
   border-color: rgba(255, 125, 0, 0.2);
 }
 
 .criteria-summary-card.success {
-  background: linear-gradient(180deg, rgba(243, 255, 247, 0.96) 0%, var(--theme-surface) 100%);
+  background: var(--theme-surface);
   border-color: rgba(0, 180, 42, 0.18);
 }
 
@@ -3744,7 +3745,7 @@ watch(
 .criteria-summary-item {
   padding: 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--theme-surface);
   border: 1px solid rgba(229, 230, 235, 0.8);
 }
 
@@ -3763,18 +3764,18 @@ watch(
 .item-card,
 .report-header-card {
   border: 1px solid rgba(229, 230, 235, 0.95);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--theme-surface);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .summary-card {
   padding: 16px;
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfdff 100%);
+  background: var(--theme-surface);
 }
 
 .summary-card-soft {
-  background: linear-gradient(180deg, #fbfcff 0%, var(--theme-surface) 100%);
+  background: var(--theme-surface);
 }
 
 .decision-focus-grid {
@@ -3786,10 +3787,10 @@ watch(
 
 .decision-focus-card {
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.95);
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #f8fbff 100%);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .decision-focus-label {
@@ -3802,7 +3803,7 @@ watch(
   font-size: 22px;
   font-weight: 600;
   line-height: 1.2;
-  color: #111827;
+  color: var(--theme-text);
   word-break: break-word;
 }
 
@@ -3877,7 +3878,7 @@ watch(
   font-size: 18px;
   font-weight: 600;
   line-height: 1.2;
-  color: #111827;
+  color: var(--theme-text);
 }
 
 .support-analysis-grid {
@@ -3888,10 +3889,10 @@ watch(
 
 .support-analysis-card {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(229, 230, 235, 0.88);
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfdff 100%);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .report-section-intro {
@@ -3939,7 +3940,7 @@ watch(
 .support-analysis-value {
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--theme-text);
 }
 
 .report-two-column {
@@ -3965,7 +3966,7 @@ watch(
   width: 4px;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--theme-accent) 0%, #36a9ff 100%);
+  background: none;
 }
 
 .section-text,
@@ -3996,7 +3997,7 @@ watch(
 }
 
 .item-card {
-  background: linear-gradient(180deg, var(--theme-surface) 0%, #fbfcfe 100%);
+  background: var(--theme-surface);
 }
 
 .item-header + .item-detail,
@@ -4010,12 +4011,12 @@ watch(
 }
 
 :deep(.arco-table) {
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 :deep(.arco-table-th) {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   color: var(--theme-text-secondary);
 }
 
@@ -4045,11 +4046,11 @@ watch(
 }
 
 .generation-record-panel {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(var(--arcoblue-1), 0.12));
+  background: var(--theme-surface);
 }
 
 .snapshot-panel {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(var(--arcoblue-1), 0.1));
+  background: var(--theme-surface);
 }
 
 .compare-item {
@@ -4092,25 +4093,25 @@ watch(
 .report-nav-panel {
   padding: 12px 14px;
   border: 1px solid rgba(226, 232, 240, 0.92);
-  border-radius: 16px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .report-hero {
   gap: 18px;
   padding: 24px;
-  border-radius: 20px;
-  box-shadow: 0 18px 40px rgba(59, 130, 246, 0.08);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .hero-description {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 .hero-meta-item,
 .hero-status-card {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .report-summary-grid {
@@ -4123,22 +4124,22 @@ watch(
 .item-card,
 .report-header-card,
 .decision-focus-card {
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .summary-card,
 .report-section,
 .item-card,
 .report-header-card {
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .support-analysis-card {
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 :deep(.report-content .arco-alert) {
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 @media (max-width: 1200px) {
@@ -4191,7 +4192,7 @@ watch(
   .report-sidebar,
   .report-content {
     padding: 14px;
-    border-radius: 14px;
+    border-radius: 12px;
   }
 
   .report-hero {

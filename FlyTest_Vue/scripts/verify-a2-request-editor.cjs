@@ -5,8 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const base = process.env.UI_BASE_URL || 'http://127.0.0.1:5175';
 const output = process.env.UI_OUTPUT_DIR || path.resolve(__dirname, '../playwright-screenshots/a2-request-editor');
-const tabs = ['Headers','Query','Cookies','Auth','Body','Files','Assertions','Extractors','Transport'];
-const additions = { Headers: '新增 Header', Query: '新增 Query', Cookies: '新增 Cookie', Assertions: '新增断言', Extractors: '新增提取规则' };
+const tabs = ['Headers','Params','Cookies','Auth','Body','Files','Assertions','Extractors','Transport'];
+const additions = { Headers: '新增 Header', Params: '新增 Query', Cookies: '新增 Cookie', Assertions: '新增断言', Extractors: '新增提取规则' };
 async function selectTab(modal, name) {
   const tab = modal.locator('.arco-tabs-tab').filter({ hasText: new RegExp('^' + name + '$') });
   await tab.scrollIntoViewIfNeeded();

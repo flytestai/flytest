@@ -138,10 +138,10 @@ const emit = defineEmits<ReportsSuitePanelEmits>()
 .table-card,
 .stat-card {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .filter-grid {
@@ -168,8 +168,7 @@ const emit = defineEmits<ReportsSuitePanelEmits>()
 
 .filter-card {
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+    var(--theme-surface);
 }
 
 .filter-card :deep(.arco-card-body),
@@ -205,7 +204,7 @@ const emit = defineEmits<ReportsSuitePanelEmits>()
 }
 
 .table-card :deep(.arco-table) {
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 

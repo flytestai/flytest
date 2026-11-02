@@ -1000,11 +1000,11 @@ const handleBatchDeleteScreenshots = () => {
 
 <style scoped>
 .testcase-form-container { /* 复用 TestCaseForm.vue 的样式 */
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.08));
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
   padding: 22px;
-  box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   max-height: 100vh; /* 确保不超过视口高度 */
   box-sizing: border-box;
@@ -1162,12 +1162,12 @@ const handleBatchDeleteScreenshots = () => {
 
 .screenshot-item:hover {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .screenshot-item.selected {
   border-color: var(--theme-accent);
-  box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.2);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .screenshot-checkbox {
@@ -1175,7 +1175,7 @@ const handleBatchDeleteScreenshots = () => {
   top: 8px;
   left: 8px;
   z-index: 10;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: var(--theme-surface);
   border-radius: 4px;
   padding: 2px;
 }
@@ -1192,7 +1192,7 @@ const handleBatchDeleteScreenshots = () => {
 
 .screenshot-item:hover {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .screenshot-preview {
@@ -1336,7 +1336,7 @@ const handleBatchDeleteScreenshots = () => {
 
 /* 上传模态框样式 */
 .upload-area {
-  border: 2px dashed #d9d9d9;
+  border: 2px dashed var(--theme-border);
   border-radius: 8px;
   padding: 40px;
   text-align: center;
@@ -1518,7 +1518,7 @@ const handleBatchDeleteScreenshots = () => {
 
 .thumbnail-item.active {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .thumbnail-image {
@@ -1563,7 +1563,7 @@ const handleBatchDeleteScreenshots = () => {
   max-height: 100%;
   object-fit: contain;
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   background-color: var(--theme-surface);
 }
 
@@ -1581,7 +1581,7 @@ const handleBatchDeleteScreenshots = () => {
 .nav-button {
   position: absolute;
   pointer-events: auto;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: var(--theme-surface);
   border: 1px solid var(--theme-border);
   width: 40px;
   height: 40px;
@@ -1593,7 +1593,7 @@ const handleBatchDeleteScreenshots = () => {
 
 .nav-button:hover:not(:disabled) {
   background-color: var(--theme-surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   transform: scale(1.1);
 }
 
@@ -1620,11 +1620,11 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .testcase-form-container {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.08));
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
   padding: 22px;
-  box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));
+  box-shadow: var(--theme-card-shadow);
 }
 
 .form-header {
@@ -1680,19 +1680,19 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 .precondition-content {
-  background: linear-gradient(180deg, rgba(var(--arcoblue-1), 0.1), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
 }
 
 .notes-content {
-  background: linear-gradient(180deg, rgba(var(--arcoblue-1), 0.08), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
 }
 
 .screenshots-section {
   padding: 18px;
   border: 1px solid var(--ui-panel-border, var(--theme-border));
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  border-radius: 12px;
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .screenshots-grid {
@@ -1701,49 +1701,49 @@ const handleBatchDeleteScreenshots = () => {
 
 .screenshot-item {
   border: 1px solid var(--ui-panel-border, var(--theme-border));
-  border-radius: 14px;
-  background-color: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  border-radius: 12px;
+  background-color: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .screenshot-item:hover {
   border-color: rgba(var(--arcoblue-6), 0.4);
-  box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
+  box-shadow: var(--theme-card-shadow);
   transform: translateY(-2px);
 }
 
 .screenshot-preview {
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95));
+  background: var(--theme-surface);
 }
 
 .screenshot-info-container {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.06));
+  background: var(--theme-surface);
 }
 
 .upload-area {
   border: 2px dashed rgba(var(--arcoblue-6), 0.22);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-1), 0.12), rgba(255, 255, 255, 0.96));
+  border-radius: 12px;
+  background: var(--theme-surface);
 }
 
 .file-item {
   border: 1px solid var(--ui-panel-border, var(--theme-border));
   border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.92);
+  background-color: var(--theme-surface);
 }
 
 .preview-sidebar {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.06));
+  background: var(--theme-surface);
   border-right: 1px solid var(--ui-panel-border, var(--theme-border));
 }
 
 .preview-main {
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.96));
+  background: var(--theme-surface);
 }
 
 .preview-image {
-  border-radius: 14px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.14);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .nav-indicator {
@@ -1751,13 +1751,13 @@ const handleBatchDeleteScreenshots = () => {
 }
 
 :deep(.testcase-detail-content .arco-descriptions) {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 :deep(.testcase-detail-content .arco-table) {
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 </style>

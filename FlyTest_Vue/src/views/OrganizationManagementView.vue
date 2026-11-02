@@ -1,5 +1,6 @@
 <template>
   <div class="organization-management fc-page">
+    <WorkspacePageHeader title="组织管理" description="维护组织成员与权限归属，明确团队协作边界" />
     <div class="page-header fc-toolbar">
       <div class="search-box">
         <a-input-search
@@ -107,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted, nextTick } from 'vue';
 import { Message, Modal, Row as ARow, Col as ACol } from '@arco-design/web-vue';
 import {
@@ -434,10 +436,10 @@ const deleteOrganization = (organization: Organization, event?: Event) => {
 <style scoped>
 .organization-management {
   background: var(--ui-panel-bg);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 20px;
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   box-sizing: border-box;
 }
@@ -448,12 +450,11 @@ const deleteOrganization = (organization: Organization, event?: Event) => {
   align-items: center;
   margin-bottom: 20px;
   padding: 18px 20px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--ui-toolbar-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .search-box {
@@ -469,7 +470,7 @@ const deleteOrganization = (organization: Organization, event?: Event) => {
 .organization-management :deep(.arco-table) {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .organization-management :deep(.arco-table-container) {
@@ -494,14 +495,14 @@ const deleteOrganization = (organization: Organization, event?: Event) => {
 }
 
 .organization-management :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .organization-management :deep(.arco-modal-header) {
   padding: 18px 24px;
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+  background: var(--theme-surface);
 }
 
 .organization-management :deep(.arco-modal-body) {

@@ -250,10 +250,10 @@ const computePercent = (value: number, maxValue: number) => {
 .summary-card,
 .dashboard-panel {
   padding: 18px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .summary-card__label {

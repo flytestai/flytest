@@ -433,12 +433,11 @@ onMounted(() => {
 .page-header {
   margin-bottom: 16px;
   padding: 18px 20px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--ui-panel-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
-  box-shadow: var(--ui-panel-shadow);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-header h2 {
@@ -459,11 +458,11 @@ onMounted(() => {
 }
 
 .section-sidebar {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--ui-panel-bg);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .section-content {
@@ -471,9 +470,9 @@ onMounted(() => {
 }
 
 .panel-card {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   background: var(--ui-panel-bg);
 }
 
@@ -505,7 +504,7 @@ onMounted(() => {
   overflow: hidden;
   border-radius: 8px;
   border: 1px solid var(--ui-toolbar-border);
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.9), rgba(14, 165, 233, 0.92));
+  background: var(--theme-accent);
   color: #fff;
   font-size: 24px;
   font-weight: 700;
@@ -562,8 +561,8 @@ onMounted(() => {
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.12);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.96));
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .readonly-label {

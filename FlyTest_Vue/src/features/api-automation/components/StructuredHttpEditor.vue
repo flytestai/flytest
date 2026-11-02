@@ -56,7 +56,7 @@
         </div>
       </a-tab-pane>
 
-      <a-tab-pane key="query" title="Query">
+      <a-tab-pane key="query" title="Params">
         <div class="editor-tab-header">
           <div>
             <div class="editor-tab-title">查询参数</div>
@@ -265,7 +265,7 @@
         <a-form-item v-if="localModel.body_mode === 'json'" label="JSON Body">
           <a-textarea
             v-model="localModel.body_json_text"
-            :auto-size="{ minRows: 8, maxRows: 18 }"
+            :auto-size="{ minRows: compact ? 4 : 8, maxRows: compact ? 8 : 18 }"
             placeholder='例如：{"page":1,"size":20}'
             @focus="setReferenceTarget('body_json_text', 'JSON Body')"
           />
@@ -318,7 +318,7 @@
         <a-form-item v-if="localModel.body_mode === 'raw'" label="Raw 文本">
           <a-textarea
             v-model="localModel.raw_text"
-            :auto-size="{ minRows: 8, maxRows: 18 }"
+            :auto-size="{ minRows: compact ? 4 : 8, maxRows: compact ? 8 : 18 }"
             @focus="setReferenceTarget('raw_text', 'Raw 文本')"
           />
         </a-form-item>
@@ -326,7 +326,7 @@
         <a-form-item v-if="localModel.body_mode === 'xml'" label="XML 文本">
           <a-textarea
             v-model="localModel.xml_text"
-            :auto-size="{ minRows: 8, maxRows: 18 }"
+            :auto-size="{ minRows: compact ? 4 : 8, maxRows: compact ? 8 : 18 }"
             @focus="setReferenceTarget('xml_text', 'XML 文本')"
           />
         </a-form-item>
@@ -335,7 +335,7 @@
           <a-form-item label="GraphQL Query">
             <a-textarea
               v-model="localModel.graphql_query"
-              :auto-size="{ minRows: 8, maxRows: 18 }"
+              :auto-size="{ minRows: compact ? 4 : 8, maxRows: compact ? 8 : 18 }"
               @focus="setReferenceTarget('graphql_query', 'GraphQL Query')"
             />
           </a-form-item>
@@ -653,12 +653,14 @@ const props = withDefaults(
     allowEmptyAuth?: boolean
     allowInheritedTransport?: boolean
     preferredTab?: string
+    compact?: boolean
   }>(),
   {
     showRequestTarget: true,
     allowEmptyAuth: false,
     allowInheritedTransport: false,
     preferredTab: 'headers',
+    compact: false,
   }
 )
 
@@ -1012,7 +1014,7 @@ const handleAssertionTypeChange = (item: ApiAssertionSpec) => {
   gap: 16px;
   padding: 12px 14px;
   border: 1px solid var(--color-neutral-3);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(var(--primary-6), 0.06);
 }
 
@@ -1026,9 +1028,9 @@ const handleAssertionTypeChange = (item: ApiAssertionSpec) => {
 
 .structured-http-editor__tabs {
   border: 1px solid var(--color-neutral-3);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 16px;
-  background: linear-gradient(180deg, #fbfcfd 0%, var(--theme-surface) 100%);
+  background: var(--theme-surface);
 }
 
 .editor-tab-header {

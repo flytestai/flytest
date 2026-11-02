@@ -357,9 +357,9 @@ const handleCancel = () => {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  border: 2px dashed #d9d9d9;
+  border: 2px dashed var(--theme-border);
   border-radius: 6px;
-  background-color: #fafafa;
+  background-color: var(--theme-surface-soft);
   cursor: pointer;
   transition: border-color 0.3s;
 }

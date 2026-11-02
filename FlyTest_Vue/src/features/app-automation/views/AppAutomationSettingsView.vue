@@ -116,12 +116,11 @@ const {
   justify-content: space-between;
   gap: 18px;
   padding: 22px 24px;
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.16), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 252, 0.94));
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .settings-hero__copy {
@@ -166,9 +165,9 @@ const {
   justify-content: space-between;
   gap: 10px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
-  background: rgba(255, 255, 255, 0.74);
+  background: var(--theme-surface);
 }
 
 .settings-meta-card span {
@@ -189,8 +188,8 @@ const {
 }
 
 .page-shell :deep(.arco-card) {
-  border-radius: 20px;
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-shell :deep(.arco-card-body) {
@@ -206,7 +205,7 @@ const {
   .settings-hero {
     flex-direction: column;
     padding: 20px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .settings-hero__copy h3 {

@@ -1,5 +1,6 @@
 <template>
   <div class="testbug-management-container fc-page">
+    <AssetModuleHeader />
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
@@ -9,6 +10,7 @@
       <template #directory><TestSuiteTreePanel
           ref="suitePanelRef"
           :current-project-id="currentProjectId"
+          :initial-suite-id="Number(route.query.suite) || null"
           @suite-selected="handleSuiteSelected"
           @suite-updated="handleSuiteUpdated"
         /></template>
@@ -20,6 +22,7 @@
               @view-mode-change="bugViewMode = $event"
               :current-project-id="currentProjectId"
               :selected-suite-id="selectedSuiteId"
+              :initial-bug-id="initialBugId"
             />
           </div>
         </template>
@@ -32,16 +35,20 @@
 </template>
 
 <script setup lang="ts">
+import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
 import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import TestBugManagementPanel from '@/components/testcase/TestBugManagementPanel.vue';
 import TestSuiteTreePanel from '@/components/testcase/TestSuiteTreePanel.vue';
 import { getTestSuiteDetail, type TestSuite } from '@/services/testSuiteService';
 import { useProjectStore } from '@/store/projectStore';
 
 const projectStore = useProjectStore();
+const route = useRoute();
+const initialBugId = computed(() => { const id = Number(route.query.bug); return Number.isInteger(id) && id > 0 ? id : null });
 const currentProjectId = computed(() => projectStore.currentProjectId || null);
 
 const suitePanelRef = ref<InstanceType<typeof TestSuiteTreePanel> | null>(null);
@@ -78,13 +85,15 @@ const handleSuiteUpdated = async () => {
   await syncSelectedSuiteFromPanel();
   await fetchSelectedSuiteDetail();
 };
-
-
-
-watch(currentProjectId, async () => {
+watch([currentProjectId, () => route.query.suite], async ([project, value]) => {
   selectedSuiteId.value = null;
   selectedSuiteDetail.value = null;
-});
+  const id = Number(value);
+  if (project && Number.isInteger(id) && id > 0) {
+    selectedSuiteId.value = id;
+    await fetchSelectedSuiteDetail();
+  }
+}, { immediate: true });
 
 onMounted(async () => {
   if (currentProjectId.value && selectedSuiteId.value) {
@@ -112,7 +121,7 @@ onMounted(async () => {
   background: var(--ui-panel-bg);
   border-radius: var(--ui-radius-md);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .list-view-layout {
@@ -138,13 +147,13 @@ onMounted(async () => {
   flex: 0 0 8px;
   cursor: col-resize;
   border-radius: 999px;
-  background: linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.22));
+  background: var(--theme-surface);
   opacity: 0.85;
   transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 }
 
 .suite-panel-resizer:hover {
-  background: linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.14), rgba(var(--theme-accent-rgb), 0.34));
+  background: var(--theme-surface);
   opacity: 1;
   transform: scaleX(1.05);
 }
@@ -164,7 +173,7 @@ onMounted(async () => {
   background: var(--ui-panel-bg);
   border-radius: var(--ui-radius-md);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(16px);
 }
 
@@ -201,7 +210,7 @@ onMounted(async () => {
   background: var(--ui-panel-bg);
   border-radius: var(--ui-radius-md);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 @media (max-width: 768px) {

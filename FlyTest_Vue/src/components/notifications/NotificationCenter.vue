@@ -500,7 +500,7 @@ onUnmounted(() => {
   padding: 0;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--theme-surface);
   color: var(--theme-text-secondary);
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -509,7 +509,7 @@ onUnmounted(() => {
 .notification-button:hover {
   color: var(--theme-text);
   border-color: rgba(var(--theme-accent-rgb), 0.36);
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--theme-surface);
   transform: translateY(-1px);
 }
 
@@ -529,9 +529,9 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 8px;
   border: 1px solid var(--ui-panel-border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--ui-panel-bg);
-  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(18px);
 }
 
@@ -600,7 +600,7 @@ onUnmounted(() => {
   padding: 14px 14px 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--theme-surface);
   text-align: left;
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -608,12 +608,12 @@ onUnmounted(() => {
 
 .notification-item:hover {
   border-color: rgba(var(--theme-accent-rgb), 0.28);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
   transform: translateY(-1px);
 }
 
 .notification-item--unread {
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.08), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
 }
 
 .notification-item__body,
@@ -655,7 +655,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(22, 93, 255, 0.12);
+  background: rgba(var(--theme-accent-rgb), 0.12);
   color: var(--theme-accent);
   font-size: 11px;
   font-weight: 700;
@@ -746,7 +746,7 @@ onUnmounted(() => {
   padding: 14px;
   border: 1px solid rgba(149, 161, 187, 0.14);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--theme-surface);
 }
 
 .notification-reply__meta {

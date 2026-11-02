@@ -423,7 +423,7 @@ const distributionWidth = computed(() => {
 .distribution-bar__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--theme-accent), #36cfc9);
+  background: var(--theme-surface);
 }
 
 .step-media {

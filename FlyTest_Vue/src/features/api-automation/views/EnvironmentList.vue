@@ -419,12 +419,11 @@ defineExpose({
   gap: 22px;
   align-items: end;
   padding: 26px 28px;
-  border-radius: 28px;
+  border-radius: 12px;
   background:
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.92));
+    var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .hero-copy,
@@ -487,14 +486,14 @@ defineExpose({
 
 .hero-actions :deep(.arco-btn) {
   padding-inline: 18px;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .suggestion-strip,
 .content-card {
-  border-radius: 26px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .suggestion-strip {
@@ -504,8 +503,7 @@ defineExpose({
   gap: 18px;
   padding: 20px 22px;
   background:
-    linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(16, 185, 129, 0.08)),
-    rgba(255, 255, 255, 0.94);
+    var(--theme-surface);
 }
 
 .suggestion-strip__copy {
@@ -530,11 +528,11 @@ defineExpose({
 
 .content-card {
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  background: var(--theme-surface);
 }
 
 .content-card :deep(.arco-table-container) {
-  border-radius: 26px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -555,18 +553,16 @@ defineExpose({
   gap: 16px;
   margin-bottom: 18px;
   padding: 18px 20px;
-  border-radius: 22px;
-  border: 1px solid rgba(59, 130, 246, 0.14);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(20, 184, 166, 0.08)),
-    rgba(255, 255, 255, 0.92);
+    var(--theme-surface);
 }
 
 .draft-banner--emerald {
   border-color: rgba(16, 185, 129, 0.14);
   background:
-    linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08)),
-    rgba(255, 255, 255, 0.92);
+    var(--theme-surface);
 }
 
 .draft-banner__copy {

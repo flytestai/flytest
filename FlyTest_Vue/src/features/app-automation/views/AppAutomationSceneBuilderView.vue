@@ -212,17 +212,16 @@ const {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 253, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--theme-card-border);
-  border-radius: 18px;
-  box-shadow: var(--ui-panel-shadow);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-shell :deep(.arco-card),
 .page-shell :deep(.scene-builder-card) {
-  border-radius: 18px;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 @media (max-width: 900px) {

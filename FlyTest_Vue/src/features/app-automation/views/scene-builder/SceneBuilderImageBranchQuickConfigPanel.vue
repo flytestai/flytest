@@ -134,7 +134,7 @@ defineProps<Props>()
   flex-direction: column;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
 }

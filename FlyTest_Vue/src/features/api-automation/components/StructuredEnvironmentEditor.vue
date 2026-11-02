@@ -141,9 +141,9 @@ const addCookie = () => {
 <style scoped>
 .structured-environment-editor {
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 18px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.98));
+  background: var(--theme-surface);
 }
 
 .editor-toolbar {
@@ -170,10 +170,10 @@ const addCookie = () => {
 .editor-empty {
   padding: 20px;
   border: 1px dashed rgba(148, 163, 184, 0.32);
-  border-radius: 16px;
+  border-radius: 12px;
   color: var(--theme-text-tertiary);
   text-align: center;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--theme-surface);
 }
 
 .item-card {
@@ -181,9 +181,9 @@ const addCookie = () => {
   flex-direction: column;
   gap: 12px;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--theme-surface);
 }
 
 .item-card + .item-card {

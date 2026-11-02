@@ -64,7 +64,7 @@ const emit = defineEmits<TestCaseExecuteDialogEmits>()
 :deep(.arco-select-view) {
   min-height: 42px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-surface);
 }
 
 @media (max-width: 900px) {

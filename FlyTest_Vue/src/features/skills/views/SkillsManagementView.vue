@@ -33,22 +33,20 @@ const currentProjectId = computed(() => projectStore.currentProjectId)
   gap: 18px;
   min-height: 100%;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.05), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--ui-panel-border);
-  border-radius: 18px;
-  box-shadow: var(--ui-panel-shadow);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-header {
   margin-bottom: 0;
   padding: 20px 22px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-header h2 {
@@ -66,10 +64,10 @@ const currentProjectId = computed(() => projectStore.currentProjectId)
 }
 
 .skills-container {
-  background: rgba(255, 255, 255, 0.96);
-  border-radius: 16px;
+  background: var(--theme-surface);
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
   min-height: 400px;
   overflow: hidden;
 }
@@ -82,9 +80,9 @@ const currentProjectId = computed(() => projectStore.currentProjectId)
   min-height: 420px;
   padding: 80px 24px;
   color: var(--color-text-3);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 </style>

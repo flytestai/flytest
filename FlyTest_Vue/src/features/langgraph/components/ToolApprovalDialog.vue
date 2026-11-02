@@ -241,7 +241,7 @@ const handleReject = async () => {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-surface) 84%, rgba(var(--theme-accent-rgb), 0.14)) 0%, color-mix(in srgb, var(--theme-shell-soft) 82%, rgba(var(--theme-accent-rgb), 0.2)) 100%);
+  background: var(--theme-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -272,7 +272,7 @@ const handleReject = async () => {
 
 /* 工具信息卡片 */
 .tool-card {
-  background: linear-gradient(135deg, var(--theme-surface-soft) 0%, var(--theme-surface-soft) 100%);
+  background: var(--theme-surface);
   border: 1px solid var(--color-border-2);
   border-radius: 12px;
   padding: 16px;
@@ -290,7 +290,7 @@ const handleReject = async () => {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--theme-accent) 0%, #0e42d2 100%);
+  background: var(--theme-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,12 +393,12 @@ const handleReject = async () => {
 
 .btn-approve {
   flex: 1;
-  background: linear-gradient(135deg, var(--theme-success) 0%, #009a29 100%);
+  background: var(--theme-accent);
   border: none;
 }
 
 .btn-approve:hover {
-  background: linear-gradient(135deg, #23c343 0%, var(--theme-success) 100%);
+  background: var(--theme-accent);
 }
 </style>
 

@@ -413,7 +413,7 @@ onMounted(() => {
   padding: 24px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   gap: 24px;
 }
 
@@ -533,7 +533,7 @@ onMounted(() => {
 }
 
 .module-item.active {
-  background: #e8f4ff;
+  background: var(--theme-accent-soft);
   border-color: var(--theme-accent);
 }
 
@@ -704,7 +704,7 @@ onMounted(() => {
 }
 
 .module-recommendations {
-  background: #e6f7ff;
+  background: var(--theme-accent-soft);
   border: 1px solid #91d5ff;
 }
 
@@ -780,7 +780,7 @@ onMounted(() => {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-accent), #722ed1);
+  background: var(--theme-surface);
   color: white;
 }
 

@@ -4,7 +4,7 @@
         <template #description>支持基础步骤、自定义组件和流程控制分支的可视化编排。</template>
         <template #actions><div class="header-actions">
       <div class="header-action-group">
-        <a-button type="outline" :loading="aiGenerating" @click="emit('open-ai-plan')">AI 生成场景</a-button>
+        <a-button class="fc-ai-action" type="outline" :loading="aiGenerating" @click="emit('open-ai-plan')">AI 生成场景</a-button>
         <a-button :loading="loading" @click="emit('reload-data')">刷新</a-button>
         <a-button type="outline" @click="emit('open-testcase-workspace')">测试用例</a-button>
         <a-button type="outline" @click="emit('open-execution-workspace')">执行记录</a-button>
@@ -53,10 +53,9 @@ const emit = defineEmits<{
   gap: 20px;
   padding: 18px 20px;
   border: 1px solid var(--theme-card-border);
-  border-radius: 18px;
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.02)),
-    var(--theme-card-bg);
+    var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
 }
 

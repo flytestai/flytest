@@ -40,12 +40,11 @@ const emit = defineEmits<ExecutionsFilterCardEmits>()
 
 <style scoped>
 .filter-card {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .filter-grid {

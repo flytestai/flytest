@@ -3,7 +3,7 @@ export function getPublicAssetUrl(assetPath: string): string {
   return `${import.meta.env.BASE_URL}${normalizedPath}`;
 }
 
-const BRAND_ASSET_VERSION = '20261031-feice-refined-2';
+const BRAND_ASSET_VERSION = '20261102-feice-navy-teal-1';
 
 export const brandLogoUrl = `${getPublicAssetUrl('feice-mark.svg')}?v=${BRAND_ASSET_VERSION}`;
 export const brandFaviconUrl = `${getPublicAssetUrl('favicon.svg')}?v=${BRAND_ASSET_VERSION}`;

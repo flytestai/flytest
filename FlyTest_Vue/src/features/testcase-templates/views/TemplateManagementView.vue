@@ -1,5 +1,6 @@
 <template>
   <div class="template-management-view fc-page">
+    <AssetModuleHeader />
     <WorkspacePageHeader title="用例模板" description="维护测试用例导入导出的字段映射与文件格式。" :show-back="true" @back="$router.back()">
       <template #actions>
         <a-button type="primary" @click="handleCreate">
@@ -94,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
@@ -213,25 +215,23 @@ onMounted(() => {
   padding: 20px 24px;
   min-height: 100%;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.05), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.9));
+    var(--theme-surface);
 }
 
 .template-list-card {
   margin-top: 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .filter-bar {
   margin-bottom: 20px;
   padding: 16px 20px;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.94));
+    var(--theme-surface);
   border: 1px solid rgba(149, 161, 187, 0.14);
-  border-radius: 14px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -240,12 +240,11 @@ onMounted(() => {
 
 .template-management-view :deep(.arco-page-header) {
   padding: 18px 20px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--ui-panel-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
-  box-shadow: var(--ui-panel-shadow);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .template-management-view :deep(.arco-page-header-wrapper) {
@@ -297,14 +296,14 @@ onMounted(() => {
 
 /* 表格优化 */
 .template-list-card :deep(.arco-table) {
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .template-list-card :deep(.arco-table-container) {
   border: 1px solid rgba(149, 161, 187, 0.14);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .template-list-card :deep(.arco-table-th) {

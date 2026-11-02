@@ -178,7 +178,7 @@ const emit = defineEmits<SceneBuilderConfigPanelEmits>()
 <style scoped>
 .config-panel {
   min-height: 560px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -205,7 +205,7 @@ const emit = defineEmits<SceneBuilderConfigPanelEmits>()
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.2);
   background: rgba(var(--theme-accent-rgb), 0.04);
 }
@@ -218,11 +218,10 @@ const emit = defineEmits<SceneBuilderConfigPanelEmits>()
 
 .quick-config-panel {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.03)),
-    rgba(var(--theme-accent-rgb), 0.05);
+    var(--theme-surface);
 }
 
 .quick-config-title {

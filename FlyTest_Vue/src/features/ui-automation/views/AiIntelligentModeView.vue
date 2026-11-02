@@ -215,7 +215,7 @@
                 批量删除
               </a-button>
               <a-button type="outline" @click="openAdhocModal(false)"><template #icon><icon-play-arrow /></template>临时执行</a-button>
-              <a-button type="primary" @click="openCaseModal()"><template #icon><icon-plus /></template>新建 AI 用例</a-button>
+              <a-button class="fc-ai-action" type="primary" @click="openCaseModal()"><template #icon><icon-plus /></template>新建 AI 用例</a-button>
             </div>
           </div>
           <a-table class="fc-table" v-model:selectedKeys="selectedCaseIds" :columns="caseColumns" :data="cases" :loading="caseLoading" :pagination="casePagination" :scroll="{ x: 1080 }" :row-selection="caseRowSelection" row-key="id" @page-change="onCasePageChange" @page-size-change="onCasePageSizeChange">
@@ -1308,7 +1308,7 @@ onUnmounted(() => stopPolling())
 .distribution-item { display: grid; grid-template-columns: 72px 1fr 40px; align-items: center; gap: 12px; }
 .distribution-label, .distribution-count { color: var(--color-text-1); }
 .distribution-bar { height: 8px; border-radius: 999px; background: var(--color-fill-2); overflow: hidden; }
-.distribution-bar__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--theme-accent), #36cfc9); }
+.distribution-bar__fill { height: 100%; border-radius: 999px; background: var(--theme-surface); }
 .step-media { margin-top: 12px; }
 .gif-preview { overflow: hidden; border-radius: 10px; border: 1px solid var(--color-border-2); background: var(--color-fill-1); }
 .gif-preview img { display: block; width: 100%; max-height: 360px; object-fit: contain; }

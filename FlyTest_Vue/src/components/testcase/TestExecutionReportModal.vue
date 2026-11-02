@@ -606,9 +606,9 @@ watch(
 /* AI执行过程整体折叠区块 */
 .execution-log-container :deep(.log-ai-section) {
   margin: 8px 0;
-  border: 1px solid rgba(22, 93, 255, 0.2);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.2);
   border-radius: 6px;
-  background-color: rgba(22, 93, 255, 0.02);
+  background-color: rgba(var(--theme-accent-rgb), 0.02);
 }
 
 .execution-log-container :deep(.log-ai-header) {
@@ -623,7 +623,7 @@ watch(
 }
 
 .execution-log-container :deep(.log-ai-header:hover) {
-  background-color: rgba(22, 93, 255, 0.08);
+  background-color: rgba(var(--theme-accent-rgb), 0.08);
 }
 
 .execution-log-container :deep(.log-ai-header::marker) {
@@ -632,7 +632,7 @@ watch(
 
 .execution-log-container :deep(.log-ai-content) {
   padding: 8px 12px 12px 16px;
-  border-top: 1px solid rgba(22, 93, 255, 0.1);
+  border-top: 1px solid rgba(var(--theme-accent-rgb), 0.1);
 }
 
 .execution-log-container :deep(.log-line.step) {
@@ -640,7 +640,7 @@ watch(
   font-weight: 600;
   margin-top: 8px;
   padding: 6px 8px;
-  background-color: rgba(22, 93, 255, 0.06);
+  background-color: rgba(var(--theme-accent-rgb), 0.06);
   border-radius: 4px;
 }
 
@@ -671,7 +671,7 @@ watch(
 }
 
 .execution-log-container :deep(.log-line.tool) {
-  color: #722ed1;
+  color: var(--theme-ai);
   padding-left: 8px;
 }
 
@@ -711,7 +711,7 @@ watch(
   margin: 16px 0;
   padding: 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--color-fill-2) 0%, var(--color-fill-3) 100%);
+  background: var(--theme-surface);
   border: 1px solid var(--color-border);
 }
 
@@ -780,7 +780,7 @@ watch(
   transition: opacity 0.3s ease;
   border: 1px solid var(--theme-border);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .screenshot-index {
@@ -857,8 +857,7 @@ watch(
   transition: all 0.3s;
   z-index: 100;
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.4),
-    0 4px 16px rgba(0, 0, 0, 0.3);
+    var(--theme-card-shadow);
 }
 
 .custom-arrow-left {
@@ -874,8 +873,7 @@ watch(
   border-color: rgba(255, 255, 255, 1);
   transform: translateY(-50%) scale(1.15);
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.5),
-    0 6px 20px rgba(0, 0, 0, 0.4);
+    var(--theme-card-shadow);
 }
 
 .custom-arrow:active {

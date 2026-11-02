@@ -19,6 +19,7 @@
         <iframe
           ref="drawioIframeRef"
           class="drawio-iframe"
+          title="图表编辑画布"
           :src="drawioUrl"
           @load="onIframeLoad"
         ></iframe>
@@ -1499,7 +1500,7 @@ onUnmounted(() => {
   height: 52px;
   border-radius: 50% !important;
   font-size: 22px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   z-index: 1000;
 }
 
@@ -1514,7 +1515,7 @@ onUnmounted(() => {
   background: var(--color-bg-2);
   border-radius: 12px;
   border: 1px solid var(--color-border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   display: flex;
   flex-direction: column;
   z-index: 999;

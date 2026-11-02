@@ -13,7 +13,7 @@
         <strong>测试用例</strong>
         <span>快速进入用例列表，单条执行或转到测试套件编排</span>
       </button>
-      <button class="quick-item fc-native-action" type="button" @click="emit('open-tab', 'scene-builder')">
+      <button class="quick-item fc-native-action fc-ai-action" type="button" @click="emit('open-tab', 'scene-builder')">
         <strong>场景编排</strong>
         <span>通过 AI 和组件库搭建测试步骤</span>
       </button>
@@ -40,7 +40,7 @@ const emit = defineEmits<DashboardQuickActionsCardEmits>()
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   box-shadow: var(--theme-card-shadow);
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .quick-card {
@@ -59,10 +59,9 @@ const emit = defineEmits<DashboardQuickActionsCardEmits>()
   gap: 10px;
   padding: 18px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
-  border-radius: 16px;
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.03)),
-    rgba(var(--theme-accent-rgb), 0.06);
+    var(--theme-surface);
   text-align: left;
   cursor: pointer;
   transition:
@@ -75,9 +74,8 @@ const emit = defineEmits<DashboardQuickActionsCardEmits>()
   transform: translateY(-2px);
   border-color: rgba(var(--theme-accent-rgb), 0.34);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.11), rgba(var(--theme-accent-rgb), 0.05)),
-    rgba(var(--theme-accent-rgb), 0.1);
-  box-shadow: 0 16px 28px rgba(var(--theme-accent-rgb), 0.12);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .quick-item strong {

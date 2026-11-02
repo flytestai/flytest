@@ -72,8 +72,9 @@ async function run() {
       await Promise.all(responses);
       await page.locator('.dashboard-insights').waitFor({ state: 'visible' });
       await page.waitForTimeout(200);
-      assert.equal(await page.locator('.insights-block').count(), 7);
-      assert.equal(await page.locator('.insights-automation-item').last().locator('strong').innerText(), '—');
+      assert.equal(await page.locator('.insights-block').count(), 8);
+      assert.equal(await page.locator('.fc-runtime-rows>a').count(), 3);
+      await page.getByRole('button', { name: '执行量', exact: true }).click();
       if (scenario.empty) await page.getByText('暂无执行趋势', { exact: true }).waitFor();
       else assert.equal(await page.locator('.insights-chart-stack').count(), 7);
 
@@ -99,11 +100,11 @@ async function run() {
         const heights = geometry.primary.map(rect => Math.round(rect.height));
         assert.equal(new Set(heights).size, 1, 'First row cards must align');
         assert.equal(Math.round(geometry.resources[0].y), Math.round(geometry.resources[1].y));
-        assert(Math.abs(geometry.resources[1].width - geometry.resources[0].width) < 2, 'Risk, automation and asset cards use equal columns');
+        assert(geometry.resources[0].width > geometry.resources[1].width, 'Risk summary receives more space than asset distribution');
       }
       if (scenario.dark) {
         assert.notEqual(geometry.background, 'rgb(255, 255, 255)');
-        assert.equal(await page.locator('.dashboard-insights').evaluate(el => getComputedStyle(el).getPropertyValue('--insight-danger-soft').trim()), '#462b34');
+        assert.equal(await page.locator('.dashboard-insights').evaluate(el => getComputedStyle(el).getPropertyValue('--insight-danger-soft').trim()), '#432C39');
       }
       if (['desktop', 'tablet', 'mobile', 'dark', 'empty', 'large-values', 'large-values-mobile'].includes(scenario.name)) {
         const blocks = scenario.width < 680 ? page.locator('.insights-block') : page.locator('.insights-row');

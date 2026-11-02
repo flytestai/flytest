@@ -14,7 +14,7 @@
           <a-radio :value="30">30天</a-radio>
           <a-radio :value="90">90天</a-radio>
         </a-radio-group>
-        <a-button :loading="aiSummaryLoading" :disabled="!report?.summary.total_count" @click="loadAiSummary">
+        <a-button class="fc-ai-action" :loading="aiSummaryLoading" :disabled="!report?.summary.total_count" @click="loadAiSummary">
           {{ aiSummary ? '重新获取 AI 摘要' : '生成 AI 摘要' }}
         </a-button>
         <a-button @click="loadReport">刷新</a-button>
@@ -532,12 +532,11 @@ defineExpose({
   gap: 22px;
   align-items: end;
   padding: 26px 28px;
-  border-radius: 28px;
+  border-radius: 12px;
   background:
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.92));
+    var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .report-hero__copy,
@@ -591,10 +590,10 @@ defineExpose({
 .state-card,
 .summary-card,
 .report-card {
-  border-radius: 26px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .state-card {
@@ -622,11 +621,11 @@ defineExpose({
 }
 
 .summary-card-primary {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(14, 165, 233, 0.08));
+  background: var(--theme-surface);
 }
 
 .summary-card-danger {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(249, 115, 22, 0.08));
+  background: var(--theme-surface);
 }
 
 .summary-label {
@@ -665,8 +664,8 @@ defineExpose({
   flex-direction: column;
   gap: 10px;
   padding: 18px 20px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 118, 110, 0.08));
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(14, 165, 233, 0.14);
 }
 
@@ -701,7 +700,7 @@ defineExpose({
 .ai-report-block {
   margin-top: 16px;
   padding: 18px 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
@@ -753,9 +752,9 @@ defineExpose({
 .run-report-card,
 .interface-report-card,
 .failed-case-card {
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--theme-surface);
 }
 
 .run-report-card {
@@ -861,11 +860,11 @@ defineExpose({
 }
 
 .trend-bar-total {
-  background: rgba(59, 130, 246, 0.22);
+  background: rgba(var(--theme-accent-rgb), 0.22);
 }
 
 .trend-bar-pass {
-  background: linear-gradient(90deg, #14b8a6, var(--theme-success));
+  background: var(--theme-surface);
 }
 
 .report-card :deep(.arco-card-body) {
@@ -876,7 +875,7 @@ defineExpose({
 
 .report-card :deep(.arco-table-container) {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 

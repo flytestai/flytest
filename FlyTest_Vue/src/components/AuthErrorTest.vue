@@ -117,7 +117,7 @@ const testValidRequest = async () => {
 <style scoped>
 .auth-error-test {
   padding: 20px;
-  background: #f5f5f5;
+  background: var(--theme-surface-soft);
   border-radius: 8px;
   margin: 20px 0;
 }

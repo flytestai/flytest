@@ -107,7 +107,7 @@ const emit = defineEmits<SuiteExecutionDetailDialogEmits>()
 
 .detail-card,
 .detail-panel {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -120,8 +120,7 @@ const emit = defineEmits<SuiteExecutionDetailDialogEmits>()
   min-height: 124px;
   padding: 20px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
-    var(--theme-card-bg);
+    var(--theme-surface);
 }
 
 .detail-label,
@@ -183,8 +182,8 @@ const emit = defineEmits<SuiteExecutionDetailDialogEmits>()
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  background: var(--theme-surface);
 }
 
 .artifact-item {
@@ -194,8 +193,7 @@ const emit = defineEmits<SuiteExecutionDetailDialogEmits>()
   gap: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.025)),
-    rgba(var(--theme-accent-rgb), 0.05);
+    var(--theme-surface);
 }
 
 .artifact-meta {
@@ -231,7 +229,7 @@ const emit = defineEmits<SuiteExecutionDetailDialogEmits>()
   align-items: center;
   justify-content: center;
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.14);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(var(--theme-accent-rgb), 0.04);
 }
 

@@ -55,7 +55,7 @@ async function inspectModal(page, width) {
     return { clipped, radius: getComputedStyle(root).borderRadius, width: root.getBoundingClientRect().width, contract: Boolean(root.closest('.fc-dialog')) };
   });
   assert(state.contract, `The actual dialog must use the shared A2 contract: ${JSON.stringify(state)}`);
-  assert.equal(state.radius, width < 768 ? '16px' : '20px');
+  assert.equal(state.radius, '12px');
   assert(state.width <= width, 'Dialog fits viewport');
   assert.deepEqual(state.clipped, [], `Visible form controls fit viewport: ${JSON.stringify(state)}`);
   return modal;

@@ -240,7 +240,7 @@ const emitSelection = (node: CollectionTreeNode | null) => {
 
 watch(() => props.selectedCollectionId, id => {
   if (!id) { selectedKeys.value = []; currentTreeSelection.value = null }
-  else if (currentTreeSelection.value?.id !== id) { selectedKeys.value = ['collection-' + id]; currentTreeSelection.value = findNodeByKey(treeData.value, selectedKeys.value[0]) }
+  else if ((currentTreeSelection.value?.type === 'request' ? currentTreeSelection.value.displayCollectionId : currentTreeSelection.value?.id) !== id) { selectedKeys.value = ['collection-' + id]; currentTreeSelection.value = findNodeByKey(treeData.value, selectedKeys.value[0]) }
 })
 const syncSelectionState = () => {
   if (!selectedKeys.value.length && props.selectedCollectionId) selectedKeys.value = ['collection-' + props.selectedCollectionId]
@@ -304,6 +304,12 @@ const onSelect = (keys: (string | number)[], data: { node?: CollectionTreeNode }
   currentTreeSelection.value = node || null
   emitSelection(node || null)
   emit('navigate')
+}
+
+const restoreSelection = (requestId?: number, collectionId?: number) => {
+  const key = requestId ? `request-${requestId}` : collectionId ? `collection-${collectionId}` : ''
+  selectedKeys.value = key ? [key] : []
+  currentTreeSelection.value = key ? findNodeByKey(treeData.value, key) : null
 }
 
 const selectCollectionNode = (node: CollectionTreeCollectionNode) => {
@@ -467,6 +473,7 @@ watch(
 
 defineExpose({
   refresh: fetchCollections,
+  restoreSelection,
 })
 </script>
 
@@ -485,10 +492,10 @@ defineExpose({
 .collection-panel {
   min-height: 0;
   height: 100%;
-  border-radius: 26px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
 }
 
@@ -546,9 +553,9 @@ defineExpose({
   flex-direction: column;
   gap: 6px;
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.84));
+  background: var(--theme-surface);
 }
 
 .collection-overview__label {
@@ -586,14 +593,14 @@ defineExpose({
 .collection-action-button {
   min-width: 96px;
   padding-inline: 18px;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .tree-container {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  border-radius: 22px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.1);
   background: rgba(248, 250, 252, 0.58);
   padding: 12px 10px 4px;
@@ -606,19 +613,19 @@ defineExpose({
 
 .tree-container :deep(.arco-tree-node-title) {
   padding: 12px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 14px;
   line-height: 1.6;
 }
 
 .tree-container :deep(.arco-tree-node-title:hover) {
-  background: rgba(59, 130, 246, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.06);
+  background: rgba(var(--theme-accent-rgb), 0.08);
+  box-shadow: inset 0 0 0 1px rgba(var(--theme-accent-rgb), 0.06);
 }
 
 .tree-container :deep(.arco-tree-node-selected .arco-tree-node-title) {
-  background: rgba(59, 130, 246, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+  background: rgba(var(--theme-accent-rgb), 0.12);
+  box-shadow: inset 0 0 0 1px rgba(var(--theme-accent-rgb), 0.12);
 }
 
 .collection-node-dropdown {

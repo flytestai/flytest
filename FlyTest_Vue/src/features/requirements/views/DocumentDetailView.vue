@@ -1201,7 +1201,7 @@ onBeforeUnmount(() => {
   padding: 24px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   gap: 24px; /* 增加左侧和右侧区域之间的间距 */
 }
 
@@ -1240,7 +1240,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  background: linear-gradient(135deg, #e8f4ff 0%, #f0f5ff 100%);
+  background: var(--theme-surface);
   border-radius: 8px;
   border: 1px solid #b8daff;
 }
@@ -1263,7 +1263,7 @@ onBeforeUnmount(() => {
 }
 
 .info-card {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .info-grid {
@@ -1333,7 +1333,7 @@ onBeforeUnmount(() => {
 }
 
 .modules-card {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .modules-header {
@@ -1358,14 +1358,14 @@ onBeforeUnmount(() => {
   border: 1px solid var(--theme-surface-soft);
   border-radius: 8px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--theme-surface-soft);
   transition: all 0.3s;
   margin-bottom: 16px;
 }
 
 .module-item:hover {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(0, 160, 233, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 
@@ -1377,7 +1377,7 @@ onBeforeUnmount(() => {
 
 .module-item.selected {
   border-color: var(--theme-accent);
-  background: #e6f4ff;
+  background: var(--theme-accent-soft);
 }
 
 .module-header {
@@ -1539,7 +1539,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #e6f4ff;
+  background: var(--theme-accent-soft);
   border: 1px solid #91caff;
   border-radius: 6px;
   margin-top: 16px;
@@ -1564,14 +1564,14 @@ onBeforeUnmount(() => {
   min-height: 300px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 /* 新的统一展示样式 */
 .document-content-container {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
 }
 
@@ -1580,8 +1580,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--theme-surface-soft);
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .toolbar-left {
@@ -1621,7 +1621,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   border-radius: 8px;
   padding: 16px;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--theme-border);
   background: var(--theme-surface-soft);
   min-height: 60px;
 }
@@ -1629,13 +1629,13 @@ onBeforeUnmount(() => {
 .content-segment:hover {
   border-color: rgba(0, 160, 233, 0.4);
   background: rgba(0, 160, 233, 0.05);
-  box-shadow: 0 2px 8px rgba(0, 160, 233, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .content-segment.selected {
   background: rgba(0, 160, 233, 0.1);
   border: 2px solid rgba(0, 160, 233, 0.5);
-  box-shadow: 0 4px 12px rgba(0, 160, 233, 0.2);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .content-segment.highlighted {
@@ -1646,7 +1646,7 @@ onBeforeUnmount(() => {
 .content-segment.editing {
   background: var(--theme-surface);
   border: 2px solid var(--theme-accent);
-  box-shadow: 0 4px 16px rgba(0, 160, 233, 0.25);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .module-label {
@@ -1659,7 +1659,7 @@ onBeforeUnmount(() => {
   color: white;
   font-weight: 600;
   z-index: 10;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -1670,7 +1670,7 @@ onBeforeUnmount(() => {
 }
 
 .module-number {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--theme-surface);
   padding: 2px 6px;
   border-radius: 2px;
   font-weight: 600;
@@ -1692,7 +1692,7 @@ onBeforeUnmount(() => {
 /* 模块标题框内的按钮样式 - 白色主题 */
 .label-actions .module-action-btn {
   color: #fff !important; /* 按钮颜色为白色，使用important强制覆盖 */
-  background-color: rgba(255, 255, 255, 0.2) !important; /* 半透明白色背景 */
+  background-color: var(--theme-surface) !important; /* 半透明白色背景 */
   border-radius: 4px;
   padding: 4px 8px;
   transition: all 0.2s ease;
@@ -1701,15 +1701,15 @@ onBeforeUnmount(() => {
 
 .label-actions .module-action-btn:hover {
   color: #fff !important; /* 悬停时保持白色 */
-  background-color: rgba(255, 255, 255, 0.3) !important; /* 悬停时背景色加深 */
+  background-color: var(--theme-surface) !important; /* 悬停时背景色加深 */
   border-color: rgba(255, 255, 255, 0.5) !important; /* 悬停时边框颜色加深 */
   transform: translateY(-1px); /* 悬停时轻微上浮 */
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2); /* 悬停时添加白色阴影 */
+  box-shadow: var(--theme-card-shadow); /* 悬停时添加白色阴影 */
 }
 
 .label-actions .module-action-btn:active {
   transform: translateY(0); /* 点击时恢复原位 */
-  box-shadow: 0 1px 4px rgba(255, 255, 255, 0.1); /* 点击时阴影变小 */
+  box-shadow: var(--theme-card-shadow); /* 点击时阴影变小 */
 }
 
 /* 强制覆盖图标颜色 - 使用更具体的选择器 */
@@ -1734,14 +1734,14 @@ onBeforeUnmount(() => {
 .label-actions .edit-btn,
 .label-actions .split-btn {
   color: #fff !important;
-  background-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: var(--theme-surface) !important;
   border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 .label-actions .edit-btn:hover,
 .label-actions .split-btn:hover {
   color: #fff !important;
-  background-color: rgba(255, 255, 255, 0.3) !important;
+  background-color: var(--theme-surface) !important;
   border-color: rgba(255, 255, 255, 0.5) !important;
 }
 
@@ -1818,7 +1818,7 @@ onBeforeUnmount(() => {
 }
 
 .segment-content.markdown-body :deep(code) {
-  background: #f5f5f5;
+  background: var(--theme-surface-soft);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Consolas', 'Monaco', monospace;
@@ -1826,7 +1826,7 @@ onBeforeUnmount(() => {
 }
 
 .segment-content.markdown-body :deep(pre) {
-  background: #f5f5f5;
+  background: var(--theme-surface-soft);
   padding: 12px;
   border-radius: 6px;
   overflow-x: auto;
@@ -1851,14 +1851,14 @@ onBeforeUnmount(() => {
   height: auto;
   border-radius: 6px;
   margin: 12px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   cursor: zoom-in;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .segment-content.markdown-body :deep(img:hover) {
   transform: scale(1.02);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .inline-content-edit {
@@ -1877,7 +1877,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 24px;
-  background: #e6f4ff;
+  background: var(--theme-accent-soft);
   border-top: 1px solid #91caff;
   margin-top: 16px;
 }
@@ -2051,7 +2051,7 @@ onBeforeUnmount(() => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-accent), #722ed1);
+  background: var(--theme-surface);
   color: white;
 }
 
@@ -2085,12 +2085,12 @@ onBeforeUnmount(() => {
 
 .stat-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .stat-item.active {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .stat-item.high {
@@ -2183,7 +2183,7 @@ onBeforeUnmount(() => {
 
 .issue-item:hover {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .issue-header {

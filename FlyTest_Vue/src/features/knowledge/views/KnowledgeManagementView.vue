@@ -42,6 +42,7 @@
         </div>
 
         <a-table class="fc-table"
+          :scroll="{ x: 1200 }"
           :columns="columns"
           :data="knowledgeBases"
           :loading="loading"
@@ -50,7 +51,7 @@
           @page-size-change="handlePageSizeChange"
         >
           <template #name="{ record }">
-            <a-link @click="selectKnowledgeBase(record)">{{ record.name }}</a-link>
+            <button type="button" class="fc-knowledge-name" @click="selectKnowledgeBase(record)">{{ record.name }}</button>
           </template>
 
           <template #project="{ record }">
@@ -419,11 +420,10 @@ onMounted(async () => {
   box-sizing: border-box;
   gap: 16px;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.05), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--ui-panel-border);
-  border-radius: 18px;
-  box-shadow: var(--ui-panel-shadow);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-header {
@@ -434,12 +434,11 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 18px 20px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-title {
@@ -475,10 +474,10 @@ onMounted(async () => {
   flex-direction: column;
   overflow: hidden;
   padding: 20px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .detail-panel-full {
@@ -486,10 +485,10 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .list-header {
@@ -500,11 +499,10 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 18px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.94));
+    var(--theme-surface);
 }
 
 .search-bar {
@@ -535,15 +533,15 @@ onMounted(async () => {
 /* 表格自适应 */
 .knowledge-base-list :deep(.arco-table) {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .knowledge-base-list :deep(.arco-table-container) {
   overflow-x: auto;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .knowledge-base-list :deep(.arco-table-th) {
@@ -567,7 +565,7 @@ onMounted(async () => {
 }
 
 .knowledge-management :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 @media (max-width: 900px) {

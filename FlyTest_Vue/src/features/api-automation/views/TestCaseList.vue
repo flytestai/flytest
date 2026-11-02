@@ -29,7 +29,7 @@
           <a-option v-for="item in environments" :key="item.id" :value="item.id" :label="item.name" />
         </a-select>
         <div v-if="selectedRequestId" class="tools-group tools-group--soft">
-          <a-button :loading="caseGenerationLoadingMode === 'generate'" :disabled="isCaseGenerationLoading" @click="generateCases('generate')">AI生成</a-button>
+          <a-button class="fc-ai-action" :loading="caseGenerationLoadingMode === 'generate'" :disabled="isCaseGenerationLoading" @click="generateCases('generate')">AI生成</a-button>
           <a-button :loading="caseGenerationLoadingMode === 'regenerate'" :disabled="isCaseGenerationLoading" @click="generateCases('regenerate')">重新生成</a-button>
           <a-button :loading="caseGenerationLoadingMode === 'append'" :disabled="isCaseGenerationLoading" @click="generateCases('append')">追加生成</a-button>
         </div>
@@ -819,8 +819,8 @@ defineExpose({ refresh: loadTestCases })
 
 <style scoped>
 .test-case-list { display: flex; flex-direction: column; gap: 22px; }
-.page-hero, .state-card, .group-card { border: 1px solid rgba(148,163,184,.16); border-radius: 28px; background: rgba(255,255,255,.94); box-shadow: 0 18px 40px rgba(15,23,42,.06); }
-.page-hero { display: grid; grid-template-columns: minmax(260px,1fr) minmax(560px,1.5fr); gap: 22px; padding: 26px 28px; background: radial-gradient(circle at top right, rgba(59,130,246,.14), transparent 32%), linear-gradient(180deg, rgba(255,255,255,.97), rgba(248,250,252,.92)); }
+.page-hero, .state-card, .group-card { border: 1px solid rgba(148,163,184,.16); border-radius: 12px; background: var(--theme-surface); box-shadow: var(--theme-card-shadow); }
+.page-hero { display: grid; grid-template-columns: minmax(260px,1fr) minmax(560px,1.5fr); gap: 22px; padding: 26px 28px; background: var(--theme-surface); }
 .page-hero__copy, .page-hero__tools, .tools-group, .group-list, .case-name, .detail-panel { display: flex; }
 .page-hero__copy, .group-list, .case-name, .detail-panel { flex-direction: column; }
 .page-hero__copy { gap: 8px; }
@@ -831,25 +831,25 @@ defineExpose({ refresh: loadTestCases })
 .page-hero__meta, .group-card__meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--theme-text-secondary); }
 .tools-search { width: 320px; max-width: 100%; }
 .tools-select { width: 220px; }
-.tools-group--soft { padding: 8px 10px; border-radius: 18px; background: rgba(248,250,252,.8); border: 1px solid rgba(148,163,184,.12); }
+.tools-group--soft { padding: 8px 10px; border-radius: 12px; background: rgba(248,250,252,.8); border: 1px solid rgba(148,163,184,.12); }
 .state-card { min-height: 220px; display: flex; align-items: center; justify-content: center; padding: 28px; }
 .group-list { gap: 18px; }
-.group-card { padding: 22px; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.92)); }
+.group-card { padding: 22px; background: var(--theme-surface); }
 .group-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 .group-card__copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .group-card__title { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--theme-text); }
 .case-name { gap: 4px; }
 .case-name__title { font-size: 14px; font-weight: 700; color: var(--theme-text); word-break: break-word; }
 .case-name__desc, .section-note { font-size: 12px; line-height: 1.7; color: var(--theme-text-secondary); }
-.section-note { margin-bottom: 14px; padding: 12px 14px; border-radius: 14px; background: rgba(248,250,252,.9); }
-.request-body-hint { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(59,130,246,.12); background: linear-gradient(135deg, rgba(59,130,246,.08), rgba(20,184,166,.06)); }
+.section-note { margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(248,250,252,.9); }
+.request-body-hint { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(var(--theme-accent-rgb),.12); background: var(--theme-surface); }
 .request-body-hint__copy { min-width: 0; }
 .request-body-hint__title { font-size: 14px; font-weight: 700; color: var(--theme-text); }
 .request-body-hint__desc { margin-top: 4px; font-size: 12px; line-height: 1.7; color: var(--theme-text-secondary); }
 .detail-panel { gap: 16px; }
-.json-block { margin: 0; padding: 16px; border-radius: 18px; background: rgba(15,23,42,.95); color: #e2e8f0; font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-.group-card :deep(.arco-table-container) { overflow: hidden; border-radius: 18px; border: 1px solid rgba(148,163,184,.12); }
-.page-hero :deep(.arco-input-wrapper), .page-hero :deep(.arco-select-view), .page-hero :deep(.arco-btn) { min-height: 42px; border-radius: 14px; }
+.json-block { margin: 0; padding: 16px; border-radius: 12px; background: rgba(15,23,42,.95); color: var(--theme-border); font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.group-card :deep(.arco-table-container) { overflow: hidden; border-radius: 12px; border: 1px solid rgba(148,163,184,.12); }
+.page-hero :deep(.arco-input-wrapper), .page-hero :deep(.arco-select-view), .page-hero :deep(.arco-btn) { min-height: 42px; border-radius: 12px; }
 @media (max-width: 1200px) { .page-hero { grid-template-columns: 1fr; } .page-hero__tools { justify-content: flex-start; } }
 @media (max-width: 768px) { .page-hero { padding: 20px; } .page-hero__title { font-size: 26px; } .page-hero__tools, .tools-group, .tools-search, .tools-select { width: 100%; } .group-card__head, .request-body-hint { flex-direction: column; align-items: stretch; } }
 </style>

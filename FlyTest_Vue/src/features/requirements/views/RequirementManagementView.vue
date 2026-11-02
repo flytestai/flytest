@@ -946,19 +946,17 @@ projectStore.$subscribe((_mutation, state) => {
 .workspace-hero--requirement-command {
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.12), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 249, 253, 0.78));
+    var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(16px);
 }
 
 .workspace-hero--requirement-command::before {
   background-image:
-    linear-gradient(to right, rgba(var(--theme-accent-rgb), 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.06) 1px, transparent 1px);
+    none;
   background-size: 30px 30px;
   mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.08));
 }
@@ -968,7 +966,7 @@ projectStore.$subscribe((_mutation, state) => {
   height: 160px;
   right: -44px;
   top: -56px;
-  background: radial-gradient(circle, rgba(var(--theme-accent-rgb), 0.16), transparent 66%);
+  background: none;
   filter: blur(10px);
 }
 
@@ -1024,10 +1022,10 @@ projectStore.$subscribe((_mutation, state) => {
   min-height: 92px;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 18px;
+  border-radius: 12px;
   border-color: rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(255, 255, 255, 0.62));
+    var(--theme-surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(14px);
 }
@@ -1049,8 +1047,7 @@ projectStore.$subscribe((_mutation, state) => {
   bottom: -18px;
   opacity: 0.58;
   background:
-    radial-gradient(circle at 35% 35%, rgba(135, 244, 255, 0.2), transparent 34%),
-    radial-gradient(circle at 50% 50%, rgba(var(--theme-accent-rgb), 0.16), transparent 72%);
+    var(--theme-surface);
 }
 
 .filter-section {
@@ -1058,7 +1055,7 @@ projectStore.$subscribe((_mutation, state) => {
   padding: 16px 24px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .filter-row {
@@ -1093,7 +1090,7 @@ projectStore.$subscribe((_mutation, state) => {
 .content-section {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
 }
 
@@ -1116,9 +1113,9 @@ projectStore.$subscribe((_mutation, state) => {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  border: 2px dashed #d9d9d9;
+  border: 2px dashed var(--theme-border);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--theme-surface-soft);
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -1184,8 +1181,7 @@ projectStore.$subscribe((_mutation, state) => {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 22%),
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 22%);
+    none;
   pointer-events: none;
 }
 
@@ -1197,7 +1193,7 @@ projectStore.$subscribe((_mutation, state) => {
 
 .filter-section {
   padding: 18px 22px;
-  border-radius: 24px;
+  border-radius: 12px;
 }
 
 .filter-search :deep(.arco-input-wrapper),
@@ -1218,13 +1214,13 @@ projectStore.$subscribe((_mutation, state) => {
 }
 
 .content-section {
-  border-radius: 26px;
+  border-radius: 12px;
 }
 
 @media (max-width: 768px) {
   .workspace-hero--requirement-command {
     padding: 14px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .workspace-hero--requirement-command .workspace-hero-title {

@@ -40,6 +40,7 @@ async function run() {
       assert.equal(await coverage.getAttribute('data-quality'),q.coverageTone(scenario.coverage));
       assert.equal(await page.locator('[data-metric=open-defects]').getAttribute('data-quality'),'danger');
       assert.equal(await page.locator('[data-metric=open-defects] .kpi-value').evaluate(el=>getComputedStyle(el).color),'rgb(224, 0, 0)');
+      await page.getByRole('button',{name:'执行量',exact:true}).click();
       const green=await page.locator('.insights-chart-stack>.tone-success').first().evaluate(el=>({color:getComputedStyle(el).backgroundColor,height:el.getBoundingClientRect().height}));
       const red=await page.locator('.insights-chart-stack>.tone-danger').first().evaluate(el=>({color:getComputedStyle(el).backgroundColor,height:el.getBoundingClientRect().height}));
       assert.equal(green.color,'rgb(0, 128, 0)');assert.equal(red.color,'rgb(224, 0, 0)');assert(green.height>red.height&&red.height>0,'Trend columns preserve their real positive counts');

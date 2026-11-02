@@ -751,19 +751,19 @@ const formatToolMessage = (content: string) => {
 .step-separator-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, transparent, var(--theme-border) 20%, var(--theme-border) 80%, transparent);
+  background: var(--theme-surface);
 }
 
 .step-separator-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--theme-accent);
-  background: linear-gradient(135deg, var(--theme-accent-soft) 0%, #f2f5ff 100%);
+  background: var(--theme-surface);
   padding: 6px 16px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid #d4e6ff;
   white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(22, 93, 255, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 /* Agent Step 消息样式 - 紧凑的进度指示器 */
@@ -777,7 +777,7 @@ const formatToolMessage = (content: string) => {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 12px;
   background-color: var(--theme-surface-soft);
   color: var(--theme-text-tertiary);
@@ -889,7 +889,7 @@ const formatToolMessage = (content: string) => {
   width: fit-content;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
   display: flex;
   justify-content: center;
   position: relative;
@@ -1011,14 +1011,14 @@ const formatToolMessage = (content: string) => {
   background-color: white;
   color: var(--theme-text);
   border-top-left-radius: 2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .tool-message .message-bubble {
   background-color: #fff7e6;
   color: var(--theme-text);
   border-top-left-radius: 2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--theme-card-shadow);
   /* 增强工具消息的文本换行 */
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -1065,7 +1065,7 @@ const formatToolMessage = (content: string) => {
   left: 0;
   right: 0;
   height: 40px;
-  background: linear-gradient(transparent, color-mix(in srgb, var(--theme-surface) 78%, white 22%));
+  background: none;
   pointer-events: none;
 }
 
@@ -1152,7 +1152,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .user-message .action-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: var(--theme-surface) !important;
   color: white !important;
 }
 
@@ -1214,7 +1214,7 @@ const formatToolMessage = (content: string) => {
 .streaming-content {
   position: relative;
   border-left: 3px solid var(--theme-success);
-  background: linear-gradient(90deg, rgba(0, 180, 42, 0.05) 0%, transparent 20%);
+  background: var(--theme-surface);
   padding-left: 8px;
 }
 
@@ -1388,7 +1388,7 @@ const formatToolMessage = (content: string) => {
   right: 0;
   top: -100%;
   height: 100%;
-  background: linear-gradient(to bottom, rgba(22, 93, 255, 0), rgba(22, 93, 255, 0.12), rgba(22, 93, 255, 0));
+  background: none;
   animation: code-streaming-sweep 1.8s linear infinite;
   pointer-events: none;
 }
@@ -1403,7 +1403,7 @@ const formatToolMessage = (content: string) => {
 }
 
 .user-message .message-bubble :deep(pre) {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--theme-surface);
 }
 
 .tool-message .message-bubble :deep(pre) {
@@ -1482,7 +1482,7 @@ const formatToolMessage = (content: string) => {
 .user-message .message-bubble :deep(blockquote) {
   border-left-color: rgba(255, 255, 255, 0.5);
   color: rgba(255, 255, 255, 0.85);
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--theme-surface);
   padding: 8px 12px;
   border-radius: 0 6px 6px 0;
   margin-bottom: 12px;

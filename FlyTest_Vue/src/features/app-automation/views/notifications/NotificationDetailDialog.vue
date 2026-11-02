@@ -111,18 +111,17 @@ const emit = defineEmits<NotificationDetailDialogEmits>()
 
 .detail-card,
 .detail-panel {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .detail-card {
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.05), rgba(255, 255, 255, 0.94));
+    var(--theme-surface);
 }
 
 .detail-label,
@@ -171,7 +170,7 @@ const emit = defineEmits<NotificationDetailDialogEmits>()
 }
 
 :deep(.arco-modal-content) {
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -179,8 +178,7 @@ const emit = defineEmits<NotificationDetailDialogEmits>()
   padding: 18px 24px;
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+    var(--theme-surface);
 }
 
 :deep(.arco-modal-body) {

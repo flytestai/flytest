@@ -237,12 +237,12 @@ const handleReject = async () => {
 
 <style scoped>
 .approval-card {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-surface) 92%, rgba(var(--theme-accent-rgb), 0.08)) 0%, color-mix(in srgb, var(--theme-shell-soft) 88%, rgba(var(--theme-accent-rgb), 0.12)) 100%);
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
   border-radius: 12px;
   margin: 0 16px 12px 16px;
   overflow: hidden;
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.14);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .card-content {
@@ -266,7 +266,7 @@ const handleReject = async () => {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #fa8c16 0%, #d46b08 100%);
+  background: var(--theme-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -334,7 +334,7 @@ const handleReject = async () => {
 }
 
 .remember-option :deep(.arco-select-view-single) {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--theme-surface);
   border-color: rgba(var(--theme-accent-rgb), 0.18);
 }
 
@@ -348,8 +348,8 @@ const handleReject = async () => {
 }
 
 .btn-reject {
-  border-color: #d9d9d9;
-  color: #595959;
+  border-color: var(--theme-border);
+  color: var(--theme-text-secondary);
   background: var(--theme-surface);
 }
 
@@ -359,12 +359,12 @@ const handleReject = async () => {
 }
 
 .btn-approve {
-  background: linear-gradient(135deg, var(--theme-success) 0%, #389e0d 100%);
+  background: var(--theme-accent);
   border: none;
 }
 
 .btn-approve:hover {
-  background: linear-gradient(135deg, #73d13d 0%, var(--theme-success) 100%);
+  background: var(--theme-accent);
 }
 
 /* 参数详情 */
@@ -387,7 +387,7 @@ const handleReject = async () => {
   align-items: flex-start;
   gap: 12px;
   padding: 8px 12px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-surface-soft) 78%, white 22%) 0%, color-mix(in srgb, var(--theme-surface) 84%, white 16%) 100%);
+  background: var(--theme-surface);
   border-radius: 6px;
   border: 1px solid var(--theme-border);
 }
@@ -396,14 +396,14 @@ const handleReject = async () => {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: 13px;
   font-weight: 600;
-  color: #722ed1;
+  color: var(--theme-ai);
   min-width: 100px;
   flex-shrink: 0;
 }
 
 .arg-key::after {
   content: ':';
-  color: #8c8c8c;
+  color: var(--theme-text-tertiary);
   margin-left: 2px;
 }
 
@@ -429,7 +429,7 @@ const handleReject = async () => {
 }
 
 .arg-value.type-null {
-  color: #8c8c8c;
+  color: var(--theme-text-tertiary);
   font-style: italic;
 }
 

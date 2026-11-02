@@ -1,8 +1,8 @@
 <template>
   <AuthShell>
-    <p class="feice-auth-card-kicker">欢迎使用 FeiCe 飞测</p>
-    <h2 id="auth-title">欢迎回来</h2>
-    <p class="feice-auth-card-description">登录账号，进入你的测试工作台。</p>
+    <p class="feice-auth-card-kicker">WELCOME TO FEICE</p>
+    <h2 id="auth-title">欢迎使用飞测</h2>
+    <p class="feice-auth-card-description">登录工作空间，开始高效测试协作</p>
 
     <form class="feice-auth-form" @submit.prevent="handleLogin">
       <div class="feice-auth-field">
@@ -21,7 +21,7 @@
         </div>
       </div>
       <div class="feice-auth-options">
-        <label class="feice-auth-remember"><input v-model="rememberMe" type="checkbox" />记住我</label>
+        <label class="feice-auth-remember"><input v-model="rememberMe" type="checkbox" />记住登录状态</label>
         <span class="feice-auth-options-note">用户名或手机号均可登录</span>
       </div>
       <p v-if="errorMessage" class="feice-auth-error" role="alert"><icon-exclamation-circle aria-hidden="true" />{{ errorMessage }}</p>

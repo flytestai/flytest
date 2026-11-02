@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440" fill="none">
+<title>飞测：连接需求评审、用例资产与自动化执行</title>
+<defs><linearGradient id="wing" x1="260" y1="320" x2="530" y2="90" gradientUnits="userSpaceOnUse"><stop stop-color="#008F83"/><stop offset=".6" stop-color="#35CEBF"/><stop offset="1" stop-color="#A1F5EA"/></linearGradient><linearGradient id="fold" x1="200" y1="160" x2="360" y2="330" gradientUnits="userSpaceOnUse"><stop stop-color="#5084AD"/><stop offset="1" stop-color="#183D59"/></linearGradient><radialGradient id="halo"><stop stop-color="#04B9AA" stop-opacity=".18"/><stop offset="1" stop-color="#04B9AA" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="370" cy="255" rx="330" ry="170" fill="url(#halo)"/>
+<ellipse cx="360" cy="242" rx="300" ry="120" transform="rotate(-14 360 242)" stroke="#4FD5CC" stroke-opacity=".45"/>
+<ellipse cx="360" cy="242" rx="240" ry="78" transform="rotate(-14 360 242)" stroke="#4FD5CC" stroke-opacity=".12" stroke-dasharray="3 7"/>
+<path d="M125 255L260 153Q270 145 285 150L398 185L310 291L125 264Q116 263 125 255Z" fill="url(#fold)" stroke="#91C3D7" stroke-opacity=".6" stroke-width="1.4"/>
+<path d="M260 153L320 233L310 291L398 185" stroke="#A7D9E7" stroke-opacity=".7" stroke-width="1.4"/>
+<path d="M279 342L411 162Q419 151 434 146L568 95Q579 91 572 103L425 293Q419 301 408 305L288 350Q273 356 279 342Z" fill="url(#wing)" stroke="#ADF4E7" stroke-width="1.5"/>
+<path d="M283 346L429 238L574 98L411 162L429 238L409 303" stroke="#D5FFF6" stroke-opacity=".65" stroke-width="1.4"/>
+<circle cx="127" cy="184" r="5" fill="#41DDCE"/><circle cx="565" cy="117" r="5" fill="#41DDCE"/><circle cx="355" cy="361" r="5" fill="#41DDCE"/>
+<g font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="13" fill="#D4E6F2"><rect x="70" y="138" width="106" height="34" rx="8" fill="#1B344A" stroke="#3B586E"/><text x="97" y="160">需求评审</text><rect x="518" y="67" width="106" height="34" rx="8" fill="#1B344A" stroke="#3B586E"/><text x="545" y="89">用例资产</text><rect x="306" y="377" width="122" height="34" rx="8" fill="#1B344A" stroke="#3B586E"/><text x="333" y="399">自动化执行</text></g>
+</svg>

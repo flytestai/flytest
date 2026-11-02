@@ -31,7 +31,7 @@
       <div class="ai-endpoint">{{ aiEndpointDisplay }}</div>
 
       <div class="ai-actions">
-        <a-button type="primary" @click="emit('open-scene-builder')">进入 AI 编排</a-button>
+        <a-button class="fc-ai-action" type="primary" @click="emit('open-scene-builder')">进入 AI 编排</a-button>
         <a-button @click="emit('open-llm-config')">模型配置</a-button>
       </div>
     </div>
@@ -52,7 +52,7 @@ const emit = defineEmits<DashboardAiOverviewCardEmits>()
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   box-shadow: var(--theme-card-shadow);
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .ai-panel {
@@ -93,11 +93,10 @@ const emit = defineEmits<DashboardAiOverviewCardEmits>()
 }
 
 .ai-item {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.03)),
-    rgba(var(--theme-accent-rgb), 0.05);
+    var(--theme-surface);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -117,7 +116,7 @@ const emit = defineEmits<DashboardAiOverviewCardEmits>()
 
 .ai-endpoint {
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.14);
   background: rgba(var(--theme-surface-rgb), 0.72);
   word-break: break-word;

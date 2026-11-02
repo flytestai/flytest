@@ -32,7 +32,7 @@ defineProps<DashboardExecutionSummaryCardProps>()
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   box-shadow: var(--theme-card-shadow);
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .summary-grid {
@@ -43,11 +43,10 @@ defineProps<DashboardExecutionSummaryCardProps>()
 
 .summary-item {
   padding: 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.025)),
-    rgba(var(--theme-accent-rgb), 0.08);
+    var(--theme-surface);
   display: flex;
   flex-direction: column;
   gap: 10px;

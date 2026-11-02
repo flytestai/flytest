@@ -131,7 +131,7 @@ const emit = defineEmits<ScheduledTaskDetailDialogEmits>()
   justify-content: center;
   background: rgba(var(--theme-accent-rgb), 0.04);
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.14);
-  border-radius: 16px;
+  border-radius: 12px;
   color: var(--theme-text-secondary);
 }
 
@@ -140,7 +140,7 @@ const emit = defineEmits<ScheduledTaskDetailDialogEmits>()
 }
 
 .detail-panel {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -178,11 +178,10 @@ const emit = defineEmits<ScheduledTaskDetailDialogEmits>()
 .detail-card,
 .notification-item {
   padding: 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.03)),
-    rgba(var(--theme-accent-rgb), 0.04);
+    var(--theme-surface);
 }
 
 .detail-card strong {

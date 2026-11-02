@@ -172,7 +172,7 @@ onUnmounted(() => {
   height: 10px;
   border-radius: 50%;
   background: var(--theme-success);
-  box-shadow: 0 0 8px rgba(0, 180, 42, 0.5);
+  box-shadow: var(--theme-card-shadow);
   display: inline-block;
 }
 

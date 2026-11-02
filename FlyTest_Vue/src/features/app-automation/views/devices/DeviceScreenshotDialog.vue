@@ -39,9 +39,9 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.1), rgba(var(--theme-accent-rgb), 0.04));
+  background: var(--theme-surface);
 }
 
 .screenshot-copy {
@@ -76,18 +76,17 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   display: flex;
   justify-content: center;
   padding: 20px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background:
-    radial-gradient(circle at top, rgba(var(--theme-accent-rgb), 0.08), transparent 48%),
-    rgba(var(--theme-surface-rgb), 0.72);
+    var(--theme-surface);
   overflow: auto;
 }
 
 .screenshot-image {
   max-width: 100%;
-  border-radius: 16px;
-  box-shadow: 0 18px 40px rgba(18, 32, 61, 0.18);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 @media (max-width: 900px) {

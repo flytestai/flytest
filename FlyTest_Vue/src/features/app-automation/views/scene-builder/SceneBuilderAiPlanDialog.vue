@@ -96,11 +96,10 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.04)),
-    rgba(var(--theme-surface-rgb), 0.72);
+    var(--theme-surface);
 }
 
 .ai-dialog-item span {
@@ -124,7 +123,7 @@ const emit = defineEmits<{
 
 .field-card {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
 }

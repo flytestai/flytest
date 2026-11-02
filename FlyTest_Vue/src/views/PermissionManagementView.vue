@@ -1,5 +1,6 @@
 <template>
   <div class="permission-management fc-page">
+    <WorkspacePageHeader title="权限管理" description="选择用户或组织，查看并配置资源访问权限" />
     <div class="permission-content">
       <!-- 左侧实体选择面板 -->
       <div class="entity-panel fc-directory">
@@ -28,7 +29,12 @@
               v-for="entity in filteredEntities" 
               :key="entity.id"
               :class="['entity-item', { active: selectedEntity?.id === entity.id }]"
+              role="button"
+              tabindex="0"
+              :aria-pressed="selectedEntity?.id === entity.id"
               @click="selectEntity(entity)"
+              @keydown.enter="selectEntity(entity)"
+              @keydown.space.prevent="selectEntity(entity)"
             >
               <div class="entity-info">
                 <div class="entity-avatar">
@@ -113,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { getUserList, type User } from '@/services/userService';
@@ -273,12 +280,11 @@ onMounted(() => {
 <style scoped>
 .permission-management {
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.9));
-  border-radius: 16px;
+    var(--theme-surface);
+  border-radius: 12px;
   padding: 20px;
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -295,10 +301,10 @@ onMounted(() => {
 /* 左侧实体面板 */
 .entity-panel {
   width: 265px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.9));
-  border-radius: 14px;
+  background: var(--theme-surface);
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.16);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -348,7 +354,7 @@ onMounted(() => {
   padding: 16px;
   border-radius: 12px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--theme-surface);
   border: 1px solid rgba(149, 161, 187, 0.14);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -359,13 +365,13 @@ onMounted(() => {
 
 .entity-item:hover {
   border-color: rgba(var(--theme-accent-rgb), 0.3);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
   transform: translateY(-1px);
 }
 
 .entity-item.active {
   border-color: rgba(var(--theme-accent-rgb), 0.34);
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.08), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
 }
 
 .entity-info {
@@ -380,7 +386,7 @@ onMounted(() => {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent));
+  background: var(--theme-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,13 +433,13 @@ onMounted(() => {
 .permission-panel {
   flex: 1;
   border: 1px solid var(--ui-panel-border);
-  border-radius: 14px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
   background: var(--ui-panel-bg);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .no-selection {
@@ -471,8 +477,7 @@ onMounted(() => {
   padding: 20px;
   border-bottom: 1px solid var(--ui-toolbar-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.94));
+    var(--theme-surface);
 }
 
 .details-header .entity-info {
@@ -509,7 +514,7 @@ onMounted(() => {
 .permission-management :deep(.arco-card),
 .permission-management :deep(.arco-table),
 .permission-management :deep(.arco-modal-content) {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .permission-management :deep(.arco-radio-group) {

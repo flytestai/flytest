@@ -1018,7 +1018,7 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
   height: 8px;
   border-radius: 50%;
   background: var(--theme-danger);
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+  box-shadow: var(--theme-card-shadow);
   flex-shrink: 0;
 }
 
@@ -1043,6 +1043,6 @@ const filterModelOption = (inputValue: string, option: { value: string }) => {
 
 .native-datetime-input:focus {
   border-color: rgb(var(--primary-6));
-  box-shadow: 0 0 0 2px rgba(var(--primary-6), 0.14);
+  box-shadow: var(--theme-card-shadow);
 }
 </style>

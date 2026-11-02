@@ -62,7 +62,7 @@ defineProps<Props>()
   flex-direction: column;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
 }
@@ -88,7 +88,7 @@ defineProps<Props>()
 }
 
 .quick-config-subtle-alert {
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--primary-6-rgb), 0.16);
   background: rgba(var(--primary-6-rgb), 0.08);
   color: var(--theme-text-secondary);

@@ -27,10 +27,9 @@ const emit = defineEmits<PackagesHeaderBarEmits>()
   gap: 18px;
   padding: 18px 20px;
   border: 1px solid var(--theme-card-border);
-  border-radius: 18px;
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.02)),
-    var(--theme-card-bg);
+    var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
 }
 

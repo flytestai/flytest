@@ -225,12 +225,11 @@ defineExpose({
   gap: 22px;
   align-items: end;
   padding: 26px 28px;
-  border-radius: 28px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.92));
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .report-hero__copy,
@@ -277,8 +276,8 @@ defineExpose({
 .range-selector {
   align-items: center;
   padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
@@ -304,10 +303,10 @@ defineExpose({
 .summary-card,
 .report-card,
 .state-card {
-  border-radius: 26px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .summary-card,
@@ -323,14 +322,12 @@ defineExpose({
 
 .summary-card--primary {
   background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(14, 165, 233, 0.1)),
-    rgba(255, 255, 255, 0.96);
+    var(--theme-surface);
 }
 
 .summary-card--success {
   background:
-    linear-gradient(135deg, rgba(20, 184, 166, 0.16), rgba(16, 185, 129, 0.08)),
-    rgba(255, 255, 255, 0.96);
+    var(--theme-surface);
 }
 
 .summary-label {
@@ -377,7 +374,7 @@ defineExpose({
 
 .report-card :deep(.arco-table-container) {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 

@@ -1,0 +1,416 @@
+.feice-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  min-height: 100dvh;
+  color: var(--theme-text);
+  background: var(--theme-bg);
+  font-family: var(--theme-display-font);
+}
+.feice-auth * {
+  box-sizing: border-box;
+}
+.feice-auth-brand-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 38px 7%;
+  color: #f5f9ff;
+  background: #0e2035;
+  overflow: hidden;
+}
+.feice-auth-header {
+  flex: none;
+}
+.feice-auth-brand {
+  display: block;
+  width: fit-content;
+}
+.feice-auth .feice-auth-brand .feice-auth-logo-light {
+  display: none;
+}
+.feice-auth .feice-auth-brand .feice-auth-logo-dark {
+  display: block;
+  width: 190px;
+  height: auto;
+}
+.feice-auth-story {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding-top: 45px;
+}
+.feice-auth-story h1 {
+  margin: 0;
+  font-size: clamp(30px, 3.2vw, 54px);
+  line-height: 1.5;
+  letter-spacing: -0.9px;
+  font-weight: 650;
+}
+.feice-auth-story h1 em {
+  color: #30d6c4;
+  font-style: normal;
+}
+.feice-auth-description {
+  margin: 16px 0 0;
+  color: #a1b8d2;
+  font-size: clamp(13px, 1.3vw, 18px);
+  line-height: 1.8;
+}
+.feice-auth-flight {
+  display: block;
+  width: calc(100% + 40px);
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  margin: 16px -20px 0;
+}
+.feice-auth-capabilities {
+  display: flex;
+  flex: none;
+  gap: 14px;
+  color: #9dbad5;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  padding-top: 16px;
+}
+.feice-auth-capabilities i {
+  font-style: normal;
+  color: #47667e;
+}
+.feice-auth-workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 34px 8%;
+  background: var(--theme-bg);
+}
+.feice-auth-language {
+  text-align: right;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+.feice-auth-stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+  margin: 40px auto;
+}
+.feice-auth-card {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.feice-auth-card-kicker {
+  margin: 0 0 16px;
+  color: var(--theme-accent);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.18em;
+}
+.feice-auth-card h2 {
+  margin: 0;
+  font-size: 31px;
+  font-weight: 650;
+  letter-spacing: -0.8px;
+}
+.feice-auth-card-description {
+  margin: 10px 0 36px;
+  color: var(--theme-text-tertiary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.feice-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.feice-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+.feice-auth-field > label {
+  color: var(--theme-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.feice-auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.feice-auth-input-icon {
+  position: absolute;
+  left: 15px;
+  width: 18px;
+  height: 18px;
+  color: var(--theme-text-secondary);
+  pointer-events: none;
+}
+.feice-auth-input {
+  width: 100%;
+  min-width: 0;
+  height: 50px;
+  padding: 0 44px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-input-border);
+  border-radius: 7px;
+  color: var(--theme-text);
+  font: 13px var(--theme-display-font);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.feice-auth-input::placeholder {
+  color: var(--theme-text-tertiary);
+}
+.feice-auth-input:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px var(--theme-focus-ring);
+}
+.feice-auth-eye {
+  position: absolute;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--theme-text-tertiary);
+  cursor: pointer;
+}
+.feice-auth-eye:hover {
+  color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+}
+.feice-auth-eye svg {
+  width: 18px;
+  height: 18px;
+}
+.feice-auth-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+.feice-auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+.feice-auth-remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--theme-accent);
+  margin: 0;
+}
+.feice-auth-options-note {
+  font-size: 10px;
+  color: var(--theme-text-tertiary);
+}
+.feice-auth-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 49px;
+  padding: 12px;
+  border: 1px solid var(--theme-accent);
+  border-radius: 7px;
+  background: var(--theme-accent);
+  color: #ffffff;
+  font: 600 14px var(--theme-display-font);
+  cursor: pointer;
+}
+.feice-auth-submit:hover:not(:disabled) {
+  background: var(--theme-accent-hover);
+  border-color: var(--theme-accent-hover);
+}
+.feice-auth-submit:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.feice-auth-submit svg {
+  width: 18px;
+  height: 18px;
+}
+.feice-auth a {
+  color: var(--theme-accent);
+  text-decoration: none;
+}
+.feice-auth-switch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--theme-text-tertiary);
+}
+.feice-auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 7px;
+  background: var(--theme-danger-soft);
+  color: var(--theme-danger);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.feice-auth-error svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 2px;
+}
+.feice-auth-help {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 24px;
+  margin-top: 30px;
+  border-top: 1px solid var(--theme-border);
+  font-size: 11px;
+}
+.feice-auth-help :is(a, button) {
+  padding: 0;
+  color: var(--theme-text-tertiary);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.feice-auth-help :is(a, button):hover {
+  color: var(--theme-accent);
+}
+.feice-auth-help > span {
+  color: var(--theme-text-tertiary);
+}
+.feice-auth-footer {
+  text-align: right;
+  color: var(--theme-text-tertiary);
+  font-size: 10px;
+  line-height: 1.8;
+}
+.feice-auth-tip {
+  margin: 0;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.feice-auth-success {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: var(--theme-accent-soft);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.feice-auth-success strong {
+  color: var(--theme-accent);
+}
+.feice-auth-success p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.feice-auth--register .feice-auth-form {
+  gap: 15px;
+}
+.feice-auth :is(a, button, input[type="checkbox"]):focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 3px;
+}
+@media (min-width: 1800px) {
+  .feice-auth-brand-panel {
+    padding-inline: 10%;
+  }
+  .feice-auth-stage {
+    max-width: 450px;
+  }
+}
+@media (max-width: 1023px) {
+  .feice-auth {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .feice-auth-brand-panel {
+    padding: 22px 32px;
+  }
+  .feice-auth .feice-auth-brand .feice-auth-logo-dark {
+    width: 150px;
+  }
+  .feice-auth-story {
+    padding-top: 20px;
+  }
+  .feice-auth-story h1 {
+    font-size: 25px;
+    line-height: 1.4;
+  }
+  .feice-auth-story h1 br {
+    display: none;
+  }
+  .feice-auth-description {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .feice-auth-flight,
+  .feice-auth-capabilities {
+    display: none;
+  }
+  .feice-auth-workspace {
+    padding: 22px 28px;
+  }
+  .feice-auth-stage {
+    margin: 20px auto 36px;
+  }
+  .feice-auth-footer {
+    text-align: center;
+  }
+}
+@media (max-width: 420px) {
+  .feice-auth-brand-panel {
+    padding: 20px 24px;
+  }
+  .feice-auth-story h1 {
+    font-size: 20px;
+    letter-spacing: -0.4px;
+  }
+  .feice-auth-workspace {
+    padding: 18px 24px;
+  }
+  .feice-auth-card h2 {
+    font-size: 26px;
+  }
+  .feice-auth-card-description {
+    font-size: 12px;
+    margin-bottom: 26px;
+  }
+  .feice-auth-options-note {
+    display: none;
+  }
+  .feice-auth-help {
+    gap: 9px;
+  }
+}

@@ -11,7 +11,7 @@
         <a-tag v-if="aiStatusHasConfig" :color="aiStatusSupportsVision ? 'arcoblue' : 'purple'">
           {{ aiStatusSupportsVision ? '视觉 + 文本' : '文本模式' }}
         </a-tag>
-        <a-button size="mini" :loading="aiStatusLoading" @click="emit('refresh-ai-status')">刷新 AI 状态</a-button>
+        <a-button class="fc-ai-action" size="mini" :loading="aiStatusLoading" @click="emit('refresh-ai-status')">刷新 AI 状态</a-button>
         <a-button size="mini" type="outline" @click="emit('open-llm-config')">模型配置</a-button>
       </a-space>
     </div>
@@ -105,7 +105,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 18px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -158,7 +158,7 @@ const emit = defineEmits<{
 
 .ai-status-item,
 .ai-activity-panel {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
   background:
     linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.04)),
@@ -237,8 +237,7 @@ const emit = defineEmits<{
 .ai-activity-empty {
   border-color: rgba(var(--theme-accent-rgb), 0.16);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.04)),
-    rgba(var(--theme-surface-rgb), 0.72);
+    var(--theme-surface);
   color: var(--theme-text-secondary);
 }
 

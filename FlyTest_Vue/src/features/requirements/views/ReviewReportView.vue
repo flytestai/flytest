@@ -536,7 +536,7 @@ onMounted(() => {
   padding: 24px;
   background: white !important;
   border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: var(--theme-card-shadow) !important;
   gap: 24px;
 }
 
@@ -591,7 +591,7 @@ onMounted(() => {
 .metric-card {
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .metric-content {
@@ -641,7 +641,7 @@ onMounted(() => {
 .distribution-card,
 .modules-card,
 .issues-card {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .summary-content {
@@ -710,7 +710,7 @@ onMounted(() => {
   border: 1px solid var(--theme-surface-soft);
   border-radius: 8px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--theme-surface-soft);
 }
 
 .module-header {
@@ -792,12 +792,12 @@ onMounted(() => {
 
 .issue-item:hover {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(0, 160, 233, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .issue-item.resolved {
   opacity: 0.6;
-  background: #f8f9fa;
+  background: var(--theme-surface-soft);
 }
 
 .issue-header {
@@ -857,7 +857,7 @@ onMounted(() => {
   min-height: 300px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 /* 内容切换动画 */

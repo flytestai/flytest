@@ -75,7 +75,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
 
 .detail-card,
 .detail-panel {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -88,8 +88,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   min-height: 124px;
   padding: 20px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
-    var(--theme-card-bg);
+    var(--theme-surface);
 }
 
 .detail-label,
@@ -186,11 +185,10 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.025)),
-    rgba(255, 255, 255, 0.03);
+    var(--theme-surface);
 }
 
 .empty-note {
@@ -199,7 +197,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.14);
   background: rgba(var(--theme-accent-rgb), 0.04);
 }

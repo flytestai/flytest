@@ -66,7 +66,7 @@ const emit = defineEmits<SettingsServiceHealthCardEmits>()
 
 <style scoped>
 .settings-card {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -118,7 +118,7 @@ const emit = defineEmits<SettingsServiceHealthCardEmits>()
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--color-border-2);
   background: var(--color-fill-2);
 }

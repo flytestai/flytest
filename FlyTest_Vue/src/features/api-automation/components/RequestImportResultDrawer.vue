@@ -136,9 +136,9 @@ const stringifyBlock = (value: unknown) => {
 .json-block {
   margin: 0;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(15, 23, 42, 0.95);
-  color: #e2e8f0;
+  color: var(--theme-border);
   font-size: 12px;
   line-height: 1.7;
   white-space: pre-wrap;

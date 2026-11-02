@@ -106,8 +106,8 @@ const {
 .page-shell :deep(.arco-card),
 .page-shell :deep(.notification-card),
 .page-shell :deep(.stats-card) {
-  border-radius: 20px;
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-shell :deep(.arco-card-body) {

@@ -95,7 +95,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--theme-card-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--theme-surface);
 }
 
 .preview-image.large {
@@ -114,7 +114,7 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   justify-content: center;
   gap: 10px;
   border: 1px dashed var(--theme-card-border);
-  border-radius: 14px;
+  border-radius: 12px;
   color: var(--theme-text-secondary);
 }
 

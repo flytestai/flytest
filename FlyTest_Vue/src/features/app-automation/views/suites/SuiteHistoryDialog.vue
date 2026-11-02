@@ -76,9 +76,9 @@ const emit = defineEmits<SuiteHistoryDialogEmits>()
 
 :deep(.arco-table) {
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
-  border-radius: 18px;
+  border-radius: 12px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--theme-surface);
 }
 
 :deep(.arco-table-th) {

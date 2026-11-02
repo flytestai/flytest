@@ -1,5 +1,6 @@
 <template>
   <div class="user-management fc-page">
+    <WorkspacePageHeader title="用户管理" description="管理成员账号、审核申请与账号状态" />
     <div class="approval-filter-bar">
       <a-radio-group
         v-model="approvalFilter"
@@ -287,6 +288,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message, Modal, Row as ARow, Col as ACol, Divider as ADivider } from '@arco-design/web-vue';
@@ -863,10 +865,10 @@ const deleteUser = (user: User) => {
 <style scoped>
 .user-management {
   background: var(--ui-panel-bg);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 20px;
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   box-sizing: border-box;
 }
@@ -879,7 +881,7 @@ const deleteUser = (user: User) => {
   border-radius: 10px;
   border: 1px solid var(--ui-toolbar-border);
   background: var(--ui-toolbar-bg);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-header {
@@ -888,12 +890,11 @@ const deleteUser = (user: User) => {
   align-items: center;
   margin-bottom: 20px;
   padding: 18px 20px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--ui-toolbar-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .search-box {
@@ -968,7 +969,7 @@ const deleteUser = (user: User) => {
 .user-management :deep(.arco-table) {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .user-management :deep(.arco-table-container) {
@@ -983,7 +984,7 @@ const deleteUser = (user: User) => {
 }
 
 .user-management :deep(.arco-table-td) {
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--theme-surface);
 }
 
 .user-management :deep(.arco-table-tr:hover .arco-table-td) {
@@ -1002,14 +1003,14 @@ const deleteUser = (user: User) => {
 }
 
 .user-management :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .user-management :deep(.arco-modal-header) {
   padding: 18px 24px;
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+  background: var(--theme-surface);
 }
 
 .user-management :deep(.arco-modal-body) {

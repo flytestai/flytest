@@ -40,7 +40,7 @@ defineProps<ScheduledTaskStatsGridProps>()
 .stat-card {
   position: relative;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -50,7 +50,7 @@ defineProps<ScheduledTaskStatsGridProps>()
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 42%);
+  background: none;
   pointer-events: none;
 }
 

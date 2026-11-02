@@ -3,6 +3,7 @@ UI automation actuator websocket client.
 """
 
 import asyncio
+from contextlib import suppress
 import json
 import logging
 import time
@@ -23,6 +24,7 @@ class WebSocketClient:
     """WebSocket client for the Django backend."""
 
     VERSION = "1.0.0"
+    HEARTBEAT_INTERVAL = 30
 
     def __init__(self, url: str, actuator_id: str = "default", config: Any = None):
         self.url = url
@@ -295,8 +297,24 @@ class WebSocketClient:
         except Exception as exc:
             logger.error("Failed to handle message: %s", exc)
 
+    async def _heartbeat_loop(self):
+        # WebSocket protocol pings don't reach the Django consumer. Send an
+        # application message so idle and busy actuators keep their lease fresh.
+        while not self._stop_event.is_set():
+            try:
+                await asyncio.wait_for(self._stop_event.wait(), timeout=self.HEARTBEAT_INTERVAL)
+            except asyncio.TimeoutError:
+                if self.connected:
+                    await self.send(SocketDataModel(code=ResponseCode.SUCCESS, msg="heartbeat"))
+
     async def run(self):
         if not await self.connect():
             logger.error("Initial connection failed")
 
-        await self.receive_loop()
+        heartbeat = asyncio.create_task(self._heartbeat_loop())
+        try:
+            await self.receive_loop()
+        finally:
+            heartbeat.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat

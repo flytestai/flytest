@@ -105,7 +105,7 @@ const paletteTabModel = computed({
 <style scoped>
 .library-panel {
   min-height: 560px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -151,11 +151,10 @@ const paletteTabModel = computed({
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.03)),
-    rgba(var(--theme-accent-rgb), 0.06);
+    var(--theme-surface);
   cursor: pointer;
   transition:
     transform 0.18s ease,
@@ -168,9 +167,8 @@ const paletteTabModel = computed({
   transform: translateY(-2px);
   border-color: rgba(var(--theme-accent-rgb), 0.34);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.11), rgba(var(--theme-accent-rgb), 0.05)),
-    rgba(var(--theme-accent-rgb), 0.09);
-  box-shadow: 0 16px 28px rgba(var(--theme-accent-rgb), 0.12);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .component-item-custom {

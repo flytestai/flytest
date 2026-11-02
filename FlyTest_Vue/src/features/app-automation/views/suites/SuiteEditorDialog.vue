@@ -52,12 +52,11 @@ const emit = defineEmits<SuiteEditorDialogEmits>()
 <style scoped>
 .selected-preview {
   margin-top: 8px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.24);
   padding: 16px;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
+    var(--theme-surface);
 }
 
 .preview-title {
@@ -80,7 +79,7 @@ const emit = defineEmits<SuiteEditorDialogEmits>()
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   background: rgba(var(--theme-accent-rgb), 0.05);
 }
@@ -94,7 +93,7 @@ const emit = defineEmits<SuiteEditorDialogEmits>()
 }
 
 :deep(.arco-modal-content) {
-  border-radius: 20px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -102,8 +101,7 @@ const emit = defineEmits<SuiteEditorDialogEmits>()
   padding: 18px 24px;
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+    var(--theme-surface);
 }
 
 :deep(.arco-modal-body) {

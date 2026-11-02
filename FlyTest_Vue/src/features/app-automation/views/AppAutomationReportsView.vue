@@ -163,22 +163,21 @@ const {
   justify-content: center;
   color: var(--theme-text-secondary);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 253, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--theme-card-border);
-  border-radius: 24px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-shell :deep(.arco-tabs-content),
 .page-shell :deep(.arco-card),
 .page-shell :deep(.report-panel-card) {
-  border-radius: 20px;
+  border-radius: 12px;
 }
 
 .page-shell :deep(.arco-card),
 .page-shell :deep(.report-panel-card) {
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .report-tabs :deep(.arco-tabs-nav) {

@@ -130,9 +130,9 @@ const handleCancel = () => {
 
 .execution-confirm-content :deep(.arco-descriptions) {
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.16);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .execution-confirm-content :deep(.arco-descriptions-item-label) {
@@ -142,18 +142,18 @@ const handleCancel = () => {
 }
 
 .execution-confirm-content :deep(.arco-descriptions-item-value) {
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--theme-surface);
 }
 
 :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 :deep(.arco-modal-header) {
   padding: 18px 24px;
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+  background: var(--theme-surface);
 }
 
 :deep(.arco-modal-body) {

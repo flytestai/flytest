@@ -42,7 +42,7 @@
           管理提示词
         </a-button>
 
-        <a-button type="text" @click="goToLlmConfigs">
+        <a-button class="fc-ai-action" type="text" @click="goToLlmConfigs">
           <template #icon>
             <icon-settings />
           </template>
@@ -234,7 +234,7 @@ defineExpose({
 .chat-header-container {
   background-color: var(--theme-surface);
   border-bottom: 1px solid var(--theme-border);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--theme-card-shadow);
   z-index: 1;
 }
 
@@ -310,7 +310,7 @@ defineExpose({
   gap: 8px;
   padding: 4px 8px;
   background-color: rgba(0, 0, 0, 0.04);
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 12px;
 }
 

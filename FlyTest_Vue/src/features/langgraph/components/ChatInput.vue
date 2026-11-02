@@ -338,7 +338,7 @@ const handlePaste = (e: ClipboardEvent) => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: linear-gradient(135deg, #f0f5ff 0%, var(--theme-accent-soft) 100%);
+  background: var(--theme-surface);
   border-left: 3px solid var(--theme-accent);
   border-radius: 0 8px 8px 0;
 }
@@ -379,7 +379,7 @@ const handlePaste = (e: ClipboardEvent) => {
   max-height: 150px;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .image-preview img {
@@ -441,7 +441,7 @@ const handlePaste = (e: ClipboardEvent) => {
 
 .chat-input:hover, .chat-input:focus {
   background-color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--theme-card-shadow);
 }
 
 /* 确保文本框内容样式正确 */
@@ -459,7 +459,7 @@ const handlePaste = (e: ClipboardEvent) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(22, 93, 255, 0.1), rgba(22, 93, 255, 0.05));
+  background: var(--theme-surface);
   border: 2px dashed var(--theme-accent);
   border-radius: 12px;
   display: flex;
@@ -498,7 +498,7 @@ const handlePaste = (e: ClipboardEvent) => {
   display: flex;
   align-items: center;
   gap: 4px;
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 0 16px;
   height: 44px;
   flex-shrink: 0;
@@ -509,7 +509,7 @@ const handlePaste = (e: ClipboardEvent) => {
   display: flex;
   align-items: center;
   gap: 4px;
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 0 16px;
   height: 44px;
   flex-shrink: 0;

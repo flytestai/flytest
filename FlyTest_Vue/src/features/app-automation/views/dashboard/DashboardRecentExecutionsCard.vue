@@ -47,7 +47,7 @@ const emit = defineEmits<DashboardRecentExecutionsCardEmits>()
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   box-shadow: var(--theme-card-shadow);
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .recent-card :deep(.arco-table-th),

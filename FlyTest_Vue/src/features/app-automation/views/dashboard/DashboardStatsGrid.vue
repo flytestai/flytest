@@ -25,7 +25,7 @@
       <div class="stat-value">{{ activeTaskCount }}</div>
       <div class="stat-meta">暂停 {{ pausedTaskCount }} / 失败 {{ failedTaskCount }}</div>
     </a-card>
-    <a-card class="stat-card fc-metric fc-panel">
+    <a-card class="stat-card fc-metric fc-panel fc-ai-metric">
       <div class="stat-label">AI 智能模式</div>
       <div class="stat-value">{{ aiReady ? 'ON' : aiHasConfig ? 'Fallback' : 'OFF' }}</div>
       <div class="stat-meta">{{ aiCapabilityDisplay }}</div>
@@ -53,14 +53,14 @@ defineProps<DashboardStatsGridProps>()
   background: var(--theme-card-bg);
   border: 1px solid var(--theme-card-border);
   box-shadow: var(--theme-card-shadow);
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .stat-card::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 42%);
+  background: none;
   pointer-events: none;
 }
 

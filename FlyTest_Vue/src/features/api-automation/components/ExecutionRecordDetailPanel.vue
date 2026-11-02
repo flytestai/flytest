@@ -21,7 +21,7 @@
       <a-divider>AI 失败复盘</a-divider>
 
       <div class="ai-analysis-toolbar">
-        <a-button type="primary" size="small" :loading="analysisLoading" @click="loadFailureAnalysis">
+        <a-button class="fc-ai-action" type="primary" size="small" :loading="analysisLoading" @click="loadFailureAnalysis">
           {{ failureAnalysis ? '重新获取复盘建议' : '生成 AI 复盘建议' }}
         </a-button>
         <span v-if="failureAnalysis" class="ai-analysis-toolbar__meta">
@@ -347,8 +347,8 @@ watch(
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(15, 118, 110, 0.08));
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(14, 165, 233, 0.14);
 }
 
@@ -388,7 +388,7 @@ watch(
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.82);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
@@ -410,8 +410,8 @@ watch(
   flex-direction: column;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
@@ -449,13 +449,13 @@ watch(
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.82);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .workflow-summary-card--primary {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(59, 130, 246, 0.08));
+  background: var(--theme-surface);
 }
 
 .workflow-summary-card__label {
@@ -486,8 +486,8 @@ watch(
 
 .workflow-step-card {
   padding: 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
@@ -524,7 +524,7 @@ watch(
 .workflow-step-card__error {
   margin-top: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(254, 242, 242, 0.9);
   color: #b91c1c;
   font-size: 12px;
@@ -535,9 +535,9 @@ watch(
 .workflow-step-card__note {
   margin-top: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(239, 246, 255, 0.9);
-  color: #1d4ed8;
+  color: var(--theme-accent-hover);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -563,9 +563,9 @@ watch(
 .json-block {
   margin: 0;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(15, 23, 42, 0.95);
-  color: #e2e8f0;
+  color: var(--theme-border);
   font-size: 12px;
   line-height: 1.7;
   white-space: pre-wrap;

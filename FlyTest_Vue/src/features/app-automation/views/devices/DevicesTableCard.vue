@@ -107,7 +107,7 @@ const emit = defineEmits<DevicesTableCardEmits>()
 <style scoped>
 .table-card {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);

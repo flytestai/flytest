@@ -92,10 +92,10 @@ const emit = defineEmits<NotificationsTableCardEmits>()
 
 <style scoped>
 .table-card {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .meta-stack {
@@ -125,7 +125,7 @@ const emit = defineEmits<NotificationsTableCardEmits>()
 }
 
 .table-card :deep(.arco-table) {
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 

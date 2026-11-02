@@ -23,35 +23,38 @@ AI、向量检索和设备执行能力需要配置相应模型、服务或设备
 
 ## 界面预览
 
-当前前端采用 A2 明亮工作台方案：统一 FeiCe 品牌、蓝色主操作、圆角卡片、紧凑筛选区和表格，以及适配桌面、平板和手机的导航与内容布局。支持深色主题。
+当前前端采用深蓝导航、浅色工作区、青绿主操作与紫色 AI 标识。登录页使用左右分栏；质量工作台突出风险与待办；测试资产支持目录、列表、详情审核三栏；接口支持同屏编辑、执行和响应检查。全站共用主题、控件和响应式规范，并保留深色主题。
+
+测试资产、接口、Web、APP 在主导航中使用直接入口，子页面在工作区标签中切换。知识库、团队、系统配置、自动化编排、详情与编辑控件已按同一规范补齐；见[剩余页面优化与验收记录](./docs/plans/2026-11-02-workbench-completion.md)。
 
 以下为当前代码的浏览器截图。业务数据来自隔离的演示接口夹具，包含统计字段的展示示例，不代表真实项目数据或所有后端字段均已接入。
 
 | 登录页 | 质量工作台 |
 | --- | --- |
-| ![FeiCe 登录页](./.github/readme-assets/a2-login.png) | ![FeiCe 质量工作台](./.github/readme-assets/a2-dashboard.png) |
+| ![FeiCe 登录页](./.github/readme-assets/navy-login.png) | ![FeiCe 质量工作台](./.github/readme-assets/navy-dashboard.png) |
 
-| 测试用例 | API 测试报告 |
+| 测试资产与审核 | API 请求工作区 |
 | --- | --- |
-| ![FeiCe 测试用例](./.github/readme-assets/a2-testcases.png) | ![FeiCe API 测试报告](./.github/readme-assets/a2-api-report.png) |
+| ![FeiCe 测试资产](./.github/readme-assets/navy-testcases.png) | ![FeiCe API 请求工作区](./.github/readme-assets/navy-api-workbench.png) |
 
 | Web / UI 自动化 | APP 自动化设备管理 |
 | --- | --- |
-| ![FeiCe Web 自动化](./.github/readme-assets/a2-ui-automation.png) | ![FeiCe APP 设备管理](./.github/readme-assets/a2-app-devices.png) |
+| ![FeiCe Web 自动化](./.github/readme-assets/navy-ui-automation.png) | ![FeiCe APP 设备管理](./.github/readme-assets/navy-app-devices.png) |
 
 <details>
 <summary>查看手机端布局</summary>
 
-<img src="./.github/readme-assets/a2-mobile.png" width="320" alt="FeiCe 手机端质量工作台" />
+<img src="./.github/readme-assets/navy-mobile.png" width="320" alt="FeiCe 手机端质量工作台" />
 
 </details>
 
 ### 质量指标配色
 
-- 主操作：蓝色 `#0066FF`；通过：绿色 `#008000`；风险：红色 `#E00000`。
+- 导航：深蓝 `#111E30`；工作区：`#F5F7FA`；主操作：青绿 `#008F83`；AI：紫色 `#7C5CE2`。
+- 通过：绿色 `#008000`；风险：红色 `#E00000`。操作色与质量状态色分开使用。
 - 执行通过率：原始值恰好为 **100%** 时绿色，其余有效通过率均为红色。
 - 待处理缺陷：红色；自动化覆盖率：**≥80%** 绿色、低于 80% 红色。
-- 执行趋势仅使用绿色和红色柱子表示通过与失败。
+- 执行趋势支持通过率与执行量视角，均仅使用绿色和红色表示通过与失败。
 - 无有效数据时显示占位或空状态。当前 Django 项目统计未提供自动化覆盖率字段时，首页显示“暂无覆盖率数据”，不根据不同资产数量推算覆盖率。
 
 ## 技术与仓库结构
@@ -205,7 +208,7 @@ node scripts/verify-a2-details.cjs
 
 这些检查在独立浏览器中拦截接口，不向业务库写入测试数据。截图与报告输出到被 Git 忽略的 `playwright-screenshots/`。布局夹具不能替代真实权限、模型、设备和外部服务的业务验收。
 
-最新 A2 验证记录涵盖 46 个主要入口在 1440 / 1024 / 390px 下的 138 项布局检查，以及 320px、弹窗、登录注册、质量阈值和交互专项检查，详见 [验收记录](./docs/plans/2026-10-30-feice-a2-verification.md)。
+本次深蓝青绿界面的检查范围与结果见[验收记录](./docs/plans/2026-11-02-navy-teal-verification.md)。此前 A2 版本的检查保留在[历史记录](./docs/plans/2026-10-30-feice-a2-verification.md)。
 
 ## 文档入口
 

@@ -121,19 +121,18 @@ const {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 253, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--theme-card-border);
-  border-radius: 24px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
   color: var(--theme-text-secondary);
 }
 
 .page-shell :deep(.arco-card),
 .page-shell :deep(.execution-card),
 .page-shell :deep(.stats-card) {
-  border-radius: 20px;
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-shell :deep(.arco-card-header) {

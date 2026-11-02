@@ -29,17 +29,22 @@
     <div v-else class="dashboard-content">
       <a-spin :loading="loading" tip="正在加载首页数据..." class="dashboard-spin">
         <section class="dashboard-heading">
-          <div><h2>质量概览</h2><p>掌握交付风险，推进今天的测试工作。</p></div>
-          <div class="dashboard-heading-actions"><a-button @click="refreshDashboardData()" :loading="loading">刷新数据</a-button><a-button type="primary" @click="goToTestcases">进入测试用例</a-button></div>
+          <div><h2>质量工作台</h2><p>掌握质量进展，让每次交付更有把握</p></div>
+          <div class="dashboard-heading-actions"><a-button @click="refreshDashboardData()" :loading="loading">刷新数据</a-button><a-button type="outline" @click="goToExecutionReports">查看报告</a-button></div>
         </section>
+
+
         <div class="dashboard-project-strip"><span>当前项目</span><strong>{{ currentProjectName }}</strong><span>实时汇总 · 每 2 分钟刷新</span></div>
         <section class="kpi-grid" aria-label="工作概览">
           <article v-for="card in overviewCards" :key="card.title" class="kpi-card" :class="{ 'kpi-card--primary': card.primary }" :data-quality="card.tone" :data-metric="card.key" :title="card.rule">
-            <div class="kpi-top"><span class="kpi-label">{{ card.title }}</span><span class="kpi-icon"><component :is="card.icon" /></span></div>
+            <span class="kpi-icon"><component :is="card.icon" /></span><div class="fc-kpi-copy"><span class="kpi-label">{{ card.title }}</span>
             <div class="kpi-value">{{ card.value }}</div>
             <div class="kpi-note">{{ card.note }}</div>
+            </div>
           </article>
         </section>
+
+        <section class="fc-quality-insight" aria-label="AI 质量洞察"><span class="fc-quality-insight__label"><icon-thunderbolt />AI 质量洞察</span><p>{{ qualitySummary }}</p><router-link to="/langgraph-chat" title="进入 AI 对话，分析当前项目质量问题">进入 AI 分析 →</router-link></section>
 
         <DashboardInsights
           :stats="statistics"
@@ -64,7 +69,7 @@ import { getProjectStatistics, getTokenUsageStats, type ProjectStatistics, type 
 import { useProjectStore } from '@/store/projectStore'
 import { useAuthStore } from '@/store/authStore'
 import DashboardInsights from '@/components/dashboard/DashboardInsights.vue'
-import { calculatePassRate, passRateTone, coverageTone, formatQualityPercent } from '@/utils/qualityStatus'
+import { calculatePassRate, passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { fetchTokenUsageStats } from '@/features/langgraph/services/llmConfigService'
 import type { TokenUsageStats as LlmTokenUsageStats } from '@/features/langgraph/types/llmConfig'
 
@@ -119,13 +124,17 @@ const usageStartDate = ref(formatDashboardDate(new Date()))
 const usageEndDate = ref(formatDashboardDate(new Date()))
 
 const rawPassRate = computed(() => calculatePassRate(statistics.value?.executions?.case_results?.passed || 0, statistics.value?.executions?.case_results?.total || 0))
-const automationCoverage = computed(() => statistics.value?.automation_coverage?.rate ?? null)
 const overviewCards = computed(() => [
-  { key: 'total', title: '测试用例总量', value: (statistics.value?.testcases?.total || 0).toLocaleString('zh-CN'), icon: IconFile, primary: true, tone: undefined, note: '待审核 ' + (statistics.value?.testcases?.by_review_status?.pending_review || 0) + ' 条', rule: '当前项目的测试资产总量' },
+  { key: 'total', title: '用例总量', value: (statistics.value?.testcases?.total || 0).toLocaleString('zh-CN'), icon: IconFile, primary: false, tone: undefined, note: '当前项目测试资产', rule: '当前项目的测试资产总量' },
   { key: 'pass-rate', title: '执行通过率', value: formatQualityPercent(rawPassRate.value), icon: passRateTone(rawPassRate.value) === 'success' ? IconCheck : IconClose, primary: false, tone: passRateTone(rawPassRate.value), note: rawPassRate.value === null ? '暂无执行数据' : '通过 ' + (statistics.value?.executions?.case_results?.passed || 0) + ' / ' + (statistics.value?.executions?.case_results?.total || 0), rule: '只有 100% 通过为绿色，其余为红色' },
   { key: 'open-defects', title: '待处理缺陷', value: (statistics.value?.bugs?.open || 0).toLocaleString('zh-CN'), icon: IconBug, primary: false, tone: 'danger', note: '高优先级 ' + (statistics.value?.bugs?.high_severity || 0) + ' 项', rule: '待处理缺陷使用红色' },
-  { key: 'coverage', title: '自动化覆盖率', value: formatQualityPercent(automationCoverage.value), icon: IconThunderbolt, primary: false, tone: coverageTone(automationCoverage.value), note: automationCoverage.value === null ? '暂无覆盖率数据' : '覆盖率目标 ≥80%', rule: '覆盖率低于 80% 为红色，达到 80% 为绿色' },
+  { key: 'pending-review', title: '待审核用例', value: (statistics.value?.testcases?.by_review_status?.pending_review || 0).toLocaleString('zh-CN'), icon: IconFile, primary: false, tone: 'ai', note: '待人工审核后使用', rule: '审核状态与最近执行结果独立统计' },
 ])
+const qualitySummary = computed(() => {
+  if (!statistics.value) return '暂无项目统计，加载后可查看质量风险摘要。'
+  const bugs = statistics.value.bugs?.high_severity || 0, review = statistics.value.testcases?.by_review_status?.pending_review || 0
+  return bugs ? `当前项目有 ${bugs} 项高严重度缺陷，建议优先回归验证；另有 ${review} 条用例待审核。` : `当前项目无高严重度缺陷，${review} 条用例待审核。可进入 AI 对话进一步分析测试覆盖与执行风险。`
+})
 
 const formatTokenCount = (count: number): string => {
   return count.toLocaleString('zh-CN')

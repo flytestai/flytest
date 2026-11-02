@@ -986,7 +986,7 @@ const deleteProject = (project: Project, event?: Event) => {
   background-color: var(--theme-surface);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   box-sizing: border-box;
 }
@@ -1063,7 +1063,7 @@ const deleteProject = (project: Project, event?: Event) => {
 
 .no-permission-content p {
   font-size: 14px;
-  color: #595959;
+  color: var(--theme-text-secondary);
   margin-bottom: 24px;
   line-height: 1.5;
 }
@@ -1169,28 +1169,27 @@ const deleteProject = (project: Project, event?: Event) => {
 
 .page-header {
   padding: 20px 22px;
-  border-radius: 16px;
+  border-radius: 12px;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 24%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
+    var(--theme-surface);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
 }
 
 :deep(.arco-table) {
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 :deep(.arco-table-container) {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(226, 232, 240, 0.92);
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--theme-surface);
 }
 
 :deep(.arco-table-th) {
-  background: #f8fafc;
+  background: var(--theme-surface-soft);
   color: var(--theme-text-secondary);
   font-weight: 600;
 }
@@ -1212,28 +1211,26 @@ const deleteProject = (project: Project, event?: Event) => {
 
 .no-permission-content {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
+    var(--theme-surface);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
-  border-radius: 14px;
+  box-shadow: var(--theme-card-shadow);
+  border-radius: 12px;
 }
 
 .workspace-hero--project-command {
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--ui-panel-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.1), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 253, 0.86));
-  box-shadow: var(--ui-panel-shadow);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(16px);
 }
 
 .workspace-hero--project-command::before {
   background-image:
-    linear-gradient(to right, rgba(var(--theme-accent-rgb), 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.06) 1px, transparent 1px);
+    none;
   background-size: 30px 30px;
   mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.08));
 }
@@ -1243,7 +1240,7 @@ const deleteProject = (project: Project, event?: Event) => {
   height: 160px;
   right: -44px;
   top: -56px;
-  background: radial-gradient(circle, rgba(var(--theme-accent-rgb), 0.16), transparent 66%);
+  background: none;
   filter: blur(10px);
 }
 
@@ -1302,7 +1299,7 @@ const deleteProject = (project: Project, event?: Event) => {
   border-radius: 10px;
   border-color: rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(255, 255, 255, 0.62));
+    var(--theme-surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(14px);
 }
@@ -1324,8 +1321,7 @@ const deleteProject = (project: Project, event?: Event) => {
   bottom: -18px;
   opacity: 0.58;
   background:
-    radial-gradient(circle at 35% 35%, rgba(135, 244, 255, 0.2), transparent 34%),
-    radial-gradient(circle at 50% 50%, rgba(var(--theme-accent-rgb), 0.16), transparent 72%);
+    var(--theme-surface);
 }
 
 .ellipsis-text {
@@ -1333,7 +1329,7 @@ const deleteProject = (project: Project, event?: Event) => {
 }
 
 :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 :deep(.arco-modal-header) {
@@ -1341,7 +1337,7 @@ const deleteProject = (project: Project, event?: Event) => {
 }
 
 :deep(.arco-modal-body) {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 253, 0.92));
+  background: var(--theme-surface);
 }
 
 :deep(.arco-select-view),

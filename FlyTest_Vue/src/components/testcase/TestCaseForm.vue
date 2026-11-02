@@ -986,7 +986,7 @@ const handleImageError = (_event: Event) => {
   background-color: var(--theme-surface);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.2), 0 0 10px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -1161,7 +1161,7 @@ const handleImageError = (_event: Event) => {
   /* 选中时的行样式 */
   .chosen-row {
     background-color: #f0f7ff;
-    box-shadow: 0 2px 8px rgba(22, 93, 255, 0.2);
+    box-shadow: var(--theme-card-shadow);
   }
 
   .field-error {
@@ -1225,7 +1225,7 @@ const handleImageError = (_event: Event) => {
 
   .screenshot-item:hover {
     border-color: var(--theme-accent);
-    box-shadow: 0 2px 8px rgba(22, 93, 255, 0.15);
+    box-shadow: var(--theme-card-shadow);
   }
 
   .screenshot-preview {
@@ -1368,24 +1368,24 @@ const handleImageError = (_event: Event) => {
 .screenshot-preview-modal :deep(.arco-modal-header) {
   border-bottom: 1px solid rgba(149, 161, 187, 0.14);
   padding: 18px 24px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
+  background: var(--theme-surface);
 }
 
 .screenshot-preview-modal :deep(.arco-modal-content) {
-  border-radius: 18px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .enhanced-preview-container {
   display: flex;
   height: 100%;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.9));
+  background: var(--theme-surface);
 }
 
 /* 左侧信息面板 */
 .preview-sidebar {
   width: 320px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--theme-surface);
   border-right: 1px solid rgba(149, 161, 187, 0.14);
   display: flex;
   flex-direction: column;
@@ -1472,7 +1472,7 @@ const handleImageError = (_event: Event) => {
 
 .thumbnail-item.active {
   border-color: var(--theme-accent);
-  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .thumbnail-image {
@@ -1516,8 +1516,8 @@ const handleImageError = (_event: Event) => {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 14px;
-  box-shadow: 0 22px 46px rgba(15, 23, 42, 0.16);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
   background-color: var(--theme-surface);
 }
 
@@ -1535,7 +1535,7 @@ const handleImageError = (_event: Event) => {
 .nav-button {
   position: absolute;
   pointer-events: auto;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: var(--theme-surface);
   border: 1px solid var(--theme-border);
   width: 40px;
   height: 40px;
@@ -1547,7 +1547,7 @@ const handleImageError = (_event: Event) => {
 
 .nav-button:hover:not(:disabled) {
   background-color: var(--theme-surface);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+  box-shadow: var(--theme-card-shadow);
   transform: scale(1.1);
 }
 

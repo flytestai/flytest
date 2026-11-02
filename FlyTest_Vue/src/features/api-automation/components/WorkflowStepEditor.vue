@@ -294,8 +294,8 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
   gap: 16px;
   padding: 16px 18px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.82), rgba(255, 255, 255, 0.96));
+  border-radius: 12px;
+  background: var(--theme-surface);
 }
 
 .workflow-step-editor__title {
@@ -321,16 +321,16 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
 .workflow-step-editor__empty {
   padding: 20px;
   border: 1px dashed rgba(148, 163, 184, 0.36);
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.75);
   color: var(--theme-text-secondary);
 }
 
 .workflow-step-card {
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 22px;
+  border-radius: 12px;
   background: var(--theme-surface);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
 }
 
@@ -340,7 +340,7 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.92));
+  background: var(--theme-surface);
 }
 
 .workflow-step-card__summary {
@@ -373,7 +373,7 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
 
 .workflow-step-card__warning {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(254, 242, 242, 0.92);
   color: #b91c1c;
   font-size: 12px;
@@ -382,9 +382,9 @@ const handleRequestChange = (step: ApiTestCaseWorkflowEditorStep, value: string 
 
 .workflow-step-card__note {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(239, 246, 255, 0.92);
-  color: #1d4ed8;
+  color: var(--theme-accent-hover);
   font-size: 12px;
   line-height: 1.7;
 }

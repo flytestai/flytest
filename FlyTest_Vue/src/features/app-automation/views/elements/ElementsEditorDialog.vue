@@ -219,7 +219,7 @@ const handleFileInputChange = (event: Event) => {
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--theme-card-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--theme-surface);
 }
 
 .preview-image.large {
@@ -238,7 +238,7 @@ const handleFileInputChange = (event: Event) => {
   margin-bottom: 16px;
   padding: 16px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(var(--theme-accent-rgb), 0.05);
 }
 

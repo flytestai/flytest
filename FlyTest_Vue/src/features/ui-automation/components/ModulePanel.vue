@@ -338,10 +338,10 @@ defineExpose({
 .module-panel {
   min-height: 0;
   height: auto;
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
 }
 
@@ -411,7 +411,7 @@ defineExpose({
 .module-action-button {
   min-width: 84px;
   padding-inline: 18px;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .tree-container {
@@ -428,17 +428,17 @@ defineExpose({
 
 .tree-container :deep(.arco-tree-node-title) {
   padding: 12px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 14px;
   line-height: 1.6;
 }
 
 .tree-container :deep(.arco-tree-node-title:hover) {
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(var(--theme-accent-rgb), 0.08);
 }
 
 .tree-container :deep(.arco-tree-node-selected .arco-tree-node-title) {
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(var(--theme-accent-rgb), 0.12);
 }
 
 .tree-node {

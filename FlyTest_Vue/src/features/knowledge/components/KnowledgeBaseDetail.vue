@@ -2,8 +2,9 @@
   <div class="knowledge-base-detail">
     <div class="detail-header fc-detail-heading">
       <h3>{{ knowledgeBase.name }}</h3>
-      <a-button type="text" @click="$emit('close')">
+      <a-button type="text" aria-label="返回知识库列表" @click="$emit('close')">
         <template #icon><icon-close /></template>
+        返回列表
       </a-button>
     </div>
 
@@ -698,7 +699,7 @@ onMounted(() => {
 }
 
 .document-title-link:hover {
-  color: #0e42d2;
+  color: var(--theme-accent-hover);
   text-decoration: underline;
 }
 </style>

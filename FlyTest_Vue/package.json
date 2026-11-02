@@ -35,7 +35,12 @@
     "test:asset-details": "node scripts/verify-a2-asset-details.cjs",
     "test:request-editor": "node scripts/verify-a2-request-editor.cjs",
     "test:workspace:directories": "node scripts/verify-contextual-workspaces.cjs",
-    "test:workspace:density": "node scripts/verify-workspace-density.cjs"
+    "test:workspace:density": "node scripts/verify-workspace-density.cjs",
+    "test:workbench": "node scripts/verify-navy-workbench.cjs",
+    "test:workbench:state": "node scripts/verify-navy-state.cjs",
+    "test:workbench:completion": "node scripts/verify-workbench-completion.cjs",
+    "test:workbench:navigation": "node scripts/verify-module-navigation.cjs",
+    "test:workbench:scrollbars": "node scripts/verify-transparent-scrollbars.cjs"
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.57.0",

@@ -37,7 +37,7 @@
             </template>
           </a-dropdown>
           <a-dropdown trigger="click" @select="handleSelectedCaseGenerationAction">
-            <a-button :disabled="!selectedRequestIds.length">
+            <a-button class="fc-ai-action" :disabled="!selectedRequestIds.length">
               AI 用例
             </a-button>
             <template #content>
@@ -99,7 +99,7 @@
               <a-space :size="4">
                 <a-button type="text" size="small" @click="executeRequest(record)">执行</a-button>
                 <a-dropdown trigger="click" @select="value => handleSingleCaseGenerationAction(record, value)">
-                  <a-button type="text" size="small">AI用例</a-button>
+                  <a-button class="fc-ai-action" type="text" size="small">AI用例</a-button>
                   <template #content>
                     <a-doption value="generate">生成</a-doption>
                     <a-doption value="regenerate">重新生成</a-doption>
@@ -126,7 +126,7 @@
                 </div>
               </div>
               <div class="request-case-panel__actions">
-                <a-button size="small" @click="generateCasesForRequest(record, 'generate')">AI生成</a-button>
+                <a-button class="fc-ai-action" size="small" @click="generateCasesForRequest(record, 'generate')">AI生成</a-button>
                 <a-button size="small" @click="generateCasesForRequest(record, 'regenerate')">重新生成</a-button>
                 <a-button size="small" @click="generateCasesForRequest(record, 'append')">追加生成</a-button>
               </div>
@@ -998,10 +998,10 @@ defineExpose({
   justify-content: space-between;
   gap: 22px;
   padding: 24px 26px;
-  border-radius: 24px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-summary,
@@ -1096,7 +1096,7 @@ defineExpose({
 
 .toolbar-group :deep(.arco-btn) {
   padding-inline: 16px;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .content-section {
@@ -1106,10 +1106,10 @@ defineExpose({
 }
 
 .content-section :deep(.arco-table-container) {
-  border-radius: 24px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .content-section :deep(.arco-table-th) {
@@ -1127,7 +1127,7 @@ defineExpose({
   flex-direction: column;
   gap: 16px;
   padding: 24px 26px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
 }
 
 .request-case-panel__header {
@@ -1175,10 +1175,10 @@ defineExpose({
   justify-content: space-between;
   gap: 14px;
   padding: 18px 20px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .request-case-card__main {
@@ -1261,11 +1261,10 @@ defineExpose({
   gap: 16px;
   margin-bottom: 18px;
   padding: 16px 18px;
-  border-radius: 20px;
-  border: 1px solid rgba(59, 130, 246, 0.14);
+  border-radius: 12px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(20, 184, 166, 0.08)),
-    rgba(255, 255, 255, 0.92);
+    var(--theme-surface);
 }
 
 .prefill-copy {
@@ -1322,7 +1321,7 @@ defineExpose({
   text-align: right;
   font-size: 13px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .import-progress-hero {
@@ -1330,20 +1329,19 @@ defineExpose({
   flex-direction: column;
   gap: 10px;
   padding: 22px 24px;
-  border-radius: 24px;
+  border-radius: 12px;
   background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(15, 118, 110, 0.12)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 252, 0.92));
-  border: 1px solid rgba(59, 130, 246, 0.14);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    var(--theme-surface);
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-progress-badge {
   width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
+  background: rgba(var(--theme-accent-rgb), 0.12);
+  color: var(--theme-accent-hover);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1372,30 +1370,28 @@ defineExpose({
   align-items: flex-start;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--theme-surface);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .import-progress-step.is-active {
-  border-color: rgba(59, 130, 246, 0.26);
-  box-shadow: 0 16px 34px rgba(59, 130, 246, 0.12);
+  border-color: rgba(var(--theme-accent-rgb), 0.26);
+  box-shadow: var(--theme-card-shadow);
   transform: translateY(-1px);
 }
 
 .import-progress-step.is-finished {
   border-color: rgba(20, 184, 166, 0.22);
   background:
-    linear-gradient(135deg, rgba(20, 184, 166, 0.08), rgba(255, 255, 255, 0.96)),
-    rgba(255, 255, 255, 0.92);
+    var(--theme-surface);
 }
 
 .import-progress-step.is-error {
   border-color: rgba(239, 68, 68, 0.24);
   background:
-    linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(255, 255, 255, 0.96)),
-    rgba(255, 255, 255, 0.92);
+    var(--theme-surface);
 }
 
 .import-progress-step-marker {
@@ -1406,24 +1402,24 @@ defineExpose({
   height: 34px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.14);
-  color: #334155;
+  color: var(--theme-text-secondary);
   font-size: 13px;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .import-progress-step.is-active .import-progress-step-marker {
-  background: linear-gradient(135deg, var(--theme-accent), #14b8a6);
+  background: var(--theme-surface);
   color: #fff;
 }
 
 .import-progress-step.is-finished .import-progress-step-marker {
-  background: linear-gradient(135deg, var(--theme-success), #14b8a6);
+  background: var(--theme-surface);
   color: #fff;
 }
 
 .import-progress-step.is-error .import-progress-step-marker {
-  background: linear-gradient(135deg, var(--theme-danger), #f97316);
+  background: var(--theme-surface);
   color: #fff;
 }
 
@@ -1458,12 +1454,11 @@ defineExpose({
   flex-direction: column;
   gap: 14px;
   padding: 22px 24px;
-  border-radius: 24px;
+  border-radius: 12px;
   background:
-    linear-gradient(135deg, rgba(13, 148, 136, 0.14), rgba(15, 23, 42, 0.06)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 252, 0.92));
+    var(--theme-surface);
   border: 1px solid rgba(13, 148, 136, 0.16);
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-hero-badge {
@@ -1500,9 +1495,9 @@ defineExpose({
 .hero-pill {
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
-  color: #334155;
+  color: var(--theme-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1514,10 +1509,10 @@ defineExpose({
   align-items: center;
   gap: 10px;
   padding: 28px 24px;
-  border-radius: 26px;
+  border-radius: 12px;
   border: 1.5px dashed rgba(15, 118, 110, 0.26);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 250, 249, 0.88));
+    var(--theme-surface);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
 }
@@ -1526,7 +1521,7 @@ defineExpose({
 .document-dropzone.is-dragging {
   transform: translateY(-1px);
   border-color: rgba(13, 148, 136, 0.5);
-  box-shadow: 0 18px 40px rgba(15, 118, 110, 0.12);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .document-dropzone.has-file {
@@ -1544,13 +1539,13 @@ defineExpose({
   justify-content: center;
   width: 68px;
   height: 68px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, var(--theme-success), #14b8a6);
+  border-radius: 12px;
+  background: var(--theme-surface);
   color: #fff;
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.06em;
-  box-shadow: 0 18px 36px rgba(15, 118, 110, 0.2);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .dropzone-title {
@@ -1576,8 +1571,8 @@ defineExpose({
   max-width: 680px;
   margin-top: 8px;
   padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
@@ -1603,11 +1598,11 @@ defineExpose({
   flex-direction: column;
   gap: 14px;
   padding: 20px;
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid rgba(13, 148, 136, 0.14);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 250, 249, 0.88));
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .document-text-panel__header {
@@ -1663,16 +1658,15 @@ defineExpose({
   justify-content: space-between;
   gap: 20px;
   padding: 18px 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-option-card-primary {
   background:
-    linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(59, 130, 246, 0.08)),
-    rgba(255, 255, 255, 0.92);
+    var(--theme-surface);
 }
 
 .option-copy {
@@ -1706,8 +1700,8 @@ defineExpose({
 
 .empty-tip-card {
   padding: 44px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.76);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
@@ -1747,10 +1741,10 @@ defineExpose({
 
 .import-task-card {
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-task-head {
@@ -1786,7 +1780,7 @@ defineExpose({
   text-align: right;
   font-size: 12px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text);
 }
 
 .import-task-steps {
@@ -1817,7 +1811,7 @@ defineExpose({
 }
 
 .import-task-step.is-finished .import-task-step-dot {
-  background: #14b8a6;
+  background: var(--theme-accent);
 }
 
 .import-task-step.is-active {
@@ -1826,7 +1820,7 @@ defineExpose({
 
 .import-task-step.is-active .import-task-step-dot {
   background: var(--theme-accent);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-task-step.is-failed {
@@ -1835,13 +1829,13 @@ defineExpose({
 
 .import-task-step.is-failed .import-task-step-dot {
   background: var(--theme-danger);
-  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-task-error {
   margin-top: 12px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(254, 242, 242, 0.96);
   border: 1px solid rgba(248, 113, 113, 0.22);
   color: #b91c1c;
@@ -1860,19 +1854,18 @@ defineExpose({
   gap: 14px;
   min-width: 280px;
   padding: 14px 16px;
-  border: 1px solid rgba(59, 130, 246, 0.16);
-  border-radius: 20px;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
+  border-radius: 12px;
   background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(20, 184, 166, 0.1)),
-    rgba(255, 255, 255, 0.94);
-  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.14);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .import-task-float:hover {
   transform: translateY(-2px);
-  box-shadow: 0 26px 44px rgba(15, 23, 42, 0.18);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-task-float-badge {
@@ -1882,7 +1875,7 @@ defineExpose({
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--theme-accent), #14b8a6);
+  background: var(--theme-surface);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -1923,9 +1916,9 @@ defineExpose({
 .json-block {
   margin: 0;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 12px;
   background: rgba(15, 23, 42, 0.95);
-  color: #e2e8f0;
+  color: var(--theme-border);
   font-size: 12px;
   line-height: 1.7;
   white-space: pre-wrap;

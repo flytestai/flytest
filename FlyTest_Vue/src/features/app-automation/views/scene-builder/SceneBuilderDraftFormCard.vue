@@ -127,7 +127,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .draft-form-card {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -188,11 +188,10 @@ const emit = defineEmits<{
 
 .variable-list {
   border: 1px dashed rgba(var(--theme-accent-rgb), 0.24);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 16px;
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.025)),
-    rgba(var(--theme-accent-rgb), 0.04);
+    var(--theme-surface);
 }
 
 .variable-items {
@@ -207,8 +206,8 @@ const emit = defineEmits<{
   gap: 10px;
   align-items: center;
   padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
 }
 

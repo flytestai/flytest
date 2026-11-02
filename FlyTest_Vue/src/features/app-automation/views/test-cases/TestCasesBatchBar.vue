@@ -30,12 +30,11 @@ const emit = defineEmits<TestCasesBatchBarEmits>()
   justify-content: space-between;
   gap: 18px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.2);
   background:
-    linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.14), rgba(var(--theme-accent-rgb), 0.05)),
-    var(--theme-card-bg);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   color: var(--theme-text);
   overflow: hidden;
 }
@@ -69,7 +68,7 @@ const emit = defineEmits<TestCasesBatchBarEmits>()
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
-  background: linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.85), rgba(var(--theme-accent-rgb), 0.24));
+  background: none;
 }
 
 @media (max-width: 900px) {

@@ -458,11 +458,10 @@ watch(
   align-items: center;
   justify-content: center;
   overflow: auto;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background:
-    radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 48%),
-    rgba(9, 15, 28, 0.24);
+    var(--theme-surface);
   cursor: crosshair;
 }
 
@@ -471,8 +470,8 @@ watch(
   max-width: 100%;
   max-height: 560px;
   user-select: none;
-  border-radius: 18px;
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.28);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .capture-empty {
@@ -482,9 +481,9 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px dashed var(--theme-card-border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-surface);
   color: var(--theme-text-secondary);
   text-align: center;
   padding: 24px;
@@ -504,10 +503,10 @@ watch(
 
 .selection-box {
   position: absolute;
-  border: 2px solid rgba(59, 130, 246, 0.96);
-  border-radius: 16px;
-  background: rgba(59, 130, 246, 0.18);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(var(--theme-accent-rgb), 0.96);
+  border-radius: 12px;
+  background: rgba(var(--theme-accent-rgb), 0.18);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .selection-label {
@@ -531,7 +530,7 @@ watch(
   margin-top: -8px;
   border-radius: 999px;
   background: rgb(37, 99, 235);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .point-label {
@@ -557,7 +556,7 @@ watch(
 }
 
 .capture-sidebar {
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -593,9 +592,9 @@ watch(
   flex-direction: column;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-surface);
 }
 
 .summary-card-switch {

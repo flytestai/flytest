@@ -210,7 +210,7 @@ const handleSubStepSelectionChange = (step: AppSceneStep, groupKey: StepChildGro
 <style scoped>
 .canvas-panel {
   min-height: 560px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -252,11 +252,10 @@ const handleSubStepSelectionChange = (step: AppSceneStep, groupKey: StepChildGro
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.025)),
-    rgba(var(--theme-accent-rgb), 0.04);
+    var(--theme-surface);
   cursor: pointer;
   transition:
     border-color 0.18s ease,
@@ -273,7 +272,7 @@ const handleSubStepSelectionChange = (step: AppSceneStep, groupKey: StepChildGro
 .step-item.active,
 .sub-step-item.active {
   border-color: rgba(var(--theme-accent-rgb), 0.42);
-  box-shadow: 0 12px 28px rgba(var(--theme-accent-rgb), 0.12);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .step-main {
@@ -328,7 +327,7 @@ const handleSubStepSelectionChange = (step: AppSceneStep, groupKey: StepChildGro
 
 .sub-step-shell {
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(var(--theme-accent-rgb), 0.05);
   padding: 14px;
   display: flex;
@@ -341,7 +340,7 @@ const handleSubStepSelectionChange = (step: AppSceneStep, groupKey: StepChildGro
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background: rgba(var(--theme-accent-rgb), 0.04);
 }

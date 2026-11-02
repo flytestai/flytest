@@ -474,12 +474,11 @@ defineExpose({
   align-items: end;
   gap: 22px;
   padding: 26px 28px;
-  border-radius: 28px;
+  border-radius: 12px;
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.92));
+    var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-summary,
@@ -561,7 +560,7 @@ defineExpose({
 
 .page-toolbar :deep(.arco-btn) {
   padding-inline: 18px;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .state-card {
@@ -570,10 +569,10 @@ defineExpose({
   justify-content: center;
   min-height: 220px;
   padding: 32px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .content-section {
@@ -584,10 +583,10 @@ defineExpose({
 
 .run-card {
   padding: 22px;
-  border-radius: 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  border-radius: 12px;
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .run-card__header,
@@ -649,7 +648,7 @@ defineExpose({
 
 .interface-card {
   padding: 18px;
-  border-radius: 20px;
+  border-radius: 12px;
   background: rgba(248, 250, 252, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
@@ -671,7 +670,7 @@ defineExpose({
 
 .interface-card :deep(.arco-table-container) {
   margin-top: 14px;
-  border-radius: 18px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.12);
 }

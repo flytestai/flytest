@@ -148,7 +148,7 @@ const emit = defineEmits<ReportsExecutionPanelEmits>()
 .table-card,
 .stat-card {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -232,7 +232,7 @@ const emit = defineEmits<ReportsExecutionPanelEmits>()
 }
 
 .table-card :deep(.arco-table) {
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 

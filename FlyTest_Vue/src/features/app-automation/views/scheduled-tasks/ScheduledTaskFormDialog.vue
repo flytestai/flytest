@@ -187,10 +187,9 @@ const emit = defineEmits<ScheduledTaskFormDialogEmits>()
   gap: 10px;
   min-height: 108px;
   padding: 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.03)),
-    rgba(var(--theme-accent-rgb), 0.06);
+    var(--theme-surface);
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   color: var(--theme-text-secondary);
 }

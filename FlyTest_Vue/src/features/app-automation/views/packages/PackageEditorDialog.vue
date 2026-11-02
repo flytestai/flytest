@@ -72,9 +72,9 @@ const emit = defineEmits<PackageEditorDialogEmits>()
 
 .dialog-intro {
   padding: 18px 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.12), rgba(var(--theme-accent-rgb), 0.04));
+  background: var(--theme-surface);
 }
 
 .dialog-kicker {
@@ -113,7 +113,7 @@ const emit = defineEmits<PackageEditorDialogEmits>()
 
 .field-card {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
 }

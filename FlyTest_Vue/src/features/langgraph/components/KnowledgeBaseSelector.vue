@@ -243,7 +243,7 @@ onMounted(() => {
 }
 
 .active {
-  background-color: #e8f4ff;
+  background-color: var(--theme-accent-soft);
   color: var(--theme-accent);
 }
 </style>

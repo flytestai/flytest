@@ -827,6 +827,6 @@ const handlePromptTypeChange = (type: PromptType) => {
 }
 
 .type-info-icon:hover {
-  color: #0e42d2;
+  color: var(--theme-accent-hover);
 }
 </style>

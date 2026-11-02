@@ -12,6 +12,7 @@ const output = process.env.UI_OUTPUT_DIR || path.resolve(__dirname, '../playwrig
     for(const width of [1440,1024,390,320]){
       const context=await browser.newContext({viewport:{width,height:1000},reducedMotion:'reduce'});await installFixtures(context);
       const writes=[];
+      await context.route(/\/api\/projects\/1\/testcase-modules\/(?:tree\/)?(?:\?.*)?$/,route=>route.fulfill({json:{status:'success',success:true,code:200,data:[{id:1,name:'收银台',project:1,parent:null,parent_id:null,children:[],testcase_count:1,test_case_count:1}]}}));
       context.on('request',r=>{if(r.method()==='POST'&&/\/api\/projects\/$/.test(new URL(r.url()).pathname))writes.push(r.url())});
       await context.route(/\/api\/projects\/1\/testcases\/(?:\?.*)?$/,route=>route.fulfill({contentType:'application/json',body:JSON.stringify({status:'success',data:[{id:248,name:'银行卡支付成功回调处理',precondition:'检查支付结果与资金流水一致',level:'P0',review_status:'approved',execution_status:'passed',test_type:'functional',related_bug_count:0,module_detail:{id:1,name:'收银台'},creator_detail:{id:1,username:'review',real_name:'林晓'},created_at:'2026-10-30T08:00:00Z'}]})}));
       const page=await context.newPage();let errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -28,12 +29,12 @@ const output = process.env.UI_OUTPUT_DIR || path.resolve(__dirname, '../playwrig
       assert.deepEqual(clipped,[],`modal controls at ${width}`);
       await modal.getByRole('button',{name:'确定',exact:true}).click();await page.getByText('请输入项目名称',{exact:true}).last().waitFor();
       assert.equal(await modal.isVisible(),true,'Invalid form must remain open');assert.equal(writes.length,0,'Invalid form must not call create project');
-      assert.equal(await modal.evaluate(e=>getComputedStyle(e).borderRadius),width<768?'16px':'20px');
+      assert.equal(await modal.evaluate(e=>getComputedStyle(e).borderRadius),'12px');
       if(width<768)assert((await modal.boundingBox()).height<600,'A short mobile form must not stretch into a full-screen blank panel');
       await modal.screenshot({path:path.join(output,`project-dialog-${width}.png`)});
       await modal.getByRole('button',{name:'取消',exact:true}).click();await modal.waitFor({state:'hidden'});
       checks.push({check:'dialog bounds, validation, cancel and danger button color',width,passed:true});
-      await page.goto(base+'/testcases');const name=page.getByText('银行卡支付成功回调处理',{exact:true});await name.waitFor();
+      await page.goto(base+'/testcases');const name=page.getByRole('button',{name:/银行卡支付成功回调处理/});await name.waitFor();
       const uncovered=await name.evaluate(el=>{const r=el.getBoundingClientRect();const hit=document.elementFromPoint(Math.max(0,r.left)+8,r.top+r.height/2);return r.left<innerWidth-20&&hit?.closest('td')===el.closest('td')});
       assert(uncovered,`Case name must not be covered by fixed action columns at ${width}`);
       await page.screenshot({path:path.join(output,`populated-cases-${width}.png`)});checks.push({check:'populated testcase name stays readable beside actions',width,passed:true});

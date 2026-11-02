@@ -997,6 +997,7 @@ type BugTableColumnKey =
 const props = defineProps<{
   currentProjectId: number | null;
   selectedSuiteId: number | null;
+  initialBugId?: number | null;
 }>();
 const emit = defineEmits<{ 'view-mode-change': [value: 'list' | 'detail'] }>();
 
@@ -3195,6 +3196,9 @@ onUnmounted(() => {
 defineExpose({
   refresh: fetchBugs,
 });
+watch(() => [props.currentProjectId, props.selectedSuiteId, props.initialBugId], () => {
+  if (props.currentProjectId && props.selectedSuiteId && props.initialBugId) void openDetail({ id: props.initialBugId } as TestBug);
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -3293,7 +3297,7 @@ defineExpose({
 .quick-view-item {
   height: 32px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: 999px;
   color: var(--color-text-2);
@@ -3379,7 +3383,7 @@ defineExpose({
   color: rgb(var(--arcoblue-6));
   border-color: rgb(var(--arcoblue-6));
   background: rgba(var(--arcoblue-6), 0.12);
-  box-shadow: 0 0 0 1px rgba(var(--arcoblue-6), 0.08);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .bug-saved-view-chip:hover {
@@ -3523,7 +3527,7 @@ defineExpose({
   gap: 10px;
   margin-bottom: 12px;
   padding: 12px 14px;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-6), 0.04), rgba(var(--arcoblue-6), 0.01));
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--arcoblue-6), 0.12);
   border-radius: var(--ui-radius-md, 10px);
 }
@@ -3552,7 +3556,7 @@ defineExpose({
   gap: 12px;
   padding: 12px 14px;
   margin-bottom: 12px;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-1), 0.96), rgba(var(--arcoblue-2), 0.94));
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--arcoblue-4), 0.35);
   border-radius: var(--ui-radius-md, 10px);
 }
@@ -3591,7 +3595,7 @@ defineExpose({
   gap: 12px;
   padding: 12px 14px;
   margin-bottom: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(var(--arcoblue-1), 0.12));
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
 }
@@ -3732,14 +3736,14 @@ defineExpose({
   padding: 16px 18px;
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .bug-stable-row:hover {
   border-color: rgba(var(--arcoblue-6), 0.28);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--theme-card-shadow);
   transform: translateY(-1px);
 }
 
@@ -3874,10 +3878,10 @@ defineExpose({
   flex-direction: column;
   gap: 12px;
   padding: 20px 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.14));
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--arcoblue-6), 0.12);
   border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .bug-detail-page-title {
@@ -3954,10 +3958,10 @@ defineExpose({
   gap: 10px;
   padding: 12px;
   margin-bottom: 18px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--theme-surface);
   border: 1px solid rgba(203, 213, 225, 0.9);
   border-radius: var(--ui-radius-md, 10px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(12px);
 }
 
@@ -3971,10 +3975,10 @@ defineExpose({
 
 .bug-detail-section {
   padding: 18px 20px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .bug-detail-section--rich {
@@ -3989,7 +3993,7 @@ defineExpose({
 
 .bug-detail-field {
   padding: 13px 14px;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-1), 0.12), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
   min-width: 0;
@@ -4075,7 +4079,7 @@ defineExpose({
   padding: 12px;
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
-  background: linear-gradient(180deg, rgba(var(--arcoblue-1), 0.1), rgba(255, 255, 255, 0.96));
+  background: var(--theme-surface);
 }
 
 .bug-detail-attachment-image,
@@ -4111,15 +4115,15 @@ defineExpose({
   margin-top: 6px;
   border-radius: 999px;
   background: rgb(var(--arcoblue-6));
-  box-shadow: 0 0 0 4px rgba(var(--arcoblue-6), 0.12);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .bug-activity-main {
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 :deep(.bug-panel .arco-select-view),

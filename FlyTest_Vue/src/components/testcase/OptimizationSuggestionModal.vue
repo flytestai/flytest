@@ -146,7 +146,7 @@ const handleCancel = () => {
   align-items: center;
   gap: 24px;
   padding: 10px 14px;
-  background: linear-gradient(135deg, #f8f9fa 0%, var(--theme-surface-soft) 100%);
+  background: var(--theme-surface);
   border-radius: 6px;
   flex-wrap: wrap;
 }
@@ -359,7 +359,7 @@ const handleCancel = () => {
 }
 
 :root[data-theme='black'] .optimization-modal .precondition-section {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(180, 83, 9, 0.08));
+  background: var(--theme-surface);
   border-left-color: rgba(251, 191, 36, 0.78);
   color: #fde68a;
 }
@@ -405,7 +405,7 @@ const handleCancel = () => {
 }
 
 :root[data-theme='black'] .optimization-modal .optimization-hint {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(29, 78, 216, 0.1));
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--theme-accent-rgb), 0.28);
   color: #bfdbfe;
 }

@@ -58,9 +58,9 @@ defineProps<Props>()
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.1), rgba(var(--theme-accent-rgb), 0.04));
+  background: var(--theme-surface);
 }
 
 .summary-copy {
@@ -105,7 +105,7 @@ defineProps<Props>()
 
 .field-card {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
 }
@@ -119,7 +119,7 @@ defineProps<Props>()
 }
 
 .summary-alert {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 @media (max-width: 900px) {

@@ -2,7 +2,7 @@
   <div class="user-operation-log-view fc-page">
     <div class="operation-log-header">
       <div class="operation-log-title">
-        <a-button class="back-button" size="small" @click="goBack">
+        <a-button class="back-button" size="small" aria-label="返回用户列表" @click="goBack">
           <template #icon><icon-left /></template>
         </a-button>
         <div>

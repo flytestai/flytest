@@ -5,7 +5,7 @@
         <template #actions><a-space wrap class="page-actions">
       <a-tag :color="serviceStatusTagColor">{{ serviceStatusTagText }}</a-tag>
       <span class="header-tip">最近刷新：{{ lastUpdatedText }}</span>
-      <a-button :loading="aiStatusLoading" @click="emit('refresh-ai-status')">刷新 AI 状态</a-button>
+      <a-button class="fc-ai-action" :loading="aiStatusLoading" @click="emit('refresh-ai-status')">刷新 AI 状态</a-button>
       <a-button type="primary" :loading="loading" @click="emit('refresh-dashboard')">刷新总览</a-button>
     </a-space></template>
       </WorkspacePageHeader>
@@ -29,10 +29,9 @@ const emit = defineEmits<DashboardHeaderBarEmits>()
   gap: 18px;
   padding: 18px 20px;
   border: 1px solid var(--theme-card-border);
-  border-radius: 18px;
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.02)),
-    var(--theme-card-bg);
+    var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
 }
 

@@ -2234,11 +2234,10 @@ export default {
   padding: 0;
   gap: 16px;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.05), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--ui-panel-border);
-  border-radius: 22px;
-  box-shadow: var(--ui-panel-shadow);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
   overflow: visible;
 }
 
@@ -2249,9 +2248,9 @@ export default {
   flex-direction: column;
   height: 100%;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 253, 0.9));
+    var(--theme-surface);
   border: 1px solid rgba(149, 161, 187, 0.14);
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
   position: relative;
 }
@@ -2278,7 +2277,7 @@ export default {
   right: 12px;
   z-index: 2;
   border: 1px solid #d9dce3 !important;
-  background-color: rgba(255, 255, 255, 0.95) !important;
+  background-color: var(--theme-surface) !important;
 }
 
 /* 工具图片悬浮面板 */
@@ -2290,7 +2289,7 @@ export default {
   width: 320px;
   background: var(--theme-surface);
   border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
   animation: float-in 0.25s ease;
 }
@@ -2343,33 +2342,31 @@ export default {
 }
 
 .chat-sidebar {
-  border-radius: 28px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(149, 161, 187, 0.14);
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .chat-container {
-  border-radius: 30px;
+  border-radius: 12px;
 }
 
 .workspace-hero--chat-command {
   gap: 14px;
   margin: 14px 14px 10px;
   padding: 16px 18px;
-  border-radius: 24px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.12), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 249, 253, 0.78));
+    var(--theme-surface);
   box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(16px);
 }
 
 .workspace-hero--chat-command::before {
   background-image:
-    linear-gradient(to right, rgba(var(--theme-accent-rgb), 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.06) 1px, transparent 1px);
+    none;
   background-size: 30px 30px;
   mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.08));
 }
@@ -2379,7 +2376,7 @@ export default {
   height: 160px;
   right: -44px;
   top: -56px;
-  background: radial-gradient(circle, rgba(var(--theme-accent-rgb), 0.16), transparent 66%);
+  background: none;
   filter: blur(10px);
 }
 
@@ -2435,10 +2432,10 @@ export default {
   min-height: 92px;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 18px;
+  border-radius: 12px;
   border-color: rgba(var(--theme-accent-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(255, 255, 255, 0.62));
+    var(--theme-surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(14px);
 }
@@ -2460,8 +2457,7 @@ export default {
   bottom: -18px;
   opacity: 0.58;
   background:
-    radial-gradient(circle at 35% 35%, rgba(135, 244, 255, 0.2), transparent 34%),
-    radial-gradient(circle at 50% 50%, rgba(var(--theme-accent-rgb), 0.16), transparent 72%);
+    var(--theme-surface);
 }
 
 .chat-container::before {
@@ -2469,8 +2465,7 @@ export default {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 14%),
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 22%);
+    none;
   pointer-events: none;
 }
 
@@ -2488,11 +2483,11 @@ export default {
 }
 
 .floating-tool-image-panel {
-  border-radius: 22px;
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 250, 253, 0.92));
+    var(--theme-surface);
   border: 1px solid rgba(149, 161, 187, 0.14);
-  box-shadow: var(--theme-card-shadow-strong);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(18px);
 }
 
@@ -2504,13 +2499,13 @@ export default {
   .chat-layout {
     padding: 10px;
     gap: 10px;
-    border-radius: 18px;
+    border-radius: 12px;
   }
 
   .workspace-hero--chat-command {
     margin: 12px 12px 8px;
     padding: 14px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .workspace-hero--chat-command .workspace-hero-title {

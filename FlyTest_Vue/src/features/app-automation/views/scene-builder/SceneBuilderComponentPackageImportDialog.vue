@@ -104,7 +104,7 @@ const emit = defineEmits<{
 
 .field-card {
   padding: 16px 18px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
 }
@@ -125,11 +125,10 @@ const emit = defineEmits<{
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
   background:
-    linear-gradient(180deg, rgba(var(--theme-accent-rgb), 0.08), rgba(var(--theme-accent-rgb), 0.04)),
-    rgba(var(--theme-surface-rgb), 0.72);
+    var(--theme-surface);
 }
 
 .component-package-copy {

@@ -38,7 +38,7 @@ defineProps<ExecutionsStatsGridProps>()
 }
 
 .stat-card {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);

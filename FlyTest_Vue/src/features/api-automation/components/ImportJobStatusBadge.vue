@@ -241,36 +241,36 @@ watch(
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--theme-surface);
   border: 1px solid rgba(148, 163, 184, 0.16);
   color: var(--theme-text-secondary);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .import-job-badge:hover {
   transform: translateY(-1px);
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
-  border-color: rgba(59, 130, 246, 0.28);
+  box-shadow: var(--theme-card-shadow);
+  border-color: rgba(var(--theme-accent-rgb), 0.28);
 }
 
 .import-job-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--theme-text-tertiary), var(--theme-text-secondary));
-  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-job-dot.is-active {
-  background: linear-gradient(135deg, #38bdf8, var(--theme-accent));
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-job-dot.is-error {
-  background: linear-gradient(135deg, #fb7185, var(--theme-danger));
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-job-title {
@@ -288,7 +288,7 @@ watch(
   align-items: center;
   justify-content: center;
   background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
+  color: var(--theme-accent-hover);
   font-size: 12px;
   font-weight: 700;
 }
@@ -300,7 +300,7 @@ watch(
 }
 
 .import-task-alert {
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .import-task-list {
@@ -314,9 +314,9 @@ watch(
   flex-direction: column;
   gap: 12px;
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  background: var(--theme-surface);
 }
 
 .import-task-head {
@@ -395,8 +395,8 @@ watch(
 }
 
 .import-task-step.is-active .import-task-step-dot {
-  background: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  background: var(--theme-accent);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .import-task-step.is-failed {
@@ -409,7 +409,7 @@ watch(
 
 .import-task-error {
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(254, 226, 226, 0.72);
   color: #b91c1c;
   font-size: 13px;

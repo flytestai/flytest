@@ -121,7 +121,7 @@ const emit = defineEmits<ElementsTableCardEmits>()
 
 <style scoped>
 .table-card {
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: var(--theme-card-bg);
   box-shadow: var(--theme-card-shadow);
@@ -134,7 +134,7 @@ const emit = defineEmits<ElementsTableCardEmits>()
   gap: 12px;
   margin-bottom: 16px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.16);
   background: rgba(var(--theme-accent-rgb), 0.05);
   color: var(--theme-text);
@@ -155,7 +155,7 @@ const emit = defineEmits<ElementsTableCardEmits>()
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--theme-card-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--theme-surface);
 }
 
 .coordinate-preview,

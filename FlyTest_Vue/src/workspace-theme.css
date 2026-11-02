@@ -296,8 +296,8 @@ html body:has(.main-layout) .main-layout .arco-input-wrapper,
 html body:has(.main-layout) .main-layout .arco-select-view { border-radius: 7px !important; background: var(--theme-input-bg) !important; }
 html body:has(.main-layout) .main-layout .arco-btn { border-radius: 7px !important; box-shadow: none !important; }
 /* Keep Arco's danger/success/disabled button semantics. */
-html body:has(.main-layout) .main-layout .arco-btn-primary:not(.arco-btn-status-danger):not(.arco-btn-status-warning):not(.arco-btn-status-success):not(.arco-btn-disabled) { background: #3563e9 !important; border-color: #3563e9 !important; }
-html body:has(.main-layout) .main-layout .arco-btn-primary:not(.arco-btn-status-danger):not(.arco-btn-status-warning):not(.arco-btn-status-success):not(.arco-btn-disabled):hover { background: #264eca !important; }
+html body:has(.main-layout) .main-layout .arco-btn-primary:not(.arco-btn-status-danger):not(.arco-btn-status-warning):not(.arco-btn-status-success):not(.arco-btn-disabled):not(.fc-ai-action) { background: var(--theme-accent) !important; border-color: var(--theme-accent) !important; }
+html body:has(.main-layout) .main-layout .arco-btn-primary:not(.arco-btn-status-danger):not(.arco-btn-status-warning):not(.arco-btn-status-success):not(.arco-btn-disabled):not(.fc-ai-action):hover { background: var(--theme-accent-hover) !important; }
 html body:has(.main-layout) .main-layout .arco-btn-primary.arco-btn-status-danger { background: rgb(var(--danger-6)) !important; border-color: rgb(var(--danger-6)) !important; }
 html body:has(.main-layout) .main-layout .arco-btn-primary.arco-btn-status-warning { background: rgb(var(--warning-6)) !important; border-color: rgb(var(--warning-6)) !important; }
 html body:has(.main-layout) .main-layout .arco-btn-primary.arco-btn-status-success { background: rgb(var(--success-6)) !important; border-color: rgb(var(--success-6)) !important; }

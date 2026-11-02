@@ -1,0 +1,508 @@
+/* Remaining workspaces share the same dense surface and navigation contract. */
+/* Keep native wheel, touch, keyboard and drag scrolling; only hide its paint. */
+html body,
+html body * {
+  scrollbar-color: transparent transparent !important;
+}
+html body::-webkit-scrollbar,
+html body *::-webkit-scrollbar,
+html body::-webkit-scrollbar-track,
+html body *::-webkit-scrollbar-track,
+html body::-webkit-scrollbar-thumb,
+html body *::-webkit-scrollbar-thumb,
+html body::-webkit-scrollbar-corner,
+html body *::-webkit-scrollbar-corner,
+html body::-webkit-scrollbar-button,
+html body *::-webkit-scrollbar-button {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+html body .arco-scrollbar-thumb-bar,
+html body .monaco-scrollable-element > .scrollbar > .slider {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.app-automation-shell .fc-ai-metric .stat-label {
+  color: var(--theme-ai);
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .arco-btn.fc-ai-action:not(.arco-btn-disabled),
+html
+  body:has(.main-layout)
+  :is(.arco-modal, .arco-drawer)
+  .arco-btn.fc-ai-action:not(.arco-btn-disabled) {
+  color: var(--theme-ai) !important;
+  background: var(--theme-ai-soft) !important;
+  border-color: var(--theme-ai-border) !important;
+  box-shadow: none !important;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  :is(
+    .ui-automation-shell,
+    .app-automation-shell,
+    .testcase-management-container,
+    .testsuite-management-container,
+    .testbug-management-container,
+    .test-report-view,
+    .template-management-view
+  ) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.fc-module-header + .fc-workspace {
+  flex: 1;
+  min-height: 0;
+}
+.app-automation-shell .app-automation-layout {
+  flex: 1;
+  min-width: 0;
+}
+html body:has(.main-layout) .main-layout .fc-module-heading h2 {
+  font-size: 26px;
+  line-height: 1.4;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  :is(
+    .knowledge-management,
+    .permission-management,
+    .organization-management,
+    .user-management,
+    .apikey-management
+  ) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html body:has(.main-layout) .main-layout .knowledge-management {
+  gap: 0;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .knowledge-management
+  :is(.content-container, .detail-panel-full) {
+  min-height: 0;
+  margin-top: 0;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .knowledge-management
+  :is(.knowledge-base-list, .detail-panel-full) {
+  padding: 16px;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface);
+  box-shadow: none;
+}
+html body:has(.main-layout) .main-layout .knowledge-management .list-header {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html body:has(.main-layout) .main-layout .knowledge-management .filter-bar {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.knowledge-management .knowledge-base-list .search-bar {
+  flex: 0 1 340px;
+  min-width: 180px;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .knowledge-management:not(:has(.detail-panel-full)) {
+  height: auto;
+  overflow: visible;
+}
+.knowledge-management:not(:has(.detail-panel-full)) .content-container {
+  flex: none;
+  overflow: visible;
+}
+.knowledge-management .knowledge-base-list .search-bar .arco-input-wrapper {
+  width: 100% !important;
+}
+.knowledge-base-detail .detail-header {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+.knowledge-base-detail .info-grid {
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.knowledge-base-detail .info-section {
+  margin: 0;
+  padding: 14px;
+  background: var(--theme-surface);
+}
+.knowledge-base-detail .info-item {
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.knowledge-base-detail .info-item .value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.knowledge-base-detail .query-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+}
+.knowledge-base-detail .documents-section {
+  margin-bottom: 16px;
+}
+.knowledge-base-list .arco-table-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.knowledge-base-list .arco-table-cell .arco-space {
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+}
+.knowledge-base-list .arco-table-cell .arco-btn {
+  min-height: 28px !important;
+  padding: 0 6px;
+}
+.fc-knowledge-name {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme-accent);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+html body:has(.main-layout) .main-layout .permission-management .entity-panel {
+  flex: 0 0 240px;
+  width: 240px;
+  padding: 14px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.permission-management .permission-content {
+  gap: 14px;
+}
+.permission-management .permission-tree-container {
+  padding: 14px;
+}
+.permission-management .permission-panel {
+  min-width: 0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.permission-management .entity-item {
+  cursor: pointer;
+  border-radius: 8px;
+}
+.permission-management .entity-item:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: -2px;
+}
+html body:has(.main-layout) .main-layout .app-automation-shell .stats-grid {
+  gap: 12px;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .app-automation-shell
+  .stat-card
+  .arco-card-body {
+  min-height: 104px;
+  padding: 14px 16px;
+}
+.app-automation-shell .stat-card .stat-value {
+  margin-top: 8px;
+  font-size: 28px;
+}
+.app-automation-shell .stat-card .stat-meta {
+  margin-top: 6px;
+  font-size: 11px;
+}
+.app-automation-shell .dashboard-view .content-grid {
+  gap: 14px;
+  align-items: start;
+}
+.app-automation-shell .dashboard-view .summary-grid {
+  gap: 10px;
+}
+.app-automation-shell .dashboard-view .summary-item {
+  padding: 12px;
+  gap: 8px;
+  background: var(--theme-surface-soft);
+  border-color: var(--theme-border);
+}
+.app-automation-shell .dashboard-view .summary-item strong {
+  font-size: 26px;
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .app-automation-shell
+  .dashboard-view
+  .arco-card-header {
+  min-height: 46px;
+  padding: 0 16px;
+  border-bottom-color: var(--theme-border);
+}
+html
+  body:has(.main-layout)
+  .main-layout
+  .app-automation-shell
+  .dashboard-view
+  .arco-card-body {
+  padding: 16px;
+}
+.app-automation-shell .dashboard-view :is(.ai-grid, .task-grid) {
+  gap: 10px;
+}
+.app-automation-shell .dashboard-view :is(.ai-item, .task-item) {
+  padding: 12px;
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--theme-border);
+}
+.app-automation-shell .settings-shell {
+  max-width: none;
+  gap: 14px;
+  min-width: 0;
+}
+.app-automation-shell .settings-shell > * {
+  min-width: 0;
+}
+.app-automation-shell .settings-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 14px;
+}
+.app-automation-shell .settings-meta-card {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-automation-shell .settings-meta-card strong {
+  font-size: 15px;
+}
+.app-automation-shell .settings-meta-card span {
+  font-size: 11px;
+}
+html body .arco-modal :is(.editor-tab-header, .section-header) {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+html
+  body
+  :is(.fc-dialog, .arco-drawer)
+  :is(.arco-form-item-label, .arco-form-item-content) {
+  min-width: 0;
+}
+.document-detail :is(.workflow-indicator, .modules-section, .info-section) {
+  margin-bottom: 16px;
+}
+.document-detail .info-grid {
+  gap: 10px 20px;
+}
+.document-detail .modules-header {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.document-detail .modules-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.user-operation-log-view .operation-log-header {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.diagram-container .chat-fab {
+  background: var(--theme-ai) !important;
+  color: white !important;
+  border-color: var(--theme-ai) !important;
+}
+.main-layout .content:has(.trace-viewer) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.main-layout .trace-viewer {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+}
+.trace-viewer .trace-header {
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--theme-surface);
+}
+.trace-viewer .trace-title {
+  flex: 1;
+  min-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trace-viewer .trace-main {
+  min-width: 0;
+}
+.trace-viewer .snapshot-panel {
+  min-width: 0;
+}
+@container workspace (min-width:980px) {
+  .app-automation-shell .stats-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+@container workspace (min-width:1150px) {
+  .app-automation-shell .settings-shell {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+@media (max-width: 1023px) {
+  .permission-management .permission-content {
+    flex-direction: column;
+    overflow: visible;
+  }
+  html
+    body:has(.main-layout)
+    .main-layout
+    .permission-management
+    .entity-panel {
+    flex: auto;
+    width: 100%;
+    max-height: 380px;
+  }
+  .permission-management .entity-list {
+    min-height: 90px;
+  }
+  .permission-management .permission-panel {
+    min-height: 360px;
+  }
+  .knowledge-base-detail .info-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  .main-layout :is(.arco-table-col-fixed-left, .arco-table-col-fixed-right) {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+  }
+  .main-layout
+    :is(.arco-table-col-fixed-left, .arco-table-col-fixed-right)::after {
+    display: none !important;
+  }
+  html body:has(.main-layout) .main-layout .fc-module-heading h2 {
+    font-size: 22px;
+  }
+  html
+    body:has(.main-layout)
+    .main-layout
+    .knowledge-management
+    :is(.knowledge-base-list, .detail-panel-full) {
+    padding: 12px;
+  }
+  .knowledge-management .knowledge-base-list .search-bar {
+    flex: 1 1 180px;
+  }
+  .knowledge-base-detail .query-settings {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .knowledge-base-detail .setting-item {
+    width: 100%;
+    min-width: 0;
+  }
+  .app-automation-shell .settings-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fc-page :is(.page-actions, .header-actions, .action-buttons) {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .permission-management .permission-tree-container {
+    padding: 12px;
+  }
+  .permission-management .details-header {
+    padding: 14px;
+  }
+  .main-layout .content:has(.trace-viewer) {
+    overflow: auto;
+  }
+  .main-layout .trace-viewer {
+    flex: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .trace-viewer .trace-main {
+    flex: none;
+    flex-direction: column;
+    min-height: 440px;
+    overflow: visible;
+  }
+  .trace-viewer .actions-panel {
+    width: 100% !important;
+    max-width: none;
+    max-height: 220px;
+  }
+  .trace-viewer .snapshot-panel {
+    min-height: 220px;
+  }
+  .trace-viewer .resizer {
+    display: none;
+  }
+  .trace-viewer .details-panel {
+    height: 380px !important;
+  }
+  .trace-viewer .network-filters {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .trace-viewer .filter-types {
+    flex-wrap: wrap;
+  }
+}

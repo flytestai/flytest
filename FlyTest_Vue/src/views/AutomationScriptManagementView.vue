@@ -1234,7 +1234,7 @@ onUnmounted(() => {
 }
 
 .code-container {
-  background: #f5f5f5;
+  background: var(--theme-surface-soft);
   border-radius: 4px;
   padding: 16px;
   max-height: 400px;
@@ -1256,7 +1256,7 @@ onUnmounted(() => {
 /* 执行报告详情样式 */
 .execution-detail {
   padding: 12px 16px;
-  background: #fafafa;
+  background: var(--theme-surface-soft);
 }
 
 .detail-section {
@@ -1421,7 +1421,7 @@ onUnmounted(() => {
 }
 
 .execution-logs-panel .log-item {
-  color: #cccccc;
+  color: var(--theme-border);
   line-height: 1.6;
   word-break: break-all;
 }
@@ -1455,7 +1455,7 @@ onUnmounted(() => {
 }
 
 .editor-title {
-  color: #cccccc;
+  color: var(--theme-border);
   font-size: 14px;
   font-weight: 500;
   display: flex;
@@ -1556,7 +1556,7 @@ onUnmounted(() => {
 
 .frame-dot.active {
   background: var(--theme-accent);
-  box-shadow: 0 0 4px var(--theme-accent);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .frame-info {

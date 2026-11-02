@@ -367,12 +367,11 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 18px 20px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--ui-panel-border);
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.08), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.92));
-  box-shadow: var(--ui-panel-shadow);
+    var(--theme-surface);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .page-header h1 {
@@ -394,12 +393,12 @@ onMounted(() => {
 .llm-config-management :deep(.arco-card),
 .llm-config-management :deep(.arco-table),
 .llm-config-management :deep(.arco-modal-content) {
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 .llm-config-management :deep(.arco-table) {
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .llm-config-management :deep(.arco-table-th) {

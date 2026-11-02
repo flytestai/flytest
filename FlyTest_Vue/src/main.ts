@@ -11,6 +11,8 @@ import './styles/a2-components.css'
 import './styles/workspace-layout.css'
 import './styles/workspace-density.css'
 import './styles/brand.css'
+import './styles/feice-workbench.css'
+import './styles/workbench-completion.css'
 
 import App from './App.vue'
 import router, { preloadPrivateRouteComponents } from './router'

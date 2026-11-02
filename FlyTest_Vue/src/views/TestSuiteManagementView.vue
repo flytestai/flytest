@@ -1,5 +1,6 @@
 <template>
   <div class="testsuite-management-container fc-page">
+    <AssetModuleHeader />
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
@@ -107,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
 import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
 import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
@@ -416,8 +418,7 @@ onMounted(async () => {
   display: flex;
   height: 100%;
   background:
-    radial-gradient(circle at top right, rgba(var(--arcoblue-6), 0.05), transparent 22%),
-    linear-gradient(180deg, #f5f8fd 0%, #eef4fb 100%);
+    var(--theme-surface);
   overflow: hidden;
 }
 
@@ -429,7 +430,7 @@ onMounted(async () => {
   background: var(--ui-panel-bg, var(--theme-surface));
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));
+  box-shadow: var(--theme-card-shadow);
 }
 
 .list-view-layout {
@@ -454,12 +455,12 @@ onMounted(async () => {
   flex: 0 0 6px;
   cursor: col-resize;
   border-radius: 999px;
-  background: linear-gradient(to bottom, rgba(22, 93, 255, 0.1), rgba(22, 93, 255, 0.26));
+  background: var(--theme-surface);
   opacity: 0.7;
 }
 
 .suite-panel-resizer:hover {
-  background: linear-gradient(to bottom, rgba(22, 93, 255, 0.18), rgba(22, 93, 255, 0.36));
+  background: var(--theme-surface);
   opacity: 1;
 }
 
@@ -496,10 +497,10 @@ onMounted(async () => {
   gap: 16px;
   margin-bottom: 12px;
   padding: 18px 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.12));
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--arcoblue-6), 0.12);
   border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .suite-toolbar-info {
@@ -531,10 +532,10 @@ onMounted(async () => {
   flex: 1;
   justify-content: center;
   align-items: center;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--theme-surface);
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--theme-card-shadow);
 }
 
 @media (max-width: 768px) {

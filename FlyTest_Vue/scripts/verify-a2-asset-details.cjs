@@ -76,7 +76,8 @@ async function checkPage(page, label) {
       }
       errors = [];
       await page.goto(base + '/testcases');
-      await page.getByRole('button', { name: '查看', exact: true }).first().click();
+      await page.getByRole('button', { name: /支付结果一致性与重复回调验证/ }).first().click();
+      await page.getByRole('button', { name: '查看完整详情与附件 →', exact: true }).click();
       await page.getByRole('heading', { name: '测试用例详情', exact: true }).waitFor();
       await page.locator('.precondition-content').getByText(caseData.precondition, { exact: true }).waitFor();
       await checkPage(page, 'case detail');
@@ -89,7 +90,7 @@ async function checkPage(page, label) {
       assert.deepEqual(errors, [], 'case editor runtime');
       await page.screenshot({ path: path.join(output, `case-editor-${width}.png`) });
       await page.getByRole('button', { name: '取消', exact: true }).click();
-      await page.getByRole('button', { name: '查看', exact: true }).first().waitFor();
+      await page.getByRole('button', { name: new RegExp(caseData.name) }).first().waitFor();
       results.push({ view: 'case-editor', width, passed: true });
       await context.close();
     }

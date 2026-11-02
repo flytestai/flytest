@@ -80,9 +80,9 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
 
 .detail-hero-copy {
   padding: 20px 22px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
-  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb), 0.12), rgba(var(--theme-accent-rgb), 0.04));
+  background: var(--theme-surface);
 }
 
 .detail-kicker {
@@ -125,10 +125,10 @@ const visibleModel = defineModel<boolean>('visible', { required: true })
   flex-direction: column;
   gap: 8px;
   padding: 18px;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--theme-card-border);
   background: rgba(var(--theme-surface-rgb), 0.72);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .detail-panel-wide {

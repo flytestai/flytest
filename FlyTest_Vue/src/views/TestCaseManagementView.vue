@@ -1,5 +1,6 @@
 <template>
   <div class="testcase-management-container fc-page">
+    <AssetModuleHeader />
 
     <!-- 目录仅辅助资源切换，详情与编辑优先使用完整内容区。 -->
     <WorkspaceDirectoryLayout storage-key="testcases" directory-label="模块目录" :prioritize-content="viewMode !== 'list'"
@@ -13,8 +14,10 @@
         /></template>
 
 
+        <div class="fc-asset-layout"><div class="fc-asset-main">
         <!-- 列表视图 - 使用 v-show 保持组件状态（筛选条件等） -->
         <WorkspacePane :active="viewMode === 'list'"><TestCaseList
+          compact :selected-case-id="previewCaseId"
           :current-project-id="currentProjectId"
           :selected-module-id="selectedModuleId"
           :module-tree="moduleTreeForForm"
@@ -57,7 +60,9 @@
           @navigate="handleNavigateViewTestCase"
           @review-status-changed="handleReviewStatusChanged"
         />
+        </div><aside v-if="previewCaseId && viewMode === 'list' && !previewInDrawer" class="fc-asset-review"><TestCaseReviewPanel :key="currentProjectId || 0" :project-id="currentProjectId" :case-id="previewCaseId" :module-name="selectedModuleName" @close="previewCaseId = null" @edit="showEditTestCaseForm" @full="openRouteTestCaseDetail" @reviewed="testCaseListRef?.refreshTestCases()" /></aside></div>
     </WorkspaceDirectoryLayout>
+    <a-drawer v-if="previewInDrawer" :visible="!!previewCaseId && viewMode === 'list'" :width="Math.min(windowWidth - 24, 390)" :footer="false" :header="false" unmount-on-close @cancel="previewCaseId = null" class="fc-case-review-drawer"><TestCaseReviewPanel v-if="previewCaseId" :project-id="currentProjectId" :case-id="previewCaseId" :module-name="selectedModuleName" @close="previewCaseId = null" @edit="showEditTestCaseForm" @full="openRouteTestCaseDetail" @reviewed="testCaseListRef?.refreshTestCases()" /></a-drawer>
 
     <GenerateCasesModal
       v-if="isGenerateCasesModalVisible"
@@ -86,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
 import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
 import WorkspacePane from '@/components/workspace/WorkspacePane.vue'
 
@@ -105,6 +111,8 @@ import { Message, Notification } from '@arco-design/web-vue';
 
 import ModuleManagementPanel from '@/components/testcase/ModuleManagementPanel.vue';
 import TestCaseList from '@/components/testcase/TestCaseList.vue';
+import TestCaseReviewPanel from '@/components/testcase/TestCaseReviewPanel.vue';
+import { useMediaQuery, useWindowSize } from '@vueuse/core';
 const TestCaseForm = defineAsyncComponent(() => import('@/components/testcase/TestCaseForm.vue'));
 const TestCaseDetail = defineAsyncComponent(() => import('@/components/testcase/TestCaseDetail.vue'));
 const GenerateCasesModal = defineAsyncComponent(() => import('@/components/testcase/GenerateCasesModal.vue'));
@@ -181,6 +189,9 @@ type GenerateDraft = {
 type GenerateDraftMap = Record<string, GenerateDraft>;
 
 const viewMode = ref<'list' | 'add' | 'edit' | 'view'>('list');
+const previewCaseId = ref<number | null>(null);
+const previewInDrawer = useMediaQuery('(max-width: 1279px)');
+const { width: windowWidth } = useWindowSize();
 const selectedModuleId = ref<number | null>(null);
 const currentEditingTestCaseId = ref<number | null>(null);
 const currentViewingTestCaseId = ref<number | null>(null);
@@ -194,6 +205,8 @@ const pendingOptimizationTestCase = ref<TestCase | null>(null);
 const testCaseIdsForNavigation = ref<number[]>([]); // 用于编辑页面导航的用例ID列表
 
 const selectedModuleName = computed(() => allModules.value.find(item => item.id === selectedModuleId.value)?.name || '')
+watch([currentProjectId, selectedModuleId], () => { previewCaseId.value = null });
+watch(viewMode, value => { if (value !== 'list') previewCaseId.value = null });
 const modulePanelRef = ref<InstanceType<typeof ModuleManagementPanel> | null>(null);
 const testCaseListRef = ref<InstanceType<typeof TestCaseList> | null>(null);
 
@@ -377,8 +390,7 @@ const showViewTestCaseDetail = (testCase: TestCase) => {
   const ids = testCaseListRef.value?.getTestCaseIds();
   testCaseIdsForNavigation.value = ids || [];
 
-  currentViewingTestCaseId.value = testCase.id;
-  viewMode.value = 'view';
+  previewCaseId.value = testCase.id;
 };
 
 // 处理详情页面的用例导航
@@ -1181,13 +1193,13 @@ onMounted(() => {
   cursor: col-resize;
   border-radius: 999px;
   align-self: stretch;
-  background: linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.06), rgba(var(--theme-accent-rgb), 0.22));
+  background: var(--theme-surface);
   transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
   opacity: 0.85;
 }
 
 .module-panel-resizer:hover {
-  background: linear-gradient(to bottom, rgba(var(--theme-accent-rgb), 0.14), rgba(var(--theme-accent-rgb), 0.34));
+  background: var(--theme-surface);
   opacity: 1;
   transform: scaleX(1.05);
 }
@@ -1219,7 +1231,7 @@ onMounted(() => {
   background: var(--ui-panel-bg);
   border-radius: var(--ui-radius-md);
   border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--ui-panel-shadow);
+  box-shadow: var(--theme-card-shadow);
   backdrop-filter: blur(16px);
   padding: 22px 22px 20px;
 }

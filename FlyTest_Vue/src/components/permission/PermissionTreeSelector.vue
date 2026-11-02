@@ -484,10 +484,22 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 16px;
-  padding: 16px;
+  padding: 10px;
   background: var(--theme-surface-soft);
   border-radius: 6px;
+}
+
+.search-box { flex:1 1 200px; min-width:0; }
+.search-box :deep(.arco-input-wrapper) { width:100%!important; }
+.action-buttons { margin-left:auto; max-width:100%; }
+.action-buttons :deep(.arco-space) { flex-wrap:wrap; justify-content:flex-end; }
+@media(max-width:640px) {
+  .tree-header { align-items:stretch; }
+  .search-box { flex-basis:100%; }
+  .action-buttons { width:100%; }
 }
 
 .tree-container {

@@ -2,7 +2,7 @@
   <div class="trace-viewer fc-page">
     <!-- 顶部标题栏 -->
     <div class="trace-header">
-      <a-button type="text" size="small" @click="handleBack">
+      <a-button type="text" size="small" aria-label="返回上一页" @click="handleBack">
         <template #icon><icon-left /></template>
       </a-button>
       <span class="trace-title">{{ recordInfo?.test_case_name ?? `执行记录 #${recordId}` }}</span>
@@ -90,8 +90,13 @@
               v-for="(action, idx) in filteredActions"
               :key="action.action_id || idx"
               class="action-item"
+              role="button"
+              tabindex="0"
+              :aria-pressed="selectedAction?.action_id === action.action_id"
               :class="{ active: selectedAction?.action_id === action.action_id, error: action.error }"
               @click="selectActionByItem(action)"
+              @keydown.enter="selectActionByItem(action)"
+              @keydown.space.prevent="selectActionByItem(action)"
             >
               <div class="action-icon">
                 <IconLink v-if="action.type === 'goto'" />
@@ -856,15 +861,6 @@ const refreshTraceData = async () => {
 </script>
 
 <style scoped>
-/* 全局禁止滚动 - 仅在此页面生效 */
-:global(html),
-:global(body),
-:global(#app),
-:global(.arco-layout),
-:global(.arco-layout-content) {
-  overflow: hidden !important;
-}
-
 .trace-viewer {
   display: flex;
   flex-direction: column;
@@ -992,7 +988,7 @@ const refreshTraceData = async () => {
 
 .snapshot-thumb.active {
   border-color: var(--color-primary-6);
-  box-shadow: 0 0 0 2px rgba(var(--primary-6), 0.3);
+  box-shadow: var(--theme-card-shadow);
 }
 
 /* 主内容区 */
@@ -1128,7 +1124,7 @@ const refreshTraceData = async () => {
   max-height: 100%;
   object-fit: contain;
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .no-snapshot {

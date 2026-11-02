@@ -696,7 +696,7 @@ defineExpose({
   background: var(--ui-panel-bg, var(--theme-surface));
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-lg, 12px);
-  box-shadow: var(--ui-panel-shadow, 0 10px 24px rgba(15, 23, 42, 0.08));
+  box-shadow: var(--theme-card-shadow);
   overflow: hidden;
 }
 
@@ -704,7 +704,7 @@ defineExpose({
   border-bottom: 1px solid var(--ui-panel-border, var(--color-border-2));
   padding: 14px 18px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-6), 0.03), rgba(var(--arcoblue-6), 0));
+  background: var(--theme-surface);
 }
 
 :deep(.module-panel .arco-card-body) {
@@ -831,7 +831,7 @@ defineExpose({
 
 .testcase-transfer-target {
   padding: 14px;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-6), 0.04), rgba(var(--arcoblue-6), 0.01));
+  background: var(--theme-surface);
   border: 1px solid rgba(var(--arcoblue-6), 0.12);
   border-radius: var(--ui-radius-md, 10px);
 }

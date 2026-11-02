@@ -209,7 +209,7 @@ const handleFileChange = (event: Event) => {
   gap: 12px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--ui-panel-border, var(--color-neutral-3));
-  background: linear-gradient(180deg, rgba(var(--arcoblue-6), 0.04), rgba(var(--arcoblue-6), 0.01));
+  background: var(--theme-surface);
 }
 
 .editor-toolbar-left,
@@ -229,7 +229,7 @@ const handleFileChange = (event: Event) => {
   line-height: 1.7;
   word-break: break-word;
   text-align: left;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--arcoblue-1), 0.18));
+  background: var(--theme-surface);
 }
 
 .editor-surface:empty::before {
@@ -259,7 +259,7 @@ const handleFileChange = (event: Event) => {
   display: grid;
   gap: 12px;
   padding: 0 16px 16px;
-  background: linear-gradient(180deg, rgba(var(--arcoblue-6), 0.015), rgba(var(--arcoblue-6), 0.03));
+  background: var(--theme-surface);
 }
 
 .attachment-item {
@@ -267,7 +267,7 @@ const handleFileChange = (event: Event) => {
   border: 1px solid var(--ui-panel-border, var(--color-neutral-3));
   border-radius: var(--ui-radius-md, 10px);
   background: var(--color-bg-2);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--theme-card-shadow);
 }
 
 .attachment-image,

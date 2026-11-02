@@ -12,7 +12,7 @@
         <div class="mode-desc">保持当前添加用例逻辑不变，手动填写名称、步骤和预期结果。</div>
       </button>
 
-      <button type="button" class="mode-card mode-card--ai fc-native-action" @click="emit('ai')">
+      <button type="button" class="mode-card mode-card--ai fc-native-action fc-ai-action" @click="emit('ai')">
         <div class="mode-title">AI生成</div>
         <div class="mode-desc">自动带入当前模块的已有用例和需求上下文，按追加方式生成并自动避重。</div>
       </button>
@@ -47,7 +47,7 @@ const handleCancel = () => {
   padding: 18px;
   border: 1px solid var(--color-border-2);
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--theme-surface) 0%, #f7fafc 100%);
+  background: var(--theme-surface);
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -55,12 +55,12 @@ const handleCancel = () => {
 
 .mode-card:hover {
   border-color: rgb(var(--primary-6));
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--theme-card-shadow);
   transform: translateY(-1px);
 }
 
 .mode-card--ai {
-  background: linear-gradient(135deg, #f6fbff 0%, #eef7ff 100%);
+  background: var(--theme-surface);
 }
 
 .mode-title {

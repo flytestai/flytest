@@ -377,7 +377,7 @@ defineExpose({ open });
   justify-content: center;
   margin-bottom: 28px;
   padding: 16px 0;
-  background: linear-gradient(135deg, var(--color-fill-1) 0%, var(--color-fill-2) 100%);
+  background: var(--theme-surface);
   border-radius: 10px;
 }
 
