@@ -5,7 +5,7 @@
       <a-empty description="请先选择项目" />
     </div>
 
-    <WorkspaceDirectoryLayout v-else storage-key="test-bugs" directory-label="套件目录" :prioritize-content="bugViewMode !== 'list'"
+    <WorkspaceDirectoryLayout compact-header v-else storage-key="test-bugs" directory-label="套件目录" :prioritize-content="bugViewMode !== 'list'"
       :selection="selectedSuiteDetail?.name">
       <template #directory><TestSuiteTreePanel
           ref="suitePanelRef"

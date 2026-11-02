@@ -40,7 +40,8 @@
     "test:workbench:state": "node scripts/verify-navy-state.cjs",
     "test:workbench:completion": "node scripts/verify-workbench-completion.cjs",
     "test:workbench:navigation": "node scripts/verify-module-navigation.cjs",
-    "test:workbench:scrollbars": "node scripts/verify-transparent-scrollbars.cjs"
+    "test:workbench:scrollbars": "node scripts/verify-transparent-scrollbars.cjs",
+    "test:workbench:refined": "node scripts/verify-refined-workbench.cjs"
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.57.0",

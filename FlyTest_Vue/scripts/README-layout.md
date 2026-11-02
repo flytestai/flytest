@@ -72,6 +72,8 @@ npm run test:layout:interactions
 
 ## 首页下半部分专项检查
 
+`npm run test:workbench:refined` 检查精修后的单一主标题、手机双列指标与全部模块导航、知识库起步操作、加载状态，以及两种执行趋势视角的红绿柱图。覆盖 1440 / 1024 / 390 / 320px，使用隔离接口，不写入业务数据库。
+
 `npm run test:workbench:scrollbars` 在 1440 / 390px、深浅两种主题下检查工作台、APP、知识库及权限页的透明滚动条，并验证横向、纵向滚轮滚动仍可使用，共 16 个场景。仅改变轨道/滑块绘制，不禁用滚动、不改变滚动容器尺寸。
 
 `npm run test:workspace:density` 检查紧凑工作区在 1440 / 1024 / 390 / 320px 的表格起始位置、控件边界、用例筛选状态和导入导出入口，结果位于 `playwright-screenshots/density/`。设置 `UI_POPULATED=1` 可使用 30 条模拟环境数据检查长列表；`UI_WIDTHS` 可选择宽度。筛选条件位于用例页“筛选”面板，按钮显示已启用数量。

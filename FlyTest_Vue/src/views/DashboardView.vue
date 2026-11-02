@@ -11,6 +11,10 @@
       </div>
     </div>
 
+    <div v-else-if="projectStore.loading" class="fc-dashboard-loading" role="status" aria-label="正在加载项目">
+      <a-skeleton :animation="true"><a-skeleton-line :rows="3" /></a-skeleton>
+      <div class="kpi-grid"><a-skeleton v-for="index in 4" :key="index" :animation="true"><a-skeleton-shape /></a-skeleton></div>
+    </div>
     <div v-else-if="!currentProjectId" class="no-project-selected">
       <div class="empty-project-shell">
         <div class="empty-project-icon">
@@ -44,7 +48,7 @@
           </article>
         </section>
 
-        <section class="fc-quality-insight" aria-label="AI 质量洞察"><span class="fc-quality-insight__label"><icon-thunderbolt />AI 质量洞察</span><p>{{ qualitySummary }}</p><router-link to="/langgraph-chat" title="进入 AI 对话，分析当前项目质量问题">进入 AI 分析 →</router-link></section>
+        <section class="fc-quality-insight" aria-label="项目质量摘要"><span class="fc-quality-insight__label"><icon-bar-chart />质量摘要</span><p>{{ qualitySummary }}</p><router-link to="/langgraph-chat" title="进入 AI 对话，分析当前项目质量问题">AI 辅助分析 →</router-link></section>
 
         <DashboardInsights
           :stats="statistics"
@@ -63,7 +67,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { useRouter } from 'vue-router'
 import {
-  IconBarChart, IconFile, IconThunderbolt, IconBug, IconCheck, IconClose
+  IconBarChart, IconFile, IconBug, IconCheck, IconClose
 } from '@arco-design/web-vue/es/icon'
 import { getProjectStatistics, getTokenUsageStats, type ProjectStatistics, type TokenUsageStats } from '@/services/projectService'
 import { useProjectStore } from '@/store/projectStore'

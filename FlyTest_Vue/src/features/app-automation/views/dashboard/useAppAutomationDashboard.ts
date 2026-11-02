@@ -215,10 +215,12 @@ export const useAppAutomationDashboard = () => {
 
   const lastUpdatedText = computed(() => (lastUpdatedAt.value ? formatDateTime(lastUpdatedAt.value) : '-'))
   const serviceStatusTagColor = computed(() => {
+    if (!serviceHealth.status) return 'gray'
     if (serviceHealth.status !== 'ok') return 'red'
     return serviceHealth.scheduler.running ? 'green' : 'orange'
   })
   const serviceStatusTagText = computed(() => {
+    if (!serviceHealth.status) return '正在检查服务'
     if (serviceHealth.status !== 'ok') return '服务异常'
     if (serviceHealth.scheduler.running) {
       return `调度器运行中 · ${serviceHealth.scheduler.running_tasks} 个在途任务`
@@ -383,6 +385,8 @@ export const useAppAutomationDashboard = () => {
       scheduledTasks.value = taskList
       if (healthData) {
         Object.assign(serviceHealth, createServiceHealthState(), healthData)
+      } else {
+        serviceHealth.status = 'error'
       }
 
       if (includeAi) {
@@ -392,6 +396,7 @@ export const useAppAutomationDashboard = () => {
       lastUpdatedAt.value = new Date().toISOString()
       loadedProjectId.value = currentProjectId.value
     } catch (error: unknown) {
+      if (!serviceHealth.status) serviceHealth.status = 'error'
       Message.error(normalizeErrorMessage(error, '加载 APP 自动化总览失败'))
     } finally {
       if (!silent) {

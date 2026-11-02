@@ -104,9 +104,9 @@ const emit = defineEmits<SettingsServiceHealthCardEmits>()
 }
 
 .diagnostics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .service-grid {
@@ -114,14 +114,18 @@ const emit = defineEmits<SettingsServiceHealthCardEmits>()
 }
 
 .diagnostic-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid var(--color-border-2);
-  background: var(--color-fill-2);
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 4px 12px;
+  padding: 12px 0;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  background: transparent;
 }
+.diagnostic-item:last-child { border-bottom: 0; }
+.diagnostic-item span { grid-row: span 2; align-self: start; }
+.diagnostic-item small { grid-column: 2; }
 
 .diagnostic-item span {
   font-size: 12px;

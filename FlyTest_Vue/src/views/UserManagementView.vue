@@ -19,7 +19,7 @@
         <a-input-search
           placeholder="搜索系统用户名/姓名/手机号/邮箱"
           allow-clear
-          style="width: 300px"
+          style="width: min(300px, 100%)"
           @search="onSearch"
         />
       </div>

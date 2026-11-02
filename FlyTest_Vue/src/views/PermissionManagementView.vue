@@ -87,10 +87,7 @@
       <!-- 右侧权限管理面板 -->
       <div class="permission-panel">
         <div v-if="!selectedEntity" class="no-selection">
-          <div class="empty-state">
-            <i class="arco-icon arco-icon-info-circle"></i>
-            <p>请从左侧选择用户或组织来管理权限</p>
-          </div>
+          <WorkspaceEmptyState title="选择一个成员或组织" description="从左侧选择对象，查看当前授权并配置可访问的功能。" />
         </div>
         
         <div v-else class="permission-details">
@@ -119,6 +116,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspaceEmptyState from "@/components/workspace/WorkspaceEmptyState.vue"
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { Message } from '@arco-design/web-vue';
@@ -351,7 +349,7 @@ onMounted(() => {
 }
 
 .entity-item {
-  padding: 16px;
+  padding: 12px;
   border-radius: 12px;
   margin-bottom: 8px;
   background: var(--theme-surface);
@@ -366,7 +364,7 @@ onMounted(() => {
 .entity-item:hover {
   border-color: rgba(var(--theme-accent-rgb), 0.3);
   box-shadow: var(--theme-card-shadow);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .entity-item.active {
@@ -383,8 +381,9 @@ onMounted(() => {
 }
 
 .entity-avatar {
-  width: 48px;
-  height: 48px;
+  width: 34px;
+  height: 34px;
+  flex: none;
   border-radius: 50%;
   background: var(--theme-accent);
   display: flex;

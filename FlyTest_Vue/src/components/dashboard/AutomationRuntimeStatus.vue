@@ -155,7 +155,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--theme-text-tertiary);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 .fc-runtime-rows > a {
@@ -191,7 +191,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   text-align: right;
   max-width: 160px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--theme-warning);
 }
 .fc-runtime-state i {
@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 10px;
   padding-top: 14px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .fc-runtime-status footer a {
   color: var(--theme-text-tertiary);
@@ -228,11 +228,11 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 9px;
   margin-top: 14px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--theme-text-tertiary);
 }
 .fc-coverage strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .fc-coverage small {
   font-size: 10px;

@@ -39,7 +39,7 @@
 import { computed, nextTick, onBeforeUnmount, provide, ref, useId, watch } from 'vue'
 import { useEventListener, useLocalStorage, useWindowSize } from '@vueuse/core'
 import { useResizablePanel } from '@/composables/useResizablePanel'
-import { workspaceDirectoryKey, workspaceHeadingKey } from './workspaceContext'
+import { workspaceDirectoryKey, workspaceHeadingKey, workspaceCompactHeadingKey } from './workspaceContext'
 
 const props = withDefaults(defineProps<{
   storageKey: string
@@ -50,6 +50,7 @@ const props = withDefaults(defineProps<{
   clearable?: boolean
   prioritizeContent?: boolean
   drawerOnly?: boolean
+  compactHeader?: boolean
 }>(), { directory: true, directoryLabel: '模块目录', selection: '', selectionLabel: '当前范围', clearable: false, prioritizeContent: false, drawerOnly: false })
 const emit = defineEmits<{ clear: [] }>()
 const headingTarget = ref<HTMLElement>()
@@ -69,6 +70,7 @@ const dialogOpen = ref(false)
 const { panelWidth, minWidth, maxWidth, startResize, stopResize, resizeWithKeyboard } = useResizablePanel()
 
 provide(workspaceHeadingKey, headingTarget)
+provide(workspaceCompactHeadingKey, computed(() => Boolean(props.compactHeader)))
 provide(workspaceDirectoryKey, { selected: () => { if (isOverlay.value) closeDirectory() } })
 
 async function closeDirectory() {

@@ -9,7 +9,7 @@
         <a-tag :color="aiStatusTagColor">{{ aiStatusTagText }}</a-tag>
       </div>
 
-      <div class="ai-grid">
+      <div v-if="hasConfig" class="ai-grid">
         <div class="ai-item">
           <span>激活配置</span>
           <strong>{{ aiConfigDisplay }}</strong>
@@ -28,11 +28,11 @@
         </div>
       </div>
 
-      <div class="ai-endpoint">{{ aiEndpointDisplay }}</div>
+      <div v-if="hasConfig" class="ai-endpoint">{{ aiEndpointDisplay }}</div>
 
       <div class="ai-actions">
-        <a-button class="fc-ai-action" type="primary" @click="emit('open-scene-builder')">进入 AI 编排</a-button>
-        <a-button @click="emit('open-llm-config')">模型配置</a-button>
+        <a-button v-if="hasConfig" class="fc-ai-action" type="primary" @click="emit('open-scene-builder')">进入 AI 编排</a-button>
+        <a-button class="fc-ai-action" @click="emit('open-llm-config')">{{ hasConfig ? '管理模型配置' : '配置 AI 模型' }}</a-button>
       </div>
     </div>
   </a-card>

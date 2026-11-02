@@ -27,6 +27,7 @@
       <div class="content-grid">
         <DashboardExecutionSummaryCard :statistics="statistics" />
         <DashboardAiOverviewCard
+          :has-config="aiStatus.hasConfig"
           :ai-status-title="aiStatusTitle"
           :ai-status-description="aiStatusDescription"
           :ai-status-tag-color="aiStatusTagColor"
@@ -143,16 +144,15 @@ const {
 }
 
 .empty-shell {
-  min-height: 420px;
+  min-height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(circle at top right, rgba(var(--theme-accent-rgb), 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 249, 253, 0.9));
+    var(--theme-surface);
   border: 1px solid var(--theme-card-border);
-  border-radius: 24px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 .content-grid {
@@ -163,8 +163,8 @@ const {
 
 .dashboard-view :deep(.arco-card),
 .dashboard-view :deep(.dashboard-card) {
-  border-radius: 20px;
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+  box-shadow: var(--theme-card-shadow);
 }
 
 .dashboard-view :deep(.arco-card-header) {

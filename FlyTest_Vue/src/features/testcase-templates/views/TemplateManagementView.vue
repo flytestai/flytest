@@ -1,14 +1,14 @@
 <template>
   <div class="template-management-view fc-page">
-    <AssetModuleHeader />
-    <WorkspacePageHeader title="用例模板" description="维护测试用例导入导出的字段映射与文件格式。" :show-back="true" @back="$router.back()">
+    <AssetModuleHeader>
       <template #actions>
+        <a-button @click="$router.back()">返回</a-button>
         <a-button type="primary" @click="handleCreate">
           <template #icon><icon-plus /></template>
           新建模版
         </a-button>
       </template>
-    </WorkspacePageHeader>
+    </AssetModuleHeader>
 
     <a-card class="template-list-card fc-panel">
       <!-- 筛选栏 -->
@@ -96,7 +96,6 @@
 
 <script setup lang="ts">
 import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
-import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, reactive, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { IconPlus, IconFileImage } from '@arco-design/web-vue/es/icon';

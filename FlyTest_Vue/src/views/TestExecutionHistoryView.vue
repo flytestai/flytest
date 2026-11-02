@@ -5,7 +5,7 @@
       <a-empty description="请先选择项目" />
     </div>
 
-    <WorkspaceDirectoryLayout v-else storage-key="test-executions" drawer-only directory-label="报告范围与快照" :selection="checkedSuiteIds.length ? '已选 ' + checkedSuiteIds.length + ' 个套件' : '尚未选择套件'">
+    <WorkspaceDirectoryLayout compact-header v-else storage-key="test-executions" drawer-only directory-label="报告范围与快照" :selection="checkedSuiteIds.length ? '已选 ' + checkedSuiteIds.length + ' 个套件' : '尚未选择套件'">
       <template #heading>
         <WorkspacePageHeader local title="测试报告" description="选择测试范围，查看本轮质量结论与执行结果。">
           <template #actions>

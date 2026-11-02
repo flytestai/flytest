@@ -1,10 +1,11 @@
 <template>
   <WorkspaceModuleHeader
     title="测试资产"
+    :page-title="definitions.find(tab => tab.key === route.path)?.label || '测试资产'"
     description="统一管理用例、套件、缺陷与执行结果"
     :active-key="route.path"
     :tabs="tabs"
-  />
+  ><template v-if="$slots.actions" #actions><slot name="actions" /></template></WorkspaceModuleHeader>
 </template>
 <script setup lang="ts">
 import { computed } from "vue";

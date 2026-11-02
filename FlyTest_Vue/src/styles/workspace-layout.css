@@ -7,7 +7,9 @@
 .fc-workspace-heading { flex: none; min-width: 0; padding: 18px 20px 0; }
 .fc-workspace-heading:empty { display: none; }
 .fc-workspace-heading .fc-page-heading { margin: 0 !important; padding: 0 0 14px !important; gap: 10px 20px; }
-.fc-workspace-heading .fc-page-heading__title { font-size: 20px; letter-spacing: -.3px; }
+.fc-workspace-heading .fc-page-heading__title { font-size: 18px; letter-spacing: -.3px; }
+.fc-workspace-heading .fc-page-heading--compact > .fc-page-heading__actions { flex-basis: 100%; justify-content: flex-start; }
+.fc-workspace-heading .fc-page-heading--compact .fc-workspace-tools { flex: 1; width: 100%; }
 .fc-workspace-heading .fc-page-heading__description { max-width: 900px; margin-top: 4px; }
 .fc-workspace-heading .fc-page-heading__meta { margin-top: 5px; }
 .fc-workspace-heading .fc-page-heading__actions { align-self: center; padding: 0 !important; border: 0 !important; background: transparent !important; }

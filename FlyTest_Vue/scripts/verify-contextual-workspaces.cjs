@@ -52,7 +52,7 @@ async function bounds(page) {
       }
       async function goto(route) {
         await page.goto(base+route,{waitUntil:'domcontentloaded'});
-        await page.locator('.fc-workspace-heading .fc-page-heading:visible').first().waitFor();
+        await page.locator('.content .fc-module-heading:visible').first().waitFor();
         await page.waitForTimeout(250);
       }
       for(const [route,directory] of routes) await check(route,async()=>{
@@ -71,7 +71,7 @@ async function bounds(page) {
       });
       await check('directory collapse, keyboard resize and reload preference',async()=>{
         await goto('/testcases');const toggle=page.getByRole('button',{name:'模块目录',exact:true});
-        if(width>=1024){if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();const resizer=page.getByRole('separator',{name:'调整目录宽度'});const before=Number(await resizer.getAttribute('aria-valuenow'));await resizer.focus();await page.keyboard.press('ArrowRight');assert.equal(Number(await resizer.getAttribute('aria-valuenow')),before+16);await page.getByRole('button',{name:'收起模块目录',exact:true}).click();await page.reload();await page.locator('.fc-workspace-heading header:visible').waitFor();assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0);}
+        if(width>=1024){if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();const resizer=page.getByRole('separator',{name:'调整目录宽度'});const before=Number(await resizer.getAttribute('aria-valuenow'));await resizer.focus();await page.keyboard.press('ArrowRight');assert.equal(Number(await resizer.getAttribute('aria-valuenow')),before+16);await page.getByRole('button',{name:'收起模块目录',exact:true}).click();await page.reload();await page.locator('.content .fc-module-heading:visible').waitFor();assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0);}
         else {await toggle.click();await page.getByRole('dialog',{name:'模块目录',exact:true}).waitFor();await page.keyboard.press('Escape');assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0);assert.equal(await toggle.evaluate(el=>el===document.activeElement),true);}
       });
       await check('node actions, cancel and mobile directory selection',async()=>{
@@ -92,12 +92,12 @@ async function bounds(page) {
         await page.locator('.menu-demo,.menu').count().catch(()=>{});
         // Router navigation keeps visited panes mounted, matching actual sidebar usage.
         const routerNav=async(route)=>page.evaluate(route=>document.querySelector('#app').__vue_app__.config.globalProperties.$router.push(route),route);
-        await routerNav('/api-automation?tab=environments');await page.getByRole('heading',{name:'执行环境',exact:true}).waitFor();assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0);
-        await routerNav('/api-automation?tab=execution-records');await page.getByRole('heading',{name:'执行历史',exact:true}).waitFor();
-        assert.equal(await page.locator('.fc-workspace-heading .fc-page-heading:visible').count(),1,'only active heading');
+        await routerNav('/api-automation?tab=environments');await page.locator('.content').getByRole('heading',{name:'环境配置',exact:true}).waitFor();assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0);
+        await routerNav('/api-automation?tab=execution-records');await page.locator('.content').getByRole('heading',{name:'执行记录',exact:true}).waitFor();
+        assert.equal(await page.locator('.content .fc-module-heading:visible').count(),1,'only active heading');
         await page.getByRole('button',{name:'清除筛选',exact:true}).click();assert.equal(await page.locator('.fc-workspace-selection').count(),0);
         await page.locator('.fc-context-filter').click();await page.locator('.arco-select-option:visible').getByText('支付业务',{exact:true}).click();await page.locator('.fc-workspace-selection').filter({hasText:'支付业务'}).waitFor();
-        await routerNav('/api-automation');await page.getByPlaceholder('搜索接口名称或 URL').waitFor();assert.equal(await page.getByPlaceholder('搜索接口名称或 URL').inputValue(),'回归接口');assert.equal(await page.locator('.fc-workspace-heading .fc-page-heading:visible').count(),1);
+        await routerNav('/api-automation');await page.getByPlaceholder('搜索接口名称或 URL').waitFor();assert.equal(await page.getByPlaceholder('搜索接口名称或 URL').inputValue(),'回归接口');assert.equal(await page.locator('.content .fc-module-heading:visible').count(),1);
       });
       await check('report range drawer and focus return',async()=>{
         await goto('/test-executions');const trigger=page.getByRole('button',{name:'报告范围与快照',exact:true});await trigger.click();const dialog=page.getByRole('dialog',{name:'报告范围与快照',exact:true});await dialog.waitFor();assert.equal(await page.locator('#app').evaluate(el=>el.inert),true);const dismiss=dialog.getByRole('button',{name:'收起报告范围与快照',exact:true});await dismiss.focus();await page.keyboard.press('Shift+Tab');assert.equal(await dialog.evaluate(el=>el.contains(document.activeElement)),true);await page.keyboard.press('Escape');assert.equal(await page.locator('#app').evaluate(el=>el.inert),false);assert.equal(await trigger.evaluate(el=>el===document.activeElement),true);
@@ -107,10 +107,11 @@ async function bounds(page) {
         try {
           await goto('/ui-automation');const toggle=page.getByRole('button',{name:'模块目录',exact:true});if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
           await page.locator('.fc-workspace-directory:visible').getByText('支付业务',{exact:true}).click();
+          const filteredRequest = page.waitForRequest(request => request.url().includes('/ui-automation/testcases/') && new URL(request.url()).searchParams.get('module') === '11');
           await page.evaluate(()=>document.querySelector('#app').__vue_app__.config.globalProperties.$router.push('/ui-automation?tab=testcases'));
-          await page.getByRole('heading',{name:'测试用例',exact:true}).waitFor();await page.waitForTimeout(200);
+          await page.locator('.content').getByRole('heading',{name:'测试用例',exact:true}).waitFor();await filteredRequest;
           assert(requests.some(url=>url.includes('/ui-automation/testcases/')&&new URL(url).searchParams.get('module')==='11'),'selected module must filter a newly visited tab');
-          assert.equal(await page.locator('.fc-workspace-heading .fc-page-heading:visible').count(),1);
+          assert.equal(await page.locator('.content .fc-module-heading:visible').count(),1);
           await page.getByRole('button',{name:'清除筛选',exact:true}).click();assert.equal(await page.locator('.fc-workspace-selection').count(),0);
         } finally { page.off('request',record) }
       });
@@ -146,13 +147,13 @@ async function bounds(page) {
         await goto('/test-bugs');
         const clipped=await page.locator('.bug-toolbar').evaluate(root=>{const bounds=root.getBoundingClientRect();return [...root.querySelectorAll('input,button,.arco-select-view')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&(r.left<bounds.left-1||r.right>bounds.right+1)}).map(el=>el.outerHTML.slice(0,120))});
         assert.deepEqual(clipped,[],'bug filter controls must fit their own container');
-        await page.getByRole('button',{name:'提 BUG',exact:true}).click();await page.getByRole('heading',{name:'新建缺陷',exact:true}).waitFor();
+        await page.getByRole('button',{name:'提 BUG',exact:true}).click();await page.locator('.content').getByRole('heading',{name:'新建缺陷',exact:true}).waitFor();
         assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0,'editor gets full workspace width');
-        assert.equal(await page.locator('.fc-workspace-heading .fc-page-heading:visible').count(),1);
+        assert.equal(await page.locator('.content .fc-module-heading:visible').count(),1);
         await page.getByPlaceholder('请输入 BUG 标题',{exact:true}).fill('布局验收草稿');
         assert.equal(await page.getByPlaceholder('请输入 BUG 标题',{exact:true}).inputValue(),'布局验收草稿');
         await page.screenshot({path:path.join(output,`bug-editor-${width}.png`)});
-        await page.getByRole('button',{name:'取消',exact:true}).click();await page.getByRole('heading',{name:'缺陷管理',exact:true}).waitFor();
+        await page.getByRole('button',{name:'取消',exact:true}).click();await page.locator('.content').getByRole('heading',{name:'缺陷管理',exact:true}).waitFor();
       });
       await check('loading directory does not dismiss an open drawer',async()=>{
         const pattern=/\/api\/api-automation\/collections\/tree\/(?:\?.*)?$/;

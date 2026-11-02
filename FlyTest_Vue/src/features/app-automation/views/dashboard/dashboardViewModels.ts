@@ -28,6 +28,7 @@ export interface DashboardExecutionSummaryCardProps {
 }
 
 export interface DashboardAiOverviewCardProps {
+  hasConfig: boolean
   aiStatusTitle: string
   aiStatusDescription: string
   aiStatusTagColor: string

@@ -228,7 +228,7 @@ async function run() {
         });
         await nav.getByRole("link", { name: "环境设置", exact: true }).click();
         await page
-          .getByRole("heading", { name: "环境设置", exact: true })
+          .locator('.content').getByRole("heading", { name: "环境设置", exact: true })
           .waitFor();
         await page.screenshot({
           path: path.join(output, "app-settings-" + width + ".png"),

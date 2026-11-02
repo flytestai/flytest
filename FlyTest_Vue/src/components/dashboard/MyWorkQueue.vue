@@ -125,7 +125,7 @@ onBeforeUnmount(() => {
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--theme-text-tertiary);
   cursor: pointer;
 }
@@ -157,13 +157,13 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--theme-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .fc-my-work small {
   display: block;
   margin-top: 7px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--theme-text-tertiary);
 }
 .fc-my-work__indicator {
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   flex-direction: column;
   gap: 6px;
-  min-height: 160px;
+  min-height: 120px;
   color: var(--theme-text-tertiary);
   font-size: 12px;
   text-align: center;
@@ -203,7 +203,7 @@ onBeforeUnmount(() => {
 .fc-my-work footer {
   margin-top: auto;
   padding-top: 10px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .fc-my-work footer a {
   color: var(--theme-accent);

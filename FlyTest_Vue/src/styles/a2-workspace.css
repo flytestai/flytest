@@ -55,7 +55,7 @@ html body :is(.arco-input-wrapper,.arco-textarea-wrapper,.arco-select-view,.arco
 html body :is(.arco-input-wrapper,.arco-select-view,.arco-picker,.arco-textarea-wrapper):focus-within {
   border-color: var(--theme-accent) !important; box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb),.1) !important;
 }
-html body :is(.arco-input,.arco-textarea){color:var(--theme-text);font-size:13px}
+html body :is(.arco-input,.arco-textarea){color:var(--theme-text);font-size:14px}
 html body :is(.arco-input,.arco-textarea)::placeholder{color:var(--theme-text-tertiary)}
 html body :is(.arco-btn,.arco-radio-group-button,.arco-radio-button,.arco-pagination-item){border-radius:8px !important}
 html body .arco-btn{font-weight:500;font-size:13px}
@@ -80,7 +80,7 @@ html body :is(.arco-tag-blue,.arco-tag-arcoblue){color:var(--theme-accent) !impo
 html body .arco-tag{border-radius:5px;font-size:12px}
 html body .arco-alert{border-radius:10px}
 html body .arco-empty-description{font-size:13px;line-height:1.8;color:var(--theme-text-tertiary)}
-html body .arco-form-item-label{color:var(--theme-text-secondary);font-size:13px}
+html body .arco-form-item-label{color:var(--theme-text-secondary);font-size:14px}
 html body:has(.main-layout) :is(.arco-input-wrapper,.arco-textarea-wrapper,.arco-select-view,.arco-input-tag,.arco-picker,.arco-input-number,.arco-cascader-view,.arco-tree-select-view){border-radius:8px !important}
 html body:has(.main-layout) :is(.arco-input-disabled,.arco-textarea-disabled,.arco-select-view-disabled,.arco-picker-disabled,.arco-input-number-disabled){background:var(--color-fill-2) !important;color:var(--color-text-4) !important;box-shadow:none !important}
 html body:has(.main-layout) .arco-modal{border-radius:20px !important;box-shadow:var(--theme-overlay-shadow) !important}
@@ -146,7 +146,7 @@ html body:has(.main-layout) .main-layout .testcase-content .page-header{border:0
 .main-layout .testcase-content .header-actions:empty{display:none}
 html body:has(.main-layout) .main-layout .arco-table{border:1px solid var(--theme-border);border-radius:12px;background:var(--theme-surface);overflow:hidden}
 html body:has(.main-layout) .main-layout .arco-table-th{padding:10px 12px !important;background:var(--theme-surface-soft) !important;color:var(--theme-text-secondary) !important;font-weight:600;font-size:12px;border-bottom-color:var(--theme-border) !important}
-html body:has(.main-layout) .main-layout .arco-table-td{padding:10px 12px !important;font-size:13px;line-height:1.55;background:var(--theme-surface);border-bottom-color:var(--theme-border) !important}
+html body:has(.main-layout) .main-layout .arco-table-td{padding:10px 12px !important;font-size:14px;line-height:1.55;background:var(--theme-surface);border-bottom-color:var(--theme-border) !important}
 html body:has(.main-layout) .main-layout .arco-table-tr:hover .arco-table-td{background:var(--theme-surface-soft) !important}
 html body:has(.main-layout) .main-layout .arco-table-tr-checked .arco-table-td{background:var(--theme-accent-soft) !important}
 .main-layout .arco-table-pagination{padding:12px;gap:8px}
@@ -210,7 +210,7 @@ html body:has(.main-layout) .main-layout .list-view-layout .module-panel-resizab
 html body:has(.main-layout) .main-layout .list-view-layout .module-panel .arco-card-body{padding:12px !important}
 html body:has(.main-layout) .main-layout .content>:not(.ui-automation-layout):not(.api-automation-layout):not(.arco-spin){border:0 !important;box-shadow:none !important;background:transparent !important;border-radius:0 !important}
 html body:has(.main-layout) .main-layout :is(.knowledge-base-list,.detail-panel-full,.content-container>.content-card){background:var(--theme-surface) !important;border:1px solid var(--theme-border);border-radius:16px !important;box-shadow:var(--theme-card-shadow) !important;padding:16px}
-html body:has(.main-layout) .main-layout :is(.summary-item,.ai-item,.metric-card,.detail-stat,.capability-item){border:1px solid var(--theme-border);border-radius:10px !important;box-shadow:none !important;background:var(--theme-surface-soft) !important}
+html body:has(.main-layout) .main-layout :is(.metric-card,.detail-stat,.capability-item){border:1px solid var(--theme-border);border-radius:10px !important;box-shadow:none !important;background:var(--theme-surface-soft) !important}
 html body:has(.main-layout) .main-layout :is(.arco-card-header){border-radius:15px 15px 0 0}
 html body:has(.main-layout) .main-layout .arco-card-body{border-radius:0 0 15px 15px}
 .main-layout .collection-panel-head__eyebrow,.main-layout .collection-panel-head__desc,.main-layout .page-summary__eyebrow{display:none}

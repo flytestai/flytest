@@ -2,12 +2,12 @@
   <WorkspacePageHeader>
         <template #title>APP 自动化总控台</template>
         <template #description>集中查看当前项目的 AI 编排状态、定时任务、执行健康度和最近回归动作。</template>
-        <template #actions><a-space wrap class="page-actions">
+        <template #actions><div class="page-actions">
       <a-tag :color="serviceStatusTagColor">{{ serviceStatusTagText }}</a-tag>
-      <span class="header-tip">最近刷新：{{ lastUpdatedText }}</span>
+      <span class="header-tip" :title="'最近刷新：' + lastUpdatedText">{{ lastUpdatedText === '-' ? '等待首次更新' : '更新于 ' + lastUpdatedText }}</span>
       <a-button class="fc-ai-action" :loading="aiStatusLoading" @click="emit('refresh-ai-status')">刷新 AI 状态</a-button>
-      <a-button type="primary" :loading="loading" @click="emit('refresh-dashboard')">刷新总览</a-button>
-    </a-space></template>
+      <a-button :loading="loading" @click="emit('refresh-dashboard')">刷新总览</a-button>
+    </div></template>
       </WorkspacePageHeader>
 </template>
 
@@ -50,9 +50,13 @@ const emit = defineEmits<DashboardHeaderBarEmits>()
 }
 
 .page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-end;
   align-items: center;
 }
+@media(max-width:767px) { .page-actions { justify-content:flex-start; } .header-tip { display:none; } }
 
 .header-tip {
   color: var(--theme-text-secondary);

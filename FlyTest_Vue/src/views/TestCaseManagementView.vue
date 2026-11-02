@@ -3,7 +3,7 @@
     <AssetModuleHeader />
 
     <!-- 目录仅辅助资源切换，详情与编辑优先使用完整内容区。 -->
-    <WorkspaceDirectoryLayout storage-key="testcases" directory-label="模块目录" :prioritize-content="viewMode !== 'list'"
+    <WorkspaceDirectoryLayout compact-header storage-key="testcases" directory-label="模块目录" :prioritize-content="viewMode !== 'list'"
       :selection="selectedModuleName" clearable @clear="handleModuleSelected(null)">
       <template #directory><ModuleManagementPanel
           :selected-id="selectedModuleId"

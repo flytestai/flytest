@@ -1,7 +1,7 @@
 <template>
   <div class="ui-automation-shell fc-page">
-    <WorkspaceModuleHeader title="Web 自动化" description="从页面元素、步骤设计到执行与回归验证" :tabs="moduleTabs" :active-key="activeTab" />
-    <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="ui-automation" :directory="needsDirectory" directory-label="模块目录"
+    <WorkspaceModuleHeader title="Web 自动化" :page-title="moduleTabs.find(tab => tab.key === activeTab)?.label" description="从页面元素、步骤设计到执行与回归验证" :tabs="moduleTabs" :active-key="activeTab" />
+    <WorkspaceDirectoryLayout compact-header ref="workspaceRef" storage-key="ui-automation" :directory="needsDirectory" directory-label="模块目录"
       :selection="needsDirectory ? selectedModuleName : ''" :clearable="needsDirectory" @clear="clearSelection">
       <template #directory>
         <ModulePanel ref="modulePanelRef" :selected-id="selectedModuleId" @select="onModuleSelect" @navigate="workspaceRef?.closeDirectory()" @updated="onModuleUpdated" />

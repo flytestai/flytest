@@ -1,5 +1,5 @@
 /* Compact workspaces: share the heading row instead of stacking independent bars. */
-html body:has(.main-layout) { --workspace-gutter: 12px; --flat-section-gap: 12px; --flat-card-padding: 12px; }
+html body:has(.main-layout) { --workspace-gutter: 24px; --flat-section-gap: 16px; --flat-card-padding: 16px; }
 .fc-workspace-topbar { display: flex; flex: none; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid var(--theme-border); }
 .fc-workspace-heading { flex: 1 1 420px; padding: 0; }
 .fc-workspace-heading .fc-page-heading { align-items: center; padding: 0 !important; gap: 8px 12px; }
@@ -24,11 +24,11 @@ html body:has(.main-layout) { --workspace-gutter: 12px; --flat-section-gap: 12px
 html body:has(.main-layout) .main-layout :is(.page-shell,.report-grid,.stats-grid,.summary-grid,.cards-grid) { gap: 12px !important; }
 html body:has(.main-layout) .main-layout :is(.workspace-hero,.report-hero,.page-hero,.hero-card,.page-shell>.page-heading) { padding: 12px 14px !important; margin-bottom: 12px; }
 html body:has(.main-layout) .main-layout .arco-card-header { min-height: 40px; padding: 10px 12px; }
-html body:has(.main-layout) .main-layout .arco-card-body { padding: 12px !important; }
+html body:has(.main-layout) .main-layout .arco-card:not(.fc-metric) > .arco-card-body { padding: 16px !important; }
 html body:has(.main-layout) .main-layout .fc-toolbar { padding: 10px 12px !important; margin-bottom: 10px; gap: 8px !important; }
 html body:has(.main-layout) .main-layout :is(.page-header,.filter-section,.filter-bar,.table-toolbar) { padding: 10px 12px !important; margin-bottom: 10px; }
 html body:has(.main-layout) .main-layout .fc-section { padding: 12px; margin-bottom: 10px; }
-html body:has(.main-layout) .main-layout :is(.arco-table-th,.arco-table-td) { padding: 7px 10px !important; }
+html body:has(.main-layout) .main-layout :is(.arco-table-th,.arco-table-td) { padding: 9px 12px !important; }
 html body:has(.main-layout) .main-layout .arco-table-cell { padding: 0; line-height: 1.5; }
 html body:has(.main-layout) .main-layout .arco-table-pagination { padding: 8px 10px; }
 .fc-table .arco-table-empty { min-height: 130px; }
@@ -68,7 +68,7 @@ html body:has(.main-layout) .main-layout .bug-detail-grid { gap: 4px 20px; }
 html body:has(.main-layout) .main-layout .bug-detail-toolbar { padding: 8px; margin-bottom: 10px; gap: 6px; box-shadow: none; }
 html body:has(.main-layout) :is(.fc-dialog,.fc-drawer) .arco-form-item { margin-bottom: 14px; }
 @media (min-width:768px) {
-  html body:has(.main-layout) .main-layout .arco-btn:not(.arco-btn-size-mini) { min-height: 32px; }
+  html body:has(.main-layout) .main-layout .arco-btn:not(.arco-btn-size-mini) { min-height: 36px; }
   html body:has(.main-layout) .main-layout :is(.arco-input-wrapper,.arco-select-view-single) { min-height: 32px; }
 }
 @media (min-width:1440px) {

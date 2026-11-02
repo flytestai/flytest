@@ -55,7 +55,7 @@
             <svg
               viewBox="0 0 700 180"
               role="img"
-              aria-label="通过率与失败率折线图"
+              aria-label="通过率与失败率柱状图"
               preserveAspectRatio="none"
             >
               <g class="fc-rate-grid">
@@ -64,37 +64,9 @@
                 <text x="8" y="94">50%</text>
                 <text x="15" y="154">0%</text>
               </g>
-              <path
-                :d="ratePath('passed')"
-                class="fc-rate-line fc-rate-line--pass"
-              />
-              <path
-                :d="ratePath('failed')"
-                class="fc-rate-line fc-rate-line--fail"
-              />
               <template v-for="point in ratePoints" :key="point.date">
-                <circle
-                  v-if="point.passed !== null"
-                  :cx="point.x"
-                  :cy="150 - point.passed * 1.2"
-                  r="3.2"
-                  class="fc-rate-point--pass"
-                >
-                  <title>
-                    {{ point.date }}：通过 {{ point.passed.toFixed(1) }}%
-                  </title>
-                </circle>
-                <circle
-                  v-if="point.failed !== null"
-                  :cx="point.x"
-                  :cy="150 - point.failed * 1.2"
-                  r="3.2"
-                  class="fc-rate-point--fail"
-                >
-                  <title>
-                    {{ point.date }}：失败 {{ point.failed.toFixed(1) }}%
-                  </title>
-                </circle>
+                <rect v-if="point.passed !== null" :x="point.x - 20" :y="150 - point.passed * 1.2" width="18" :height="point.passed * 1.2" rx="3" :fill="'var(--theme-success)'" class="fc-rate-bar fc-rate-bar--pass"><title>{{ point.date }}：通过 {{ point.passed.toFixed(1) }}%</title></rect>
+                <rect v-if="point.failed !== null" :x="point.x + 2" :y="150 - point.failed * 1.2" width="18" :height="point.failed * 1.2" rx="3" :fill="'var(--theme-danger)'" class="fc-rate-bar fc-rate-bar--fail"><title>{{ point.date }}：失败 {{ point.failed.toFixed(1) }}%</title></rect>
               </template>
             </svg>
             <div
@@ -472,22 +444,6 @@ const ratePoints = computed(() =>
     };
   }),
 );
-const ratePath = (key: "passed" | "failed") => {
-  let connected = false;
-  return ratePoints.value
-    .map((point) => {
-      const rate = point[key];
-      if (rate === null) {
-        connected = false;
-        return "";
-      }
-      const segment =
-        (connected ? "L" : "M") + point.x + "," + (150 - rate * 1.2);
-      connected = true;
-      return segment;
-    })
-    .join(" ");
-};
 const trendMax = computed(() =>
   Math.max(1, ...trendDays.value.flatMap((day) => [day.passed, day.failed])),
 );
@@ -564,7 +520,7 @@ const operationItems = computed(() => [
   gap: 7px;
   flex: none;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-context > span {
   width: 6px;
@@ -618,7 +574,7 @@ const operationItems = computed(() => [
 .insights-heading p {
   margin: 5px 0 0;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 .insights-badge {
@@ -629,13 +585,13 @@ const operationItems = computed(() => [
   border-radius: 6px;
   background: var(--theme-surface-soft);
   color: var(--theme-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 .insights-muted {
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-note {
   display: flex;
@@ -689,14 +645,14 @@ const operationItems = computed(() => [
 .insights-item-copy h4 {
   margin: 0;
   color: var(--theme-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.6;
 }
 .insights-item-copy p {
   margin: 3px 0 0;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -751,7 +707,7 @@ const operationItems = computed(() => [
   flex-direction: column;
   gap: 9px;
   color: var(--theme-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-risk-signals > span {
   display: flex;
@@ -778,7 +734,7 @@ const operationItems = computed(() => [
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 7px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--theme-text-secondary);
 }
 .insights-metric-label strong {
@@ -814,7 +770,7 @@ const operationItems = computed(() => [
   border: 1px solid var(--theme-border);
   border-radius: 9px;
   color: var(--theme-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 750;
   letter-spacing: -0.4px;
 }
@@ -868,7 +824,7 @@ const operationItems = computed(() => [
   text-align: right;
 }
 .insights-review-item strong {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .insights-period {
@@ -887,7 +843,7 @@ const operationItems = computed(() => [
   color: var(--theme-text-tertiary);
   background: transparent;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 .insights-period button[aria-pressed="true"] {
@@ -943,7 +899,7 @@ const operationItems = computed(() => [
 }
 .insights-token-metrics dt {
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-token-metrics dd {
   margin: 10px 0 0;
@@ -991,7 +947,7 @@ const operationItems = computed(() => [
   flex: 1 1 140px;
   min-width: 0;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-ranking-list li > .insights-muted {
   grid-column: 3;
@@ -1021,7 +977,7 @@ const operationItems = computed(() => [
 .insights-ranking-empty {
   padding: 18px 0 4px;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.8;
 }
 .insights-execution {
@@ -1038,7 +994,7 @@ const operationItems = computed(() => [
   align-items: center;
   gap: 7px;
   color: var(--theme-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-trend-summary {
   display: flex;
@@ -1047,7 +1003,7 @@ const operationItems = computed(() => [
   gap: 12px 20px;
   margin: 0 0 15px;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-trend-summary strong {
   margin: 0 5px 0 7px;
@@ -1060,7 +1016,7 @@ const operationItems = computed(() => [
 }
 .insights-trend-summary b {
   margin-left: 5px;
-  font-size: 13px;
+  font-size: 14px;
 }
 .insights-chart {
   display: flex;
@@ -1147,7 +1103,7 @@ const operationItems = computed(() => [
   min-height: 190px;
   color: var(--theme-text-tertiary);
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-empty svg {
   width: 30px;
@@ -1158,7 +1114,7 @@ const operationItems = computed(() => [
 }
 .insights-empty strong {
   color: var(--theme-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .insights-operations {
@@ -1184,7 +1140,7 @@ const operationItems = computed(() => [
 .insights-operations p {
   margin: 4px 0 0;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .insights-operations dd {
   max-width: 45%;

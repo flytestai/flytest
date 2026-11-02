@@ -236,16 +236,17 @@ html
   .app-automation-shell
   .stat-card
   .arco-card-body {
-  min-height: 104px;
+  min-height: 96px;
   padding: 14px 16px;
 }
 .app-automation-shell .stat-card .stat-value {
   margin-top: 8px;
-  font-size: 28px;
+  font-size: 30px;
 }
+.app-automation-shell .stat-card .stat-value--state { font-size: 22px; line-height: 1.5; }
 .app-automation-shell .stat-card .stat-meta {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .app-automation-shell .dashboard-view .content-grid {
   gap: 14px;
@@ -257,8 +258,11 @@ html
 .app-automation-shell .dashboard-view .summary-item {
   padding: 12px;
   gap: 8px;
-  background: var(--theme-surface-soft);
+  background: transparent;
   border-color: var(--theme-border);
+  border: 0;
+  border-bottom: 1px solid var(--theme-border);
+  border-radius: 0;
 }
 .app-automation-shell .dashboard-view .summary-item strong {
   font-size: 26px;
@@ -285,9 +289,10 @@ html
   gap: 10px;
 }
 .app-automation-shell .dashboard-view :is(.ai-item, .task-item) {
-  padding: 12px;
-  background: var(--theme-surface-soft);
-  border: 1px solid var(--theme-border);
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 .app-automation-shell .settings-shell {
   max-width: none;
@@ -424,6 +429,14 @@ html
   }
 }
 @media (max-width: 767px) {
+  .app-automation-shell .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .app-automation-shell .stat-card .arco-card-body { padding:12px; box-sizing:border-box; min-height:104px; }
+  .app-automation-shell .stat-card .stat-meta { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4; }
+  .app-automation-shell .fc-page-heading--compact .page-actions { width: 100%; justify-content: flex-start; gap: 8px; }
+  .app-automation-shell .fc-page-heading--compact .header-tip { flex-basis: 100%; order: 3; font-size: 12px; }
+  .app-automation-shell .fc-page-heading--compact .arco-btn { min-height: 40px; }
+}
+@media (max-width: 767px) {
   .main-layout :is(.arco-table-col-fixed-left, .arco-table-col-fixed-right) {
     position: static !important;
     left: auto !important;
@@ -504,5 +517,13 @@ html
   }
   .trace-viewer .filter-types {
     flex-wrap: wrap;
+  }
+  .main-layout .arco-pagination {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 8px;
   }
 }

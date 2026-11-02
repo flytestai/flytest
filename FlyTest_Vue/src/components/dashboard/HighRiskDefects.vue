@@ -126,14 +126,14 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 550;
 }
 .fc-risk-list a > div > span {
   display: block;
   margin-top: 6px;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 .fc-risk-state {
   display: flex;
@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 170px;
+  min-height: 130px;
   gap: 10px;
   color: var(--theme-text-tertiary);
   font-size: 12px;
@@ -157,6 +157,6 @@ onBeforeUnmount(() => {
   color: var(--theme-accent);
 }
 .fc-risk-state > span {
-  font-size: 11px;
+  font-size: 12px;
 }
 </style>

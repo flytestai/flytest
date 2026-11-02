@@ -40,8 +40,9 @@ html body {
   background: var(--theme-bg);
 }
 html body:has(.main-layout) {
-  --workspace-gutter: 20px;
+  --workspace-gutter: 24px;
 }
+@media(max-width:1023px) { html body:has(.main-layout) { --workspace-gutter:16px; } }
 html
   body:has(.main-layout)
   .main-layout
@@ -57,7 +58,7 @@ html
     .report-hero,
     .fc-table
   ) {
-  border-radius: 10px !important;
+  border-radius: 12px !important;
 }
 html body:has(.main-layout) .main-layout .sider {
   background: var(--theme-nav-bg) !important;
@@ -90,7 +91,7 @@ html
   min-height: 40px;
   color: var(--theme-nav-text) !important;
   background: transparent !important;
-  font-size: 13px;
+  font-size: 14px;
 }
 html
   body:has(.main-layout)
@@ -267,11 +268,12 @@ html body:has(.main-layout) .main-layout .navigation-toggle {
 }
 html body .arco-btn {
   font-family: var(--theme-display-font);
-  border-radius: 6px !important;
+  border-radius: 8px !important;
   font-weight: 500;
+  font-size: 14px;
 }
 html body .arco-btn:not(.arco-btn-size-mini) {
-  min-height: 34px;
+  min-height: 36px;
 }
 html
   body
@@ -338,9 +340,13 @@ html body:has(.main-layout) .main-layout .arco-table-th {
   background: var(--theme-surface-soft) !important;
   color: var(--theme-text-secondary) !important;
   font-weight: 500;
+  border-right-width: 0;
+  border-left-width: 0;
 }
 html body:has(.main-layout) .main-layout .arco-table-td {
   border-bottom-color: var(--theme-border) !important;
+  border-right-width: 0;
+  border-left-width: 0;
 }
 html body:has(.main-layout) .main-layout .arco-table-tr:hover .arco-table-td {
   background: var(--theme-surface-soft) !important;
@@ -442,7 +448,7 @@ html body:has(.main-layout) .main-layout .api-automation-shell {
 .fc-case-code {
   display: block;
   color: var(--theme-text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 3px;
   font-variant-numeric: tabular-nums;
 }
@@ -513,7 +519,7 @@ html body:has(.main-layout) .main-layout .fc-case-title-button .fc-case-code {
 .fc-module-heading p {
   margin: 5px 0 0;
   color: var(--theme-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 html body:has(.main-layout) .main-layout .dashboard-heading h2 {
   margin: 0;
@@ -543,10 +549,10 @@ html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card {
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  min-height: 126px !important;
+  min-height: 108px !important;
   border: 1px solid var(--theme-border) !important;
   background: var(--theme-surface) !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
 }
 html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-icon {
   display: grid;
@@ -584,12 +590,12 @@ html
   flex: 1;
 }
 .main-layout .dashboard-view .fc-kpi-copy .kpi-note {
-  margin-top: 5px;
+  margin-top: 4px;
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
 }
 .main-layout .dashboard-view .fc-kpi-copy .kpi-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--theme-text-secondary);
 }
 html
@@ -617,20 +623,20 @@ html body:has(.main-layout) .main-layout .dashboard-view .kpi-value {
   min-width: 0;
   margin: 4px 0 16px;
   padding: 13px 18px;
-  border: 1px solid var(--theme-ai-border);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--theme-ai-soft);
+  background: var(--theme-surface);
 }
 .fc-quality-insight__label {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 8px;
-  color: var(--theme-ai);
+  color: var(--theme-accent);
   font-size: 13px;
   font-weight: 600;
   padding-right: 18px;
-  border-right: 1px solid var(--theme-ai-border);
+  border-right: 1px solid var(--theme-border);
 }
 .fc-quality-insight__label svg {
   width: 18px;
@@ -643,13 +649,13 @@ html body:has(.main-layout) .main-layout .dashboard-view .kpi-value {
   font-size: 12px;
   line-height: 1.7;
 }
-.fc-quality-insight a,
-.fc-dashboard-link {
+.fc-quality-insight a {
   flex: none;
   color: var(--theme-ai);
   font-size: 12px;
   text-decoration: none;
 }
+.fc-dashboard-link { color: var(--theme-accent); font-size:12px; text-decoration:none; }
 html
   body:has(.main-layout)
   .main-layout
@@ -665,7 +671,7 @@ html
 }
 html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
   padding: 18px !important;
-  border-radius: 9px !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
 }
 .main-layout .dashboard-insights .insights-secondary .insights-queue {
@@ -686,7 +692,7 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
   border-bottom: 0;
 }
 .main-layout .dashboard-insights .insights-heading h3 {
-  font-size: 15px;
+  font-size: 16px;
 }
 .main-layout .dashboard-insights .insights-heading {
   display: flex;
@@ -704,12 +710,12 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
 }
 .main-layout .dashboard-insights .insights-heading p {
   margin: 5px 0 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
   color: var(--theme-text-tertiary);
 }
 .main-layout .dashboard-insights .insights-primary {
-  min-height: 280px;
+  min-height: 240px;
 }
 .fc-trend-view {
   display: inline-flex;
@@ -728,7 +734,7 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
   background: transparent;
   color: var(--theme-text-secondary);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 .fc-trend-view button[aria-pressed="true"] {
@@ -739,14 +745,14 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 150px;
+  min-height: 130px;
   margin: 0;
   padding-top: 6px;
 }
 .fc-rate-chart svg {
   display: block;
   width: 100%;
-  height: 140px;
+  height: 120px;
   overflow: visible;
 }
 .fc-rate-grid path {
@@ -758,27 +764,6 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
   fill: var(--theme-text-tertiary);
   font-size: 10px;
   font-family: var(--theme-display-font);
-}
-.fc-rate-line {
-  fill: none;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-.fc-rate-line--pass {
-  stroke: var(--theme-success);
-}
-.fc-rate-line--fail {
-  stroke: var(--theme-danger);
-}
-.fc-rate-point--pass {
-  fill: var(--theme-surface);
-  stroke: var(--theme-success);
-  stroke-width: 1.6;
-}
-.fc-rate-point--fail {
-  fill: var(--theme-surface);
-  stroke: var(--theme-danger);
-  stroke-width: 1.6;
 }
 .fc-rate-chart > div {
   display: grid;
@@ -821,12 +806,12 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
     min-height: 36px;
   }
   .fc-module-heading h2 {
-    font-size: 22px;
+    font-size: 26px;
   }
 }
 @media (max-width: 767px) {
   html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-card {
-    padding: 12px !important;
+    padding: 14px 16px !important;
     gap: 8px;
   }
   html body:has(.main-layout) .main-layout .dashboard-view .kpi-grid .kpi-icon {
@@ -837,7 +822,7 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
     font-size: 27px;
   }
   .main-layout .dashboard-view .fc-kpi-copy .kpi-label {
-    font-size: 11px;
+    font-size: 13px;
   }
 }
 :is(button, a, [tabindex="0"]):focus-visible {
@@ -903,10 +888,10 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
 }
 @media (max-width: 767px) {
   html body:has(.main-layout) {
-    --workspace-gutter: 10px;
+    --workspace-gutter: 12px;
   }
   html body .arco-btn:not(.arco-btn-size-mini) {
-    min-height: 40px;
+    min-height: 36px;
   }
   .main-layout .qdesk-topbar-heading h1::before {
     display: none;
@@ -924,6 +909,6 @@ html body:has(.main-layout) .main-layout .dashboard-insights .insights-block {
     margin-bottom: 12px;
   }
   .fc-module-heading h2 {
-    font-size: 22px;
+    font-size: 26px;
   }
 }

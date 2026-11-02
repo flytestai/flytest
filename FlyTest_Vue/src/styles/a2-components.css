@@ -17,8 +17,13 @@ html body:has(.main-layout) .main-layout .fc-page {
   padding: 2px 0;
 }
 .fc-page-heading__copy { flex: 1 1 260px; min-width: 0; }
-.fc-page-heading__title { margin: 0; font-size: 24px; font-weight: 700; line-height: 1.4; letter-spacing: -.5px; color: var(--theme-text); }
-.fc-page-heading__description { margin: 5px 0 0; font-size: 13px; line-height: 1.7; color: var(--theme-text-secondary); max-width: 760px; }
+.fc-page-heading--compact { align-items: center; gap: 8px 16px; padding: 0; }
+.fc-page-heading--compact:empty { display: none; }
+.fc-page-heading--compact > .fc-page-heading__meta { margin: 0; }
+.fc-page-heading--compact > .fc-page-heading__actions { margin-left: auto; padding: 0; flex: 1 1 auto; justify-content: flex-end; }
+html body:has(.main-layout) .main-layout .fc-metric.arco-card { padding: 0 !important; }
+.fc-page-heading__title { margin: 0; font-size: 26px; font-weight: 650; line-height: 1.4; letter-spacing: -.35px; color: var(--theme-text); }
+.fc-page-heading__description { margin: 5px 0 0; font-size: 14px; line-height: 1.7; color: var(--theme-text-secondary); max-width: 760px; }
 .fc-page-heading__actions { display: flex; flex: 0 1 auto; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; padding-top: 2px; }
 .fc-page-heading__actions > :is(.header-actions,.header-toolbar,.page-actions,.hero-actions,.report-hero__actions,.page-hero__tools,.hero__actions,.page-toolbar) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
 .fc-page-heading__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; margin-top: 9px; color: var(--theme-text-tertiary); font-size: 12px; }
@@ -50,7 +55,7 @@ html body:has(.main-layout) .main-layout .fc-toolbar {
 html body:has(.main-layout) .main-layout .fc-toolbar:has(+.fc-table) { margin-bottom: 0; border-radius: 16px 16px 0 0 !important; border-bottom: 0 !important; }
 html body:has(.main-layout) .main-layout .fc-toolbar + .fc-table { border-radius: 0 0 16px 16px !important; box-shadow: var(--theme-card-shadow); }
 .fc-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
-html body:has(.main-layout) .main-layout .fc-panel { background: var(--theme-surface) !important; border: 1px solid var(--theme-border) !important; border-radius: 16px !important; box-shadow: var(--theme-card-shadow) !important; min-width: 0; overflow: clip; }
+html body:has(.main-layout) .main-layout .fc-panel { background: var(--theme-surface) !important; border: 1px solid var(--theme-border) !important; border-radius: 12px !important; box-shadow: var(--theme-card-shadow) !important; min-width: 0; overflow: clip; }
 html body:has(.main-layout) .main-layout .fc-section { padding: 14px; margin-bottom: 14px; background: var(--theme-surface-soft); border: 1px solid var(--theme-border); border-radius: 12px; min-width: 0; }
 .fc-section :is(h3,h4,.config-block-title) { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--theme-text); }
 .fc-table { font-variant-numeric: tabular-nums; }
@@ -79,7 +84,7 @@ html body:has(.main-layout) :is(.main-layout,.fc-dialog,.fc-drawer) .fc-form .ar
 .fc-form :is(.arco-input-wrapper,.arco-select-view,.arco-input-number,.arco-picker) { min-height: 34px; }
 .fc-form .arco-form-item-content-wrapper { min-width: 0; }
 .fc-form .arco-form-item-content { min-width: 0; max-width: 100%; }
-html body:has(.main-layout) :is(.fc-form,.fc-toolbar,.fc-page-heading,.fc-filter-panel) :is(.arco-input-wrapper,.arco-select-view-single,.arco-input-number,.arco-picker) { min-height: 34px !important; height: 34px; }
+html body:has(.main-layout) :is(.fc-form,.fc-toolbar,.fc-page-heading,.fc-filter-panel) :is(.arco-input-wrapper,.arco-select-view-single,.arco-input-number,.arco-picker) { min-height: 36px !important; height: 36px; }
 html body:has(.main-layout) :is(.arco-input-wrapper.arco-input-error,.arco-select-view-error,.arco-textarea-wrapper.arco-textarea-error,.arco-picker-error) { border-color: var(--theme-danger) !important; }
 html body:has(.main-layout) :is(.arco-input-error,.arco-select-view-error,.arco-textarea-error,.arco-picker-error):focus-within { box-shadow: 0 0 0 3px var(--theme-danger-soft) !important; }
 html body .fc-dialog .arco-modal-body { max-height: calc(100dvh - 180px); overflow: auto; overscroll-behavior: contain; }
@@ -97,7 +102,7 @@ html body .fc-dialog .fc-dialog-intro { background: var(--theme-surface-soft); b
 .fc-tabs .arco-tabs-tab { padding: 11px 4px; margin-inline: 0 20px; font-size: 13px; }
 .fc-tabs .arco-tabs-content { padding-top: 0; min-width: 0; }
 .fc-metric-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; min-width: 0; }
-html body:has(.main-layout) .main-layout .fc-metric { padding: 15px 16px !important; min-width: 0; border-radius: 14px !important; border: 1px solid var(--theme-border) !important; box-shadow: var(--theme-card-shadow) !important; background: var(--theme-surface) !important; }
+html body:has(.main-layout) .main-layout .fc-metric { padding: 15px 16px !important; min-width: 0; border-radius: 12px !important; border: 1px solid var(--theme-border) !important; box-shadow: var(--theme-card-shadow) !important; background: var(--theme-surface) !important; }
 .fc-metric .stat-value { margin-block: 7px 4px; font-size: 28px; line-height: 1.2; }
 .fc-metric :is(.stat-label,.stat-meta,.stat-hint) { font-size: 12px; line-height: 1.6; }
 html body:has(.main-layout) .main-layout .fc-directory { background: var(--theme-surface-soft) !important; border-color: var(--theme-border) !important; box-shadow: none !important; border-radius: 12px !important; min-width: 0; }
@@ -193,6 +198,7 @@ html body .fc-dialog :is(.structured-http-editor,.structured-environment-editor,
 .main-layout .app-automation-shell .fc-page-heading { margin-bottom: 0; }
 .main-layout .app-automation-shell :is(.settings-shell,.main-grid,.content-grid,.report-grid) { gap: 16px; }
 .main-layout .app-automation-shell :is(.settings-card,.draft-form-card,.ai-status-card) { padding: 16px; border: 1px solid var(--theme-border); border-radius: 16px; background: var(--theme-surface); box-shadow: var(--theme-card-shadow); }
+.main-layout .app-automation-shell .settings-card.arco-card { padding:0; }
 .main-layout .app-automation-shell .builder-grid { display: grid; grid-template-columns: minmax(200px,.8fr) minmax(300px,1.35fr) minmax(260px,1fr); align-items: start; gap: 14px; min-height: 0; }
 .main-layout .builder-grid > .arco-card { min-width: 0; }
 .main-layout .builder-grid .arco-card-header { padding: 12px 14px; }
@@ -284,7 +290,7 @@ html body .fc-dialog .tool-modal :is(.arco-input-wrapper,.arco-input-number,.arc
 @media (min-width:1600px) { .fc-page-heading { margin-bottom: 20px; } }
 @media (max-width:1023px) {
   .fc-page-heading__actions { flex-basis: 100%; }
-  .fc-page-heading__title { font-size: 22px; }
+  .fc-page-heading__title { font-size: 24px; font-weight: 650; letter-spacing: -.35px; }
   .fc-table .arco-table-empty .arco-empty { width: min(100%,calc(100vw - 72px)); }
   .fc-table .arco-table-tr-empty .arco-empty { width: min(100%,calc(100vw - 72px)); }
   .main-layout .app-automation-shell .builder-grid { grid-template-columns: minmax(0,1fr); }
@@ -298,16 +304,16 @@ html body .fc-dialog .tool-modal :is(.arco-input-wrapper,.arco-input-number,.arc
 @media (max-width:767px) {
   .fc-page-heading { gap: 10px; margin-bottom: 14px; }
   .fc-page-heading__copy { flex-basis: 100%; }
-  .fc-page-heading__title { font-size: 21px; }
-  .fc-page-heading__description { font-size: 12px; }
+  .fc-page-heading__title { font-size: 22px; font-weight: 650; letter-spacing: -.35px; }
+  .fc-page-heading__description { font-size: 14px; }
   .fc-page-heading__actions { width: 100%; }
   .fc-page-heading__actions > * { max-width: 100%; }
-  html body:has(.main-layout) :is(.fc-form,.fc-toolbar,.fc-page-heading,.fc-filter-panel) :is(.arco-input-wrapper,.arco-select-view-single,.arco-input-number,.arco-picker) { min-height: 40px !important; height: 40px; }
+  html body:has(.main-layout) :is(.fc-form,.fc-toolbar,.fc-page-heading,.fc-filter-panel) :is(.arco-input-wrapper,.arco-select-view-single,.arco-input-number,.arco-picker) { min-height: 36px !important; height: 36px; }
   .fc-page-heading__actions :is(.toolbar-search,.tools-search) { width: 100%; flex-basis: 100%; }
   html body:has(.main-layout) .main-layout .fc-toolbar { padding: 12px !important; }
   .fc-toolbar .search-box > :is(.arco-input-wrapper,.arco-select) { flex: 1 1 130px; width: auto !important; margin: 0 !important; max-width: 100%; }
   .fc-metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
-  html body:has(.main-layout) .main-layout .fc-metric { padding: 12px !important; }
+  html body:has(.main-layout) .main-layout .fc-metric { padding: 12px !important; border-radius: 12px; }
   .fc-metric .stat-value { font-size: 25px; }
   .fc-detail-heading .arco-space { flex-wrap: wrap; gap: 8px; }
   .fc-detail-heading .form-actions { width: 100%; }

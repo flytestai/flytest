@@ -208,7 +208,7 @@ node scripts/verify-a2-details.cjs
 
 这些检查在独立浏览器中拦截接口，不向业务库写入测试数据。截图与报告输出到被 Git 忽略的 `playwright-screenshots/`。布局夹具不能替代真实权限、模型、设备和外部服务的业务验收。
 
-本次深蓝青绿界面的检查范围与结果见[验收记录](./docs/plans/2026-11-02-navy-teal-verification.md)。此前 A2 版本的检查保留在[历史记录](./docs/plans/2026-10-30-feice-a2-verification.md)。
+最新整站精修、响应式布局与检查结果见[精修验收记录](./docs/plans/2026-11-02-refined-workbench.md)。深蓝青绿初版见[验收记录](./docs/plans/2026-11-02-navy-teal-verification.md)，此前 A2 版本见[历史记录](./docs/plans/2026-10-30-feice-a2-verification.md)。
 
 ## 文档入口
 

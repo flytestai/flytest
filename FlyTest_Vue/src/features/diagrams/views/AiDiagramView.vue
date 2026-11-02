@@ -4,7 +4,7 @@
     <div class="diagram-panel">
       <div class="diagram-header">
         <h3>AI 图表编辑器</h3>
-        <a-space>
+        <a-space wrap class="diagram-actions">
           <a-button type="text" @click="exportDiagram" :disabled="!currentXml">
             <template #icon><icon-download /></template>
             导出
@@ -1471,7 +1471,11 @@ onUnmounted(() => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 12px;
 }
+
+.diagram-actions { max-width: 100%; justify-content: flex-end; margin-left: auto; }
 
 .diagram-header h3 {
   margin: 0;

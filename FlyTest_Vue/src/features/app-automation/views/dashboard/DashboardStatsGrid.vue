@@ -18,7 +18,7 @@
     <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">测试用例</div>
       <div class="stat-value">{{ statistics.test_cases.total }}</div>
-      <div class="stat-meta">通过率 <span :class="'quality-' + passRateTone(statistics.executions.pass_rate)">{{ formatQualityPercent(statistics.executions.pass_rate) }}</span></div>
+      <div class="stat-meta">通过率 <span :class="'quality-' + passRateTone(statistics.executions.total ? statistics.executions.pass_rate : null)">{{ formatQualityPercent(statistics.executions.total ? statistics.executions.pass_rate : null) }}</span></div>
     </a-card>
     <a-card class="stat-card fc-metric fc-panel">
       <div class="stat-label">激活任务</div>
@@ -27,7 +27,7 @@
     </a-card>
     <a-card class="stat-card fc-metric fc-panel fc-ai-metric">
       <div class="stat-label">AI 智能模式</div>
-      <div class="stat-value">{{ aiReady ? 'ON' : aiHasConfig ? 'Fallback' : 'OFF' }}</div>
+      <div class="stat-value stat-value--state">{{ aiReady ? '已启用' : aiHasConfig ? '待就绪' : '未配置' }}</div>
       <div class="stat-meta">{{ aiCapabilityDisplay }}</div>
     </a-card>
   </div>
@@ -65,7 +65,7 @@ defineProps<DashboardStatsGridProps>()
 }
 
 .stat-card :deep(.arco-card-body) {
-  min-height: 132px;
+  min-height: 96px;
   padding: 20px;
 }
 
@@ -89,10 +89,11 @@ defineProps<DashboardStatsGridProps>()
   font-size: 12px;
   line-height: 1.65;
 }
+.stat-value--state { font-size: 22px; line-height: 1.5; }
 
 @media (max-width: 900px) {
   .stat-card :deep(.arco-card-body) {
-    min-height: 112px;
+    min-height: 96px;
     padding: 18px;
   }
 }
@@ -103,6 +104,6 @@ defineProps<DashboardStatsGridProps>()
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @container workspace (max-width: 420px) {
-  .stats-grid { grid-template-columns: minmax(0, 1fr); }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

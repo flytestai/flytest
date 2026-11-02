@@ -1,6 +1,6 @@
 <template>
   <div class="knowledge-management fc-page">
-    <WorkspacePageHeader v-if="!selectedKB">
+    <WorkspacePageHeader v-if="!selectedKB" description="沉淀团队知识，让需求、文档与测试经验持续复用">
         <template #title>知识库管理</template>
         <template #actions><div class="header-actions">
         <a-button @click="showConfigModal" style="margin-right: 8px">
@@ -50,6 +50,9 @@
           @page-change="handlePageChange"
           @page-size-change="handlePageSizeChange"
         >
+          <template #empty>
+            <WorkspaceEmptyState :title="searchKeyword || statusFilter ? '没有找到匹配的知识库' : '建立团队的第一座知识库'" :description="searchKeyword || statusFilter ? '尝试调整名称或状态筛选，查看其他知识库。' : '创建知识库、上传项目文档，再通过检索连接需求与测试经验。'" :action-label="searchKeyword || statusFilter ? '清空筛选' : '新建知识库'" @action="searchKeyword || statusFilter ? clearKnowledgeFilters() : showCreateModal()" />
+          </template>
           <template #name="{ record }">
             <button type="button" class="fc-knowledge-name" @click="selectKnowledgeBase(record)">{{ record.name }}</button>
           </template>
@@ -129,6 +132,7 @@
 
 <script setup lang="ts">
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
+import WorkspaceEmptyState from '@/components/workspace/WorkspaceEmptyState.vue'
 import { ref, onMounted, watch } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { IconPlus, IconSettings } from '@arco-design/web-vue/es/icon';
@@ -148,6 +152,7 @@ const loading = ref(false);
 const searchKeyword = ref('');
 const statusFilter = ref('');
 const selectedKB = ref<KnowledgeBase | null>(null);
+function clearKnowledgeFilters() { searchKeyword.value = ''; statusFilter.value = ''; handleSearch(); }
 const editingKB = ref<KnowledgeBase | null>(null);
 const isFormModalVisible = ref(false);
 const isStatsModalVisible = ref(false);

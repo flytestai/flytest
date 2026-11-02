@@ -1,21 +1,7 @@
 <template>
   <div class="api-automation-shell fc-page">
-    <div class="fc-module-heading">
-      <div>
-        <h2>接口自动化</h2>
-        <p>连接接口设计、调试与自动化验证</p>
-      </div>
-    </div>
-    <nav class="fc-inline-tabs" aria-label="接口自动化">
-      <router-link
-        v-for="tab in workspaceTabs"
-        :key="tab.key"
-        :to="{ path: '/api-automation', query: { tab: tab.key } }"
-        :aria-current="activeTab === tab.key ? 'page' : undefined"
-        >{{ tab.label }}</router-link
-      >
-    </nav>
-    <WorkspaceDirectoryLayout
+    <WorkspaceModuleHeader title="接口自动化" :page-title="activeTab === 'requests' ? '接口自动化' : workspaceTabs.find(tab => tab.key === activeTab)?.label" description="连接接口设计、调试与自动化验证" :tabs="workspaceTabs.map(tab => ({...tab,to:{path:'/api-automation',query:{tab:tab.key}}}))" :active-key="activeTab" />
+    <WorkspaceDirectoryLayout compact-header
       ref="workspaceRef"
       storage-key="api-automation"
       :directory="needsDirectory"
@@ -120,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import WorkspaceModuleHeader from "@/components/workspace/WorkspaceModuleHeader.vue";
 import WorkspaceDirectoryLayout from "@/components/workspace/WorkspaceDirectoryLayout.vue";
 import WorkspacePane from "@/components/workspace/WorkspacePane.vue";
 
