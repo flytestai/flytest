@@ -16,37 +16,64 @@ An AI-assisted testing platform for QA teams, connecting requirement reviews, te
 | Test assets | Cases, modules, suites, bugs, execution history, reports, templates, and data factory |
 | API automation | Collections, requests, test cases, environments, execution records, and reports |
 | Web / UI automation | Pages, steps, cases, AI mode, execution records, batch runs, shared data, environments, and actuators |
-| APP automation | Devices, packages, elements, scene builder, cases, suites, execution records, scheduled tasks, notification logs, and reports |
+| APP automation | Devices, packages, elements, scene builder, cases, suites, execution records, scheduled tasks, notification logs, reports, and environment profiles |
 | Collaboration and extensions | Projects, users, organizations, permissions, operation logs, notifications, API keys, remote MCP, and Skills management |
 
 AI, vector retrieval, and device execution require the corresponding models, services, and devices to be configured.
 
+## Latest workspace redesign (November 2026)
+
+The current release uses navy navigation, light workspaces, teal actions (`#008F83`), and purple AI indicators (`#7C5CE2`). Requirement management, AI conversations, test assets, API automation, and all nine Web automation tabs now share consistent headers, filters, tables, detail panels, and responsive layouts.
+
+APP automation now has twelve refined workspaces: overview, devices, packages, elements, scene builder, cases, suites, executions, scheduled tasks, notifications, reports, and environments. Knowledge management, the data factory, projects, and user management also have dedicated layouts.
+
+- **Packages:** authenticated APK / AAB / IPA upload and download, installation history, and APK installation on available Android devices. AAB requires conversion; IPA requires an iOS driver. Installation history is not a complete device application inventory.
+- **AI and suites:** element recognition, suite planning, and schedule drafts require configured models. Users adopt and save suggestions before use; draft generation does not execute tests. Suite execution supports sequential runs and parallel queues across multiple Android devices.
+- **APP environments:** project profiles support CRUD, cloning, import/export, and checks. Android checks use ADB; service checks test TCP connectivity. Profile maintenance/enabling does not start devices or automatically replace task execution settings.
+- **Knowledge:** project-scoped summaries, indexed chunks, source distribution, and search topics. Supported sources are files, text, and web links; automated Git/SVN synchronization is not implemented.
+- **Data factory:** scenario filters, tool search, recent/favorite tools, history, tags, and API/UI references. Counts come from available service data rather than fixed design examples.
+- **Projects and users:** member and asset summaries, recent project updates, user approval tabs, organization/role/account filters, read-only details, and explicit account toggles. Approval, account activation, and permission assignment are independent. Bulk user import is not available; absent login timestamps are shown as unavailable.
+
+Rebuild the frontend and reload Django / APP services after updating. Existing processes do not acquire new endpoints automatically; the frontend reports unavailable capabilities. Persist and back up APP package files and project metadata alongside the database. See the [APP service guide](./FlyTest_FastAPI_AppAutomation/README.md).
+
 ## Screenshots
 
-The current A2 workspace uses a shared FeiCe identity, bright blue actions, rounded cards, compact filters and tables, responsive navigation, and dark theme support.
+The workspace uses navy navigation, teal actions, rounded cards, compact filters and tables, responsive navigation, and dark theme support.
 
-These browser screenshots show the current code with isolated demonstration API fixtures. Sample statistics illustrate supported UI states; they are not production metrics or a claim that every statistics field is already supplied by the backend.
+The first gallery shows the earlier navy/teal baseline; the new workspace gallery below shows this round of changes. All screenshots use isolated demonstration fixtures. Sample statistics are not production metrics or a claim that every field is supplied by the backend.
 
 | Login | Quality workspace |
 | --- | --- |
-| ![FeiCe login](./.github/readme-assets/a2-login.png) | ![FeiCe quality workspace](./.github/readme-assets/a2-dashboard.png) |
+| ![FeiCe login](./.github/readme-assets/navy-login.png) | ![FeiCe quality workspace](./.github/readme-assets/navy-dashboard.png) |
 
-| Test cases | API test report |
+| Test cases | API request workspace |
 | --- | --- |
-| ![FeiCe test cases](./.github/readme-assets/a2-testcases.png) | ![FeiCe API report](./.github/readme-assets/a2-api-report.png) |
+| ![FeiCe test cases](./.github/readme-assets/navy-testcases.png) | ![FeiCe API request workspace](./.github/readme-assets/navy-api-workbench.png) |
 
 | Web / UI automation | APP device management |
 | --- | --- |
-| ![FeiCe Web automation](./.github/readme-assets/a2-ui-automation.png) | ![FeiCe APP devices](./.github/readme-assets/a2-app-devices.png) |
+| ![FeiCe Web automation](./.github/readme-assets/navy-ui-automation.png) | ![FeiCe APP devices](./.github/readme-assets/navy-app-devices.png) |
 
 <details>
 <summary>Mobile layout</summary>
 
-<img src="./.github/readme-assets/a2-mobile.png" width="320" alt="FeiCe mobile quality workspace" />
+<img src="./.github/readme-assets/navy-mobile.png" width="320" alt="FeiCe mobile quality workspace" />
 
 </details>
 
-Quality colors are shared across the UI: action blue `#0066FF`, pass green `#008000`, and risk red `#E00000`. A pass rate is green only when its unrounded value is exactly **100%**. Pending defects are red; coverage is green at **80% or above**, otherwise red. Execution bars use green for passed results and red for failures. Missing data uses an empty state. The dashboard displays unavailable coverage when Django statistics do not supply it, rather than estimating it from unrelated asset counts.
+### New workspace previews
+
+These screenshots also use isolated demonstration fixtures.
+
+| Projects | Users |
+| --- | --- |
+| ![Projects](./.github/readme-assets/reference-projects.png) | ![Users](./.github/readme-assets/reference-users.png) |
+
+| Knowledge | Data factory |
+| --- | --- |
+| ![Knowledge](./.github/readme-assets/reference-knowledge.png) | ![Data factory](./.github/readme-assets/reference-data-factory.png) |
+
+Quality colors are shared across the UI: action teal `#008F83`, pass green `#008000`, and risk red `#E00000`. A pass rate is green only when its unrounded value is exactly **100%**. Pending defects are red; coverage is green at **80% or above**, otherwise red. Execution bars use green for passed results and red for failures. Missing data uses an empty state. The dashboard displays unavailable coverage when Django statistics do not supply it, rather than estimating it from unrelated asset counts.
 
 ## Repository and stack
 
@@ -164,7 +191,23 @@ node scripts/verify-a2-details.cjs
 
 Start the frontend first. `UI_BASE_URL` unifies differing script default ports. To use Playwright Chromium, unset the browser channel and run `npx playwright install chromium`.
 
-The scripts intercept API calls in isolated browser contexts without writing to the business database. Reports and screenshots go to the ignored `playwright-screenshots/` directory. Fixtures do not replace real permissions, model, device, or integration acceptance tests. The latest A2 record includes 138 layout checks across 46 entries at 1440 / 1024 / 390px, plus 320px, dialogs, authentication, quality thresholds, and interaction checks.
+The scripts intercept API calls in isolated browser contexts without writing to the business database. Reports and screenshots go to the ignored `playwright-screenshots/` directory. Fixtures do not replace real permissions, model, device, or integration acceptance tests. The new workspaces are checked at desktop, tablet, and mobile widths; see individual implementation records for their scope and results.
+
+Additional module checks (from `FlyTest_Vue/`, with the frontend running) include:
+
+```bash
+npm run test:assets:reference
+npm run test:api:reference
+npm run test:web:reference
+npm run test:app:overview
+npm run test:app:settings
+npm run test:knowledge:reference
+npm run test:data-factory:panel
+npm run test:projects:reference
+npm run verify:user-reference
+```
+
+Some module scripts use installed Edge directly. Data-only checks include `npm run test:projects:data` and `npm run verify:user-data`. See [`package.json`](./FlyTest_Vue/package.json) for other APP tabs and requirement/chat checks. Backend regression commands and current implementation records are listed in the [Chinese README](./README.md#开发与验证).
 
 ## Documentation
 
