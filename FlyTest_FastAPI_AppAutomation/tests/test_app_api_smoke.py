@@ -5,7 +5,7 @@ import tempfile
 import time
 import unittest
 import gc
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -141,6 +141,46 @@ class AppApiSmokeTests(unittest.TestCase):
                     raise
                 gc.collect()
                 time.sleep(0.3)
+
+    def test_dashboard_reference_trend_is_project_scoped_and_devices_are_disjoint(self):
+        today = datetime.utcnow()
+        yesterday = (today - timedelta(days=1)).isoformat()
+        old = (today - timedelta(days=31)).isoformat()
+        now = today.isoformat()
+        with database.connection() as conn:
+            for status in ('available', 'online', 'locked', 'offline', 'unauthorized'):
+                conn.execute(
+                    'INSERT INTO devices (device_id, status, created_at, updated_at) VALUES (?, ?, ?, ?)',
+                    (f'reference-{status}', status, now, now),
+                )
+            for project, result, started, created in (
+                (1001, 'passed', now, now), (1001, 'failed', now, now),
+                (1001, '', '', yesterday), (1001, 'passed', old, old),
+                (1002, 'failed', now, now),
+            ):
+                conn.execute(
+                    '''INSERT INTO executions (project_id, result, status, started_at, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?)''',
+                    (project, result, 'completed' if result else 'pending', started, created, created),
+                )
+        response = self.client.get('/dashboard/statistics/?project_id=1001')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()['data']
+        self.assertEqual(data['devices'], {'total': 5, 'online': 2, 'locked': 1, 'busy': 1, 'offline': 1, 'unavailable': 1})
+        self.assertEqual(len(data['trend']), 30)
+        self.assertEqual(sum(day['total'] for day in data['trend']), 3)
+        self.assertEqual(data['trend'][-1], {'day': today.date().isoformat(), 'total': 2, 'passed': 1, 'failed': 1})
+        self.assertEqual(data['trend'][-2]['total'], 1)
+        self.assertEqual(data['executions']['total'], 4)
+        other = self.client.get('/dashboard/statistics/?project_id=1002').json()['data']
+        self.assertEqual(sum(day['total'] for day in other['trend']), 1)
+        self.assertEqual(other['trend'][-1]['failed'], 1)
+
+    def test_dashboard_reference_empty_trend_has_no_completed_results(self):
+        data = self.client.get('/dashboard/statistics/?project_id=1001').json()['data']
+        self.assertEqual(data['devices']['total'], 0)
+        self.assertEqual(len(data['trend']), 30)
+        self.assertTrue(all(day['total'] == day['passed'] == day['failed'] == 0 for day in data['trend']))
 
     def create_package(self):
         response = self.client.post(

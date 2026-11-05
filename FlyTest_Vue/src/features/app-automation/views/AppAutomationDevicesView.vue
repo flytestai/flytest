@@ -1,38 +1,23 @@
 <template>
-  <div class="page-shell fc-page">
-    <DevicesHeaderBar
-      :loading="loading"
-      :auto-refresh-enabled="autoRefreshEnabled"
-      :last-updated-text="lastUpdatedText"
-      @toggle-auto-refresh="toggleAutoRefresh"
-      @open-connect="showConnectModal = true"
-      @discover="discover"
-    />
-
-    <DevicesStatsGrid :stats="stats" />
-
-    <DevicesFilterCard
-      :filters="filters"
-      @search="handleSearch"
-      @reset="resetFilters"
-    />
-
-    <DevicesTableCard
+  <div class="page-shell fc-page app-devices-page">
+    <DevicesReferenceWorkspace
       :devices="devices"
       :loading="loading"
+      :load-error="loadError"
+      :auto-refresh-enabled="autoRefreshEnabled"
+      :last-updated-text="lastUpdatedText"
       :screenshot-loading-id="screenshotLoadingId"
-      :format-date-time="formatDateTime"
-      :get-status-label="getStatusLabel"
-      :get-status-color="getStatusColor"
-      :get-connection-label="getConnectionLabel"
-      :format-endpoint="formatEndpoint"
       :can-lock="canLock"
       :can-unlock="canUnlock"
       :can-reconnect="canReconnect"
       :can-disconnect="canDisconnect"
-      @open-detail="openDetail"
-      @open-edit="openEdit"
-      @preview-screenshot="previewScreenshot"
+      @refresh="loadData()"
+      @auto-refresh="toggleAutoRefresh"
+      @connect="showConnectModal = true"
+      @discover="discover"
+      @detail="openDetail"
+      @edit="openEdit"
+      @screenshot="previewScreenshot"
       @lock="lock"
       @unlock="unlock"
       @reconnect="reconnect"
@@ -43,14 +28,14 @@
     <DeviceConnectDialog
       v-model:visible="showConnectModal"
       :connect-form="connectForm"
-      @connect="connect"
+      :connect-device="connect"
     />
 
     <DeviceEditDialog
       v-model:visible="editVisible"
       :edit-form="editForm"
       :edit-saving="editSaving"
-      @submit="submitEdit"
+      :submit-device="submitEdit"
     />
 
     <DeviceDetailDialog
@@ -76,15 +61,13 @@ import {
   DeviceDetailDialog,
   DeviceEditDialog,
   DeviceScreenshotDialog,
-  DevicesFilterCard,
-  DevicesHeaderBar,
-  DevicesStatsGrid,
-  DevicesTableCard,
   useAppAutomationDevices,
 } from './devices'
+import DevicesReferenceWorkspace from './devices/DevicesReferenceWorkspace.vue'
 
 const {
   loading,
+  loadError,
   editSaving,
   autoRefreshEnabled,
   showConnectModal,
@@ -95,23 +78,19 @@ const {
   currentScreenshot,
   currentDevice,
   devices,
-  filters,
   connectForm,
   editForm,
-  stats,
   lastUpdatedText,
   formatDateTime,
   formatTimestamp,
   getStatusLabel,
-  getStatusColor,
   getConnectionLabel,
   formatEndpoint,
   canLock,
   canUnlock,
   canReconnect,
   canDisconnect,
-  handleSearch,
-  resetFilters,
+  loadData,
   discover,
   connect,
   openDetail,
@@ -150,11 +129,15 @@ const {
 @media (max-width: 900px) {
   .page-shell {
     gap: 16px;
-    padding: 4px;
+    padding: 0;
   }
 
   .page-shell :deep(.arco-card-body) {
     padding: 18px;
   }
 }
+</style>
+
+<style>
+.app-automation-shell .app-devices-page { padding: 0 !important; }
 </style>

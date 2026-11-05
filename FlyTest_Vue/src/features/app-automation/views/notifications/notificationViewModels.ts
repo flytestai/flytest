@@ -1,6 +1,7 @@
 import type { AppNotificationLog, AppScheduledTask } from '../../types'
 
 export interface NotificationFilters {
+  event_type?: string
   search: string
   status: string
   notification_type: string

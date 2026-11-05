@@ -79,6 +79,7 @@ export interface KnowledgeGlobalConfig {
  * 知识库对象（简化版，嵌入配置统一使用全局配置）
  */
 export interface KnowledgeBase {
+  processing_documents?: number;
   id: string;
   name: string;
   description?: string;
@@ -93,6 +94,16 @@ export interface KnowledgeBase {
   chunk_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface KnowledgeWorkspaceSummary {
+  knowledge_bases: number;
+  documents: number;
+  indexed_chunks: number;
+  monthly_queries: number;
+  states: { active: number; processing: number; disabled: number };
+  sources: { file: number; url: number; text: number };
+  hot_queries: { query: string; count: number }[];
 }
 
 /**

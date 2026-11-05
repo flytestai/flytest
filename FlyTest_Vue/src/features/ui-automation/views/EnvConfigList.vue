@@ -1,6 +1,7 @@
 <template>
   <div class="env-config-list fc-page">
-    <WorkspacePageHeader title="环境配置"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="env-config" :rows="envConfigData" :total="pagination.total" :loading="loading" @edit="editConfig">
+    <WorkspacePageHeader local title="环境配置"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.browser"
@@ -24,13 +25,13 @@
       </div>
       <div class="action-buttons">
         <a-button type="primary" @click="showAddModal">
-          <template #icon><icon-plus /></template>
+      <template #icon><icon-plus /></template>
           新增环境
         </a-button>
       </div>
     </div></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="envConfigData"
       :pagination="pagination"
@@ -39,6 +40,7 @@
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.name }}</button></template>
       <template #browser="{ record }">
         <a-tag :color="browserColors[record.browser as BrowserType]">{{ record.browser }}</a-tag>
       </template>
@@ -68,6 +70,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
@@ -170,6 +173,8 @@
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -225,13 +230,13 @@ const browserColors: Record<BrowserType, string> = { chromium: 'arcoblue', firef
 
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
-  { title: '环境名称', dataIndex: 'name', width: 150, align: 'center' as const },
+  { title: '环境名称', slotName: 'workspace_name', width: 150, align: 'center' as const },
   { title: '基础 URL', dataIndex: 'base_url', ellipsis: true, tooltip: true, width: 200, align: 'center' as const },
   { title: '浏览器', slotName: 'browser', width: 100, align: 'center' as const },
   { title: '模式', slotName: 'headless', width: 80, align: 'center' as const },
   { title: '默认', slotName: 'is_default', width: 70, align: 'center' as const },
   { title: '创建者', dataIndex: 'creator_name', width: 100, align: 'center' as const },
-  { title: '操作', slotName: 'operations', width: 200, fixed: 'right' as const, align: 'center' as const },
+  { title: '操作', slotName: 'operations', width: 125, fixed: 'right' as const, align: 'center' as const },
 ]
 
 const fetchData = async () => {

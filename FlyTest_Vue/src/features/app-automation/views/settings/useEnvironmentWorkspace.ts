@@ -1,0 +1,22 @@
+import {computed,ref,watch} from 'vue'
+import {Message,Modal} from '@arco-design/web-vue'
+import {AppAutomationService as service} from '../../services/appAutomationService'
+import type {EnvironmentProfile,EnvironmentInput} from './environmentModels'
+import {profileInput,parseEnvironmentImport} from './environmentModels'
+import type {AppDevice} from '../../types'
+
+export function useEnvironmentWorkspace(project:()=>number|null){
+  const profiles=ref<EnvironmentProfile[]>([]),devices=ref<AppDevice[]>([]),supported=ref(false),loading=ref(false),error=ref(''),saving=ref(false),editorVisible=ref(false),editingId=ref(''),draft=ref<EnvironmentInput>(blank()),busy=ref<string[]>([])
+  let version=0
+  function blank():EnvironmentInput{return {name:'',kind:'device',platform:'android',network:'intranet',device_ids:[],endpoint:'',description:'',enabled:true}}
+  const load=async()=>{const id=project(),request=++version;if(!id){profiles.value=[];return}loading.value=true;error.value='';try{const capability=await service.getEnvironmentCapabilities();if(request!==version||id!==project())return;supported.value=capability.profiles;if(!supported.value)return;const [rows,list]=await Promise.all([service.getEnvironments(id),service.getDevices()]);if(request!==version||id!==project())return;profiles.value=rows;devices.value=list}catch(value:any){if(request!==version||id!==project())return;const status=value?.status||value?.response?.status;const message=String(value?.message||value?.error||'');if(status===404||status===405||message.includes('Not Found')){supported.value=false;profiles.value=[]}else error.value=message||'环境配置加载失败'}finally{if(request===version)loading.value=false}}
+  const open=(profile?:EnvironmentProfile,copy=false)=>{editingId.value=profile&&!copy?profile.id:'';draft.value=profile?profileInput(profile):blank();if(copy){draft.value.name+='（副本）';draft.value.enabled=false}editorVisible.value=true}
+  const save=async()=>{if(saving.value)return false;const id=project();if(!id)return false;saving.value=true;try{const input={...parseEnvironmentImport(JSON.stringify({version:1,profiles:[draft.value]}))[0]!,enabled:draft.value.enabled};const saved=editingId.value?await service.updateEnvironment(id,editingId.value,input):await service.createEnvironment(id,input);if(id!==project())return false;profiles.value=profiles.value.some(item=>item.id===saved.id)?profiles.value.map(item=>item.id===saved.id?saved:item):[...profiles.value,saved];Message.success('环境配置已保存，请进行连通检测');return true}catch(value:any){Message.error(value.message||'保存环境失败');return false}finally{saving.value=false}}
+  const remove=(profile:EnvironmentProfile)=>{const id=project();if(!id)return;Modal.confirm({title:'删除环境配置',content:`确认删除「${profile.name}」？设备和执行记录将保留。`,onOk:async()=>{try{await service.deleteEnvironment(id,profile.id);if(id===project())profiles.value=profiles.value.filter(item=>item.id!==profile.id)}catch(value:any){Message.error(value.message||'删除失败')}}})}
+  const batch=async(ids:string[],enabled:boolean)=>{const id=project();if(!id||!ids.length)return;busy.value=[...ids];try{const rows=await service.batchEnvironments(id,ids,enabled);if(id===project())profiles.value=rows;Message.success(enabled?'环境配置已启用，请重新检测':'环境配置已设为维护')}catch(value:any){Message.error(value.message||'状态更新失败')}finally{busy.value=[]}}
+  const probe=async(ids:string[])=>{const id=project();if(!id||!ids.length)return;if(ids.length>20){Message.warning('每次最多检测 20 个环境，请缩小选择范围');return}busy.value=[...ids];try{for(const key of ids){if(id!==project())break;const saved=await service.probeEnvironment(id,key);if(id!==project())break;profiles.value=profiles.value.map(item=>item.id===key?saved:item)}}catch(value:any){Message.error(value.message||'连通检测失败')}finally{busy.value=[]}}
+  const importing=ref(false)
+  const importRows=async(rows:EnvironmentInput[])=>{const id=project();if(!id)return false;importing.value=true;try{const created=await service.importEnvironments(id,rows);if(id!==project())return false;profiles.value=[...profiles.value,...created];Message.success('环境配置已导入，初始为维护状态');return true}catch(value:any){Message.error(value.message||'导入失败');return false}finally{importing.value=false}}
+  watch(project,()=>{++version;profiles.value=[];devices.value=[];supported.value=false;editorVisible.value=false;busy.value=[];void load()},{immediate:true})
+  return {profiles,devices,supported,loading,error,saving,editorVisible,draft,busy,editingId,importing,operating:computed(()=>busy.value.length>0),load,open,save,remove,batch,probe,importRows}
+}

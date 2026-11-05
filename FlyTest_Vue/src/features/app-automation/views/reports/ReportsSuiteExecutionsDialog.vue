@@ -2,7 +2,7 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="selectedSuite ? `${selectedSuite.name} 执行记录` : '套件执行记录'"
-    width="980px"
+    :width="Math.min(980,width-24)"
     :footer="false"
   >
     <a-table class="fc-table" :data="suiteExecutions" :loading="loading" :pagination="false" row-key="id">
@@ -31,6 +31,9 @@
 </template>
 
 <script setup lang="ts">
+import {useWindowSize} from '@vueuse/core'
+const {width}=useWindowSize()
+
 import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ReportsSuiteExecutionsDialogEmits } from './reportEventModels'
 import type { ReportsSuiteExecutionsDialogProps } from './reportViewModels'

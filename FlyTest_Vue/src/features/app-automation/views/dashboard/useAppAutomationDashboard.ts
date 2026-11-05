@@ -5,6 +5,7 @@ import { getActiveLlmConfig, getLlmConfigDetails } from '@/features/langgraph/se
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
+import { getProjectStatistics } from '@/services/projectService'
 import {
   openExecutionReportWindow,
   pushAppAutomationExecutions,
@@ -15,6 +16,7 @@ import type {
   AppAutomationTab,
   AppDashboardStatistics,
   AppExecution,
+  AppDevice,
   AppLlmConfigSnapshot,
   AppScheduledTask,
   AppServiceHealth,
@@ -85,6 +87,45 @@ export const useAppAutomationDashboard = () => {
   const statistics = reactive<AppDashboardStatistics>(createEmptyStatistics())
   const scheduledTasks = ref<AppScheduledTask[]>([])
   const loading = ref(false)
+  const loadError = ref('')
+  const pendingBugs = ref<number | null>(null)
+  const bugStatisticsError = ref(false)
+  let loadVersion = 0
+  let legacyTrendCache: { key: string; trend: NonNullable<AppDashboardStatistics['trend']> } | null = null
+
+  // Older running services expose the same real data through their list APIs.
+  const completeDashboardStatistics = async (data: AppDashboardStatistics, projectId: number, force: boolean) => {
+    const needsDevices = data.devices.busy === undefined || data.devices.offline === undefined
+    const key = JSON.stringify([projectId, new Date().toISOString().slice(0,10), data.executions, data.recent_executions])
+    const needsExecutions = !data.trend && (force || legacyTrendCache?.key !== key)
+    const [devices, executions] = await Promise.all([
+      needsDevices ? AppAutomationService.getDevices() : Promise.resolve(null),
+      needsExecutions ? AppAutomationService.getExecutions(projectId) : Promise.resolve(null),
+    ])
+    if (devices) {
+      const counts = (statuses: string[]) => devices.filter((device: AppDevice) => statuses.includes(device.status)).length
+      const online = counts(['available','online']), busy = counts(['locked','busy','stopping']), offline = counts(['offline'])
+      data.devices = {total:devices.length, online, locked:counts(['locked']), busy, offline, unavailable:devices.length-online-busy-offline}
+    }
+    if (!data.trend) {
+      if (executions) {
+        const trend: NonNullable<AppDashboardStatistics['trend']> = Array.from({length:30},(_,index)=>{
+          const day = new Date(); day.setUTCDate(day.getUTCDate()-29+index)
+          return {day:day.toISOString().slice(0,10),total:0,passed:0,failed:0}
+        })
+        const byDay = new Map(trend.map(day=>[day.day,day]))
+        for (const execution of executions) {
+          const timestamp = new Date(execution.started_at || execution.created_at)
+          if (Number.isNaN(timestamp.getTime())) continue
+          const bucket = byDay.get(timestamp.toISOString().slice(0,10))
+          if (bucket) { bucket.total++; if(execution.result==='passed') bucket.passed++; if(execution.result==='failed') bucket.failed++ }
+        }
+        legacyTrendCache = {key,trend}
+        data.trend = trend
+      } else data.trend = legacyTrendCache?.trend || []
+    }
+    return data
+  }
   const aiStatusLoading = ref(false)
   const loadedProjectId = ref<number | null>(null)
   const lastUpdatedAt = ref<string | null>(null)
@@ -97,6 +138,11 @@ export const useAppAutomationDashboard = () => {
   }
 
   const resetDashboardState = () => {
+    loadVersion++
+    legacyTrendCache = null
+    pendingBugs.value = null
+    bugStatisticsError.value = false
+    loadError.value = ''
     Object.assign(statistics, createEmptyStatistics())
     scheduledTasks.value = []
     lastUpdatedAt.value = null
@@ -367,20 +413,31 @@ export const useAppAutomationDashboard = () => {
     }
 
     const { includeAi = true, silent = false } = options
+    const requestedProjectId = currentProjectId.value
+    const version = ++loadVersion
 
     if (!silent) {
       loading.value = true
     }
 
     try {
-      const [dashboardData, taskList, healthData] = await Promise.all([
-        AppAutomationService.getDashboardStatistics(currentProjectId.value),
-        AppAutomationService.getScheduledTasks(currentProjectId.value),
+      const [dashboardData, taskList, healthData, projectData] = await Promise.all([
+        AppAutomationService.getDashboardStatistics(requestedProjectId),
+        AppAutomationService.getScheduledTasks(requestedProjectId),
         AppAutomationService.getHealthStatus().catch(() => null),
+        getProjectStatistics(requestedProjectId).catch(() => null),
       ])
+      if (version !== loadVersion || requestedProjectId !== currentProjectId.value) return
+      await completeDashboardStatistics(dashboardData, requestedProjectId, !silent)
+      if (version !== loadVersion || requestedProjectId !== currentProjectId.value) return
+      loadError.value = ''
+      pendingBugs.value = projectData?.success && projectData.data?.bugs
+        ? Number(projectData.data.bugs.open || 0) + Number(projectData.data.bugs.pending_retest || 0) : null
+      bugStatisticsError.value = pendingBugs.value === null
 
       Object.assign(statistics, createEmptyStatistics(), dashboardData, {
         recent_executions: dashboardData.recent_executions || [],
+        trend: dashboardData.trend || [],
       })
       scheduledTasks.value = taskList
       if (healthData) {
@@ -393,13 +450,16 @@ export const useAppAutomationDashboard = () => {
         await refreshAiStatus()
       }
 
+      if (version !== loadVersion || requestedProjectId !== currentProjectId.value) return
       lastUpdatedAt.value = new Date().toISOString()
-      loadedProjectId.value = currentProjectId.value
+      loadedProjectId.value = requestedProjectId
     } catch (error: unknown) {
+      if (version !== loadVersion || requestedProjectId !== currentProjectId.value) return
+      loadError.value = normalizeErrorMessage(error, '加载 APP 自动化概览失败')
       if (!serviceHealth.status) serviceHealth.status = 'error'
       Message.error(normalizeErrorMessage(error, '加载 APP 自动化总览失败'))
     } finally {
-      if (!silent) {
+      if (!silent && version === loadVersion) {
         loading.value = false
       }
     }
@@ -529,6 +589,9 @@ export const useAppAutomationDashboard = () => {
 
   return {
     currentProjectId,
+    loadError,
+    pendingBugs,
+    bugStatisticsError,
     statistics,
     loading,
     aiStatusLoading,

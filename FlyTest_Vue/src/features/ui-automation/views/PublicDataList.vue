@@ -1,6 +1,7 @@
 <template>
   <div class="public-data-list fc-page">
-    <WorkspacePageHeader title="公共数据"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="public-data" :rows="publicData" :total="pagination.total" :loading="loading" @edit="editData">
+    <WorkspacePageHeader local title="公共数据"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.type"
@@ -24,13 +25,13 @@
       </div>
       <div class="action-buttons">
         <a-button type="primary" @click="showAddModal">
-          <template #icon><icon-plus /></template>
+      <template #icon><icon-plus /></template>
           新增数据
         </a-button>
       </div>
     </div></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="publicData"
       :pagination="pagination"
@@ -39,14 +40,15 @@
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.key }}</button></template>
       <template #type="{ record }">
         <a-tag :color="typeColors[record.type as PublicDataType]">
           {{ PUBLIC_DATA_TYPE_LABELS[record.type as PublicDataType] }}
         </a-tag>
       </template>
       <template #value="{ record }">
-        <a-tooltip :content="record.value" position="top">
-          <div class="ellipsis-text">{{ record.value }}</div>
+        <a-tooltip :content="/password|passwd|secret|token|credential|private.?key/i.test(record.key) ? '敏感数据，点击变量名后查看' : record.value" position="top">
+          <div class="ellipsis-text">{{ /password|passwd|secret|token|credential|private.?key/i.test(record.key) ? '••••••••' : record.value }}</div>
         </a-tooltip>
       </template>
       <template #is_enabled="{ record }">
@@ -67,6 +69,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <!-- 新增/编辑弹窗 -->
     <a-modal class="fc-dialog"
@@ -108,6 +111,8 @@
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -150,12 +155,12 @@ const typeColors: Record<PublicDataType, string> = { 0: 'blue', 1: 'green', 2: '
 
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
-  { title: '变量名', dataIndex: 'key', width: 150, align: 'center' as const },
+  { title: '变量名', slotName: 'workspace_name', width: 150, align: 'center' as const },
   { title: '类型', slotName: 'type', width: 90, align: 'center' as const },
   { title: '变量值', slotName: 'value', width: 200, align: 'center' as const },
   { title: '启用', slotName: 'is_enabled', width: 80, align: 'center' as const },
   { title: '创建者', dataIndex: 'creator_name', width: 100, align: 'center' as const },
-  { title: '操作', slotName: 'operations', width: 180, fixed: 'right' as const, align: 'center' as const },
+  { title: '操作', slotName: 'operations', width: 125, fixed: 'right' as const, align: 'center' as const },
 ]
 
 const fetchData = async () => {

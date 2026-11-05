@@ -32,6 +32,7 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
     document_count = serializers.SerializerMethodField()
     chunk_count = serializers.SerializerMethodField()
+    processing_documents = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = KnowledgeBase
@@ -39,7 +40,7 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'project', 'project_name',
             'creator', 'creator_name', 'is_active',
             'chunk_size', 'chunk_overlap',
-            'document_count', 'chunk_count', 'created_at', 'updated_at'
+            'document_count', 'chunk_count', 'processing_documents', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'creator', 'created_at', 'updated_at', 'project_name']
         extra_kwargs = {
@@ -48,11 +49,11 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
 
     def get_document_count(self, obj):
         """获取文档数量"""
-        return obj.documents.count()
+        return obj.total_documents if hasattr(obj, 'total_documents') else obj.documents.count()
 
     def get_chunk_count(self, obj):
         """获取分块数量"""
-        return DocumentChunk.objects.filter(document__knowledge_base=obj).count()
+        return obj.total_chunks if hasattr(obj, 'total_chunks') else DocumentChunk.objects.filter(document__knowledge_base=obj).count()
 
     def validate_project(self, value):
         """验证项目权限"""

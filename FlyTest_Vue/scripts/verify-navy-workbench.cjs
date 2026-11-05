@@ -443,8 +443,8 @@ async function run() {
         if ((await toggle.getAttribute("aria-expanded")) === "false")
           await toggle.click();
         await page
-          .locator(".fc-workspace-directory:visible")
-          .getByText("创建订单", { exact: true })
+          .locator(".fc-workspace-directory:visible .fc-directory-node__label")
+          .filter({hasText:/^创建订单$/})
           .click();
         const editor = page.locator(".fc-request-workbench:visible");
         await editor

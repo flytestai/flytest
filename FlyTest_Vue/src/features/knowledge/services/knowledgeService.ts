@@ -25,6 +25,13 @@ const API_BASE_URL = '/knowledge';
  * 知识库管理服务
  */
 export class KnowledgeService {
+  static async getWorkspaceSummary(project?: string | number) {
+    const response = await request<import('../types/knowledge').KnowledgeWorkspaceSummary>({
+      url: `${API_BASE_URL}/knowledge-bases/workspace/`, method: 'GET', params: project ? { project } : {},
+    });
+    if (response.success && response.data) return response.data;
+    throw Object.assign(new Error(response.error || '知识库统计加载失败'), { status: (response as typeof response & { status?: number }).status });
+  }
   // ==================== 全局配置管理 ====================
 
   /**
@@ -66,6 +73,8 @@ export class KnowledgeService {
    * 获取知识库列表
    */
   static async getKnowledgeBases(params?: {
+    workspace_state?: string;
+    access_type?: string;
     project?: number | string;
     search?: string;
     is_active?: boolean;

@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
@@ -54,6 +54,7 @@ from .database import (
 )
 from .execution_runtime import AppFlowExecutor, StepExecutionError, StopRequested
 from .extended_routes import router as extended_router
+from .package_assets import router as package_assets_router, public_metadata as package_asset_metadata
 from .reporting import (
     delete_execution_report_artifacts,
     ensure_reports_root,
@@ -98,6 +99,11 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="FlyTest APP Automation Service", version="0.2.0", lifespan=lifespan)
+from .suite_workspace import router as suite_workspace_router
+app.include_router(suite_workspace_router)
+from .environment_workspace import router as environment_workspace_router
+app.include_router(environment_workspace_router)
+app.include_router(package_assets_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1417,9 +1423,37 @@ def get_dashboard_statistics(project_id: int | None = Query(default=None)) -> di
         recent_query += " ORDER BY e.created_at DESC LIMIT 6"
         recent_executions = [serialize_execution(item) for item in fetch_all(conn, recent_query, recent_params)]
 
+        device_counts = {
+            row['status']: row['count']
+            for row in fetch_all(conn, "SELECT status, COUNT(*) AS count FROM devices GROUP BY status")
+        }
+        device_busy = sum(device_counts.get(status, 0) for status in ('locked', 'busy', 'stopping'))
+        device_offline = device_counts.get('offline', 0)
+        trend_rows = fetch_all(
+            conn,
+            f"""SELECT date(COALESCE(NULLIF(started_at, ''), created_at)) AS day,
+                COUNT(*) AS total,
+                SUM(CASE WHEN result = 'passed' THEN 1 ELSE 0 END) AS passed,
+                SUM(CASE WHEN result = 'failed' THEN 1 ELSE 0 END) AS failed
+                FROM executions {execution_where}
+                AND date(COALESCE(NULLIF(started_at, ''), created_at)) BETWEEN date('now', '-29 days') AND date('now')
+                GROUP BY day ORDER BY day""",
+            execution_params,
+        )
+        trend_by_day = {row['day']: row for row in trend_rows}
+        today = datetime.utcnow().date()
+        trend = []
+        for offset in range(29, -1, -1):
+            day = (today - timedelta(days=offset)).isoformat()
+            trend.append(trend_by_day.get(day, {'day': day, 'total': 0, 'passed': 0, 'failed': 0}))
+
     return success(
         {
-            "devices": {"total": device_total, "online": device_online, "locked": device_locked},
+            "devices": {
+                "total": device_total, "online": device_online, "locked": device_locked,
+                "busy": device_busy, "offline": device_offline,
+                "unavailable": max(0, device_total - device_online - device_busy - device_offline),
+            },
             "packages": {"total": package_total},
             "elements": {"total": element_total},
             "test_cases": {"total": test_case_total},
@@ -1431,6 +1465,7 @@ def get_dashboard_statistics(project_id: int | None = Query(default=None)) -> di
                 "pass_rate": pass_rate,
             },
             "recent_executions": recent_executions,
+            "trend": trend,
         }
     )
 
@@ -1649,7 +1684,7 @@ def list_packages(project_id: int | None = Query(default=None), search: str | No
     query += " ORDER BY updated_at DESC"
     with connection() as conn:
         rows = annotate_package_delete_state(conn, fetch_all(conn, query, params))
-    return success(rows)
+    return success([{**row, **package_asset_metadata(row)} for row in rows])
 
 
 @app.post("/packages/")
@@ -1688,6 +1723,12 @@ def create_package(payload: PackagePayload) -> dict[str, Any]:
 def update_package(package_id: int, payload: PackagePayload) -> dict[str, Any]:
     with connection() as conn:
         package = get_package_or_404(conn, package_id)
+        if package_asset_metadata(package).get("has_file") and (
+            payload.platform.strip().lower() != str(package["platform"]).lower()
+            or payload.package_name.strip() != package["package_name"]
+            or payload.project_id != int(package["project_id"])
+        ):
+            raise HTTPException(status_code=409, detail="已归档文件的应用不能更换项目、平台或包名，请为其他应用新建记录")
         ensure_project_access(payload.project_id)
         normalized_package_name = payload.package_name.strip()
         current_project_id = int(package["project_id"])
@@ -1735,7 +1776,9 @@ def update_package(package_id: int, payload: PackagePayload) -> dict[str, Any]:
 @app.delete("/packages/{package_id}/")
 def delete_package(package_id: int) -> dict[str, Any]:
     with connection() as conn:
-        _ = get_package_or_404(conn, package_id)
+        package = get_package_or_404(conn, package_id)
+        if package_asset_metadata(package).get("delete_block_reason") == "设备安装进行中":
+            raise HTTPException(status_code=409, detail="设备安装进行中，暂不能删除应用包")
         referenced_case = fetch_one(conn, "SELECT id FROM test_cases WHERE package_id = ? LIMIT 1", (package_id,))
         if referenced_case is not None:
             raise HTTPException(status_code=409, detail="package is referenced by test cases")

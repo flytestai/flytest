@@ -2,17 +2,17 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑测试用例' : '新增测试用例'"
-    width="860px"
-    @ok="emit('submit')"
+    width="min(860px, calc(100vw - 24px))"
+    :on-before-ok="submit" :ok-loading="saving"
   >
     <a-form class="fc-form" :model="form" layout="vertical">
       <a-row :gutter="12">
-        <a-col :span="12">
+        <a-col :xs="24" :md="12">
           <a-form-item field="name" label="用例名称">
-            <a-input v-model="form.name" />
+            <a-input v-model="form.name" placeholder="请输入用例名称" />
           </a-form-item>
         </a-col>
-        <a-col :span="12">
+        <a-col :xs="24" :md="12">
           <a-form-item field="package_id" label="应用包">
             <a-select v-model="form.package_id" allow-clear>
               <a-option v-for="pkg in packages" :key="pkg.id" :value="pkg.id">{{ pkg.name }}</a-option>
@@ -21,17 +21,18 @@
         </a-col>
       </a-row>
       <a-row :gutter="12">
-        <a-col :span="12">
+        <a-col :xs="24" :md="12">
           <a-form-item field="timeout" label="超时时间">
             <a-input-number v-model="form.timeout" :min="1" :max="7200" />
           </a-form-item>
         </a-col>
-        <a-col :span="12">
+        <a-col :xs="24" :md="12">
           <a-form-item field="retry_count" label="失败重试">
             <a-input-number v-model="form.retry_count" :min="0" :max="10" />
           </a-form-item>
         </a-col>
       </a-row>
+      <a-row :gutter="12"><a-col :xs="24" :md="12"><a-form-item label="所属分组"><a-input v-model="form.group" placeholder="例如：登录与注册" :max-length="80" /></a-form-item></a-col><a-col :xs="24" :md="12"><a-form-item label="优先级"><a-select v-model="form.priority" placeholder="未设置"><a-option value="">未设置</a-option><a-option v-for="p in ['P0','P1','P2','P3']" :key="p" :value="p">{{ p }}</a-option></a-select></a-form-item></a-col></a-row>
       <a-form-item field="description" label="描述">
         <a-textarea v-model="form.description" :auto-size="{ minRows: 3, maxRows: 6 }" />
       </a-form-item>

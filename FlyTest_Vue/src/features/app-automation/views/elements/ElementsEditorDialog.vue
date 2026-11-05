@@ -1,12 +1,19 @@
 <template>
-  <a-modal class="fc-dialog"
+  <a-modal class="fc-dialog element-editor-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑元素' : '新增元素'"
     width="980px"
-    @ok="emit('submit')"
+    :on-before-ok="submitElement"
+    :confirm-loading="saving"
+    :ok-button-props="{ disabled: uploading }"
+    :mask-closable="!saving" :closable="!saving" :esc-to-close="!saving" :cancel-button-props="{disabled:saving}"
     @cancel="emit('cancel')"
   >
-    <a-form class="fc-form" :model="form" layout="vertical">
+    <a-form class="fc-form" :model="form" :disabled="saving" layout="vertical">
+      <a-row :gutter="12">
+        <a-col :xs="24" :sm="12"><a-form-item label="所属页面"><a-input v-model="form.pageName" placeholder="例如：登录注册" :max-length="100"/></a-form-item></a-col>
+        <a-col :xs="24" :sm="12"><a-form-item label="控件类型"><a-select v-model="form.controlType" aria-label="元素控件类型"><a-option v-for="(label,key) in controlTypes" :key="key" :value="key">{{label}}</a-option></a-select></a-form-item></a-col>
+      </a-row>
       <a-row :gutter="12">
         <a-col :span="12">
           <a-form-item field="name" label="元素名称">
@@ -14,8 +21,9 @@
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item field="element_type" label="元素类型">
-            <a-select v-model="form.element_type">
+          <a-form-item field="element_type" label="定位载体">
+            <a-select v-model="form.element_type" @change="changeCarrier">
+              <a-option value="locator">定位元素（ID / XPath / Text）</a-option>
               <a-option value="image">图片</a-option>
               <a-option value="pos">坐标</a-option>
               <a-option value="region">区域</a-option>
@@ -112,7 +120,7 @@
         </div>
       </template>
 
-      <template v-else>
+      <template v-else-if="form.element_type === 'region'">
         <div class="config-block fc-section">
           <div class="config-block-title">区域配置</div>
           <a-row :gutter="12">
@@ -145,15 +153,16 @@
       <a-row :gutter="12">
         <a-col :span="12">
           <a-form-item field="selector_type" label="定位方式">
-            <a-input v-model="form.selector_type" placeholder="image / pos / region / text / xpath" />
+            <a-select v-model="form.selector_type" aria-label="元素定位方式"><a-option v-for="(label,key) in selectorOptions" :key="key" :value="key">{{label}}</a-option></a-select>
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item field="selector_value" label="定位值">
-            <a-input v-model="form.selector_value" placeholder="不填时会按元素类型自动生成默认值" />
+          <a-form-item field="selector_value" label="定位表达式">
+            <a-input v-model="form.selector_value" placeholder="例如：com.feice:id/btn_login" />
           </a-form-item>
         </a-col>
       </a-row>
+      <a-row :gutter="12"><a-col :xs="24" :sm="12"><a-form-item label="是否复用"><a-select v-model="form.reuseStatus" aria-label="元素复用标记"><a-option value="yes">是</a-option><a-option value="no">否</a-option><a-option value="unknown">未标记</a-option></a-select></a-form-item></a-col><a-col :xs="24" :sm="12"><a-form-item label="维护状态"><a-select v-model="form.maintenanceStatus" aria-label="元素维护状态"><a-option value="normal">正常</a-option><a-option value="needs_maintenance">待维护</a-option><a-option value="unknown">未标记</a-option></a-select></a-form-item></a-col></a-row>
 
       <a-row :gutter="12">
         <a-col :span="12">
@@ -184,10 +193,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { controlTypes } from './elementPresentation'
 import type { ElementsEditorDialogEmits } from './elementEventModels'
 import type { ElementsEditorDialogProps } from './elementViewModels'
 
-defineProps<ElementsEditorDialogProps>()
+const props = defineProps<ElementsEditorDialogProps>()
+const selectorOptions = { 'resource-id':'ResourceId', xpath:'XPath', text:'Text', accessibility_id:'Accessibility', class:'Class', image:'Image', pos:'Position', region:'Region' }
+function changeCarrier(value: unknown) {
+  const type = String(value)
+  props.form.selector_type = ['image','pos','region'].includes(type) ? type : 'resource-id'
+  props.form.selector_value = ''
+}
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 const newCategoryNameModel = defineModel<string>('newCategoryName', { required: true })

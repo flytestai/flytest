@@ -5,8 +5,8 @@
         先点击一个文本输入框，再插入数据工厂引用
         <span v-if="referenceTargetLabel">当前目标：{{ referenceTargetLabel }}</span>
       </div>
-      <a-button size="small" :disabled="!projectStore.currentProjectId" @click="openReferencePicker">
-        插入数据工厂引用
+      <a-button size="small" aria-label="插入数据工厂引用" :disabled="!projectStore.currentProjectId" @click="openReferencePicker">
+        {{ compact ? '插入引用' : '插入数据工厂引用' }}
       </a-button>
     </div>
     <div v-if="showRequestTarget" class="structured-http-editor__top">

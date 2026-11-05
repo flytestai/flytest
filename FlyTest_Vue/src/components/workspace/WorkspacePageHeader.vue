@@ -1,6 +1,6 @@
 <template>
   <Teleport :to="headingTarget || 'body'" :disabled="!headingTarget || local">
-  <header v-show="active" class="fc-page-heading" :class="{ 'fc-page-heading--compact': compact }">
+  <header v-show="active" v-bind="$attrs" class="fc-page-heading" :class="{ 'fc-page-heading--compact': compact }">
     <div v-if="!compact" class="fc-page-heading__copy">
       <h2 class="fc-page-heading__title"><slot name="title">{{ title }}</slot></h2>
       <p v-if="description || $slots.description" class="fc-page-heading__description" :title="description">
@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import { workspaceHeadingKey, workspacePaneKey, workspaceCompactHeadingKey } from './workspaceContext'
+defineOptions({ inheritAttrs: false })
 
 const headingTarget = inject(workspaceHeadingKey, undefined)
 const paneActive = inject(workspacePaneKey, undefined)

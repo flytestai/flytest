@@ -1,6 +1,7 @@
 <template>
   <div class="testcase-list fc-page">
-    <WorkspacePageHeader title="测试用例"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="testcases" :rows="testcaseData" :total="pagination.total" :loading="loading" @edit="editTestCase" @inspect="viewSteps">
+    <WorkspacePageHeader local title="测试用例"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.level"
@@ -31,15 +32,15 @@
           style="width: 150px; margin-right: 12px"
           @focus="fetchActuators"
         >
-          <template #empty>
+      <template #empty>
             <div style="padding: 8px; text-align: center; color: var(--color-text-3)">
               暂无在线执行器
             </div>
           </template>
           <a-option v-for="act in actuators" :key="act.id" :value="act.id" :disabled="!act.is_open">
             {{ act.name || act.id }}
-            <a-tag v-if="act.is_open" color="green" size="small" style="margin-left: 4px">在线</a-tag>
-            <a-tag v-else color="gray" size="small" style="margin-left: 4px">离线</a-tag>
+            <a-tag v-if="act.is_open" color="green" size="small" style="margin-left: 4px">接收任务</a-tag>
+            <a-tag v-else color="gray" size="small" style="margin-left: 4px">暂停接收</a-tag>
           </a-option>
         </a-select>
         <a-select
@@ -85,7 +86,7 @@
       </div>
     </div></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="testcaseData"
       :pagination="pagination"
@@ -93,10 +94,11 @@
       :scroll="{ x: 1100 }"
       :row-selection="{ type: 'checkbox', showCheckedAll: true }"
       v-model:selectedKeys="selectedRowKeys"
-      row-key="id"
+
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.name }}</button></template>
       <template #level="{ record }">
         <a-tag :color="levelColors[record.level as CaseLevel]">{{ record.level }}</a-tag>
       </template>
@@ -140,6 +142,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <a-modal class="fc-dialog"
       v-model:visible="modalVisible"
@@ -191,6 +194,8 @@
   </div>
 </template>
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, onMounted, watch, onUnmounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -260,13 +265,13 @@ const statusColors: Record<ExecutionStatus, string> = { 0: 'gray', 1: 'blue', 2:
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
   { title: '模块', dataIndex: 'module_name', width: 120, align: 'center' as const },
-  { title: '用例名称', dataIndex: 'name', ellipsis: true, tooltip: true, width: 200, align: 'center' as const },
+  { title: '用例名称', slotName: 'workspace_name', ellipsis: true, tooltip: true, width: 200, align: 'center' as const },
   { title: '等级', slotName: 'level', width: 80, align: 'center' as const },
   { title: '状态', slotName: 'status', width: 90, align: 'center' as const },
   { title: '步骤数', slotName: 'step_count', width: 90, align: 'center' as const },
   { title: '创建者', dataIndex: 'creator_name', width: 100, align: 'center' as const },
   { title: '创建时间', slotName: 'created_at', width: 160, align: 'center' as const },
-  { title: '操作', slotName: 'operations', width: 290, fixed: 'right' as const, align: 'center' as const },
+  { title: '操作', slotName: 'operations', width: 125, fixed: 'right' as const, align: 'center' as const },
 ]
 
 const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toLocaleString('zh-CN') : '-'

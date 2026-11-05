@@ -30,6 +30,8 @@ import type {
   AppTestSuite,
 } from '../types'
 
+import type {EnvironmentProfile,EnvironmentInput} from '../views/settings/environmentModels'
+
 const APP_BASE = '/app-automation'
 async function unwrap<T>(config: Record<string, unknown>): Promise<T> {
   const response = await request<T>(config as never)
@@ -61,6 +63,16 @@ async function unwrapText(config: Record<string, unknown>): Promise<string> {
 }
 
 export const AppAutomationService = {
+  recognizeScreenshotElements(projectId: number, image: string, pageName: string) {
+    const [header, encoded] = image.split(',')
+    const mime = header?.match(/^data:(image\/(?:png|jpeg|webp));base64$/)?.[1]
+    if (!mime || !encoded) return Promise.reject(new Error('截图格式无效'))
+    const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0))
+    const data = new FormData()
+    data.append('project_id', String(projectId)); data.append('page_name', pageName)
+    data.append('screenshot', new Blob([bytes], {type:mime}), 'screenshot.' + (mime === 'image/jpeg' ? 'jpg' : mime.split('/')[1]))
+    return unwrap<{ elements: Array<Omit<AppElement, 'id' | 'updated_at'>>; width: number; height: number; model: string }>({ url: '/lg/element-recognition/', method: 'POST', timeout: 120000, data })
+  },
   getHealthStatus() {
     return unwrap<AppServiceHealth>({
       url: `${APP_BASE}/health`,
@@ -157,6 +169,23 @@ export const AppAutomationService = {
       method: 'GET',
       params: { project_id: projectId, search },
     })
+  },
+
+  getPackageCapabilities() {
+    return unwrap<{ files: boolean; formats: string[]; install_formats: string[]; max_bytes: number }>({ url: `${APP_BASE}/packages/capabilities/`, method: 'GET' })
+  },
+  uploadPackageFile(id: number, file: File, versionName: string, versionCode: string, onProgress?: (percent: number) => void) {
+    const data = new FormData(); data.append('file', file)
+    return unwrap<Partial<AppPackage>>({ url: `${APP_BASE}/packages/${id}/upload/`, method: 'POST', data, params: { version_name: versionName, version_code: versionCode }, timeout: 300000, onUploadProgress: (event: { loaded: number; total?: number }) => { if (event.total) onProgress?.(Math.round(event.loaded / event.total * 100)) } })
+  },
+  downloadPackageFile(id: number) {
+    return unwrapBinary({ url: `${APP_BASE}/packages/${id}/download/`, method: 'GET', timeout: 300000 })
+  },
+  getPackageInstallations(id: number) {
+    return unwrap<Partial<AppPackage>>({ url: `${APP_BASE}/packages/${id}/installations/`, method: 'GET' })
+  },
+  installPackageFile(id: number, deviceId: number) {
+    return unwrap<import('../types').AppPackageInstallation>({ url: `${APP_BASE}/packages/${id}/install/`, method: 'POST', params: { device_id: deviceId }, timeout: 210000 })
   },
 
   createPackage(payload: Omit<AppPackage, 'id' | 'created_at' | 'updated_at'>) {
@@ -486,6 +515,10 @@ export const AppAutomationService = {
     })
   },
 
+  getSuiteCapabilities() { return unwrap<{metadata:boolean;parallel:boolean;max_devices:number}>({url:`${APP_BASE}/test-suites/capabilities/`,method:'GET'}) },
+  runSuiteParallel(id:number, payload:{device_ids:number[];package_name?:string;triggered_by:string}) { return unwrap<{suite_id:number;execution_ids:number[];test_case_count:number}>({url:`${APP_BASE}/test-suites/${id}/run-parallel/`,method:'POST',data:payload}) },
+  planScheduledTask(payload:{project_id:number;prompt:string}) { return unwrap<{name:string;description:string;trigger_type:'CRON'|'INTERVAL';cron_expression:string;interval_seconds:number}>({url:'/lg/task-planning/',method:'POST',data:payload,timeout:60000}) },
+  planSuite(payload:{project_id:number;prompt:string;cases:Array<{id:number;name:string;description:string;tags:string[]}>}) { return unwrap<{name:string;description:string;test_case_ids:number[]}>({url:'/lg/suite-planning/',method:'POST',data:payload,timeout:60000}) },
   getTestSuites(projectId: number, search?: string) {
     return unwrap<AppTestSuite[]>({
       url: `${APP_BASE}/test-suites/`,
@@ -501,15 +534,16 @@ export const AppAutomationService = {
     })
   },
 
-  createTestSuite(payload: { project_id: number; name: string; description: string; test_case_ids: number[] }) {
+  createTestSuite(payload: { project_id: number; name: string; description: string; test_case_ids: number[]; group?: string; execution_strategy?: string }, createdBy?: string) {
     return unwrap<AppTestSuite>({
       url: `${APP_BASE}/test-suites/`,
       method: 'POST',
       data: payload,
+      params: createdBy ? {created_by: createdBy} : undefined,
     })
   },
 
-  updateTestSuite(id: number, payload: { project_id: number; name: string; description: string; test_case_ids: number[] }) {
+  updateTestSuite(id: number, payload: { project_id: number; name: string; description: string; test_case_ids: number[]; group?: string; execution_strategy?: string }) {
     return unwrap<AppTestSuite>({
       url: `${APP_BASE}/test-suites/${id}/`,
       method: 'PUT',
@@ -622,6 +656,14 @@ export const AppAutomationService = {
     })
   },
 
+  async getEnvironmentCapabilities(){const response=await request<{profiles:boolean}>({url:APP_BASE+'/settings/environments/capabilities/',method:'GET'});if(response.success&&response.data)return response.data;throw Object.assign(new Error(response.error||response.message||'环境接口检测失败'),{status:(response as typeof response & {status?:number}).status})},
+  getEnvironments(project_id:number){return unwrap<EnvironmentProfile[]>({url:APP_BASE+'/settings/environments/',method:'GET',params:{project_id}})},
+  createEnvironment(project_id:number,data:EnvironmentInput){return unwrap<EnvironmentProfile>({url:APP_BASE+'/settings/environments/',method:'POST',params:{project_id},data})},
+  updateEnvironment(project_id:number,id:string,data:EnvironmentInput){return unwrap<EnvironmentProfile>({url:APP_BASE+'/settings/environments/'+id+'/',method:'PUT',params:{project_id},data})},
+  deleteEnvironment(project_id:number,id:string){return unwrap<null>({url:APP_BASE+'/settings/environments/'+id+'/',method:'DELETE',params:{project_id}})},
+  batchEnvironments(project_id:number,ids:string[],enabled:boolean){return unwrap<EnvironmentProfile[]>({url:APP_BASE+'/settings/environments/batch/',method:'POST',params:{project_id},data:{ids,enabled}})},
+  probeEnvironment(project_id:number,id:string){return unwrap<EnvironmentProfile>({url:APP_BASE+'/settings/environments/'+id+'/probe/',method:'POST',params:{project_id},timeout:60000})},
+  importEnvironments(project_id:number,profiles:EnvironmentInput[]){return unwrap<EnvironmentProfile[]>({url:APP_BASE+'/settings/environments/import/',method:'POST',params:{project_id},data:{profiles}})},
   getSettings() {
     return unwrap<AppAutomationSettings>({
       url: `${APP_BASE}/settings/current/`,

@@ -5,11 +5,11 @@ import { useProjectStore } from '@/store/projectStore'
 import { AppAutomationService } from '../../services/appAutomationService'
 import { replaceAppAutomationQuery } from '../appAutomationNavigation'
 import type { AppNotificationLog, AppScheduledTask } from '../../types'
+import {notificationChannel,notificationEvent,notificationTitle,notificationText,notificationInDates,notificationOverview,notificationTime,channelLabels,simulatedDelivery} from './notificationPresentation'
 import type {
   NotificationFilters,
   NotificationPaginationState,
   NotificationParsedContentItem,
-  NotificationStatistics,
 } from './notificationViewModels'
 
 export function useAppAutomationNotifications() {
@@ -18,6 +18,9 @@ export function useAppAutomationNotifications() {
   const projectStore = useProjectStore()
 
   const loading = ref(false)
+  const loadError = ref(false)
+  let loadVersion=0
+  let contextVersion=0
   const retrying = ref(false)
   const detailVisible = ref(false)
   const currentLog = ref<AppNotificationLog | null>(null)
@@ -25,6 +28,7 @@ export function useAppAutomationNotifications() {
   const taskContext = ref<AppScheduledTask | null>(null)
 
   const filters = reactive<NotificationFilters>({
+    event_type: '',
     search: '',
     status: '',
     notification_type: '',
@@ -39,7 +43,7 @@ export function useAppAutomationNotifications() {
 
   const currentTaskId = computed(() => {
     const value = Number(route.query.taskId || 0)
-    return value > 0 ? value : null
+    return Number.isSafeInteger(value) && value > 0 ? value : null
   })
 
   const recipientSummary = (record: AppNotificationLog) =>
@@ -49,28 +53,17 @@ export function useAppAutomationNotifications() {
       .join(', ') || '-'
 
   const filteredLogs = computed(() => {
-    const keyword = filters.search.trim().toLowerCase()
-
-    return logs.value.filter(log => {
-      if (filters.status && log.status !== filters.status) return false
-
-      const notificationType = String(log.actual_notification_type || log.notification_type || '')
-      if (filters.notification_type && notificationType !== filters.notification_type) return false
-
-      if (!keyword) return true
-
-      return [
-        log.task_name,
-        log.notification_content,
-        notificationType,
-        recipientSummary(log),
-        log.error_message,
-        JSON.stringify(log.response_info || {}),
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(keyword)
-    })
+    const keyword=filters.search.trim().toLowerCase()
+    return logs.value.filter(log=>{
+      if(currentTaskId.value && log.task_id!==currentTaskId.value)return false
+      if(filters.status==='simulated' && !simulatedDelivery(log))return false
+      if(filters.status && filters.status!=='simulated' && (simulatedDelivery(log)||log.status!==filters.status))return false
+      const channel=notificationChannel(log)
+      if(filters.notification_type && channel!==filters.notification_type)return false
+      if(filters.event_type && notificationEvent(log)!==filters.event_type)return false
+      if(!notificationInDates(log,filters.start_date,filters.end_date))return false
+      return !keyword || [log.id,log.task_id,log.task_name,notificationTitle(log),notificationText(log),channelLabels[channel],recipientSummary(log),log.error_message].join(' ').toLowerCase().includes(keyword)
+    }).sort((a,b)=>(notificationTime(b.created_at)||0)-(notificationTime(a.created_at)||0)||b.id-a.id)
   })
 
   const pagedLogs = computed(() => {
@@ -78,12 +71,7 @@ export function useAppAutomationNotifications() {
     return filteredLogs.value.slice(start, start + pagination.pageSize)
   })
 
-  const statistics = computed<NotificationStatistics>(() => ({
-    total: filteredLogs.value.length,
-    success: filteredLogs.value.filter(item => item.status === 'success').length,
-    failed: filteredLogs.value.filter(item => item.status === 'failed').length,
-    retried: filteredLogs.value.filter(item => item.is_retried).length,
-  }))
+  const statistics = computed(() => notificationOverview(logs.value))
 
   const parsedContent = computed<NotificationParsedContentItem[]>(() => {
     const content = currentLog.value?.notification_content
@@ -129,7 +117,8 @@ export function useAppAutomationNotifications() {
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return '-'
-    return new Date(value).toLocaleString('zh-CN', { hour12: false })
+    const time=notificationTime(value)
+    return Number.isFinite(time)?new Date(time).toLocaleString('zh-CN', { hour12: false }):'-'
   }
 
   const getTaskTypeLabel = (value: string) => {
@@ -172,49 +161,28 @@ export function useAppAutomationNotifications() {
   }
 
   const loadTaskContext = async () => {
-    if (!projectStore.currentProjectId) {
-      taskContext.value = null
-      return
-    }
-
-    if (!currentTaskId.value) {
-      taskContext.value = null
-      return
-    }
-
-    try {
-      taskContext.value = await AppAutomationService.getScheduledTask(currentTaskId.value)
-    } catch {
-      taskContext.value = null
-    }
+    const version=++contextVersion,project=projectStore.currentProjectId,id=currentTaskId.value
+    taskContext.value=null
+    if(!project||!id)return
+    try{
+      const task=await AppAutomationService.getScheduledTask(id)
+      if(version===contextVersion && project===projectStore.currentProjectId && id===currentTaskId.value && task.project_id===project)taskContext.value=task
+    }catch{/* The task id remains visible even if a task was removed. */}
   }
 
   const loadData = async () => {
-    if (!projectStore.currentProjectId) {
-      logs.value = []
-      currentLog.value = null
-      taskContext.value = null
-      detailVisible.value = false
-      loading.value = false
-      return
-    }
-
-    loading.value = true
-    try {
-      logs.value = await AppAutomationService.getNotificationLogs({
-        project_id: projectStore.currentProjectId || undefined,
-        search: filters.search || undefined,
-        status: filters.status || undefined,
-        notification_type: filters.notification_type || undefined,
-        task_id: currentTaskId.value || undefined,
-        start_date: filters.start_date || undefined,
-        end_date: filters.end_date || undefined,
-      })
-    } catch (error: any) {
-      Message.error(error.message || '加载通知日志失败')
-    } finally {
-      loading.value = false
-    }
+    const version=++loadVersion,project=projectStore.currentProjectId
+    if(!project){logs.value=[];currentLog.value=null;detailVisible.value=false;loading.value=false;return}
+    loading.value=true;loadError.value=false
+    try{
+      const value=await AppAutomationService.getNotificationLogs({project_id:project})
+      if(version!==loadVersion || project!==projectStore.currentProjectId)return
+      logs.value=value
+      if(currentLog.value)currentLog.value=value.find(item=>item.id===currentLog.value?.id)||null
+    }catch(error:any){
+      if(version!==loadVersion || project!==projectStore.currentProjectId)return
+      loadError.value=true;Message.error(error.message||'加载通知日志失败')
+    }finally{if(version===loadVersion)loading.value=false}
   }
 
   const handleSearch = () => {
@@ -223,13 +191,13 @@ export function useAppAutomationNotifications() {
   }
 
   const resetFilters = () => {
+    filters.event_type = ''
     filters.search = ''
     filters.status = ''
     filters.notification_type = ''
     filters.start_date = ''
     filters.end_date = ''
     pagination.current = 1
-    void loadData()
   }
 
   const openTaskDetail = async (taskId: number) => {
@@ -277,15 +245,15 @@ export function useAppAutomationNotifications() {
   }
 
   const retryNotification = async (record: AppNotificationLog) => {
+    if(retrying.value)return
+    const project=projectStore.currentProjectId
     retrying.value = true
     try {
       const updated = await AppAutomationService.retryNotificationLog(record.id)
+      if(project!==projectStore.currentProjectId)return
       syncLogRecord(updated)
-      Message.success(
-        updated.response_info?.retry_status === 'not_supported'
-          ? '已记录重试请求，当前本地后端尚未实现真实重发'
-          : '通知已重新触发',
-      )
+      if(updated.response_info?.retry_status==='not_supported')Message.warning('当前服务不支持真实重发，已记录重试请求，投递状态未变')
+      else Message.success('已提交重试，请以最新投递状态为准')
     } catch (error: any) {
       Message.error(error.message || '重试通知失败')
     } finally {
@@ -299,7 +267,7 @@ export function useAppAutomationNotifications() {
       if (tab === 'notifications') {
         return
       }
-      if (route.query.taskId) {
+      if (route.query.taskId && tab !== 'scheduled-tasks') {
         void clearTaskContext()
       }
       detailVisible.value = false
@@ -314,6 +282,8 @@ export function useAppAutomationNotifications() {
       }
     },
   )
+
+  watch(()=>[filters.search,filters.status,filters.notification_type,filters.event_type,filters.start_date,filters.end_date,pagination.pageSize],()=>{pagination.current=1})
 
   watch(
     () => filteredLogs.value.length,
@@ -348,6 +318,8 @@ export function useAppAutomationNotifications() {
       }
       detailVisible.value = false
       taskContext.value = null
+      logs.value=[]
+      ++loadVersion
       pagination.current = 1
       if (currentTaskId.value) {
         void clearTaskContext()
@@ -358,6 +330,10 @@ export function useAppAutomationNotifications() {
   )
 
   return {
+    projectStore,
+    logs,
+    currentTaskId,
+    loadError,
     loading,
     retrying,
     detailVisible,

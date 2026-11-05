@@ -4,53 +4,11 @@
       <a-empty description="请先选择项目后再查看 APP 自动化执行报告" />
     </div>
     <template v-else>
-      <ReportsHeaderBar
-        :loading="loading"
-        :last-updated-text="lastUpdatedText"
-        @refresh="loadData"
-      />
-
-      <a-tabs v-model:active-key="activeTab" class="report-tabs fc-tabs">
-        <a-tab-pane key="suite" title="套件报告">
-          <ReportsSuitePanel
-            :loading="loading"
-            :filters="suiteFilters"
-            :pagination="suitePagination"
-            :statistics="suiteStats"
-            :suites="pagedSuites"
-            :total="filteredSuites.length"
-            :format-date-time="formatDateTime"
-            :get-suite-status="getSuiteStatus"
-            :get-suite-health-rate="getSuiteHealthRate"
-            @search="handleSuiteSearch"
-            @reset="resetSuiteFilters"
-            @open-detail="openSuiteDetail"
-            @open-executions="openSuiteExecutions"
-            @open-report="openSuiteReport"
-          />
-        </a-tab-pane>
-
-        <a-tab-pane key="case" title="执行明细">
-          <ReportsExecutionPanel
-            :loading="loading"
-            :filters="caseFilters"
-            :pagination="casePagination"
-            :statistics="caseStats"
-            :executions="pagedExecutions"
-            :total="filteredExecutions.length"
-            :format-date-time="formatDateTime"
-            :format-rate="formatRate"
-            :format-duration="formatDuration"
-            :get-execution-source="getExecutionSource"
-            :get-execution-status="getExecutionStatus"
-            :can-open-report="canOpenReport"
-            @search="handleCaseSearch"
-            @reset="resetCaseFilters"
-            @open-detail="openExecutionDetail"
-            @open-report="openExecutionReport"
-          />
-        </a-tab-pane>
-      </a-tabs>
+      <ReportsReferenceWorkspace :project-id="projectStore.currentProjectId" :executions="executions" :suites="suites" :loading="loading" :error="loadError" :focus-id="currentExecution?.id"
+        @refresh="loadData" @suites="suiteOverviewVisible=true" @detail="openExecutionDetail" @report="openExecutionReport" @suite="openAssociatedSuite" />
+      <a-modal v-model:visible="suiteOverviewVisible" title="套件报告概览" :width="Math.min(1120,width-24)" :footer="false">
+        <ReportsSuitePanel :loading="loading" :filters="suiteFilters" :pagination="suitePagination" :statistics="suiteStats" :suites="pagedSuites" :total="filteredSuites.length" :format-date-time="formatDateTime" :get-suite-status="getSuiteStatus" :get-suite-health-rate="getSuiteHealthRate" @search="handleSuiteSearch" @reset="resetSuiteFilters" @open-detail="openSuiteDetail" @open-executions="openSuiteExecutions" @open-report="openSuiteReport" />
+      </a-modal>
 
       <ReportsSuiteDetailDialog
         v-model:visible="suiteDetailVisible"
@@ -91,10 +49,14 @@
 </template>
 
 <script setup lang="ts">
+import {ref,watch} from 'vue'
+import {useWindowSize} from '@vueuse/core'
+import ReportsReferenceWorkspace from './reports/ReportsReferenceWorkspace.vue'
+const suiteOverviewVisible=ref(false)
+const {width}=useWindowSize()
+
 import {
   ReportsExecutionDetailDialog,
-  ReportsExecutionPanel,
-  ReportsHeaderBar,
   ReportsSuiteDetailDialog,
   ReportsSuiteExecutionsDialog,
   ReportsSuitePanel,
@@ -103,7 +65,9 @@ import {
 
 const {
   projectStore,
-  activeTab,
+  executions,
+  suites,
+  loadError,
   loading,
   selectedSuite,
   suiteExecutions,
@@ -113,9 +77,7 @@ const {
   executionDetailVisible,
   currentExecution,
   suiteFilters,
-  caseFilters,
   suitePagination,
-  casePagination,
   formatDateTime,
   formatRate,
   formatDuration,
@@ -125,19 +87,13 @@ const {
   getExecutionSource,
   canOpenReport,
   filteredSuites,
-  filteredExecutions,
   pagedSuites,
-  pagedExecutions,
   suiteStats,
-  caseStats,
-  lastUpdatedText,
   executionArtifacts,
   executionLogText,
   loadData,
   handleSuiteSearch,
-  handleCaseSearch,
   resetSuiteFilters,
-  resetCaseFilters,
   openSuiteDetail,
   openSuiteExecutions,
   openExecutionDetail,
@@ -145,6 +101,9 @@ const {
   openExecutionArtifact,
   openSuiteReport,
 } = useAppAutomationReports()
+watch(()=>projectStore.currentProjectId,()=>{suiteOverviewVisible.value=false})
+const openAssociatedSuite=(id:number)=>{const suite=suites.value.find(item=>item.id===id);if(suite)void openSuiteDetail(suite)}
+
 </script>
 
 <style scoped>
@@ -153,7 +112,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0 !important;
 }
 
 .empty-shell {

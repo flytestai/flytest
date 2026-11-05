@@ -1,6 +1,6 @@
 <template>
   <div class="test-report-view fc-page">
-    <WorkspacePageHeader>
+    <WorkspacePageHeader local class="api-local-toolbar">
         <template #title>测试报告</template>
         <template #description>结合执行批次、失败用例、接口维度统计与 AI 摘要，快速生成适合测试回顾和质量同步的报告视图。</template>
         <template #meta><div class="report-hero__meta">
@@ -20,6 +20,7 @@
         <a-button @click="loadReport">刷新</a-button>
       </div></template>
       </WorkspacePageHeader>
+    <a-alert v-if="reportLoadError" type="error" class="api-report-error">报告数据暂时不可用，请重试。<template #action><a-button size="small" @click="loadReport">重试</a-button></template></a-alert>
 
     <div v-if="!projectId" class="state-card">
       <a-empty description="请先选择项目" />
@@ -34,30 +35,9 @@
     </div>
 
     <template v-else>
-      <div class="report-grid summary-grid">
-        <div class="summary-card summary-card-primary fc-metric">
-          <div class="summary-label">总执行数</div>
-          <div class="summary-value">{{ report.summary.total_count }}</div>
-          <div class="summary-meta">最近执行：{{ formatDate(report.summary.latest_executed_at) }}</div>
-        </div>
-        <div class="summary-card fc-metric">
-          <div class="summary-label">通过率</div>
-          <div class="summary-value"><span :class="'quality-' + passRateTone(report.summary.pass_rate)">{{ formatQualityPercent(report.summary.pass_rate) }}</span></div>
-          <a-progress :percent="progressFraction(report.summary.pass_rate)" :show-text="false" :color="passRateColor(report.summary.pass_rate)" />
-        </div>
-        <div class="summary-card fc-metric">
-          <div class="summary-label">执行批次</div>
-          <div class="summary-value">{{ report.hierarchy_summary?.run_count || runGroups.length }}</div>
-          <div class="summary-meta">展示最近 {{ runGroups.length }} 个批次</div>
-        </div>
-        <div class="summary-card summary-card-danger fc-metric">
-          <div class="summary-label">失败用例</div>
-          <div class="summary-value">{{ report.hierarchy_summary?.failed_test_case_count || 0 }}</div>
-          <div class="summary-meta">失败接口 {{ report.hierarchy_summary?.failed_interface_count || 0 }} 个</div>
-        </div>
-      </div>
+      <ApiReportOverview :report="report" />
 
-      <a-card class="report-card ai-summary-report-card fc-panel" :bordered="false" title="AI 报告摘要">
+<details class="api-report-ai" :open="!!aiSummary"><summary>✦ AI 质量摘要 <span>{{ aiSummary ? (aiSummary.used_ai ? 'AI 分析已生成' : '规则摘要已生成') : '按需生成当前范围的风险与建议' }}</span></summary>      <a-card class="report-card ai-summary-report-card fc-panel" :bordered="false" title="AI 报告摘要">
         <div class="ai-summary-report-toolbar">
           <a-button type="primary" size="small" :loading="aiSummaryLoading" @click="loadAiSummary">
             {{ aiSummary ? '重新生成摘要' : '生成摘要' }}
@@ -123,7 +103,8 @@
         </template>
       </a-card>
 
-      <a-card class="report-card fc-panel" :bordered="false" title="执行汇总">
+</details>
+<details class="api-report-batches"><summary>执行批次与用例明细 <span>{{ runGroups.length }} 个批次</span></summary>      <a-card class="report-card fc-panel" :bordered="false" title="执行汇总">
         <div class="run-report-list">
           <div v-for="run in runGroups" :key="run.run_id" class="run-report-card">
             <div class="run-report-card__header">
@@ -211,6 +192,7 @@
         </div>
       </a-card>
 
+</details>
       <div class="report-grid two-column-grid">
         <a-card class="report-card fc-panel" :bordered="false" title="按请求方法统计">
           <a-table class="fc-table" :data="methodTableData" :pagination="false" row-key="method" size="small">
@@ -263,23 +245,7 @@
           </a-table>
         </a-card>
 
-        <a-card class="report-card fc-panel" :bordered="false" title="执行趋势">
-          <a-empty v-if="!trendData.length" description="暂无趋势数据" />
-          <div v-else class="trend-list">
-            <div v-for="item in trendData" :key="item.day" class="trend-item">
-              <div class="trend-day">{{ formatDate(item.day, true) }}</div>
-              <div class="trend-bars">
-                <div class="trend-bar trend-bar-total" :style="{ width: `${item.totalWidth}%` }"></div>
-                <div class="trend-bar trend-bar-pass" :style="{ width: `${item.passWidth}%` }"></div>
-              </div>
-              <div class="trend-meta">
-                <span>总 {{ item.total }}</span>
-                <span>通过 {{ item.passed }}</span>
-                <span>未通过 {{ item.failed + item.error }}</span>
-              </div>
-            </div>
-          </div>
-        </a-card>
+
       </div>
 
       <a-card class="report-card fc-panel" :bordered="false" title="最近执行记录">
@@ -328,6 +294,9 @@
 </template>
 
 <script setup lang="ts">
+import ApiReportOverview from "../components/ApiReportOverview.vue";
+import { useApiWorkspaceMetrics } from "../state/workspacePresentation";
+import { calculatePassRate } from "@/utils/qualityStatus";
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateColor, passRateTone, formatQualityPercent, progressFraction } from '@/utils/qualityStatus'
 import { computed, ref, watch } from 'vue'
@@ -354,12 +323,16 @@ const loading = ref(false)
 const aiSummaryLoading = ref(false)
 const days = ref(30)
 const report = ref<ApiExecutionReport | null>(null)
+const reportLoadError=ref(false)
+let reportGeneration=0
 const aiSummary = ref<ApiExecutionReportAISummary | null>(null)
 const aiSummaryError = ref('')
+let aiSummaryGeneration=0
 const detailVisible = ref(false)
 const currentRecord = ref<ApiExecutionRecord | null>(null)
 
 const projectName = computed(() => projectStore.currentProject?.name || '未选择项目')
+useApiWorkspaceMetrics('execution-report',computed(()=>{const summary=report.value?.summary,rate=summary ? calculatePassRate(summary.passed_count,summary.total_count) : null;return [{label:'近 '+days.value+' 天执行',value:loading.value ? null : summary?.total_count ?? null},{label:'总通过率',value:formatQualityPercent(rate),tone:passRateTone(rate)},{label:'失败接口',value:loading.value ? null : report.value?.hierarchy_summary?.failed_interface_count ?? (report.value?.failing_requests.length ?? null),tone:'danger'},{label:'失败与异常',value:loading.value ? null : summary ? summary.failed_count+summary.error_count : null,tone:'danger'}]}))
 const runGroups = computed(() => report.value?.run_groups || [])
 
 const methodColorMap: Record<string, string> = {
@@ -452,7 +425,14 @@ const trendData = computed(() => {
 })
 
 const loadReport = async () => {
+  const generation=++reportGeneration,project=props.projectId,collection=props.selectedCollectionId;
+  ++aiSummaryGeneration
+  aiSummary.value=null
+  aiSummaryError.value=''
+  aiSummaryLoading.value=false
+  reportLoadError.value=false
   if (!props.projectId) {
+    loading.value=false
     report.value = null
     aiSummary.value = null
     aiSummaryError.value = ''
@@ -466,22 +446,26 @@ const loadReport = async () => {
       collection: props.selectedCollectionId,
       days: days.value,
     })
+    if(generation!==reportGeneration || project!==props.projectId || collection!==props.selectedCollectionId)return
     report.value = res.data?.data || null
     aiSummary.value = null
     aiSummaryError.value = ''
   } catch (error) {
+    if(generation!==reportGeneration)return
+    reportLoadError.value=true
     console.error('[TestReportView] 获取测试报告失败:', error)
     Message.error('获取测试报告失败')
     report.value = null
     aiSummary.value = null
     aiSummaryError.value = ''
   } finally {
-    loading.value = false
+    if(generation===reportGeneration)loading.value = false
   }
 }
 
 const loadAiSummary = async () => {
   if (!props.projectId) return
+  const generation=++aiSummaryGeneration,project=props.projectId,collection=props.selectedCollectionId,range=days.value
   aiSummaryLoading.value = true
   aiSummaryError.value = ''
   try {
@@ -490,13 +474,15 @@ const loadAiSummary = async () => {
       collection: props.selectedCollectionId,
       days: days.value,
     })
+    if(generation!==aiSummaryGeneration || project!==props.projectId || collection!==props.selectedCollectionId || range!==days.value)return
     aiSummary.value = res.data?.data || null
   } catch (error: any) {
+    if(generation!==aiSummaryGeneration)return
     console.error('[TestReportView] 获取AI报告摘要失败:', error)
     aiSummaryError.value = error?.error || '获取AI报告摘要失败'
     Message.error(aiSummaryError.value)
   } finally {
-    aiSummaryLoading.value = false
+    if(generation===aiSummaryGeneration)aiSummaryLoading.value = false
   }
 }
 

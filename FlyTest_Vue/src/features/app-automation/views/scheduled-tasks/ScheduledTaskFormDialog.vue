@@ -2,7 +2,7 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑定时任务' : '新建定时任务'"
-    width="820px"
+    :width="Math.min(820, width - 24)"
     @before-ok="done => emit('before-ok', done)"
   >
     <a-form class="fc-form" :model="form" layout="vertical">
@@ -15,8 +15,8 @@
         <a-col :span="12">
           <a-form-item v-if="!form.id" field="status" label="初始状态">
             <a-select v-model="form.status">
-              <a-option value="ACTIVE">ACTIVE</a-option>
-              <a-option value="PAUSED">PAUSED</a-option>
+              <a-option value="ACTIVE">激活（保存后开始调度）</a-option>
+              <a-option value="PAUSED">暂停</a-option>
             </a-select>
           </a-form-item>
           <a-form-item v-else label="当前状态">
@@ -94,7 +94,7 @@
 
       <a-row :gutter="12">
         <a-col :span="12">
-          <a-form-item v-if="form.trigger_type === 'CRON'" field="cron_expression" label="Cron 表达式">
+          <a-form-item v-if="form.trigger_type === 'CRON'" field="cron_expression" label="Cron 表达式（UTC · 分 时 日 月 周）">
             <a-input v-model="form.cron_expression" placeholder="例如：0 0 * * *" />
           </a-form-item>
           <a-form-item v-else-if="form.trigger_type === 'INTERVAL'" field="interval_seconds" label="间隔秒数">
@@ -116,7 +116,7 @@
           <div class="helper-card">
             <strong>调度说明</strong>
             <span v-if="form.trigger_type === 'CRON'">
-              常用示例：`0 0 * * *` 每天零点执行，`0 */2 * * *` 每两小时执行一次。
+              常用示例：`0 0 * * *` 每天 UTC 零点（北京时间 08:00）执行，`0 */2 * * *` 每两小时执行一次。
             </span>
             <span v-else-if="form.trigger_type === 'INTERVAL'">
               间隔任务会以秒为单位重复执行，建议不要低于 60 秒。
@@ -169,6 +169,9 @@
 </template>
 
 <script setup lang="ts">
+import {useWindowSize} from '@vueuse/core'
+const {width}=useWindowSize()
+
 import type { ScheduledTaskFormDialogEmits } from './scheduledTaskEventModels'
 import type { ScheduledTaskFormDialogProps } from './scheduledTaskViewModels'
 

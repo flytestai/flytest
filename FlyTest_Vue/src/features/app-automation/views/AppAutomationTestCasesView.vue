@@ -4,39 +4,9 @@
       <a-empty description="请先选择项目后再管理 APP 测试用例" />
     </div>
     <template v-else>
-      <TestCasesHeaderBar
-        v-model:search="search"
-        v-model:package-filter="packageFilter"
-        :packages="packages"
-        @search="loadData"
-        @reset="resetFilters"
-        @quick-create="openCreate"
-        @open-scene-builder-draft="openSceneBuilderDraft"
-      />
-
-      <TestCasesStatsGrid :statistics="caseStats" />
-
-      <TestCasesBatchBar
-        :selected-count="selectedCaseIds.length"
-        @open-batch-execute="openBatchExecute"
-        @clear-selection="clearSelection"
-      />
-
-      <TestCasesTableCard
-        v-model:selected-case-ids="selectedCaseIds"
-        :cases="filteredCases"
-        :loading="loading"
-        :format-date-time="formatDateTime"
-        :get-step-count="getStepCount"
-        :get-result-label="getResultLabel"
-        :get-result-color="getResultColor"
-        @open-execute="openExecute"
-        @open-scene-builder="openSceneBuilder"
-        @open-edit="openEdit"
-        @duplicate-case="duplicateCase"
-        @remove="remove"
-      />
-
+      <TestCasesReferenceWorkspace v-model:selected="selectedCaseIds" :cases="testCases" :packages="packages" :suites="suites" :project-id="projectStore.currentProjectId" :loading="loading" :error="loadError" :suite-error="suiteError"
+        @reload="loadData" @create="openCreate" @edit="openEdit" @execute="openExecute" @scene="openSceneBuilder" @duplicate="duplicateCase" @remove="remove" @ai="openAiGeneration" @batch-execute="openBatchExecute" />
+      <details class="app-case-recent"><summary>最近执行记录</summary>
       <TestCasesRecentExecutionsCard
         :executions="recentExecutions"
         :loading="loading"
@@ -50,11 +20,13 @@
         @open-execution-report="openExecutionReport"
       />
 
+      </details>
+
       <TestCaseEditorDialog
         v-model:visible="visible"
         :form="form"
         :packages="packages"
-        @submit="submit"
+        :submit="submit" :saving="saving"
       />
 
       <TestCaseExecuteDialog
@@ -63,52 +35,44 @@
         :execute-form="executeForm"
         :available-devices="availableDevices"
         :packages="packages"
-        @execute="executeCase"
+        :execute="executeCase"
       />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import TestCasesReferenceWorkspace from './test-cases/TestCasesReferenceWorkspace.vue'
+
 import {
   TestCaseEditorDialog,
   TestCaseExecuteDialog,
-  TestCasesBatchBar,
-  TestCasesHeaderBar,
   TestCasesRecentExecutionsCard,
-  TestCasesStatsGrid,
-  TestCasesTableCard,
   useAppAutomationTestCases,
 } from './test-cases'
 
 const {
+  saving, loadError, suiteError, suites, testCases,
   projectStore,
   loading,
   visible,
   executeVisible,
   executeMode,
-  search,
-  packageFilter,
   packages,
   recentExecutions,
   selectedCaseIds,
   form,
   executeForm,
   availableDevices,
-  filteredCases,
-  caseStats,
   formatDateTime,
-  getStepCount,
-  getResultLabel,
   getResultColor,
   getExecutionResultLabel,
   formatRate,
   formatProgress,
   canOpenExecutionReport,
   loadData,
-  resetFilters,
   openCreate,
-  openSceneBuilderDraft,
   openEdit,
   submit,
   duplicateCase,
@@ -117,10 +81,11 @@ const {
   openExecutionWorkspace,
   openExecutionReport,
   openBatchExecute,
-  clearSelection,
   executeCase,
   remove,
 } = useAppAutomationTestCases()
+const router = useRouter()
+const openAiGeneration = () => router.push({path:'/app-automation',query:{tab:'scene-builder',aiPlan:'1'}})
 </script>
 
 <style scoped>
@@ -129,7 +94,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0!important;
 }
 
 .empty-shell {

@@ -1,34 +1,18 @@
 <template>
-  <div class="page-shell fc-page">
+  <div class="page-shell fc-page app-packages-page">
     <div v-if="!projectStore.currentProjectId" class="empty-shell fc-empty-state">
       <a-empty description="请先选择项目后管理 APP 应用包" />
     </div>
     <template v-else>
-      <PackagesHeaderBar
+      <PackagesReferenceWorkspace
+        :packages="packages"
+        :project-id="projectStore.currentProjectId"
         :loading="loading"
+        :file-support="fileSupport"
+        :load-error="loadError"
         @refresh="loadPackages"
         @create="openCreate"
-      />
-
-      <PackagesStatsGrid :stats="packageStats" />
-
-      <PackagesFilterCard
-        v-model:search="search"
-        v-model:platform-filter="platformFilter"
-        @search="handleSearch"
-        @reset="resetFilters"
-      />
-
-      <PackagesTableCard
-        v-model:current="pagination.current"
-        v-model:page-size="pagination.pageSize"
-        :packages="pagedPackages"
-        :loading="loading"
-        :total="filteredPackages.length"
-        :format-date-time="formatDateTime"
-        :get-platform-label="getPlatformLabel"
-        :get-platform-color="getPlatformColor"
-        @open-edit="openEdit"
+        @edit="openEdit"
         @remove="remove"
       />
 
@@ -36,7 +20,11 @@
         v-model:visible="visible"
         :form="form"
         :submitting="submitting"
-        @submit="submit"
+        :file-support="fileSupport"
+        :upload-progress="uploadProgress"
+        :selected-file="selectedFile"
+        :submit-package="submit"
+        @select-file="selectedFile = $event"
       />
     </template>
   </div>
@@ -45,31 +33,22 @@
 <script setup lang="ts">
 import {
   PackageEditorDialog,
-  PackagesFilterCard,
-  PackagesHeaderBar,
-  PackagesStatsGrid,
-  PackagesTableCard,
   useAppAutomationPackages,
 } from './packages'
+import PackagesReferenceWorkspace from './packages/PackagesReferenceWorkspace.vue'
 
 const {
   projectStore,
   loading,
   submitting,
   visible,
-  search,
-  platformFilter,
-  pagination,
+  packages,
+  loadError,
+  fileSupport,
+  selectedFile,
+  uploadProgress,
   form,
-  filteredPackages,
-  pagedPackages,
-  packageStats,
-  formatDateTime,
-  getPlatformLabel,
-  getPlatformColor,
   loadPackages,
-  handleSearch,
-  resetFilters,
   openCreate,
   openEdit,
   submit,
@@ -120,3 +99,4 @@ const {
   }
 }
 </style>
+<style>.app-automation-shell .app-packages-page{padding:0!important}</style>

@@ -4,41 +4,16 @@
       <a-empty description="请选择项目后再配置 APP 定时任务" />
     </div>
     <template v-else>
-      <ScheduledTasksHeaderBar :loading="loading" @refresh="loadData" @create="openCreate" />
-
-      <ScheduledTasksFilterCard :filters="filters" @search="handleSearch" @reset="resetFilters" />
-
-      <ScheduledTasksStatsGrid :statistics="statistics" />
-
-      <ScheduledTasksTableCard
-        v-model:current="pagination.current"
-        v-model:page-size="pagination.pageSize"
-        :loading="loading"
-        :tasks="pagedTasks"
-        :total="filteredTasks.length"
-        :format-date-time="formatDateTime"
-        :get-task-type-label="getTaskTypeLabel"
-        :get-trigger-type-label="getTriggerTypeLabel"
-        :get-notification-label="getNotificationLabel"
-        :get-notification-color="getNotificationColor"
-        :get-status-color="getStatusColor"
-        :get-task-target="getTaskTarget"
-        :get-package-label="getPackageLabel"
-        :get-trigger-summary="getTriggerSummary"
-        :get-notification-summary="getNotificationSummary"
-        :get-last-result-meta="getLastResultMeta"
-        :get-task-success-rate="getTaskSuccessRate"
-        :get-last-result-summary="getLastResultSummary"
-        :has-execution-result="hasExecutionResult"
-        :is-action-loading="isActionLoading"
-        @open-detail="openDetail"
-        @run-now="runNow"
-        @open-latest-execution="openLatestExecution"
-        @open-edit="openEdit"
-        @pause="pause"
-        @resume="resume"
-        @remove="remove"
+      <ScheduledTasksReferenceWorkspace
+        v-model:current="pagination.current" v-model:page-size="pagination.pageSize"
+        :loading="loading" :error="loadError" :tasks="pagedTasks" :total="filteredTasks.length"
+        :statistics="statistics" :filters="filters" :format-time="formatDateTime"
+        :trigger-summary="getTriggerSummary" :result-meta="getLastResultMeta" :is-action-loading="isActionLoading"
+        @refresh="loadData" @reset="resetFilters" @create="openCreate" @ai="aiVisible=true"
+        @detail="openDetail" @run="runNow" @edit="openEdit" @copy="copyTask"
+        @pause="pause" @resume="resume" @remove="remove" @execution="openLatestExecution" @notifications="openTaskNotifications"
       />
+      <ScheduledTaskAiDialog v-model:visible="aiVisible" :project-id="projectStore.currentProjectId" @apply="applyProposal" />
 
       <ScheduledTaskDetailDialog
         v-model:visible="detailVisible"
@@ -84,19 +59,20 @@
 </template>
 
 <script setup lang="ts">
+import {ref,nextTick} from 'vue'
+import ScheduledTasksReferenceWorkspace from './scheduled-tasks/ScheduledTasksReferenceWorkspace.vue'
+import ScheduledTaskAiDialog, {type ScheduleProposal} from './scheduled-tasks/ScheduledTaskAiDialog.vue'
+
 import {
   ScheduledTaskDetailDialog,
   ScheduledTaskFormDialog,
-  ScheduledTasksFilterCard,
-  ScheduledTasksHeaderBar,
-  ScheduledTasksStatsGrid,
-  ScheduledTasksTableCard,
   useAppAutomationScheduledTasks,
 } from './scheduled-tasks'
 
 const {
   projectStore,
   loading,
+  loadError,
   visible,
   detailVisible,
   detailLoading,
@@ -139,7 +115,6 @@ const {
   openCreate,
   openDetail,
   openEdit,
-  handleSearch,
   resetFilters,
   handleBeforeOk,
   openLatestExecution,
@@ -151,6 +126,10 @@ const {
   resume,
   remove,
 } = useAppAutomationScheduledTasks()
+const aiVisible=ref(false)
+const copyTask=(task:Parameters<typeof openEdit>[0])=>{openEdit(task);form.id=0;form.name=task.name+'（副本）';form.status='PAUSED'}
+const applyProposal=async(proposal:ScheduleProposal)=>{openCreate();form.trigger_type=proposal.trigger_type;await nextTick();Object.assign(form,proposal,{status:'PAUSED',notify_on_failure:false,notification_type:''})}
+
 </script>
 
 <style scoped>
@@ -159,7 +138,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0 !important;
 }
 
 .empty-shell {

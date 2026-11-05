@@ -39,13 +39,8 @@
             </dd>
           </div>
           <div>
-            <dt>最近执行</dt>
-            <dd>
-              <a-tag
-                :color="getExecutionStatusColor(detail.execution_status)"
-                >{{ getExecutionStatusLabel(detail.execution_status) }}</a-tag
-              >
-            </dd>
+            <dt>负责人</dt>
+            <dd>{{ getUserDisplayName(detail.assignee_detail, '未分配') }}</dd>
           </div>
           <div class="fc-case-review__full">
             <dt>所属模块</dt>
@@ -105,6 +100,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
+import { getUserDisplayName } from '@/utils/userDisplay';
 import {
   getTestCaseDetail,
   updateTestCaseReviewStatus,
@@ -246,9 +242,13 @@ onBeforeUnmount(() => {
 }
 .fc-case-review__meta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin: 20px 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 9px;
+  background: var(--theme-surface-soft);
 }
 .fc-case-review__meta dt {
   font-size: 11px;
@@ -260,7 +260,8 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 .fc-case-review__full {
-  grid-column: 1/-1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .fc-case-review__steps {
   list-style: none;

@@ -107,6 +107,8 @@ class ComponentPackagePayload(BaseModel):
 
 
 class TestSuitePayload(BaseModel):
+    group: str = Field(default="", max_length=80)
+    execution_strategy: Literal["sequential", "parallel"] = "sequential"
     project_id: int
     name: str = Field(..., min_length=1, max_length=200)
     description: str = Field(default="", max_length=4000)

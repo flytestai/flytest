@@ -312,6 +312,8 @@ export interface DocumentDetail extends RequirementDocument {
 
 export interface DocumentListParams {
   project: string;
+  has_review?: boolean;
+  uploader?: string;
   status?: DocumentStatus;
   document_type?: DocumentType;
   search?: string;

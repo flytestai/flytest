@@ -1,6 +1,6 @@
 <template>
   <div class="environment-list fc-page">
-    <WorkspacePageHeader>
+    <WorkspacePageHeader local class="api-local-toolbar">
         <template #title>执行环境</template>
         <template #description>统一维护接口执行环境、变量、公共请求头和自动鉴权建议，保证接口、用例与报告使用同一套环境上下文。</template>
         <template #meta><div class="hero-copy__meta">
@@ -17,7 +17,7 @@
           @search="loadEnvironments"
           @clear="loadEnvironments"
         />
-        <a-button type="primary" @click="openCreateModal">新增环境</a-button>
+        <a-select v-model="defaultFilter" placeholder="环境类型" allow-clear style="width:140px"><a-option value="default">默认环境</a-option><a-option value="other">其他环境</a-option></a-select><a-button @click="searchKeyword='';defaultFilter=undefined">重置</a-button><ApiActionPortal><a-button type="primary" @click="openCreateModal">新增环境</a-button></ApiActionPortal>
       </div></template>
       </WorkspacePageHeader>
 
@@ -39,11 +39,11 @@
       </div>
     </div>
 
-    <div class="content-card fc-panel">
-      <a-table class="fc-table" :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id" size="large">
+<ApiDetailLayout :open="!!selectedPreview" @close="selectedPreview=null">    <div class="content-card fc-panel api-table-panel">
+      <a-table class="fc-table" :data="filteredEnvironments" :loading="loading" :pagination="false" row-key="id" size="small" :scroll="{x:1040}" :row-class="record => selectedPreview?.id === record.id ? 'api-selected-row' : ''" @row-click="record => selectedPreview=record">
         <template #columns>
-          <a-table-column title="环境名称" data-index="name" :width="220" />
-          <a-table-column title="基础地址" data-index="base_url" ellipsis tooltip />
+          <a-table-column title="环境名称" :width="160"><template #cell="{record}"><button class="api-row-name" @click="selectedPreview=record">{{ record.name }}</button></template></a-table-column>
+          <a-table-column title="基础地址" data-index="base_url" :width="240" ellipsis tooltip />
           <a-table-column title="默认" :width="90" align="center">
             <template #cell="{ record }">
               <a-tag :color="record.is_default ? 'green' : 'gray'">{{ record.is_default ? '是' : '否' }}</a-tag>
@@ -52,7 +52,7 @@
           <a-table-column title="超时" :width="120">
             <template #cell="{ record }">{{ record.timeout_ms }} ms</template>
           </a-table-column>
-          <a-table-column title="更新时间" :width="180">
+          <a-table-column title="变量数" :width="80"><template #cell="{record}">{{ variableCount(record) }}</template></a-table-column><a-table-column title="更新时间" :width="180">
             <template #cell="{ record }">{{ formatDate(record.updated_at) }}</template>
           </a-table-column>
           <a-table-column title="操作" :width="180" align="center">
@@ -69,6 +69,7 @@
       </a-table>
     </div>
 
+<template #detail><ApiEnvironmentPreview v-if="selectedPreview" :record="selectedPreview" @close="selectedPreview=null" @edit="openEditModal" /></template></ApiDetailLayout>
     <a-modal class="fc-dialog"
       v-model:visible="editorVisible"
       :title="editingEnvironment ? '编辑环境' : '新增环境'"
@@ -157,8 +158,13 @@
 </template>
 
 <script setup lang="ts">
+import ApiActionPortal from '../components/ApiActionPortal.vue'
+import ApiDetailLayout from '../components/ApiDetailLayout.vue'
+import ApiEnvironmentPreview from '../components/ApiEnvironmentPreview.vue'
+import { useApiWorkspaceMetrics } from '../state/workspacePresentation'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, ref, watch } from 'vue'
+const emit=defineEmits<{updated:[]}>()
 import { Message } from '@arco-design/web-vue'
 import { useProjectStore } from '@/store/projectStore'
 import { environmentApi } from '../api'
@@ -196,6 +202,9 @@ const loading = ref(false)
 const submitLoading = ref(false)
 const searchKeyword = ref('')
 const environments = ref<ApiEnvironment[]>([])
+const selectedPreview=ref<ApiEnvironment|null>(null),defaultFilter=ref<string>()
+const variableCount=(record:ApiEnvironment) => record.environment_specs?.variables?.length ?? Object.keys(record.variables || {}).length
+useApiWorkspaceMetrics('environments',computed(() => [{label:'环境总数',value:loading.value ? null : environments.value.length},{label:'默认环境',value:loading.value ? null : environments.value.filter(item=>item.is_default).length,tone:'blue'},{label:'环境变量',value:loading.value ? null : environments.value.reduce((sum,item)=>sum+variableCount(item),0),tone:'purple'},{label:'已配置地址',value:loading.value ? null : environments.value.filter(item=>item.base_url).length,tone:'teal'}]))
 const editorVisible = ref(false)
 const editingEnvironment = ref<ApiEnvironment | null>(null)
 
@@ -217,8 +226,9 @@ const formState = ref<{
 
 const filteredEnvironments = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
-  if (!keyword) return environments.value
-  return environments.value.filter(item => item.name.toLowerCase().includes(keyword))
+  const scoped = defaultFilter.value ? environments.value.filter(item=>defaultFilter.value === 'default' ? item.is_default : !item.is_default) : environments.value
+  if (!keyword) return scoped
+  return scoped.filter(item => item.name.toLowerCase().includes(keyword))
 })
 
 const primarySuggestedBaseUrl = computed<ApiEnvironmentSuggestionBaseUrl | null>(() => {
@@ -249,6 +259,7 @@ const loadEnvironments = async () => {
     const res = await environmentApi.list({ project: projectId.value })
     const data = res.data?.data || []
     environments.value = Array.isArray(data) ? data : []
+    if(selectedPreview.value) selectedPreview.value=environments.value.find(item=>item.id===selectedPreview.value?.id) || null
   } catch (error) {
     console.error('[EnvironmentList] 获取环境失败:', error)
     Message.error('获取环境列表失败')
@@ -374,6 +385,7 @@ const submitEnvironment = async (done: (closed: boolean) => void) => {
     editorVisible.value = false
     resetEditor()
     loadEnvironments()
+    emit('updated')
   } catch (error: any) {
     console.error('[EnvironmentList] 保存环境失败:', error)
     Message.error(error?.error || '保存环境失败')
@@ -388,6 +400,7 @@ const deleteEnvironment = async (id: number) => {
     await environmentApi.delete(id)
     Message.success('环境删除成功')
     loadEnvironments()
+    emit('updated')
   } catch (error: any) {
     Message.error(error?.error || '删除环境失败')
   }

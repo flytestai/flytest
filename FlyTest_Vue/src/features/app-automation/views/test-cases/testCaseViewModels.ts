@@ -2,6 +2,8 @@ import type { AppDevice, AppExecution, AppPackage, AppTestCase } from '../../typ
 
 export interface TestCaseFormModel {
   id: number
+  group: string
+  priority: string
   name: string
   description: string
   package_id: number | undefined
@@ -56,11 +58,14 @@ export interface TestCasesRecentExecutionsCardProps {
 }
 
 export interface TestCaseEditorDialogProps {
+  submit?: () => Promise<boolean>
+  saving?: boolean
   form: TestCaseFormModel
   packages: AppPackage[]
 }
 
 export interface TestCaseExecuteDialogProps {
+  execute?: () => Promise<boolean | undefined>
   mode: 'single' | 'batch'
   executeForm: TestCaseExecuteFormModel
   availableDevices: AppDevice[]

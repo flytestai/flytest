@@ -176,6 +176,7 @@ import {
 const props = defineProps<{
   visible: boolean
   projectId: number
+  pageName?: string
 }>()
 
 const emit = defineEmits<{
@@ -412,6 +413,7 @@ const submit = async () => {
   submitting.value = true
   try {
     const payload = await buildPayload()
+    if (props.pageName !== undefined) payload.config = {...payload.config, page_name:props.pageName.trim(), reusable:false, maintenance_status:'normal'}
     await AppAutomationService.createElement(payload)
     Message.success('元素已从设备截图创建')
     emit('success')

@@ -1,5 +1,6 @@
 ﻿<template>
   <div class="chat-layout fc-page">
+    <header class="conversation-page-heading"><div class="conversation-page-heading__copy"><span class="conversation-page-heading__icon" aria-hidden="true"><icon-message /></span><div><h2>AI 对话</h2><p>结合当前项目、知识库和测试工具进行测试分析。</p></div><span class="conversation-project-badge"><icon-folder />当前项目：{{ projectStore.currentProject?.name || '未选择项目' }}</span></div><a-button type="primary" @click="createNewChat"><template #icon><icon-plus /></template>新对话</a-button></header>
     <WorkspaceDirectoryLayout ref="workspaceRef" storage-key="ai-chat" directory-label="历史会话" selection-label="当前会话" :selection="chatSessions.find(item => item.id === sessionId)?.title || '新对话'">
       <template #directory><ChatSidebar
       :sessions="chatSessions"
@@ -15,21 +16,6 @@
 
     <!-- 右侧聊天区域 -->
     <div class="chat-container">
-      <WorkspacePageHeader>
-        <template #title>AI 对话</template>
-        <template #description>结合当前项目、知识库和工具进行测试分析。</template>
-        <template #meta><div class="fc-inline-metrics">
-          <div class="fc-inline-metric">
-            <span class="fc-inline-metric-value">{{ chatSessions.length }}</span>
-            <span class="fc-inline-metric-label">会话数量</span>
-          </div>
-          <div class="fc-inline-metric">
-            <span class="fc-inline-metric-value">{{ useKnowledgeBase ? 'ON' : 'OFF' }}</span>
-            <span class="fc-inline-metric-label">知识增强</span>
-          </div>
-        </div></template>
-        <template #actions><a-button type="primary" @click="createNewChat"><template #icon><icon-plus /></template>新对话</a-button></template>
-      </WorkspacePageHeader>
 
       <ChatHeader
         ref="chatHeaderRef"
@@ -64,6 +50,7 @@
         @preview-html="handlePreviewHtml"
         @tool-image-detected="handleToolImageDetected"
         @float-tool-image="handleFloatToolImage"
+        @use-suggestion="draft => chatInputRef?.setDraft(draft)"
       />
 
       <!-- 工具图片悬浮面板（可拖动） -->
@@ -90,6 +77,9 @@
       />
 
       <ChatInput
+        ref="chatInputRef"
+        :model-configured="Boolean(currentLlmConfig)"
+        :model-name="currentLlmConfig?.name || ''"
         :is-loading="isLoading"
         :supports-vision="currentLlmConfig?.supports_vision || false"
         :context-token-count="contextTokenInfo.tokenCount"
@@ -98,6 +88,7 @@
         @send-message="handleSendMessage"
         @clear-quote="handleClearQuote"
         @stop-generation="handleStopGeneration"
+        @tool-settings="isToolApprovalSettingsVisible = true"
       />
     </div>
 
@@ -171,7 +162,6 @@
 <script setup lang="ts">
 import WorkspaceDirectoryLayout from '@/components/workspace/WorkspaceDirectoryLayout.vue'
 
-import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, onActivated, watch, onUnmounted, computed, nextTick } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import {
@@ -195,7 +185,7 @@ import type { LlmConfig } from '@/features/langgraph/types/llmConfig';
 import { useProjectStore } from '@/store/projectStore';
 import { useLlmConfigRefresh } from '@/composables/useLlmConfigRefresh';
 import { marked } from 'marked';
-import { IconFullscreen, IconFullscreenExit, IconPlus } from '@arco-design/web-vue/es/icon';
+import { IconFullscreen, IconFullscreenExit, IconPlus, IconMessage, IconFolder } from '@arco-design/web-vue/es/icon';
 
 // 导入子组件
 import ChatSidebar from '../components/ChatSidebar.vue';
@@ -208,6 +198,7 @@ import ToolApprovalSettingsModal from '../components/ToolApprovalSettingsModal.v
 import type { InterruptEvent } from '../components/ToolApprovalCard.vue';
 
 const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>()
+const chatInputRef = ref<InstanceType<typeof ChatInput>>()
 
 // 配置marked
 marked.setOptions({
@@ -1882,6 +1873,7 @@ const loadCurrentLlmConfig = async () => {
     if (response.status === 'success' && response.data) {
       // 找到激活的配置
       const activeConfig = response.data.find(config => config.is_active);
+      currentLlmConfig.value = activeConfig || null;
       if (activeConfig) {
         currentLlmConfig.value = activeConfig;
       } else {
@@ -1890,6 +1882,7 @@ const loadCurrentLlmConfig = async () => {
     }
   } catch (error) {
     console.error('获取LLM配置失败:', error);
+    currentLlmConfig.value = null;
     Message.error('获取LLM配置失败');
   }
 };
@@ -2513,3 +2506,5 @@ export default {
   }
 }
 </style>
+
+<style src="./conversation-workspace.css"></style>

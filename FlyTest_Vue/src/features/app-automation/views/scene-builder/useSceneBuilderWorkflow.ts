@@ -66,6 +66,7 @@ export const useSceneBuilderWorkflow = ({
   refreshAiRuntimeStatus,
 }: UseSceneBuilderWorkflowOptions) => {
   const loading = ref(false)
+  const loadError = ref('')
   const saving = ref(false)
   const executing = ref(false)
   const loadedProjectId = ref<number | null>(null)
@@ -207,6 +208,7 @@ export const useSceneBuilderWorkflow = ({
     }
 
     loading.value = true
+    loadError.value = ''
     try {
       const [baseComponents, userComponents, deviceList, packageList, caseList] = await Promise.all([
         AppAutomationService.getComponents(),
@@ -235,7 +237,8 @@ export const useSceneBuilderWorkflow = ({
         }
       }
     } catch (error: any) {
-      Message.error(error.message || '加载场景编排数据失败')
+      loadError.value = error.message || '加载场景编排数据失败'
+      Message.error(loadError.value)
     } finally {
       loading.value = false
     }
@@ -266,10 +269,11 @@ export const useSceneBuilderWorkflow = ({
     description: draft.description.trim(),
     package_id: draft.package_id ?? null,
     ui_flow: {
+      ...(testCases.value.find(item => item.id === selectedCaseId.value)?.ui_flow || {}),
       steps: steps.value.map(item => sanitizeStep(item)),
     },
     variables: buildVariablePayload(),
-    tags: [],
+    tags: testCases.value.find(item => item.id === selectedCaseId.value)?.tags || [],
     timeout: draft.timeout,
     retry_count: draft.retry_count,
   })
@@ -442,6 +446,7 @@ export const useSceneBuilderWorkflow = ({
   )
 
   return {
+    loadError,
     loading,
     saving,
     executing,

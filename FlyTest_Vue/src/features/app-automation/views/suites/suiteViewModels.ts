@@ -7,12 +7,16 @@ export interface SuiteFilters {
 
 export interface SuiteFormModel {
   id: number
+  group: string
+  execution_strategy: 'sequential' | 'parallel'
   name: string
   description: string
   test_case_ids: number[]
 }
 
 export interface SuiteRunFormModel {
+  execution_strategy: 'sequential' | 'parallel'
+  device_ids: number[]
   device_id: number | undefined
   package_name: string | undefined
 }
@@ -49,6 +53,10 @@ export interface SuiteDetailDialogProps {
 }
 
 export interface SuiteEditorDialogProps {
+  save?: () => Promise<boolean>
+  saving?: boolean
+  metadataAvailable?: boolean
+  parallelAvailable?: boolean
   form: SuiteFormModel
   testCases: AppTestCase[]
   selectedCases: AppTestCase[]
@@ -78,6 +86,9 @@ export interface SuiteHistoryDialogProps {
 }
 
 export interface SuiteRunDialogProps {
+  run?: () => Promise<boolean | undefined>
+  running?: boolean
+  parallelAvailable?: boolean
   runForm: SuiteRunFormModel
   availableDevices: AppDevice[]
   packages: AppPackage[]

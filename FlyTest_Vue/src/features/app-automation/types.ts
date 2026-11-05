@@ -55,6 +55,24 @@ export interface AppPackage {
   updated_at: string
   can_delete?: boolean
   delete_block_reason?: string
+  asset_management_available?: boolean
+  has_file?: boolean
+  file_name?: string
+  file_type?: string
+  file_size?: number
+  version_name?: string
+  version_code?: string
+  uploaded_at?: string
+  installations?: AppPackageInstallation[]
+}
+
+export interface AppPackageInstallation {
+  device_id: number
+  device_name: string
+  status: 'installing' | 'installed' | 'failed'
+  progress: number | null
+  updated_at: string
+  error?: string
 }
 
 export interface AppElement {
@@ -194,6 +212,11 @@ export interface AppExecutionLog {
 }
 
 export interface AppExecution {
+  task_id?: number | null
+  package_id?: number | null
+  app_name?: string
+  app_version?: string
+  package_snapshot?: {name?:string;platform?:string;version?:string}
   id: number
   project_id: number
   test_case_id: number
@@ -288,6 +311,9 @@ export interface AppDashboardStatistics {
     total: number
     online: number
     locked: number
+    busy?: number
+    offline?: number
+    unavailable?: number
   }
   packages: {
     total: number
@@ -306,6 +332,7 @@ export interface AppDashboardStatistics {
     pass_rate: number
   }
   recent_executions: AppExecution[]
+  trend?: Array<{ day: string; total: number; passed: number; failed: number }>
 }
 
 export interface AppComponent {
@@ -380,6 +407,8 @@ export interface AppSuiteCase {
 }
 
 export interface AppTestSuite {
+  group?: string
+  execution_strategy?: 'sequential' | 'parallel'
   id: number
   project_id: number
   name: string

@@ -1,10 +1,5 @@
 <template>
   <div class="fc-request-workbench">
-    <WorkspacePageHeader title="请求工作区"
-      ><template #actions
-        ><a-button @click="emit('close')">返回接口列表</a-button></template
-      ></WorkspacePageHeader
-    >
     <div v-if="loading" class="fc-request-state">
       <a-spin tip="加载接口配置…" />
     </div>
@@ -17,11 +12,12 @@
         ><a-button @click="load">重试</a-button></template
       ></a-result
     >
-    <template v-else-if="detail">
+    <ApiDetailLayout v-else-if="detail" :open="overviewOpen" @close="overviewOpen=false">
+      <ApiActionPortal><a-button @click="$router.push('/api-automation?tab=environments')">环境配置</a-button><a-button type="primary" :loading="executing" :disabled="saving || generating" @click="execute">执行测试</a-button></ApiActionPortal>
       <header class="fc-request-tab">
         <span>{{ detail.name }}</span
         ><span v-if="dirty" class="fc-request-unsaved">未保存</span
-        ><button type="button" aria-label="关闭当前接口" @click="emit('close')">
+        ><a-button type="text" size="mini" @click="emit('close')">返回接口列表</a-button><a-button type="text" size="mini" @click="overviewOpen=!overviewOpen">接口概览</a-button><button type="button" aria-label="关闭当前接口" @click="emit('close')">
           ×
         </button>
       </header>
@@ -178,8 +174,8 @@
             >
           </footer></template
         >
-      </section>
-    </template>
+      </section><template #detail><ApiRequestOverview :record="detail" :body="editor.body_json_text" :saving="saving" @close="overviewOpen=false" @save="save()" /></template>
+    </ApiDetailLayout>
     <a-modal
       v-model:visible="suggestionsVisible"
       title="AI 断言草稿"
@@ -209,6 +205,9 @@
   </div>
 </template>
 <script setup lang="ts">
+import ApiDetailLayout from "./ApiDetailLayout.vue";
+import ApiRequestOverview from "./ApiRequestOverview.vue";
+import ApiActionPortal from './ApiActionPortal.vue';
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { Message, Modal } from "@arco-design/web-vue";
@@ -234,6 +233,7 @@ import type {
   ApiRequest,
   ApiRequestForm,
 } from "../types";
+const overviewOpen=ref(window.innerWidth >= 1360);
 const props = defineProps<{ projectId?: number; requestId: number }>();
 const emit = defineEmits<{ close: []; updated: []; executed: [] }>();
 const methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
@@ -361,7 +361,7 @@ async function loadEnvironments() {
     const response = await environmentApi.list({ project });
     if (project !== props.projectId) return;
     environments.value = response.data.data || [];
-    environmentId.value = environments.value.find((env) => env.is_default)?.id;
+    if(!environments.value.some(env=>env.id===environmentId.value)) environmentId.value = environments.value.find((env) => env.is_default)?.id;
   } catch {
     if (project === props.projectId) environments.value = [];
   } finally {
@@ -539,7 +539,7 @@ onBeforeUnmount(() => {
   releasePoll();
   if (jobId) void caseGenerationJobApi.cancel(jobId).catch(() => {});
 });
-defineExpose({ confirmLeave });
+defineExpose({ confirmLeave, refreshEnvironments:loadEnvironments });
 </script>
 <style scoped>
 .fc-request-workbench {

@@ -1,4 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue'
+import { devicePlatform } from '../devices/devicePresentation'
+import { caseHasSteps } from '../test-cases/testCasePresentation'
 import { Message, Modal } from '@arco-design/web-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
@@ -26,6 +28,11 @@ export function useAppAutomationSuites() {
   const router = useRouter()
 
   const loading = ref(false)
+  const saving = ref(false), running = ref(false)
+  const loadError = ref(''), executionError = ref('')
+  const capabilities = ref({metadata:false,parallel:false,max_devices:8})
+  const executions = ref<AppExecution[]>([])
+  let loadVersion = 0
   const visible = ref(false)
   const runVisible = ref(false)
   const detailVisible = ref(false)
@@ -49,18 +56,22 @@ export function useAppAutomationSuites() {
 
   const form = reactive<SuiteFormModel>({
     id: 0,
+    group: '',
+    execution_strategy: 'sequential',
     name: '',
     description: '',
     test_case_ids: [],
   })
 
   const runForm = reactive<SuiteRunFormModel>({
+    execution_strategy: 'sequential',
+    device_ids: [],
     device_id: undefined,
     package_name: undefined,
   })
 
   const availableDevices = computed(() =>
-    devices.value.filter(item => item.status === 'available' || item.status === 'online'),
+    devices.value.filter(item => devicePlatform(item) === 'Android' && ['available','online'].includes(item.status)),
   )
 
   const selectedCases = computed(
@@ -209,6 +220,8 @@ export function useAppAutomationSuites() {
 
   const resetForm = () => {
     form.id = 0
+    form.group = ''
+    form.execution_strategy = 'sequential'
     form.name = ''
     form.description = ''
     form.test_case_ids = []
@@ -216,6 +229,8 @@ export function useAppAutomationSuites() {
 
   const resetRunState = () => {
     currentSuiteId.value = null
+    runForm.device_ids = []
+    runForm.execution_strategy = 'sequential'
     runForm.device_id = undefined
     runForm.package_name = undefined
   }
@@ -229,6 +244,8 @@ export function useAppAutomationSuites() {
   }
 
   const loadData = async () => {
+    const version = ++loadVersion
+    const projectId = projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       suites.value = []
       testCases.value = []
@@ -242,16 +259,20 @@ export function useAppAutomationSuites() {
     }
 
     loading.value = true
+    loadError.value = ''
+    executionError.value = ''
     try {
-      const [suiteList, caseList, deviceList, packageList] = await Promise.all([
-        AppAutomationService.getTestSuites(
-          projectStore.currentProjectId,
-          filters.search.trim() || undefined,
-        ),
+      const [suiteList, caseList, deviceList, packageList, capability, executionList] = await Promise.all([
+        AppAutomationService.getTestSuites(projectId!),
         AppAutomationService.getTestCases(projectStore.currentProjectId),
         AppAutomationService.getDevices(),
-        AppAutomationService.getPackages(projectStore.currentProjectId),
+        AppAutomationService.getPackages(projectId!),
+        AppAutomationService.getSuiteCapabilities().catch(()=>({metadata:false,parallel:false,max_devices:8})),
+        AppAutomationService.getExecutions(projectId!).catch(()=> { if(version === loadVersion) executionError.value='执行量暂不可用'; return [] }),
       ])
+      if (version !== loadVersion || projectId !== projectStore.currentProjectId) return
+      capabilities.value = capability
+      executions.value = executionList
       suites.value = suiteList
       testCases.value = caseList
       devices.value = deviceList
@@ -270,9 +291,11 @@ export function useAppAutomationSuites() {
         }
       }
     } catch (error: any) {
-      Message.error(error.message || '加载测试套件失败')
+      if(version !== loadVersion) return
+      loadError.value = error.message || '加载测试套件失败'
+      Message.error(loadError.value)
     } finally {
-      loading.value = false
+      if (version === loadVersion) loading.value = false
     }
   }
 
@@ -282,13 +305,16 @@ export function useAppAutomationSuites() {
     await loadData()
   }
 
-  const openCreate = () => {
+  const openCreate = (group = '') => {
     resetForm()
+    form.group = group
     visible.value = true
   }
 
   const openEdit = (record: AppTestSuite) => {
     form.id = record.id
+    form.group = record.group || ''
+    form.execution_strategy = record.execution_strategy || 'sequential'
     form.name = record.name
     form.description = record.description
     form.test_case_ids = record.suite_cases.map(item => item.test_case_id)
@@ -296,10 +322,10 @@ export function useAppAutomationSuites() {
   }
 
   const saveSuite = async () => {
-    if (!projectStore.currentProjectId) return
+    if (!projectStore.currentProjectId || saving.value) return false
     if (!form.name.trim()) {
       Message.warning('请输入套件名称')
-      return
+      return false
     }
 
     const payload = {
@@ -307,14 +333,16 @@ export function useAppAutomationSuites() {
       name: form.name.trim(),
       description: form.description.trim(),
       test_case_ids: form.test_case_ids,
+      ...(capabilities.value.metadata ? {group:form.group.trim(),execution_strategy:form.execution_strategy} : {}),
     }
 
+    saving.value = true
     try {
       if (form.id) {
         await AppAutomationService.updateTestSuite(form.id, payload)
         Message.success('测试套件已更新')
       } else {
-        await AppAutomationService.createTestSuite(payload)
+        await AppAutomationService.createTestSuite(payload, authStore.currentUser?.username || 'FeiCe')
         Message.success('测试套件已创建')
       }
       visible.value = false
@@ -322,7 +350,9 @@ export function useAppAutomationSuites() {
       await loadData()
     } catch (error: any) {
       Message.error(error.message || '保存测试套件失败')
-    }
+      return false
+    } finally { saving.value = false }
+    return true
   }
 
   const moveCase = (index: number, delta: -1 | 1) => {
@@ -335,6 +365,9 @@ export function useAppAutomationSuites() {
   }
 
   const openRun = (record: AppTestSuite) => {
+    if (!record.suite_cases?.length || record.suite_cases.some(member => !testCases.value.find(item=>item.id===member.test_case_id && caseHasSteps(item)))) { Message.warning('套件为空或存在未配置步骤的用例'); return }
+    runForm.execution_strategy = record.execution_strategy || 'sequential'
+    runForm.device_ids = []
     if (!availableDevices.value.length) {
       Message.warning('当前没有可用设备，请先连接或释放设备后再执行套件')
       return
@@ -353,13 +386,16 @@ export function useAppAutomationSuites() {
   }
 
   const runSuite = async () => {
-    if (!currentSuiteId.value || !runForm.device_id) {
-      Message.warning('请选择执行设备')
-      return
+    if (running.value) return false
+    if (!currentSuiteId.value || (runForm.execution_strategy === 'sequential' ? !runForm.device_id : runForm.device_ids.length < 2)) {
+      Message.warning('请选择执行设备，并行执行至少需要 2 台设备')
+      return false
     }
 
+    if (runForm.execution_strategy === 'parallel' && !capabilities.value.parallel) { Message.warning('服务尚未加载并行执行能力'); return false }
+    running.value = true
     try {
-      const result = await AppAutomationService.runTestSuite(currentSuiteId.value, {
+      const result = runForm.execution_strategy === 'parallel' ? await AppAutomationService.runSuiteParallel(currentSuiteId.value, {device_ids:runForm.device_ids,package_name:runForm.package_name,triggered_by:authStore.currentUser?.username || 'FeiCe'}) : await AppAutomationService.runTestSuite(currentSuiteId.value, {
         device_id: runForm.device_id,
         package_name: runForm.package_name || undefined,
         triggered_by: authStore.currentUser?.username || 'FeiCe',
@@ -372,7 +408,8 @@ export function useAppAutomationSuites() {
       )
     } catch (error: any) {
       Message.error(error.message || '执行测试套件失败')
-    }
+    } finally { running.value = false }
+    return false
   }
 
   const openDetail = async (record: AppTestSuite) => {
@@ -440,9 +477,10 @@ export function useAppAutomationSuites() {
       await AppAutomationService.createTestSuite({
         project_id: record.project_id,
         name: `${record.name}-副本`,
+        ...(capabilities.value.metadata ? {group:record.group || '', execution_strategy:record.execution_strategy || 'sequential'} : {}),
         description: record.description,
         test_case_ids: record.suite_cases.map(item => item.test_case_id),
-      })
+      }, authStore.currentUser?.username || 'FeiCe')
       Message.success('测试套件副本已创建')
       await loadData()
     } catch (error: any) {
@@ -544,12 +582,14 @@ export function useAppAutomationSuites() {
       resetForm()
       resetRunState()
       filters.status = ''
+      suites.value = []; testCases.value = []; packages.value = []; executions.value = []; devices.value = []
       void loadData()
     },
     { immediate: true },
   )
 
   return {
+    saving, running, loadError, executionError, capabilities, executions,
     projectStore,
     loading,
     visible,

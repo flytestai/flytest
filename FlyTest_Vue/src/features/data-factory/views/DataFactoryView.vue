@@ -1,157 +1,20 @@
 <template>
   <div class="data-factory-page fc-page">
-    <WorkspacePageHeader>
-        <template #title>{{ pageTitle }}</template>
-        <template #description>{{ pageDescription }}</template>
-        <template #meta><div class="hero__meta">
-          <span>{{ projectName }}</span>
-          <span>{{ heroToolCount }} 个工具</span>
-          <span>{{ tags.length }} 个标签</span>
-          <span>{{ statistics.total_records }} 条记录</span>
-        </div></template>
-        <template #actions><div class="hero__actions">
-        <a-radio-group v-if="!isCategoryMenuView" v-model="viewMode" type="button" size="small">
-          <a-radio value="category">分类导航</a-radio>
-          <a-radio value="scenario">场景导航</a-radio>
-        </a-radio-group>
-        <a-space wrap>
-          <a-button :disabled="!projectReady" @click="openReferenceBrowser('api')"><template #icon><icon-copy /></template>API 引用</a-button>
-          <a-button :disabled="!projectReady" @click="openReferenceBrowser('ui')"><template #icon><icon-copy /></template>UI 引用</a-button>
-          <a-button :disabled="!projectReady" @click="historyVisible = true"><template #icon><icon-history /></template>使用记录</a-button>
-          <a-button :disabled="!projectReady" @click="tagManagerVisible = true"><template #icon><icon-tags /></template>标签管理</a-button>
-          <a-button @click="refreshAll"><template #icon><icon-refresh /></template>刷新</a-button>
-        </a-space>
-      </div></template>
-      </WorkspacePageHeader>
-
-    <section v-if="!projectReady" class="panel banner">
-      <strong>当前未选择项目</strong>
-      <span>{{ projectLockMessage }}</span>
-    </section>
-
-    <section v-if="!isCategoryMenuView" class="stats-grid fc-metric-grid">
-      <div class="stat-card panel fc-metric"><span>总使用记录</span><strong>{{ statistics.total_records }}</strong></div>
-      <div class="stat-card panel fc-metric"><span>已保存记录</span><strong>{{ statistics.saved_records }}</strong></div>
-      <div class="stat-card panel fc-metric"><span>标签数量</span><strong>{{ tags.length }}</strong></div>
-      <div class="stat-card panel fc-metric"><span>可用工具</span><strong>{{ catalog.tools.length }}</strong></div>
-    </section>
-
-    <section v-if="!isCategoryMenuView" class="panel">
-      <div class="section-title">场景筛选</div>
-      <div class="section-desc">点击场景后会立即过滤下方分类模块与工具卡片。</div>
-      <div class="pill-row">
-        <button type="button" class="pill fc-native-action" :class="{ active: selectedScenario === 'all' }" @click="applyScenarioFilter('all')">全部场景</button>
-        <button
-          v-for="scenario in catalog.scenarios"
-          :key="scenario.scenario"
-          type="button"
-          class="pill fc-native-action"
-          :class="{ active: selectedScenario === scenario.scenario }"
-          @click="applyScenarioFilter(scenario.scenario)"
-        >
-          {{ scenario.name }} · {{ scenario.tool_count }}
-        </button>
-      </div>
-    </section>
-
-    <section v-if="!isCategoryMenuView" class="insight-grid">
-      <div class="panel" :class="{ locked: !projectReady }">
-        <div class="section-title">分类使用统计</div>
-        <div v-if="projectReady" class="metric-list">
-          <div v-for="item in categoryBreakdown" :key="item.key" class="metric">
-            <div class="metric__head"><span>{{ item.name }}</span><strong>{{ item.total }}</strong></div>
-            <div class="metric__track"><span class="metric__bar" :style="{ width: `${item.percent}%` }"></span></div>
-          </div>
-        </div>
-        <div v-else class="empty">{{ projectLockMessage }}</div>
-      </div>
-
-      <div class="panel" :class="{ locked: !projectReady }">
-        <div class="section-title">场景使用统计</div>
-        <div v-if="projectReady" class="metric-list">
-          <div v-for="item in scenarioBreakdown" :key="item.key" class="metric">
-            <div class="metric__head"><span>{{ item.name }}</span><strong>{{ item.total }}</strong></div>
-            <div class="metric__track"><span class="metric__bar metric__bar--soft" :style="{ width: `${item.percent}%` }"></span></div>
-          </div>
-        </div>
-        <div v-else class="empty">{{ projectLockMessage }}</div>
-      </div>
-
-      <div class="panel" :class="{ locked: !projectReady }">
-        <div class="section-title">最近使用</div>
-        <div v-if="projectReady && recentRecords.length" class="recent-list">
-          <button v-for="record in recentRecords" :key="record.id" type="button" class="recent fc-native-action" @click="showRecordResult(record)">
-            <div class="recent__title">{{ record.tool_display_name }}</div>
-            <div class="recent__meta">{{ formatDate(record.created_at) }}</div>
-            <div class="recent__preview">{{ record.preview }}</div>
-          </button>
-        </div>
-        <div v-else class="empty">{{ projectReady ? '暂无最近使用记录' : projectLockMessage }}</div>
-      </div>
-    </section>
-
-    <section v-if="!isCategoryMenuView" class="reference-grid">
-      <div class="panel" :class="{ locked: !projectReady }">
-        <div class="section-head">
-          <div>
-            <div class="section-title">标签引用中心</div>
-            <div class="section-desc">直接复制标签引用到 API 自动化请求、断言和 UI 自动化步骤中。</div>
-          </div>
-          <a-space wrap>
-            <a-button size="small" :disabled="!projectReady" @click="openReferenceBrowser('api')">浏览 API 引用</a-button>
-            <a-button size="small" :disabled="!projectReady" @click="openReferenceBrowser('ui')">浏览 UI 引用</a-button>
-          </a-space>
-        </div>
-
-        <div v-if="projectReady && topReferenceTags.length" class="reference-list">
-          <article v-for="tag in topReferenceTags" :key="tag.id" class="reference-item">
-            <div class="reference-item__head">
-              <a-tag :color="tag.color || 'arcoblue'">{{ tag.code }}</a-tag>
-              <span>{{ tag.total }} 次引用</span>
-            </div>
-            <div class="reference-item__title">{{ tag.name }}</div>
-            <div class="reference-item__preview">{{ tag.preview || '暂无标签预览' }}</div>
-            <div class="reference-item__actions">
-              <a-button size="mini" @click="copyTagReference(tag.code, 'api')">复制 API</a-button>
-              <a-button size="mini" @click="copyTagReference(tag.code, 'ui')">复制 UI</a-button>
-            </div>
-          </article>
-        </div>
-        <div v-else class="empty">{{ projectReady ? '当前项目下暂无可引用标签' : projectLockMessage }}</div>
-      </div>
-
-      <div class="panel" :class="{ locked: !projectReady }">
-        <div class="section-head">
-          <div>
-            <div class="section-title">记录引用中心</div>
-            <div class="section-desc">已保存记录可直接复制引用，也可以点开查看具体执行结果。</div>
-          </div>
-          <span class="pill active">{{ referenceRecords.length }} 条可引用记录</span>
-        </div>
-
-        <div v-if="projectReady && referenceRecords.length" class="reference-list">
-          <button
-            v-for="record in referenceRecords"
-            :key="record.id"
-            type="button"
-            class="reference-item reference-item--interactive fc-native-action"
-            @click="showRecordResult(record)"
-          >
-            <div class="reference-item__head">
-              <span class="reference-item__title">{{ record.tool_display_name }}</span>
-              <span>{{ formatDate(record.created_at) }}</span>
-            </div>
-            <div class="reference-item__preview">{{ record.preview }}</div>
-            <div class="reference-item__actions">
-              <a-button size="mini" @click.stop="copyText(record.reference_placeholder_api, '已复制 API 记录引用')">复制 API</a-button>
-              <a-button size="mini" @click.stop="copyText(record.reference_placeholder_ui, '已复制 UI 记录引用')">复制 UI</a-button>
-            </div>
-          </button>
-        </div>
-        <div v-else class="empty">{{ projectReady ? '当前项目下暂无已保存记录可引用' : projectLockMessage }}</div>
-      </div>
-    </section>
-
+    <DataFactoryPanelWorkspace v-if="!isCategoryMenuView"
+      :catalog="catalog" :statistics="statistics" :tag-count="tagTotal" :project-id="projectId" :project-name="projectName"
+      :loading="panelLoading" :error="panelError" :catalog-ready="catalogReady" :statistics-ready="statisticsReady"
+      :references-ready="referencesReady" :reference-records="referenceRecords" :reference-tags="topReferenceTags"
+      @refresh="refreshAll" @category="focusCategorySection" @tool="openToolDialog" @record="showRecordResult"
+      @reference="openReferenceBrowser" @history="historyTab = 'records'; historyVisible = true" @tags="tagManagerVisible = true"
+      @copy-tag="copyTagReference" @copy-record="copyRecordReference"
+    />
+    <WorkspacePageHeader v-else>
+      <template #title>{{ pageTitle }}</template><template #description>{{ pageDescription }}</template>
+      <template #meta><div class="hero__meta"><span>{{ projectName }}</span><span>{{ heroToolCount }} 个工具</span></div></template>
+      <template #actions><a-space wrap><a-button @click="clearCategoryFocus">返回工具面板</a-button><a-button :disabled="!projectReady" @click="historyVisible = true">使用记录</a-button></a-space></template>
+    </WorkspacePageHeader>
+    <a-alert v-if="isCategoryMenuView && !projectReady">{{ projectLockMessage }}</a-alert>
+    <a-alert v-if="isCategoryMenuView && panelError" type="error">{{ panelError }}<a-button type="text" @click="refreshAll">重试</a-button></a-alert>
     <section v-if="isCategoryMenuView" id="data-factory-tools" ref="toolWorkspaceSection" class="workspace-panel workspace-panel--category-only">
       <div v-if="categoryMenuTools.length" class="tool-grid">
         <button v-for="tool in categoryMenuTools" :key="tool.name" type="button" class="tool-card fc-native-action" @click="openToolDialog(tool)">
@@ -832,7 +695,8 @@
 
 <script setup lang="ts">
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
-import { computed, defineAsyncComponent, nextTick, reactive, ref, watch } from 'vue'
+import DataFactoryPanelWorkspace from '../components/DataFactoryPanelWorkspace.vue'
+import { computed, defineAsyncComponent, nextTick, reactive, ref, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { IconArrowRight, IconCheckCircle, IconClockCircle, IconCodeBlock, IconCopy, IconDownload, IconFile, IconFire, IconFontColors, IconHistory, IconLock, IconPlayArrow, IconRefresh, IconTags, IconTool, IconUserGroup } from '@arco-design/web-vue/es/icon'
@@ -903,6 +767,14 @@ const tags = ref<DataFactoryTag[]>([])
 const statistics = ref<DataFactoryStatistics>(emptyStatistics())
 const records = ref<DataFactoryRecord[]>([])
 const loadingRecords = ref(false)
+const panelLoading = ref(false)
+const panelError = ref('')
+const catalogReady = ref(false)
+const statisticsReady = ref(false)
+const referencesReady = ref(false)
+const tagTotal = ref<number | null>(null)
+const savedReferenceRecords = ref<DataFactoryRecord[]>([])
+let catalogVersion = 0, tagsVersion = 0, statisticsVersion = 0, recordsVersion = 0, referencesVersion = 0, refreshVersion = 0, executionVersion = 0, detailVersion = 0
 const executing = ref(false)
 const lastExecution = ref<DataFactoryExecuteResult | null>(null)
 const toolKeyword = ref('')
@@ -1223,14 +1095,7 @@ const topReferenceTags = computed(() => statistics.value.tag_stats.slice(0, 6).m
     preview: detail?.latest_preview || detail?.description || '',
   }
 }))
-const referenceRecords = computed(() => {
-  const uniqueRecords = new Map<number, DataFactoryRecord>()
-  for (const record of [...recentRecords.value, ...records.value]) {
-    if (!record.is_saved || uniqueRecords.has(record.id)) continue
-    uniqueRecords.set(record.id, record)
-  }
-  return Array.from(uniqueRecords.values()).slice(0, 6)
-})
+const referenceRecords = computed(() => savedReferenceRecords.value)
 
 const currentTool = computed<DataFactoryTool | null>(() => catalog.value.tools.find(item => item.name === currentToolName.value) || null)
 const specializedLayoutKind = computed<'generic' | 'jsonpath' | 'json-diff' | 'text-diff' | 'cron-generate' | 'cron-expression' | 'image-base64'>(() => {
@@ -1803,6 +1668,10 @@ const buildToolFormState = (tool: DataFactoryTool | null, inputData?: Record<str
 
 const resetProjectScopedState = () => {
   tags.value = []
+  tagTotal.value = null
+  statisticsReady.value = false
+  referencesReady.value = false
+  savedReferenceRecords.value = []
   statistics.value = emptyStatistics()
   records.value = []
   lastExecution.value = null
@@ -1885,46 +1754,83 @@ const buildPayloadValue = (field: DataFactoryToolField) => {
   return field.type === 'json' && typeof rawValue === 'string' ? (rawValue.trim() ? JSON.parse(rawValue) : field.default ?? {}) : rawValue
 }
 
-const loadCatalog = async () => { catalog.value = extractDataFactoryData<DataFactoryCatalog>(await dataFactoryApi.getCatalog()) }
-const loadTags = async () => { if (!projectId.value) return; tags.value = extractDataFactoryData<any>(await dataFactoryApi.getTags({ project: projectId.value, page_size: 200 }))?.results ?? [] }
-const loadStatistics = async () => { if (!projectId.value) return; statistics.value = extractDataFactoryData<DataFactoryStatistics>(await dataFactoryApi.getStatistics(projectId.value)) }
-
+const loadCatalog = async () => {
+  const version = ++catalogVersion
+  try {
+    const data = extractDataFactoryData<DataFactoryCatalog>(await dataFactoryApi.getCatalog())
+    if (version !== catalogVersion) return
+    if (!data || !Array.isArray(data.tools) || !Array.isArray(data.categories) || !Array.isArray(data.scenarios)) throw new Error('工具目录格式异常')
+    catalog.value = data; catalogReady.value = true
+  } catch (error) { if (version === catalogVersion) catalogReady.value = false; throw error }
+}
+const loadTags = async () => {
+  const id = projectId.value, version = ++tagsVersion
+  if (!id) return
+  try {
+    const data = extractDataFactoryData<any>(await dataFactoryApi.getTags({ project: id, page_size: 100 }))
+    if (id !== projectId.value || version !== tagsVersion) return
+    if (!data || !Array.isArray(data.results) || typeof data.count !== 'number') throw new Error('标签数据格式异常')
+    tags.value = data.results; tagTotal.value = data.count
+  } catch (error) { if (id === projectId.value && version === tagsVersion) { tags.value = []; tagTotal.value = null }; throw error }
+}
+const loadStatistics = async () => {
+  const id = projectId.value, version = ++statisticsVersion
+  if (!id) return
+  try {
+    const data = extractDataFactoryData<DataFactoryStatistics>(await dataFactoryApi.getStatistics(id))
+    if (id !== projectId.value || version !== statisticsVersion) return
+    if (!data || !Array.isArray(data.recent_records)) throw new Error('统计数据格式异常')
+    statistics.value = data; statisticsReady.value = true
+  } catch (error) { if (id === projectId.value && version === statisticsVersion) { statistics.value = emptyStatistics(); statisticsReady.value = false }; throw error }
+}
+const loadReferenceRecords = async () => {
+  const id = projectId.value, version = ++referencesVersion
+  if (!id) return
+  try {
+    const data = extractDataFactoryData<any>(await dataFactoryApi.getRecords({ project: id, is_saved: true, page: 1, page_size: 6 }))
+    if (id !== projectId.value || version !== referencesVersion) return
+    if (!data || !Array.isArray(data.results)) throw new Error('引用记录格式异常')
+    savedReferenceRecords.value = data.results; referencesReady.value = true
+  } catch (error) { if (id === projectId.value && version === referencesVersion) { savedReferenceRecords.value = []; referencesReady.value = false }; throw error }
+}
 const loadRecords = async () => {
-  if (!projectId.value) return
+  const id = projectId.value, version = ++recordsVersion
+  if (!id) return
   loadingRecords.value = true
   try {
-    const data = extractDataFactoryData<any>(await dataFactoryApi.getRecords({ project: projectId.value, page: recordPagination.current, page_size: recordPagination.pageSize, search: recordFilters.search || undefined, tool_category: recordFilters.category === 'all' ? undefined : recordFilters.category, tool_scenario: recordFilters.scenario === 'all' ? undefined : recordFilters.scenario, is_saved: recordFilters.saved === 'all' ? undefined : recordFilters.saved === 'saved' }))
-    records.value = data?.results ?? []
-    recordPagination.total = data?.count ?? 0
+    const data = extractDataFactoryData<any>(await dataFactoryApi.getRecords({ project: id, page: recordPagination.current, page_size: recordPagination.pageSize, search: recordFilters.search || undefined, tool_category: recordFilters.category === 'all' ? undefined : recordFilters.category, tool_scenario: recordFilters.scenario === 'all' ? undefined : recordFilters.scenario, is_saved: recordFilters.saved === 'all' ? undefined : recordFilters.saved === 'saved' }))
+    if (id !== projectId.value || version !== recordsVersion) return
+    records.value = data?.results ?? []; recordPagination.total = data?.count ?? 0
   } catch (error: any) {
-    Message.error(normalizeErrorMessage(error, '加载使用记录失败'))
-  } finally {
-    loadingRecords.value = false
-  }
+    if (id === projectId.value && version === recordsVersion) { records.value = []; recordPagination.total = 0; Message.error(normalizeErrorMessage(error, '加载使用记录失败')) }
+  } finally { if (id === projectId.value && version === recordsVersion) loadingRecords.value = false }
 }
-
 const refreshAll = async () => {
-  try {
-    await loadCatalog()
-    if (!projectId.value) return resetProjectScopedState()
-    await Promise.all([loadTags(), loadStatistics(), loadRecords()])
-  } catch (error: any) {
-    Message.error(normalizeErrorMessage(error, '加载数据工厂失败'))
-  }
+  const version = ++refreshVersion
+  panelLoading.value = true; panelError.value = ''
+  const jobs = [{ label: '工具目录', run: loadCatalog }, ...(projectId.value ? [{ label: '标签', run: loadTags }, { label: '统计', run: loadStatistics }, { label: '引用记录', run: loadReferenceRecords }, { label: '使用记录', run: loadRecords }] : [])]
+  const results = await Promise.allSettled(jobs.map(job => job.run()))
+  if (version !== refreshVersion) return
+  const failed = results.flatMap((result, index) => result.status === 'rejected' ? [jobs[index]!.label] : [])
+  panelError.value = failed.length ? failed.join('、') + '加载失败，请重试。' : ''
+  panelLoading.value = false
 }
 
 const executeToolRun = async () => {
   if (!projectReady.value) return Message.warning('请先选择项目后再运行工具')
   if (!currentTool.value) return
+  const id = projectId.value, version = ++executionVersion
   executing.value = true
   try {
-    lastExecution.value = extractDataFactoryData<DataFactoryExecuteResult>(await dataFactoryApi.execute({ project: projectId.value!, tool_name: currentTool.value.name, input_data: Object.fromEntries(currentTool.value.fields.map(field => [field.name, buildPayloadValue(field)])), save_record: saveRecord.value, tag_ids: selectedTagIds.value, tag_names: tagNamesText.value.split(/[,\n，]+/).map(item => item.trim()).filter(Boolean) }))
+    const data = extractDataFactoryData<DataFactoryExecuteResult>(await dataFactoryApi.execute({ project: id!, tool_name: currentTool.value.name, input_data: Object.fromEntries(currentTool.value.fields.map(field => [field.name, buildPayloadValue(field)])), save_record: saveRecord.value, tag_ids: selectedTagIds.value, tag_names: tagNamesText.value.split(/[,\n，]+/).map(item => item.trim()).filter(Boolean) }))
+    if (version !== executionVersion || id !== projectId.value) return
+    lastExecution.value = data
     Message.success('工具运行成功')
-    await Promise.all([loadTags(), loadStatistics(), loadRecords()])
+    await Promise.all([loadTags(), loadStatistics(), loadRecords(), loadReferenceRecords()])
   } catch (error: any) {
-    Message.error(normalizeErrorMessage(error, '工具运行失败'))
+    if (version === executionVersion && id === projectId.value) Message.error(normalizeErrorMessage(error, '工具运行失败'))
   } finally {
-    executing.value = false
+    if (version === executionVersion) executing.value = false
   }
 }
 
@@ -1934,12 +1840,14 @@ const handleRecordPageSizeChange = (pageSize: number) => { if (projectReady.valu
 
 const showRecordResult = async (record: DataFactoryRecord) => {
   if (!projectReady.value) return
+  const id = projectId.value, version = ++detailVersion
   try {
     const detail = extractDataFactoryData<DataFactoryRecord>(await dataFactoryApi.getRecord(record.id))
+    if (version !== detailVersion || id !== projectId.value || detail.project !== id) return
     const tool = catalog.value.tools.find(item => item.name === detail.tool_name) || buildFallbackTool(detail)
     openToolDialog(tool, { inputData: detail.input_data, execution: { tool, output_data: detail.output_data, saved: detail.is_saved, record: detail }, tagIds: detail.tags.map(item => item.id), saveRecord: detail.is_saved })
   } catch (error: any) {
-    Message.error(normalizeErrorMessage(error, '加载记录详情失败'))
+    if (version === detailVersion && id === projectId.value) Message.error(normalizeErrorMessage(error, '加载记录详情失败'))
   }
 }
 
@@ -1948,7 +1856,7 @@ const deleteRecord = async (id: number) => {
   try {
     await dataFactoryApi.deleteRecord(id)
     Message.success('记录已删除')
-    await Promise.all([loadRecords(), loadStatistics(), loadTags()])
+    await Promise.all([loadRecords(), loadStatistics(), loadTags(), loadReferenceRecords()])
   } catch (error: any) {
     Message.error(normalizeErrorMessage(error, '删除记录失败'))
   }
@@ -1972,6 +1880,8 @@ const copyTagReference = (code: string, mode: DataFactoryReferenceMode) =>
     buildDataFactoryPlaceholder('tag', code, mode),
     `已复制 ${mode === 'api' ? 'API' : 'UI'} 标签引用`
   )
+
+const copyRecordReference = (record: DataFactoryRecord, mode: DataFactoryReferenceMode) => copyText(mode === 'api' ? record.reference_placeholder_api : record.reference_placeholder_ui, '已复制 ' + mode.toUpperCase() + ' 记录引用')
 
 const handleReferenceSelect = (placeholder: string) =>
   copyText(placeholder, `已复制 ${referencePickerMode.value === 'api' ? 'API' : 'UI'} 引用`)
@@ -2037,7 +1947,7 @@ const handleImagePicked = (fieldName: string, event: Event) => {
 }
 
 const triggerImagePicker = (fieldName: string) => uploadInputs.get(fieldName)?.click()
-const handleTagsUpdated = () => { if (projectReady.value) void Promise.all([loadTags(), loadStatistics(), loadRecords()]) }
+const handleTagsUpdated = () => { if (projectReady.value) void refreshAll() }
 
 watch(
   () => route.query.category,
@@ -2052,7 +1962,15 @@ watch(
   { immediate: true }
 )
 
-watch(() => projectId.value, () => void refreshAll(), { immediate: true })
+watch(() => projectId.value, () => {
+  ++tagsVersion; ++statisticsVersion; ++recordsVersion; ++referencesVersion; ++executionVersion; ++detailVersion
+  resetProjectScopedState()
+  recordFilters.search = ''; recordFilters.saved = 'all'; recordFilters.category = 'all'; recordFilters.scenario = 'all'
+  toolDialogVisible.value = false; historyVisible.value = false; tagManagerVisible.value = false; referencePickerVisible.value = false
+  executing.value = false; loadingRecords.value = false
+  void refreshAll()
+}, { immediate: true })
+onBeforeUnmount(() => { ++catalogVersion; ++tagsVersion; ++statisticsVersion; ++recordsVersion; ++referencesVersion; ++refreshVersion; ++executionVersion; ++detailVersion })
 watch(
   visibleCategories,
   categories => {
@@ -2077,7 +1995,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px;
+  padding: 0;
   box-sizing: border-box;
   overflow: visible;
 }
@@ -2238,4 +2156,5 @@ watch(
   .workspace-actions, .workspace-summary { align-items: stretch; }
   .overview-grid, .scenario-grid, .tool-grid { grid-template-columns: 1fr; }
 }
+.data-factory-page:has(> .df-panel-reference){padding:0;background:transparent;border:0;box-shadow:none}
 </style>

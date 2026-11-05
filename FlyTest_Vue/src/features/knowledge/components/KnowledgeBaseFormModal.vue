@@ -73,7 +73,7 @@
         </a-col>
       </a-row>
 
-      <a-form-item v-if="!isEdit" label="状态" field="is_active">
+      <a-form-item label="状态" field="is_active">
         <a-switch
           v-model="formData.is_active"
           checked-text="启用"
@@ -160,6 +160,7 @@ watch(() => props.visible, async (visible) => {
           : props.knowledgeBase.project,
         chunk_size: props.knowledgeBase.chunk_size,
         chunk_overlap: props.knowledgeBase.chunk_overlap,
+        is_active: props.knowledgeBase.is_active,
       });
     } else {
       if (projectStore.currentProjectId) {
@@ -199,11 +200,13 @@ const resetForm = () => {
 
 const handleSubmit = async () => {
   try {
-    await formRef.value?.validate();
+    const errors = await formRef.value?.validate();
+    if (errors) return;
     loading.value = true;
 
     if (isEdit.value && props.knowledgeBase) {
       const updateData: UpdateKnowledgeBaseRequest = {
+        is_active: formData.is_active,
         name: formData.name,
         description: formData.description,
         project: formData.project,

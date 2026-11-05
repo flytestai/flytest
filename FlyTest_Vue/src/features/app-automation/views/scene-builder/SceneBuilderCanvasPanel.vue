@@ -1,13 +1,9 @@
 <template>
-  <a-card class="canvas-panel fc-panel">
-    <template #title>场景步骤</template>
-    <template #extra>
-      <a-space>
-        <span class="step-counter">共 {{ steps.length }} 步</span>
-        <a-button size="mini" status="danger" :disabled="!steps.length" @click="emit('clear-steps')">清空</a-button>
-      </a-space>
-    </template>
-
+  <section class="canvas-panel scene-flow-canvas" aria-label="场景流程画布">
+    <div class="scene-flow-toolbar"><span>{{ steps.length }} 个步骤 · 拖动手柄调整顺序</span><a-button size="mini" status="danger" :disabled="!steps.length" @click="emit('clear-steps')">清空</a-button></div>
+    <div class="scene-flow-viewport" ref="viewport">
+    <div class="scene-flow-content" :style="{zoom: zoom / 100}">
+    <div class="scene-flow-terminal"><span>▶</span> 开始</div>
     <div v-if="steps.length" class="step-list">
       <draggable
         :model-value="steps"
@@ -18,15 +14,17 @@
         @update:model-value="updateSteps"
       >
         <template #item="{ element, index }">
-          <div class="step-item-wrapper">
+          <div class="step-item-wrapper" :class="{'flow-container': isContainerStep(element)}">
             <div
               class="step-item"
               :class="{ active: selectedStepIndex === index && selectedSubStepIndex === null }"
+              role="button" tabindex="0" :aria-label="'编辑步骤 ' + (element.name || resolveStepTitle(element))" :aria-pressed="selectedStepIndex === index && selectedSubStepIndex === null"
+              @keydown.enter.self.prevent="emit('select-step', index)" @keydown.space.self.prevent="emit('select-step', index)"
               @click="emit('select-step', index)"
             >
               <div class="step-main">
                 <span class="drag-handle">⋮⋮</span>
-                <span class="step-index">{{ index + 1 }}</span>
+                <span class="step-index"><SceneBuilderStepIcon :type="element.component_type || element.type || element.action" /></span>
                 <div class="step-copy">
                   <strong>{{ element.name || resolveStepTitle(element) }}</strong>
                   <span>{{ resolveStepMeta(element) }}</span>
@@ -90,6 +88,9 @@
                           selectedSubStepGroupKey === group.key &&
                           selectedSubStepIndex === subIndex,
                       }"
+                      role="button" tabindex="0" :aria-label="'编辑子步骤 ' + (subStep.name || resolveStepTitle(subStep))"
+                      @keydown.enter.self.prevent="emit('select-sub-step', { index, groupKey: group.key, subIndex })"
+                      @keydown.space.self.prevent="emit('select-sub-step', { index, groupKey: group.key, subIndex })"
                       @click.stop="emit('select-sub-step', { index, groupKey: group.key, subIndex })"
                     >
                       <div class="step-main">
@@ -129,12 +130,22 @@
         </template>
       </draggable>
     </div>
-    <a-empty v-else description="从左侧添加步骤，快速搭建 APP 自动化场景" />
-  </a-card>
+    <a-empty v-else description="从右侧添加步骤，开始编排你的第一个场景" />
+    <div v-if="steps.length" class="scene-flow-terminal end">■ 结束</div>
+    </div>
+    </div>
+    <div class="scene-flow-zoom" aria-label="画布缩放">
+      <button aria-label="放大画布" :disabled="zoom >= 150" @click="zoom = Math.min(150, zoom + 10)">+</button>
+      <span>{{ zoom }}%</span>
+      <button aria-label="缩小画布" :disabled="zoom <= 50" @click="zoom = Math.max(50, zoom - 10)">−</button>
+      <button aria-label="重置画布" @click="resetView">⊡</button>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, ref } from 'vue'
+import SceneBuilderStepIcon from './SceneBuilderStepIcon.vue'
 import type { AppComponent, AppSceneStep } from '../../types'
 import {
   getNodeKey,
@@ -191,6 +202,10 @@ const emit = defineEmits<{
   'update-step-group-items': [payload: UpdateStepGroupItemsPayload]
 }>()
 
+const zoom = ref(100)
+const viewport = ref<HTMLElement>()
+const resetView = () => { zoom.value = 100; viewport.value?.scrollTo({top: 0, left: 0, behavior: 'auto'}) }
+
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 
 const isContainerStep = (step?: Partial<AppSceneStep> | null) => Boolean(step && (isCustomStep(step) || isFlowContainerStep(step)))
@@ -208,191 +223,15 @@ const handleSubStepSelectionChange = (step: AppSceneStep, groupKey: StepChildGro
 </script>
 
 <style scoped>
-.canvas-panel {
-  min-height: 560px;
-  border-radius: 12px;
-  border: 1px solid var(--theme-card-border);
-  background: var(--theme-card-bg);
-  box-shadow: var(--theme-card-shadow);
-  overflow: hidden;
-}
+.scene-flow-canvas {position:relative;min-height:580px;background:radial-gradient(circle,var(--theme-border) .7px,transparent .8px) 0 0/14px 14px;border:0;border-radius:0;box-shadow:none;overflow:hidden}
+.scene-flow-toolbar {display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:var(--theme-surface);border-bottom:1px solid var(--theme-border);font-size:11px;color:var(--theme-text-secondary)}
+.scene-flow-viewport {height:620px;overflow:auto;padding:18px 24px 50px;scrollbar-gutter:stable}.scene-flow-content {min-width:280px;display:flex;flex-direction:column;align-items:center;padding-bottom:16px}.scene-flow-terminal {position:relative;display:flex;gap:8px;align-items:center;justify-content:center;width:146px;min-height:30px;border:1px solid #b3e5c1;border-radius:24px;background:#e8faed;color:#15803d;font-size:12px;font-weight:600;margin:0 auto 24px}.scene-flow-terminal.end {margin:24px auto 0;background:var(--theme-surface);color:var(--theme-text-secondary);border-color:var(--theme-border)}
+.scene-flow-terminal:not(.end):after,.step-item-wrapper:after {content:'↓';position:absolute;bottom:-24px;left:50%;height:24px;line-height:24px;color:#587080;font-size:17px;transform:translateX(-50%)}.step-item-wrapper:last-child:after {bottom:-24px}
+.step-list {width:100%}.draggable-root {display:flex;flex-direction:column;gap:24px;align-items:center}.step-item-wrapper {position:relative;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px}.step-item {position:relative;display:flex;flex-direction:column;width:min(100%,290px);border:1px solid var(--theme-border);border-radius:11px;background:var(--theme-surface);box-shadow:0 2px 4px #233b5510;padding:9px 12px;cursor:pointer;outline-offset:3px}.step-item.active,.sub-step-item.active {border-color:#00a392;box-shadow:0 0 0 2px #00a39216}.step-main {display:flex;align-items:center;gap:9px;min-width:0;width:100%}.drag-handle {cursor:grab;color:#a5b4c4;font-size:15px;user-select:none}.step-index {width:24px;height:26px;display:grid;place-items:center;border-radius:7px;color:#7c5ce2;background:#f2edff;font-size:12px;flex-shrink:0}.step-copy {min-width:0;display:flex;flex-direction:column;gap:3px}.step-copy strong {font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.step-copy>span {font-size:10px;color:var(--theme-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.step-item>.arco-space {margin-top:6px;justify-content:flex-end;width:100%}.step-item .arco-btn {height:20px;font-size:10px;padding:0 5px}.step-item .arco-tag {font-size:10px;margin-left:auto;flex-shrink:0}.flow-container>.step-item {border-color:#d9cef5;background:var(--theme-surface)}
+.sub-step-shell {display:flex;align-items:stretch;justify-content:center;gap:12px;width:100%;padding:12px 0 0;border-top:1px solid #c8bbeb}.sub-step-group {min-width:180px;flex:1;border:1px solid var(--theme-border);border-radius:10px;background:var(--theme-surface);padding:10px;max-width:340px}.sub-step-group-header {display:flex;flex-direction:column;gap:8px;margin-bottom:10px}.sub-step-group-copy {display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#7c5ce2}.sub-step-group-copy span {font-size:10px;color:var(--theme-text-secondary)}.sub-step-toolbar {display:flex;flex-wrap:wrap;gap:6px}.sub-step-toolbar .arco-select {width:100%;font-size:11px}.sub-step-list {display:flex;flex-direction:column;gap:14px}.sub-step-item {position:relative;display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--theme-border);background:var(--theme-surface);border-radius:7px;cursor:pointer}.sub-step-item:not(:last-child):after {content:'↓';position:absolute;left:50%;bottom:-15px;color:#9baaba;font-size:12px}.sub-step-item .arco-space {justify-content:flex-end}.sub-step-item .arco-btn {height:20px;padding:0 4px;font-size:10px}.sub-step-item .step-index {width:28px;font-size:10px}.sub-step-group .arco-empty {padding:12px 0;font-size:11px}
+.scene-flow-zoom {position:absolute;bottom:14px;left:14px;display:flex;align-items:center;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:8px;box-shadow:0 2px 6px #142b4710;padding:2px}.scene-flow-zoom button {width:30px;height:30px;background:none;border:0;cursor:pointer;color:var(--theme-text);font-size:20px;border-radius:5px}.scene-flow-zoom button:hover {background:#e5f5f1}.scene-flow-zoom button:disabled {opacity:.35;cursor:default}.scene-flow-zoom span {font-size:10px;color:var(--theme-text-secondary);min-width:32px;text-align:center}
+@media(max-width:650px) {.scene-flow-viewport {height:490px;padding:18px 12px 50px}.scene-flow-canvas {min-height:0}.sub-step-shell {justify-content:flex-start}.scene-flow-toolbar {font-size:10px}.step-item {width:260px;max-width:100%}}
 
-.canvas-panel :deep(.arco-card-header) {
-  min-height: 60px;
-  padding: 0 20px;
-  border-bottom-color: rgba(var(--theme-accent-rgb), 0.12);
-}
-
-.canvas-panel :deep(.arco-card-body) {
-  padding: 20px;
-}
-
-.canvas-panel :deep(.arco-btn) {
-  border-radius: 12px;
-}
-
-.step-list,
-.draggable-root,
-.sub-step-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.step-item-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.step-item,
-.sub-step-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(var(--theme-accent-rgb), 0.12);
-  background:
-    var(--theme-surface);
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
-}
-
-.step-item:hover,
-.sub-step-item:hover {
-  transform: translateY(-1px);
-  border-color: rgba(var(--theme-accent-rgb), 0.28);
-}
-
-.step-item.active,
-.sub-step-item.active {
-  border-color: rgba(var(--theme-accent-rgb), 0.42);
-  box-shadow: var(--theme-card-shadow);
-}
-
-.step-main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.drag-handle {
-  color: var(--theme-text-secondary);
-  cursor: move;
-  user-select: none;
-}
-
-.step-index {
-  min-width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: rgba(var(--theme-accent-rgb), 0.14);
-  color: var(--theme-accent);
-  font-weight: 700;
-}
-
-.sub-index {
-  background: rgba(var(--theme-accent-rgb), 0.22);
-}
-
-.step-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.step-copy strong {
-  color: var(--theme-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.step-copy span,
-.step-counter {
-  font-size: 12px;
-  color: var(--theme-text-secondary);
-}
-
-.sub-step-shell {
-  border: 1px solid rgba(var(--theme-accent-rgb), 0.18);
-  border-radius: 12px;
-  background: rgba(var(--theme-accent-rgb), 0.05);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sub-step-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(var(--theme-accent-rgb), 0.14);
-  background: rgba(var(--theme-accent-rgb), 0.04);
-}
-
-.sub-step-group-header {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sub-step-group-copy {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.sub-step-group-copy strong {
-  color: var(--theme-text);
-}
-
-.sub-step-group-copy span {
-  font-size: 12px;
-  color: var(--theme-text-secondary);
-}
-
-.sub-step-toolbar {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.sub-step-toolbar :deep(.arco-select-view),
-.sub-step-toolbar :deep(.arco-btn) {
-  border-radius: 12px;
-}
-
-@media (max-width: 960px) {
-  .step-item,
-  .sub-step-item {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .sub-step-toolbar {
-    grid-template-columns: 1fr;
-  }
-
-  .sub-step-group-copy {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
+@media(hover:hover) and (pointer:fine) {.step-item>.arco-space {position:absolute;bottom:-21px;right:0;z-index:2;margin:0;width:auto;background:var(--theme-surface);border:1px solid var(--theme-border);border-radius:5px;opacity:0;pointer-events:none}.step-item:hover>.arco-space,.step-item:focus-within>.arco-space {opacity:1;pointer-events:auto}.step-item {min-height:49px;justify-content:center}}
+.sub-step-shell {position:relative;border-bottom:1px solid #c8bbeb;padding-bottom:12px}.sub-step-shell:before {content:'';position:absolute;left:50%;height:14px;width:1px;top:-14px;background:#c8bbeb}
 </style>

@@ -2,11 +2,13 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="执行详情"
-    width="980px"
+    width="min(980px, calc(100vw - 24px))"
     :footer="false"
   >
     <div v-if="detailLoading" class="modal-state">正在加载执行详情...</div>
     <div v-else-if="currentExecution" class="detail-shell fc-detail-page">
+      <div class="execution-log-switch"><a-button :type="section==='summary'?'primary':'outline'" @click="section='summary'">详情概览</a-button><a-button :type="section==='logs'?'primary':'outline'" @click="section='logs'">运行日志</a-button></div>
+      <div v-show="section==='summary'">
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">执行状态</span>
@@ -84,7 +86,8 @@
         <div v-else class="empty-note compact">当前执行暂无可查看的证据文件</div>
       </a-card>
 
-      <a-card class="detail-panel fc-panel" title="执行日志">
+      </div>
+      <a-card v-show="section==='logs'" class="detail-panel fc-panel" title="执行日志">
         <div v-if="currentExecution.logs?.length" class="log-list">
           <div v-for="(log, index) in currentExecution.logs" :key="`${log.timestamp}-${index}`" class="log-item">
             <div class="log-meta">
@@ -108,6 +111,7 @@ import type { ExecutionsDetailDialogProps } from './executionViewModels'
 defineProps<ExecutionsDetailDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
+const section=defineModel<'summary'|'logs'>('section',{default:'summary'})
 
 const emit = defineEmits<ExecutionsDetailDialogEmits>()
 </script>

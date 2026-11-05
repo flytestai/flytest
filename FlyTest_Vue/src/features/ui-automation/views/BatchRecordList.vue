@@ -1,6 +1,7 @@
 <template>
   <div class="batch-record-list fc-page">
-    <WorkspacePageHeader title="批量执行"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="batch-records" :rows="recordData" :total="pagination.total" :loading="loading" @inspect="viewDetail">
+    <WorkspacePageHeader local title="批量执行"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.status"
@@ -12,22 +13,23 @@
           <a-option v-for="(label, key) in BATCH_STATUS_LABELS" :key="key" :value="Number(key)">{{ label }}</a-option>
         </a-select>
         <a-button type="outline" @click="onSearch">
-          <template #icon><icon-refresh /></template>
+      <template #icon><icon-refresh /></template>
           刷新
         </a-button>
       </div>
-    </div></template></WorkspacePageHeader>
+    </div><router-link to="/ui-automation?tab=testcases"><a-button type="primary">选择用例并新建批次</a-button></router-link></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="recordData"
       :pagination="pagination"
       :loading="loading"
       :scroll="{ x: 1000 }"
-      row-key="id"
+
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.name }}</button></template>
       <template #status="{ record }">
         <a-tag :color="statusColors[record.status as BatchExecutionStatus]">
           {{ BATCH_STATUS_LABELS[record.status as BatchExecutionStatus] ?? '未知' }}
@@ -70,6 +72,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <!-- 详情抽屉 -->
     <a-drawer class="fc-drawer"
@@ -169,6 +172,8 @@
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { passRateColor, formatQualityPercent } from '@/utils/qualityStatus'
 import { ref, reactive, computed, watch } from 'vue'
@@ -210,7 +215,7 @@ const execStatusColors: Record<ExecutionStatus | 4, string> = {
 
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
-  { title: '批次名称', dataIndex: 'name', ellipsis: true, tooltip: true, width: 200 },
+  { title: '批次名称', slotName: 'workspace_name', ellipsis: true, tooltip: true, width: 200 },
   { title: '状态', slotName: 'status', width: 100, align: 'center' as const },
   { title: '执行进度', slotName: 'progress', width: 150, align: 'center' as const },
   { title: '成功率', slotName: 'success_rate', width: 80, align: 'center' as const },

@@ -1,6 +1,7 @@
 <template>
   <div class="execution-record-list fc-page">
-    <WorkspacePageHeader title="执行记录"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="execution-records" :rows="recordData" :total="pagination.total" :loading="loading" @inspect="viewDetail">
+    <WorkspacePageHeader local title="执行记录"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.status"
@@ -23,22 +24,23 @@
           <a-option value="api">API 触发</a-option>
         </a-select>
         <a-button type="outline" @click="onSearch">
-          <template #icon><icon-refresh /></template>
+      <template #icon><icon-refresh /></template>
           刷新
         </a-button>
       </div>
     </div></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="recordData"
       :pagination="pagination"
       :loading="loading"
       :scroll="{ x: 1100 }"
-      row-key="id"
+
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.test_case_name }}</button></template>
       <template #status="{ record }">
         <a-tag :color="statusColors[record.status as ExecutionStatus]">
           {{ STATUS_LABELS[record.status as ExecutionStatus] ?? '未知' }}
@@ -70,6 +72,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <a-drawer class="fc-drawer"
       v-model:visible="drawerVisible"
@@ -169,6 +172,8 @@
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -216,7 +221,7 @@ const triggerColors: Record<string, string> = {
 
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
-  { title: '用例名称', dataIndex: 'test_case_name', ellipsis: true, tooltip: true, width: 180, align: 'center' as const },
+  { title: '用例名称', slotName: 'workspace_name', ellipsis: true, tooltip: true, width: 180, align: 'center' as const },
   { title: '执行人', dataIndex: 'executor_name', width: 100, align: 'center' as const },
   { title: '状态', slotName: 'status', width: 90, align: 'center' as const },
   { title: '触发类型', slotName: 'trigger_type', width: 100, align: 'center' as const },

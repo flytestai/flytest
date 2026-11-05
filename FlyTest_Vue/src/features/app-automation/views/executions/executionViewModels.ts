@@ -1,6 +1,11 @@
 import type { AppExecution, AppTestSuite } from '../../types'
 
 export interface ExecutionFilters {
+  source: string
+  device: number
+  task: number
+  app: number
+  dates: string[]
   search: string
   status: string
   suite: string

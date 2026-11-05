@@ -183,6 +183,7 @@ export const executionRecordApi = {
 }
 
 export const testCaseApi = {
+  create: (data: ApiTestCaseForm) => request.post<ApiResponse<ApiTestCase>>(`${BASE_URL}/test-cases/`, data),
   list: (params?: { project?: number; request?: number; collection?: number }) =>
     request.get<ApiResponse<ApiTestCase[]>>(`${BASE_URL}/test-cases/`, { params }),
 

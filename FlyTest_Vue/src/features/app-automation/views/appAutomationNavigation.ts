@@ -7,6 +7,7 @@ import type { AppAutomationTab } from '../types'
 export type AppAutomationQueryPatch = Record<string, string | undefined>
 
 const appAutomationContextKeys = [
+  'deviceId',
   'caseId',
   'executionId',
   'suiteId',

@@ -1,47 +1,51 @@
 <template>
   <div class="chat-sidebar">
-    <div v-if="sessions.length" class="fc-session-selection-tools">
+    <div class="conversation-history-search"><a-input-search v-model="search" placeholder="搜索历史会话" :input-attrs="{ 'aria-label': '搜索历史会话' }" allow-clear /><a-button type="text" size="small" :aria-pressed="batchMode" @click="batchMode = !batchMode; selectedSessions = []">{{ batchMode ? '完成' : '管理' }}</a-button></div>
+    <div v-if="sessions.length && batchMode" class="fc-session-selection-tools">
       <a-button size="small" @click="toggleSelectAll">{{ selectedSessions.length ? '取消全选' : '全选' }}</a-button>
       <a-button v-if="selectedSessions.length" type="text" status="danger" size="small" @click="handleBatchDelete">删除选中 ({{ selectedSessions.length }})</a-button>
     </div>
 
     <div class="chat-history-list">
       <div v-if="sessions.length === 0" class="empty-history">
-        暂无历史对话
+        <icon-message /><strong>暂无历史会话</strong><span>发送第一条消息后，会话会保存在这里。</span>
       </div>
+      <div v-else-if="!filteredSessions.length" class="empty-history">没有匹配的会话</div>
+      <template v-for="group in sessionGroups" :key="group.label"><h3 v-if="group.sessions.length" class="conversation-history-group">{{ group.label }}</h3>
       <div
-        v-for="session in sessions"
+        v-for="session in group.sessions"
         :key="session.id"
         :class="['chat-history-item', session.id === currentSessionId ? 'active' : '']"
       >
         <a-checkbox 
+          v-if="batchMode"
           v-model="selectedSessions"
           :value="session.id"
           class="history-item-checkbox"
+          :aria-label="'选择会话：' + session.title"
           @click.stop
         />
-        <div class="history-item-content" @click="$emit('switch-session', session.id)">
+        <button type="button" class="history-item-content" :aria-current="session.id === currentSessionId ? 'true' : undefined" @click="$emit('switch-session', session.id)">
+          <icon-message class="conversation-history-icon" aria-hidden="true" />
           <div class="history-item-info">
             <div class="history-item-title">{{ session.title || '未命名对话' }}</div>
             <div class="history-item-time">{{ formatTime(session.lastTime) }}</div>
           </div>
-        </div>
+        </button>
         <div v-if="selectedSessions.length === 0" class="history-item-actions">
-          <a-button type="text" size="mini" @click.stop="$emit('delete-session', session.id)">
-            <template #icon>
-              <icon-delete style="color: #f53f3f;" />
-            </template>
-          </a-button>
+          <a-dropdown trigger="click"><a-button type="text" size="mini" :aria-label="'会话操作：' + session.title"><template #icon><icon-more /></template></a-button><template #content><a-doption @click="$emit('delete-session', session.id)"><template #icon><icon-delete /></template>删除会话</a-doption></template></a-dropdown>
         </div>
       </div>
+      </template>
     </div>
+    <div class="conversation-history-footer"><a-button type="text" :disabled="!sessions.length" @click="$emit('batch-delete-sessions', sessions.map(session => session.id))"><template #icon><icon-delete /></template>清空历史</a-button></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Button as AButton, Checkbox as ACheckbox, Space as ASpace, Modal, Message } from '@arco-design/web-vue';
-import { IconPlus, IconDelete, IconCheckCircle, IconCloseCircle } from '@arco-design/web-vue/es/icon';
+import { IconDelete, IconMessage, IconMore } from '@arco-design/web-vue/es/icon';
 
 interface ChatSession {
   id: string;
@@ -67,10 +71,20 @@ const emit = defineEmits<{
 
 // 选中的会话列表
 const selectedSessions = ref<string[]>([]);
+const search = ref(''), batchMode = ref(false);
+const filteredSessions = computed(() => props.sessions.filter(session => (session.title || '未命名对话').toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase())));
+const sessionGroups = computed(() => {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const week = new Date(today); week.setDate(week.getDate() - 7);
+  const groups = [{label:'今天', sessions:[] as ChatSession[]},{label:'最近 7 天',sessions:[] as ChatSession[]},{label:'更早',sessions:[] as ChatSession[]}];
+  filteredSessions.value.forEach(session => groups[session.lastTime >= today ? 0 : session.lastTime >= week ? 1 : 2].sessions.push(session));
+  return groups;
+});
+watch(() => props.sessions.map(session => session.id), ids => { selectedSessions.value = selectedSessions.value.filter(id => ids.includes(id)); });
 
 // 计算是否全选
 const isAllSelected = computed(() => {
-  return props.sessions.length > 0 && selectedSessions.value.length === props.sessions.length;
+  return filteredSessions.value.length > 0 && filteredSessions.value.every(session => selectedSessions.value.includes(session.id));
 });
 
 // 全选/取消全选
@@ -80,7 +94,7 @@ const toggleSelectAll = () => {
     selectedSessions.value = [];
   } else {
     // 全选
-    selectedSessions.value = props.sessions.map(session => session.id);
+    selectedSessions.value = filteredSessions.value.map(session => session.id);
   }
 };
 

@@ -1,20 +1,4 @@
 <template>
-  <SceneBuilderHeaderBar
-    :ai-generating="header.aiGenerating"
-    :loading="header.loading"
-    :saving="header.saving"
-    :executing="header.executing"
-    :has-steps="header.hasSteps"
-    @open-ai-plan="emit('open-ai-plan')"
-    @reload-data="emit('reload-data')"
-    @open-testcase-workspace="emit('open-testcase-workspace')"
-    @open-execution-workspace="emit('open-execution-workspace')"
-    @create-draft="emit('create-draft')"
-    @open-create-custom-component="emit('open-create-custom-component')"
-    @save-draft="emit('save-draft')"
-    @open-execute-dialog="emit('open-execute-dialog')"
-  />
-
   <details class="fc-status-disclosure">
     <summary>
       <span>AI 辅助配置</span>
@@ -62,7 +46,6 @@
 <script setup lang="ts">
 import SceneBuilderAiStatusCard from './SceneBuilderAiStatusCard.vue'
 import SceneBuilderDraftFormCard from './SceneBuilderDraftFormCard.vue'
-import SceneBuilderHeaderBar from './SceneBuilderHeaderBar.vue'
 import type { SceneBuilderTopSectionEmits } from './sceneBuilderEventModels'
 import type {
   SceneBuilderAiStatusSectionProps,

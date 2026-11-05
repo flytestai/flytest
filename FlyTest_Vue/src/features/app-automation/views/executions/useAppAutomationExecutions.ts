@@ -8,7 +8,8 @@ import {
   openExecutionReportWindow,
   replaceAppAutomationQuery,
 } from '../appAutomationNavigation'
-import type { AppExecution, AppTestSuite } from '../../types'
+import { executionState, executionApp, executionTask, executionTime, executionCode, executionInDates } from './executionPresentation'
+import type { AppExecution, AppTestSuite, AppDevice, AppPackage, AppTestCase, AppScheduledTask } from '../../types'
 import type {
   ExecutionArtifact,
   ExecutionFilters,
@@ -20,10 +21,11 @@ import type {
 const statusConfig = {
   pending: { label: '等待执行', color: 'gold', hex: '#ffb400' },
   running: { label: '执行中', color: 'arcoblue', hex: '#165dff' },
-  passed: { label: '执行通过', color: 'green', hex: '#00b42a' },
-  failed: { label: '执行失败', color: 'red', hex: '#f53f3f' },
+  passed: { label: '执行通过', color: 'green', hex: '#16a34a' },
+  failed: { label: '执行失败', color: 'red', hex: '#dc2626' },
   stopped: { label: '已停止', color: 'orange', hex: '#ff7d00' },
   completed: { label: '已完成', color: 'cyan', hex: '#14c9c9' },
+  error: { label: '执行异常', color: 'orange', hex: '#f97316' },
   unknown: { label: '未知', color: 'gray', hex: '#86909c' },
 } as const
 
@@ -33,6 +35,10 @@ export function useAppAutomationExecutions() {
   const router = useRouter()
 
   const loading = ref(false)
+  const loadError = ref(''), relatedError = ref('')
+  const devices=ref<AppDevice[]>([]), packages=ref<AppPackage[]>([]), cases=ref<AppTestCase[]>([]), tasks=ref<AppScheduledTask[]>([])
+  let dataVersion=0, detailVersion=0
+  let syncedSuiteContext: string | undefined
   const detailLoading = ref(false)
   const detailVisible = ref(false)
   const loadedProjectId = ref<number | null>(null)
@@ -44,6 +50,7 @@ export function useAppAutomationExecutions() {
 
   const filters = reactive<ExecutionFilters>({
     search: '',
+    source: '', device:0, task:0, app:0, dates:[],
     status: '',
     suite: 'all',
   })
@@ -109,15 +116,7 @@ export function useAppAutomationExecutions() {
     return normalized
   }
 
-  const getExecutionState = (record: AppExecution) => {
-    if (record.result === 'passed') return 'passed'
-    if (record.result === 'failed' || record.status === 'failed') return 'failed'
-    if (record.result === 'stopped' || record.status === 'stopped') return 'stopped'
-    if (record.status === 'running') return 'running'
-    if (record.status === 'pending') return 'pending'
-    if (record.status === 'completed') return 'completed'
-    return 'unknown'
-  }
+  const getExecutionState = executionState
 
   const getExecutionStatusMeta = (record: AppExecution): ExecutionStatusMeta =>
     statusConfig[getExecutionState(record)] || statusConfig.unknown
@@ -147,6 +146,11 @@ export function useAppAutomationExecutions() {
 
     return [...executions.value]
       .filter(record => {
+        if (filters.source && record.trigger_mode !== filters.source) return false
+        if (filters.device && record.device_id !== filters.device) return false
+        if (filters.task && (record.task_id ?? executionTask(record,tasks.value)?.id) !== filters.task) return false
+        if (filters.app && executionApp(record,cases.value,packages.value).id !== filters.app) return false
+        if (!executionInDates(record,filters.dates)) return false
         if (filters.status && getExecutionState(record) !== filters.status) {
           return false
         }
@@ -168,6 +172,7 @@ export function useAppAutomationExecutions() {
         }
 
         return [
+          executionCode(record), String(record.id), executionTask(record,tasks.value)?.name, executionApp(record,cases.value,packages.value).name,
           record.case_name,
           record.device_name,
           record.device_serial,
@@ -239,6 +244,7 @@ export function useAppAutomationExecutions() {
 
   const clearLoadedData = () => {
     suites.value = []
+    devices.value=[]; packages.value=[]; cases.value=[]; tasks.value=[]
     executions.value = []
     currentExecution.value = null
     lastUpdatedAt.value = null
@@ -250,11 +256,10 @@ export function useAppAutomationExecutions() {
       return
     }
 
-    const suiteId = Number(route.query.suiteId || 0)
-    if (suiteId > 0) {
-      filters.suite = String(suiteId)
-    } else {
-      filters.suite = 'all'
+    const suiteContext=String(route.query.suiteId || '')
+    if(suiteContext!==syncedSuiteContext){
+      filters.suite=Number(suiteContext)>0?suiteContext:'all'
+      syncedSuiteContext=suiteContext
     }
 
     const executionId = Number(route.query.executionId || 0)
@@ -270,10 +275,11 @@ export function useAppAutomationExecutions() {
   }
 
   const loadExecutions = async (options: { silent?: boolean } = {}) => {
+    const version=++dataVersion, projectId=projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       clearLoadedData()
       detailVisible.value = false
-      if (!options.silent) {
+      if (!options.silent && version === dataVersion) {
         loading.value = false
       }
       return
@@ -284,12 +290,17 @@ export function useAppAutomationExecutions() {
     }
 
     try {
-      executions.value = await AppAutomationService.getExecutions(projectStore.currentProjectId)
+      const records=await AppAutomationService.getExecutions(projectId!)
+      if(version!==dataVersion||projectId!==projectStore.currentProjectId)return
+      executions.value = records
+      loadError.value = ''
       lastUpdatedAt.value = new Date().toISOString()
     } catch (error: any) {
-      Message.error(error.message || '加载执行记录失败')
+      if(version!==dataVersion)return
+      loadError.value=error.message || '加载执行记录失败'
+      if(!options.silent) Message.error(loadError.value)
     } finally {
-      if (!options.silent) {
+      if (!options.silent && version === dataVersion) {
         loading.value = false
       }
     }
@@ -299,6 +310,7 @@ export function useAppAutomationExecutions() {
     id: number,
     options: { silent?: boolean; open?: boolean; syncRoute?: boolean } = {},
   ) => {
+    const version=++detailVersion, projectId=projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       currentExecution.value = null
       detailVisible.value = false
@@ -311,7 +323,10 @@ export function useAppAutomationExecutions() {
     }
 
     try {
-      currentExecution.value = await AppAutomationService.getExecutionDetail(id)
+      const record=await AppAutomationService.getExecutionDetail(id)
+      if(version!==detailVersion||projectId!==projectStore.currentProjectId)return
+      if(record.project_id !== projectId) throw Error('该执行记录不属于当前项目')
+      currentExecution.value = record
       if (options.open) {
         detailVisible.value = true
       }
@@ -323,6 +338,7 @@ export function useAppAutomationExecutions() {
         })
       }
     } catch (error: any) {
+      if(version!==detailVersion)return
       if (currentExecution.value?.id === id || options.open) {
         detailVisible.value = false
         currentExecution.value = null
@@ -331,13 +347,14 @@ export function useAppAutomationExecutions() {
         Message.error(error.message || '加载执行详情失败')
       }
     } finally {
-      if (!options.silent) {
+      if (!options.silent && version === detailVersion) {
         detailLoading.value = false
       }
     }
   }
 
   const loadData = async () => {
+    const version=++dataVersion, projectId=projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       clearLoadedData()
       loading.value = false
@@ -346,11 +363,17 @@ export function useAppAutomationExecutions() {
 
     loading.value = true
     try {
-      const [suiteList, executionList] = await Promise.all([
-        AppAutomationService.getTestSuites(projectStore.currentProjectId),
-        AppAutomationService.getExecutions(projectStore.currentProjectId),
+      relatedError.value=''
+      const optional=<T,>(request:Promise<T[]>)=>request.catch(()=>{if(version===dataVersion)relatedError.value='部分关联数据暂不可用，可刷新重试';return [] as T[]})
+      const [suiteList, executionList, deviceList, packageList, caseList, taskList] = await Promise.all([
+        optional(AppAutomationService.getTestSuites(projectId!)),
+        AppAutomationService.getExecutions(projectId!),
+        optional(AppAutomationService.getDevices()), optional(AppAutomationService.getPackages(projectId!)), optional(AppAutomationService.getTestCases(projectId!)), optional(AppAutomationService.getScheduledTasks(projectId!)),
       ])
 
+      if(version!==dataVersion||projectId!==projectStore.currentProjectId)return
+      loadError.value=''
+      devices.value=deviceList; packages.value=packageList; cases.value=caseList; tasks.value=taskList
       suites.value = suiteList
       executions.value = executionList
       lastUpdatedAt.value = new Date().toISOString()
@@ -358,9 +381,11 @@ export function useAppAutomationExecutions() {
 
       await syncRouteContext()
     } catch (error: any) {
-      Message.error(error.message || '加载执行记录失败')
+      if(version!==dataVersion)return
+      loadError.value=error.message || '加载执行记录失败'
+      Message.error(loadError.value)
     } finally {
-      loading.value = false
+      if(version===dataVersion) loading.value = false
     }
   }
 
@@ -370,6 +395,7 @@ export function useAppAutomationExecutions() {
 
   const resetFilters = () => {
     filters.search = ''
+    filters.source='';filters.device=0;filters.app=0;filters.task=0;filters.dates=[]
     filters.status = ''
     filters.suite = 'all'
     pagination.current = 1
@@ -413,7 +439,7 @@ export function useAppAutomationExecutions() {
   let polling = false
 
   const pollRunningExecutions = async () => {
-    if (polling || loading.value || detailLoading.value || !hasRunningExecutions.value) {
+    if (route.query.tab !== 'executions' || polling || loading.value || detailLoading.value || !hasRunningExecutions.value) {
       return
     }
 
@@ -487,6 +513,8 @@ export function useAppAutomationExecutions() {
   watch(
     () => projectStore.currentProjectId,
     () => {
+      ++dataVersion; ++detailVersion; syncedSuiteContext=undefined
+      resetFilters()
       pagination.current = 1
       detailVisible.value = false
       filters.search = ''
@@ -513,6 +541,8 @@ export function useAppAutomationExecutions() {
     { immediate: true },
   )
 
+  watch(()=>JSON.stringify(filters),()=>{pagination.current=1})
+
   onMounted(() => {
     timer = window.setInterval(() => {
       void pollRunningExecutions()
@@ -526,6 +556,7 @@ export function useAppAutomationExecutions() {
   })
 
   return {
+    devices, packages, cases, tasks, loadError, relatedError,
     projectStore,
     loading,
     detailLoading,

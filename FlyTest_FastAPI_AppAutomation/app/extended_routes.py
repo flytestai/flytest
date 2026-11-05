@@ -651,6 +651,8 @@ def serialize_suite(row: dict[str, Any], conn) -> dict[str, Any]:
         """,
         (row["id"],),
     )
+    from .suite_workspace import read_metadata
+    row.update(read_metadata(row))
     row["test_case_count"] = len(cases)
     row["suite_cases"] = [serialize_suite_case(item) for item in cases]
     row["stopped_count"] = int((execution_stats or {}).get("stopped_count") or 0)
@@ -1735,6 +1737,8 @@ def create_test_suite(payload: TestSuitePayload, created_by: str = Query(default
                 "INSERT INTO test_suite_cases (test_suite_id, test_case_id, sort_order, created_at) VALUES (?, ?, ?, ?)",
                 (suite_id, test_case_id, index, now),
             )
+        from .suite_workspace import write_metadata
+        write_metadata({"id": suite_id, "project_id": payload.project_id}, payload.group, payload.execution_strategy)
         suite = get_suite_or_404(conn, suite_id)
     return success(suite, "测试套件已创建", 201)
 
@@ -1765,6 +1769,8 @@ def update_test_suite(suite_id: int, payload: TestSuitePayload) -> dict[str, Any
                 "INSERT INTO test_suite_cases (test_suite_id, test_case_id, sort_order, created_at) VALUES (?, ?, ?, ?)",
                 (suite_id, test_case_id, index, now),
             )
+        from .suite_workspace import write_metadata
+        write_metadata({"id": suite_id, "project_id": payload.project_id}, payload.group if "group" in payload.model_fields_set else suite.get("group", ""), payload.execution_strategy if "execution_strategy" in payload.model_fields_set else suite.get("execution_strategy", "sequential"))
         suite = get_suite_or_404(conn, suite_id)
     return success(suite, "测试套件已更新")
 

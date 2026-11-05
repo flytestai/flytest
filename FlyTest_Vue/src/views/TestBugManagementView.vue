@@ -1,6 +1,6 @@
 <template>
   <div class="testbug-management-container fc-page">
-    <AssetModuleHeader />
+    <AssetModuleHeader ref="assetHeaderRef"><template v-if="!selectedSuiteId" #actions><a-button type="primary" disabled title="请先选择一个测试套件">新建缺陷</a-button></template></AssetModuleHeader>
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
@@ -14,11 +14,12 @@
           @suite-selected="handleSuiteSelected"
           @suite-updated="handleSuiteUpdated"
         /></template>
-<template v-if="!selectedSuiteId" #heading><WorkspacePageHeader local title="缺陷管理" description="从套件目录选择需要查看的内容" /></template>
 
         <template v-if="selectedSuiteId">
           <div class="bug-panel-shell">
             <TestBugManagementPanel
+              :asset-actions-target="bugViewMode === 'list' ? assetHeaderRef?.actionsTarget : undefined"
+              @statistics-changed="assetHeaderRef?.refresh()"
               @view-mode-change="bugViewMode = $event"
               :current-project-id="currentProjectId"
               :selected-suite-id="selectedSuiteId"
@@ -52,6 +53,7 @@ const initialBugId = computed(() => { const id = Number(route.query.bug); return
 const currentProjectId = computed(() => projectStore.currentProjectId || null);
 
 const suitePanelRef = ref<InstanceType<typeof TestSuiteTreePanel> | null>(null);
+const assetHeaderRef = ref<InstanceType<typeof AssetModuleHeader>>();
 const selectedSuiteId = ref<number | null>(null);
 const bugViewMode = ref<'list' | 'detail'>('list');
 const selectedSuiteDetail = ref<TestSuite | null>(null);

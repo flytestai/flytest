@@ -166,13 +166,13 @@ async function bounds(page) {
         } finally { await context.unroute(pattern,delayed) }
       });
       await check('chat history is contextual and new conversation stays in page heading',async()=>{
-        await page.goto(base+'/langgraph-chat');await page.locator('.fc-workspace-heading').getByRole('heading',{name:'AI 对话',exact:true}).waitFor();
+        await page.goto(base+'/langgraph-chat');await page.locator('.conversation-page-heading').getByRole('heading',{name:'AI 对话',exact:true}).waitFor();
         const toggle=page.getByRole('button',{name:'历史会话',exact:true});
         if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
         const directory=page.locator('.fc-workspace-directory:visible');await directory.waitFor();
         assert.equal(await directory.locator('.arco-btn-primary').count(),0,'history panel has no competing primary actions');
         await page.getByRole('button',{name:'收起历史会话',exact:true}).click();
-        await page.locator('.fc-workspace-heading').getByRole('button',{name:'新对话',exact:true}).click();
+        await page.locator('.conversation-page-heading').getByRole('button',{name:'新对话',exact:true}).click();
         assert.equal(await page.locator('.fc-workspace-directory:visible').count(),0);
         await page.screenshot({path:path.join(output,`chat-${width}.png`)});
       });

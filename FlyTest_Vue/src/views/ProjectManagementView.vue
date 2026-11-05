@@ -1,7 +1,8 @@
 <template>
   <div class="project-management fc-page">
     <!-- 无项目权限时显示提示 -->
-    <div v-if="!hasProjectPermission" class="no-permission-panel">
+    <div v-if="permissionChecking" class="loading-container"><a-spin tip="正在加载项目" /></div>
+    <div v-else-if="!hasProjectPermission" class="no-permission-panel">
       <div class="no-permission-content">
         <div class="icon-container">
           <svg class="permission-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -14,66 +15,8 @@
       </div>
     </div>
 
-    <!-- 有权限时显示正常内容 -->
-    <div v-else>
-      <WorkspacePageHeader>
-        <template #title>项目管理</template>
-        <template #description>管理项目、团队成员与测试资产，明确协作范围和权限。</template>
-        <template #meta><div class="fc-inline-metrics">
-          <div class="fc-inline-metric">
-            <span class="fc-inline-metric-value">{{ pagination.total || projectData.length }}</span>
-            <span class="fc-inline-metric-label">项目总量</span>
-          </div>
-          <div class="fc-inline-metric">
-            <span class="fc-inline-metric-value">{{ hasProjectPermission ? 'OK' : '--' }}</span>
-            <span class="fc-inline-metric-label">管理权限</span>
-          </div>
-        </div></template>
-      </WorkspacePageHeader>
-
-      <div class="page-header fc-toolbar">
-        <div class="search-box">
-          <a-input-search
-            placeholder="搜索项目名称/描述"
-            allow-clear
-            style="width: 300px"
-            @search="onSearch"
-          />
-        </div>
-        <div class="action-buttons">
-          <a-button type="primary" @click="showAddProjectModal">添加项目</a-button>
-        </div>
-      </div>
-
-      <a-table class="fc-table"
-        :columns="columns"
-        :data="projectData"
-        :pagination="pagination"
-        :loading="loading"
-        :scroll="{ x: 900 }"
-        @page-change="onPageChange"
-        @page-size-change="onPageSizeChange"
-        @row-click="handleRowClick"
-      >
-        <template #name="{ record }">
-          <a-tooltip :content="record.name" position="top">
-            <div class="ellipsis-text">{{ record.name }}</div>
-          </a-tooltip>
-        </template>
-        <template #description="{ record }">
-          <a-tooltip :content="record.description || '无描述'" position="top">
-            <div class="ellipsis-text">{{ record.description || '无描述' }}</div>
-          </a-tooltip>
-        </template>
-        <template #operations="{ record }">
-          <a-space :size="4">
-            <a-button type="text" size="mini" @click="viewProjectMembers(record, $event)">成员</a-button>
-            <a-button type="text" size="mini" @click="editProject(record, $event)">编辑</a-button>
-            <a-button type="text" status="danger" size="mini" @click="deleteProject(record, $event)">删除</a-button>
-          </a-space>
-        </template>
-      </a-table>
-    </div>
+    <ProjectReferenceWorkspace v-else :projects="projectData" :loading="loading" :error="projectError" :revision="workspaceRevision"
+      @refresh="fetchProjectList" @create="showAddProjectModal" @members="viewProjectMembers" @edit="editProject" @delete="deleteProject" @open="openProject" @assets="openProjectAssets" />
 
     <!-- 项目成员管理模态框 -->
     <a-modal class="fc-dialog"
@@ -88,7 +31,7 @@
       </div>
       <div v-else>
         <div class="members-header">
-          <a-button type="primary" @click="showAddMemberModal">添加成员</a-button>
+          <a-button type="primary" :disabled="!canManageMembers" @click="showAddMemberModal">添加成员</a-button>
         </div>
         <div v-if="projectMembers.length === 0" class="no-data">
           暂无成员数据
@@ -115,7 +58,7 @@
                 type="text"
                 size="mini"
                 @click="showUpdateRoleModal(record)"
-                :disabled="record.role === 'owner'"
+                :disabled="record.role === 'owner' || record.user === authStore.user?.id || !canManageMembers"
               >
                 修改角色
               </a-button>
@@ -124,7 +67,7 @@
                 size="mini"
                 status="danger"
                 @click="removeMember(record)"
-                :disabled="record.role === 'owner'"
+                :disabled="record.role === 'owner' || record.user === authStore.user?.id || !canManageMembers"
               >
                 移除
               </a-button>
@@ -139,7 +82,7 @@
     <a-modal class="fc-dialog"
       v-model:visible="addMemberModalVisible"
       title="添加项目成员"
-      @ok="handleAddMember"
+      @before-ok="handleAddMember"
       @cancel="() => addMemberModalVisible = false"
       :mask-closable="false"
     >
@@ -173,7 +116,7 @@
     <a-modal class="fc-dialog"
       v-model:visible="updateRoleModalVisible"
       title="更新成员角色"
-      @ok="handleUpdateRole"
+      @before-ok="handleUpdateRole"
       @cancel="() => updateRoleModalVisible = false"
       :mask-closable="false"
     >
@@ -279,8 +222,9 @@
 </template>
 
 <script setup lang="ts">
-import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
-import { ref, reactive, onMounted, watch } from 'vue';
+import ProjectReferenceWorkspace from '@/features/projects/components/ProjectReferenceWorkspace.vue'
+import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted, watch, computed, onBeforeUnmount } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import {
   getProjectList,
@@ -304,6 +248,11 @@ import { getUserDisplayName } from '@/utils/userDisplay';
 
 // 加载状态
 const loading = ref(false);
+const permissionChecking = ref(true);
+const projectError = ref('');
+const workspaceRevision = ref(0);
+const router = useRouter();
+let listVersion = 0, membersVersion = 0;
 // 搜索关键词
 const searchKeyword = ref('');
 
@@ -402,104 +351,33 @@ const pagination = reactive({
   pageSizeOptions: [10, 20, 50, 100],
 });
 
-const syncProjectDataFromStore = () => {
-  if (searchKeyword.value.trim()) {
-    return;
-  }
-
-  projectData.value = [...projectStore.projectList];
-  pagination.total = projectStore.projectList.length;
-  if (projectStore.projectList.length > 0) {
-    hasProjectPermission.value = true;
-  }
-};
-
-// 获取项目列表
 const fetchProjectList = async () => {
-  loading.value = true;
+  const version = ++listVersion;
+  loading.value = true; projectError.value = '';
   try {
-    const response = await getProjectList({
-      page: pagination.current,
-      pageSize: pagination.pageSize,
-      search: searchKeyword.value,
-    });
-
-    if (response.success && response.data) {
-      projectData.value = response.data;
-      pagination.total = response.total || response.data.length;
-      if (response.data.length > 0) {
-        hasProjectPermission.value = true;
-      }
-    } else {
-      if (projectStore.projectList.length > 0) {
-        syncProjectDataFromStore();
-      } else {
-        Message.error(response.error || '获取项目列表失败');
-        projectData.value = [];
-        pagination.total = 0;
-      }
-    }
+    const response = await getProjectList();
+    if (version !== listVersion) return;
+    if (!response.success || !response.data) throw new Error(response.error || '获取项目列表失败');
+    projectData.value = response.data;
+    pagination.total = response.data.length;
+    projectStore.projectList = response.data;
+    const active = response.data.find(project => project.id === projectStore.currentProjectId) || response.data[0];
+    if (active) projectStore.setCurrentProject(active);
+    else { projectStore.currentProject = null; localStorage.removeItem('selected_project_id'); }
+    workspaceRevision.value++;
+    checkProjectPermission();
   } catch (error) {
-    console.error('获取项目列表出错:', error);
-    if (projectStore.projectList.length > 0) {
-      syncProjectDataFromStore();
-    } else {
-      Message.error('获取项目列表时发生错误');
-      projectData.value = [];
-      pagination.total = 0;
-    }
-  } finally {
-    loading.value = false;
-  }
+    if (version === listVersion) { projectData.value = []; pagination.total = 0; projectError.value = error instanceof Error ? error.message : '项目加载失败，请重试'; }
+  } finally { if (version === listVersion) loading.value = false; }
 };
-
-// 搜索项目
-const onSearch = (value: string) => {
-  searchKeyword.value = value;
-  pagination.current = 1; // 重置到第一页
-  fetchProjectList();
-};
-
-// 分页变化
-const onPageChange = (page: number) => {
-  pagination.current = page;
-  fetchProjectList();
-};
-
-// 每页显示数量变化
-const onPageSizeChange = (pageSize: number) => {
-  pagination.pageSize = pageSize;
-  pagination.current = 1; // 重置到第一页
-  fetchProjectList();
-};
-
-// 在组件挂载时检查权限并加载项目数据
 onMounted(async () => {
-  await authStore.bootstrapSession();
-  await projectStore.fetchProjects();
-  checkProjectPermission();
-  if (projectStore.projectList.length > 0 && !searchKeyword.value.trim()) {
-    syncProjectDataFromStore();
-  }
-  await fetchProjectList();
+  try { await authStore.bootstrapSession(); checkProjectPermission(); await fetchProjectList(); }
+  finally { permissionChecking.value = false; }
 });
-
-// 监听认证状态变化
-watch(() => authStore.isAuthenticated, () => {
-  checkProjectPermission();
-}, { immediate: true });
-
-// 监听用户权限变化
-watch(() => authStore.userPermissions, () => {
-  checkProjectPermission();
-}, { deep: true });
-
-watch(() => projectStore.projectList, () => {
-  checkProjectPermission();
-  if (!searchKeyword.value.trim()) {
-    syncProjectDataFromStore();
-  }
-}, { deep: true });
+watch(() => [authStore.isAuthenticated, authStore.userPermissions, projectStore.projectList], checkProjectPermission, { deep: true });
+onBeforeUnmount(() => { ++listVersion; ++membersVersion; });
+const openProject = (project: Project) => { projectStore.setCurrentProject(project); void router.push('/dashboard'); };
+const openProjectAssets = (project: Project) => { projectStore.setCurrentProject(project); void router.push('/testcases'); };
 
 // 处理行点击事件
 const handleRowClick = (record: Project) => {
@@ -513,6 +391,11 @@ const membersModalVisible = ref(false);
 const membersLoading = ref(false);
 const selectedProject = ref<Project | null>(null);
 const projectMembers = ref<ProjectMember[]>([]);
+const canManageMembers = computed(() => {
+  if (authStore.user?.is_staff) return true;
+  const self = projectMembers.value.find(member => member.user === authStore.user?.id);
+  return !!self && (['owner', 'admin'].includes(self.role) || ['projects.change_project','projects.add_projectmember','projects.change_projectmember'].some(permission => authStore.hasPermission(permission)));
+});
 
 // 项目成员表格列定义
 const memberColumns = [
@@ -582,14 +465,17 @@ const viewProjectMembers = async (project: Project, event?: Event) => {
 
   selectedProject.value = project;
   membersModalVisible.value = true;
+  projectMembers.value = [];
   await fetchProjectMembers(project.id);
 };
 
 // 获取项目成员列表
 const fetchProjectMembers = async (projectId: number) => {
+  const version = ++membersVersion;
   membersLoading.value = true;
   try {
     const response = await getProjectMembers(projectId);
+    if (version !== membersVersion || selectedProject.value?.id !== projectId) return;
     if (response.success && response.data) {
 
       projectMembers.value = response.data;
@@ -602,7 +488,7 @@ const fetchProjectMembers = async (projectId: number) => {
     Message.error('获取项目成员列表时发生错误');
     projectMembers.value = [];
   } finally {
-    membersLoading.value = false;
+    if (version === membersVersion) membersLoading.value = false;
   }
 };
 
@@ -659,12 +545,12 @@ const fetchAvailableUsers = async () => {
 const handleAddMember = async () => {
   if (!selectedProject.value) {
     Message.error('未选择项目');
-    return;
+    return false;
   }
 
   if (!addMemberForm.userId) {
     Message.error('请选择用户');
-    return;
+    return false;
   }
 
   try {
@@ -679,6 +565,8 @@ const handleAddMember = async () => {
       addMemberModalVisible.value = false;
       // 刷新成员列表
       await fetchProjectMembers(selectedProject.value.id);
+      workspaceRevision.value++;
+      return true;
     } else {
       Message.error(response.error || '添加成员失败');
     }
@@ -686,6 +574,7 @@ const handleAddMember = async () => {
     console.error('添加成员出错:', error);
     Message.error('添加成员时发生错误');
   }
+  return false;
 };
 
 // 移除成员
@@ -699,6 +588,7 @@ const removeMember = (member: ProjectMember) => {
 
   Modal.warning({
     title: '确认移除',
+    hideCancel: false,
     content: `确定要移除成员 "${getUserDisplayName(member.user_detail)}" 吗？`,
     okText: '确认',
     cancelText: '取消',
@@ -710,6 +600,7 @@ const removeMember = (member: ProjectMember) => {
           Message.success('成员移除成功');
           // 刷新成员列表
           await fetchProjectMembers(selectedProject.value!.id);
+          workspaceRevision.value++;
         } else {
           Message.error(response.error || '移除成员失败');
         }
@@ -739,7 +630,7 @@ const showUpdateRoleModal = (member: ProjectMember) => {
 const handleUpdateRole = async () => {
   if (!selectedProject.value || !selectedMember.value) {
     Message.error('未选择项目或成员');
-    return;
+    return false;
   }
 
   try {
@@ -754,6 +645,8 @@ const handleUpdateRole = async () => {
       updateRoleModalVisible.value = false;
       // 刷新成员列表
       await fetchProjectMembers(selectedProject.value.id);
+      workspaceRevision.value++;
+      return true;
     } else {
       Message.error(response.error || '更新角色失败');
     }
@@ -761,6 +654,7 @@ const handleUpdateRole = async () => {
     console.error('更新角色出错:', error);
     Message.error('更新角色时发生错误');
   }
+  return false;
 };
 
 // 添加项目模态框相关
@@ -841,7 +735,7 @@ const handleAddProject = async () => {
 
     if (response.success) {
       Message.success('项目创建成功');
-      fetchProjectList();
+      await fetchProjectList();
       // 关闭模态框
       addProjectModalVisible.value = false;
       return true;
@@ -937,7 +831,7 @@ const handleEditProject = async () => {
 
     if (response.success) {
       Message.success('项目更新成功');
-      fetchProjectList();
+      await fetchProjectList();
       editProjectModalVisible.value = false;
       return true;
     } else {
@@ -958,17 +852,18 @@ const deleteProject = (project: Project, event?: Event) => {
   }
 
   Modal.warning({
-    title: '确认删除',
-    content: `确定要删除项目 "${project.name}" 吗？此操作不可恢复。`,
+    title: '申请删除项目',
+    hideCancel: false,
+    content: `确定要删除项目 "${project.name}" 吗？申请将提交管理员审核，审核通过后才会删除项目。`,
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
       try {
         const response = await deleteProjectService(project.id);
         if (response.success) {
-          Message.success('项目删除成功');
+          Message.success('删除申请已提交，等待管理员审核');
           // 刷新项目列表
-          fetchProjectList();
+          await fetchProjectList();
         } else {
           Message.error(response.error || '删除项目失败');
         }
@@ -983,11 +878,12 @@ const deleteProject = (project: Project, event?: Event) => {
 
 <style scoped>
 .project-management {
-  background-color: var(--theme-surface);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: var(--theme-card-shadow);
-  height: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  height: auto;
+  min-height: 100%;
   box-sizing: border-box;
 }
 

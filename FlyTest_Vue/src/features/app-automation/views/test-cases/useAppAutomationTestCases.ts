@@ -10,7 +10,9 @@ import {
   pushAppAutomationExecutions,
   pushAppAutomationSceneBuilder,
 } from '../appAutomationNavigation'
-import type { AppDevice, AppExecution, AppPackage, AppTestCase } from '../../types'
+import type { AppDevice, AppExecution, AppPackage, AppTestCase, AppTestSuite } from '../../types'
+import { caseGroup, casePriority, caseHasSteps, validateCaseContent } from './testCasePresentation'
+import { devicePlatform } from '../devices/devicePresentation'
 import type {
   TestCaseExecuteFormModel,
   TestCaseFormModel,
@@ -24,6 +26,11 @@ export function useAppAutomationTestCases() {
   const router = useRouter()
 
   const loading = ref(false)
+  const saving = ref(false)
+  const loadError = ref('')
+  const suiteError = ref('')
+  const suites = ref<AppTestSuite[]>([])
+  let loadVersion = 0
   const visible = ref(false)
   const executeVisible = ref(false)
   const executeMode = ref<'single' | 'batch'>('single')
@@ -38,6 +45,8 @@ export function useAppAutomationTestCases() {
 
   const form = reactive<TestCaseFormModel>({
     id: 0,
+    group: '',
+    priority: '',
     name: '',
     description: '',
     package_id: undefined,
@@ -53,8 +62,17 @@ export function useAppAutomationTestCases() {
   })
 
   const availableDevices = computed(() =>
-    devices.value.filter(device => device.status === 'available' || device.status === 'online'),
+    devices.value.filter(device => devicePlatform(device) === 'Android' && ['available', 'online'].includes(device.status)),
   )
+  const preferredDeviceId = () => {
+    const requestedId = Number(route.query.deviceId)
+    if (requestedId > 0) {
+      const requested = availableDevices.value.find(device => device.id === requestedId)
+      if (!requested) Message.warning('原选设备当前不可用，请重新选择执行设备')
+      return requested?.id
+    }
+    return availableDevices.value[0]?.id
+  }
 
   const selectedCases = computed(
     () =>
@@ -78,8 +96,8 @@ export function useAppAutomationTestCases() {
   )
 
   const filteredCases = computed(() => {
-    if (!packageFilter.value) return testCases.value
-    return testCases.value.filter(item => item.package_id === packageFilter.value)
+    const term = search.value.trim().toLowerCase()
+    return testCases.value.filter(item => (!packageFilter.value || item.package_id === packageFilter.value) && (!term || `${item.name} ${item.id} AP-${String(item.id).padStart(4, '0')} ${item.description}`.toLowerCase().includes(term)))
   })
 
   const caseStats = computed<TestCaseStats>(() => {
@@ -135,6 +153,8 @@ export function useAppAutomationTestCases() {
 
   const resetForm = () => {
     form.id = 0
+    form.group = ''
+    form.priority = ''
     form.name = ''
     form.description = ''
     form.package_id = undefined
@@ -145,6 +165,8 @@ export function useAppAutomationTestCases() {
   }
 
   const loadData = async () => {
+    const version = ++loadVersion
+    const projectId = projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       testCases.value = []
       packages.value = []
@@ -155,24 +177,28 @@ export function useAppAutomationTestCases() {
     }
 
     loading.value = true
+    loadError.value = ''
+    suiteError.value = ''
     try {
-      const [caseList, packageList, deviceList, executionList] = await Promise.all([
-        AppAutomationService.getTestCases(
-          projectStore.currentProjectId,
-          search.value.trim() || undefined,
-        ),
+      const [caseList, packageList, deviceList, executionList, suiteList] = await Promise.all([
+        AppAutomationService.getTestCases(projectId!),
         AppAutomationService.getPackages(projectStore.currentProjectId),
         AppAutomationService.getDevices(),
-        AppAutomationService.getExecutions(projectStore.currentProjectId),
+        AppAutomationService.getExecutions(projectId!),
+        AppAutomationService.getTestSuites(projectId!).catch(() => { if (version === loadVersion) suiteError.value = '套件关联暂不可用'; return [] }),
       ])
+      if (version !== loadVersion || projectId !== projectStore.currentProjectId) return
+      suites.value = suiteList
       testCases.value = caseList
       packages.value = packageList
       devices.value = deviceList
       recentExecutionList.value = executionList
     } catch (error: any) {
-      Message.error(error.message || '加载测试用例失败')
+      if (version !== loadVersion) return
+      loadError.value = error.message || '加载测试用例失败'
+      Message.error(loadError.value)
     } finally {
-      loading.value = false
+      if (version === loadVersion) loading.value = false
     }
   }
 
@@ -182,8 +208,9 @@ export function useAppAutomationTestCases() {
     await loadData()
   }
 
-  const openCreate = () => {
+  const openCreate = (group = '') => {
     resetForm()
+    form.group = group
     visible.value = true
   }
 
@@ -193,6 +220,8 @@ export function useAppAutomationTestCases() {
 
   const openEdit = (record: AppTestCase) => {
     form.id = record.id
+    form.group = caseGroup(record)
+    form.priority = casePriority(record)
     form.name = record.name
     form.description = record.description
     form.package_id = record.package_id || undefined
@@ -204,15 +233,22 @@ export function useAppAutomationTestCases() {
   }
 
   const submit = async () => {
+    if (saving.value) return false
+    if (!form.name.trim()) { Message.warning('请输入用例名称'); return false }
+    saving.value = true
     try {
+      const flow = JSON.parse(form.uiFlowText || '{}'), variables = JSON.parse(form.variablesText || '[]')
+      validateCaseContent(flow, variables)
+      flow.feice_meta = { ...(flow.feice_meta || {}), group: form.group.trim(), priority: form.priority }
+
       const payload = {
         project_id: projectStore.currentProjectId || 0,
-        name: form.name,
+        name: form.name.trim(),
         description: form.description,
         package_id: form.package_id ?? null,
-        ui_flow: JSON.parse(form.uiFlowText || '{}'),
-        variables: JSON.parse(form.variablesText || '[]'),
-        tags: [],
+        ui_flow: flow,
+        variables,
+        tags: testCases.value.find(item => item.id === form.id)?.tags || [],
         timeout: form.timeout,
         retry_count: form.retry_count,
       }
@@ -227,9 +263,11 @@ export function useAppAutomationTestCases() {
 
       visible.value = false
       await loadData()
+      return true
     } catch (error: any) {
       Message.error(error.message || '保存测试用例失败，请检查 JSON')
-    }
+      return false
+    } finally { saving.value = false }
   }
 
   const duplicateCase = async (record: AppTestCase) => {
@@ -253,9 +291,10 @@ export function useAppAutomationTestCases() {
   }
 
   const openExecute = (record: AppTestCase) => {
+    if (!caseHasSteps(record)) { Message.warning('请先在场景编排中添加步骤'); return }
     executeMode.value = 'single'
     currentExecutionCaseId.value = record.id
-    executeForm.device_id = availableDevices.value[0]?.id
+    executeForm.device_id = preferredDeviceId()
     executeForm.package_id = record.package_id || undefined
     executeVisible.value = true
   }
@@ -278,6 +317,8 @@ export function useAppAutomationTestCases() {
       return
     }
 
+    if (selectedCases.value.some(item => !caseHasSteps(item))) { Message.warning('所选用例含空流程，请先补充步骤'); return }
+
     if (selectedCaseIds.value.length > 1) {
       Message.warning('多条用例请先加入测试套件后再执行，避免同一设备上的锁竞争')
       void pushAppAutomationTab(router, 'suites')
@@ -286,7 +327,7 @@ export function useAppAutomationTestCases() {
 
     executeMode.value = 'single'
     currentExecutionCaseId.value = selectedCaseIds.value[0] || null
-    executeForm.device_id = availableDevices.value[0]?.id
+    executeForm.device_id = preferredDeviceId()
     executeForm.package_id =
       selectedCases.value[0]?.package_id ??
       testCases.value.find(item => item.id === currentExecutionCaseId.value)?.package_id ??
@@ -308,7 +349,7 @@ export function useAppAutomationTestCases() {
   const executeCase = async () => {
     if (!executeForm.device_id) {
       Message.warning('请选择执行设备')
-      return
+      return false
     }
 
     try {
@@ -417,6 +458,7 @@ export function useAppAutomationTestCases() {
     } catch (error: any) {
       Message.error(error.message || '启动执行失败')
     }
+    return false
   }
 
   const remove = (id: number) => {
@@ -477,6 +519,11 @@ export function useAppAutomationTestCases() {
       resetForm()
       resetExecuteState()
       packageFilter.value = ''
+      testCases.value = []
+      packages.value = []
+      suites.value = []
+      devices.value = []
+      loadError.value = ''
       selectedCaseIds.value = []
       recentExecutionList.value = []
       void loadData()
@@ -485,6 +532,7 @@ export function useAppAutomationTestCases() {
   )
 
   return {
+    saving, loadError, suiteError, suites,
     projectStore,
     loading,
     visible,

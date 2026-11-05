@@ -1,21 +1,11 @@
 <template>
   <div class="page-shell fc-page">
-    <WorkspacePageHeader>
-        <template #title>环境设置</template>
-        <template #description>统一管理 ADB、运行环境与自动化服务状态，让执行链路更稳定、排查更直接。</template>
-        <template #meta><div class="settings-hero__meta">
-        <div class="settings-meta-card">
-          <span>运行能力</span>
-          <strong>{{ readyCapabilityCount }}</strong>
-        </div>
-        <div class="settings-meta-card">
-          <span>依赖组件</span>
-          <strong>{{ installedDependencyCount }}</strong>
-        </div>
-      </div></template>
-      </WorkspacePageHeader>
-
-    <div class="settings-shell">
+    <SettingsReferenceWorkspace :project-id="projectStore.currentProjectId" :fallback="fallbackEnvironment" @executor="drawerTab='config';drawerVisible=true" @diagnostics="drawerTab='diagnostics';drawerVisible=true" @refresh="reloadAll" />
+    <a-drawer v-model:visible="drawerVisible" title="全局执行器配置与诊断" :width="Math.min(1000,width-16)" :footer="false">
+      <a-alert>以下 ADB、工作目录及默认超时属于全局执行器配置，会影响该服务的所有项目。环境列表为项目级配置管理。</a-alert>
+      <a-tabs v-model:active-key="drawerTab"><a-tab-pane key="config" title="执行器配置">
+        <SettingsEnvironmentCard :form="form" :saving="saving" :detecting="detecting" :diagnostics-loading="diagnosticsLoading" @reload-all="reloadAll" @refresh-diagnostics="loadDiagnostics(true)" @detect-adb="detectAdb" @save="save" />
+      </a-tab-pane><a-tab-pane key="diagnostics" title="服务与运行诊断">
       <SettingsServiceHealthCard
         :service-health="serviceHealth"
         :diagnostics="diagnostics"
@@ -34,16 +24,7 @@
         @reload-all="reloadAll"
       />
 
-      <SettingsEnvironmentCard
-        :form="form"
-        :saving="saving"
-        :detecting="detecting"
-        :diagnostics-loading="diagnosticsLoading"
-        @reload-all="reloadAll"
-        @refresh-diagnostics="loadDiagnostics(true)"
-        @detect-adb="detectAdb"
-        @save="save"
-      />
+
 
       <SettingsAdbDiagnosticsCard
         :diagnostics="diagnostics"
@@ -60,12 +41,19 @@
         :format-time="formatTime"
         @refresh-runtime="loadRuntimeCapabilities(true)"
       />
-    </div>
+      </a-tab-pane></a-tabs>
+    </a-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
+import {ref,computed} from 'vue'
+import {useWindowSize} from '@vueuse/core'
+import {useProjectStore} from '@/store/projectStore'
+import SettingsReferenceWorkspace from './settings/SettingsReferenceWorkspace.vue'
+import type {EnvironmentProfile} from './settings/environmentModels'
+const projectStore=useProjectStore(),{width}=useWindowSize(),drawerVisible=ref(false),drawerTab=ref('config')
+
 import {
   SettingsAdbDiagnosticsCard,
   SettingsEnvironmentCard,
@@ -99,6 +87,12 @@ const {
   reloadAll,
   save,
 } = useAppAutomationSettings()
+const fallbackEnvironment=computed<EnvironmentProfile>(()=>({
+  id:'global-executor',name:'当前全局执行器',kind:'executor',platform:'android',network:'intranet',device_ids:[],endpoint:'',description:'ADB、运行依赖及自动化服务的真实配置',enabled:true,
+  health:!diagnostics.checked_at||!serviceHealth.checked_at?'unchecked':overallStatusColor.value==='green'?'available':overallStatusColor.value==='red'||Boolean(diagnostics.error)?'error':'unchecked',
+  health_message:overallStatusLabel.value,checked_at:diagnostics.checked_at||null,updated_at:diagnostics.checked_at||serviceHealth.checked_at||''
+}))
+
 </script>
 
 <style scoped>
@@ -107,7 +101,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0 !important;
 }
 
 .settings-hero {

@@ -37,6 +37,9 @@ export function useAppAutomationScheduledTasks() {
   const router = useRouter()
 
   const loading = ref(false)
+  const loadError = ref(false)
+  let loadVersion = 0
+  let detailVersion = 0
   const visible = ref(false)
   const detailVisible = ref(false)
   const detailLoading = ref(false)
@@ -119,17 +122,17 @@ export function useAppAutomationScheduledTasks() {
   })
 
   const statistics = computed<ScheduledTaskStatistics>(() => {
-    const totalRuns = filteredTasks.value.reduce((sum, task) => sum + Number(task.total_runs || 0), 0)
-    const successfulRuns = filteredTasks.value.reduce(
+    const totalRuns = tasks.value.reduce((sum, task) => sum + Number(task.total_runs || 0), 0)
+    const successfulRuns = tasks.value.reduce(
       (sum, task) => sum + Number(task.successful_runs || 0),
       0,
     )
-    const active = filteredTasks.value.filter(task => task.status === 'ACTIVE').length
-    const paused = filteredTasks.value.filter(task => task.status === 'PAUSED').length
+    const active = tasks.value.filter(task => task.status === 'ACTIVE').length
+    const paused = tasks.value.filter(task => task.status === 'PAUSED').length
     const successRate = totalRuns ? Math.round((successfulRuns / totalRuns) * 1000) / 10 : 0
 
     return {
-      total: filteredTasks.value.length,
+      total: tasks.value.length,
       active,
       paused,
       totalRuns,
@@ -247,8 +250,8 @@ export function useAppAutomationScheduledTasks() {
 
   const getLastResultMeta = (task: AppScheduledTask): ScheduledTaskResultMeta => {
     if (task.error_message) return { label: '触发失败', color: 'red' }
-    if (task.last_result.status === 'triggered') return { label: '已触发', color: 'arcoblue' }
-    if (task.total_runs > 0) return { label: '已执行', color: 'green' }
+    if (task.last_result?.status === 'triggered') return { label: '触发成功', color: 'green' }
+    if (task.total_runs > 0) return { label: '已触发', color: 'gray' }
     return { label: '暂无记录', color: 'gray' }
   }
 
@@ -342,6 +345,8 @@ export function useAppAutomationScheduledTasks() {
   }
 
   const loadData = async () => {
+    const version = ++loadVersion
+    const projectId = projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       clearLoadedData()
       visible.value = false
@@ -353,20 +358,17 @@ export function useAppAutomationScheduledTasks() {
     }
 
     loading.value = true
+    loadError.value = false
     try {
       const [taskList, suiteList, caseList, deviceList, packageList] = await Promise.all([
-        AppAutomationService.getScheduledTasks(projectStore.currentProjectId, {
-          search: filters.search || undefined,
-          status: filters.status || undefined,
-          task_type: filters.task_type || undefined,
-          trigger_type: filters.trigger_type || undefined,
-        }),
+        AppAutomationService.getScheduledTasks(projectStore.currentProjectId),
         AppAutomationService.getTestSuites(projectStore.currentProjectId),
         AppAutomationService.getTestCases(projectStore.currentProjectId),
         AppAutomationService.getDevices(),
         AppAutomationService.getPackages(projectStore.currentProjectId),
       ])
 
+      if(version !== loadVersion || projectId !== projectStore.currentProjectId) return
       tasks.value = taskList
       suites.value = suiteList
       testCases.value = caseList
@@ -378,13 +380,17 @@ export function useAppAutomationScheduledTasks() {
         syncTaskFromList(currentTask.value.id)
       }
     } catch (error: any) {
+      if(version !== loadVersion || projectId !== projectStore.currentProjectId) return
+      loadError.value = true
       Message.error(error.message || '加载定时任务失败')
     } finally {
-      loading.value = false
+      if(version === loadVersion) loading.value = false
     }
   }
 
   const loadTaskDetail = async (taskId: number, options: { syncRoute?: boolean } = {}) => {
+    const requestVersion = ++detailVersion
+    const projectId = projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       currentTask.value = null
       taskNotifications.value = []
@@ -405,6 +411,8 @@ export function useAppAutomationScheduledTasks() {
           task_id: taskId,
         }),
       ])
+      if(requestVersion !== detailVersion || projectId !== projectStore.currentProjectId || route.query.tab !== 'scheduled-tasks') return
+      if(task.project_id !== projectId) throw new Error('任务不属于当前项目')
       currentTask.value = task
       taskNotifications.value = notifications
       detailVisible.value = true
@@ -413,10 +421,13 @@ export function useAppAutomationScheduledTasks() {
         await replaceAppAutomationQuery(route, router, { tab: 'scheduled-tasks', taskId: String(taskId) })
       }
     } catch (error: any) {
+      if(requestVersion !== detailVersion || projectId !== projectStore.currentProjectId) return
       Message.error(error.message || '加载任务详情失败')
     } finally {
-      detailLoading.value = false
-      taskNotificationsLoading.value = false
+      if(requestVersion === detailVersion) {
+        detailLoading.value = false
+        taskNotificationsLoading.value = false
+      }
     }
   }
 
@@ -475,8 +486,8 @@ export function useAppAutomationScheduledTasks() {
       Message.warning('请选择测试用例')
       return false
     }
-    if (form.trigger_type === 'CRON' && !form.cron_expression.trim()) {
-      Message.warning('请输入 Cron 表达式')
+    if (form.trigger_type === 'CRON' && form.cron_expression.trim().split(/\s+/).length !== 5) {
+      Message.warning('请输入五段 Cron 表达式（分 时 日 月 周，UTC）')
       return false
     }
     if (form.trigger_type === 'INTERVAL' && !form.interval_seconds) {
@@ -609,6 +620,7 @@ export function useAppAutomationScheduledTasks() {
   }
 
   const runNow = async (id: number) => {
+    if(isActionLoading('run', id)) return
     setActionLoading('run', id, true)
     try {
       const result = (await AppAutomationService.runScheduledTaskNow(
@@ -634,6 +646,7 @@ export function useAppAutomationScheduledTasks() {
   }
 
   const pause = async (id: number) => {
+    if(isActionLoading('pause', id)) return
     setActionLoading('pause', id, true)
     try {
       await AppAutomationService.pauseScheduledTask(id)
@@ -648,6 +661,7 @@ export function useAppAutomationScheduledTasks() {
   }
 
   const resume = async (id: number) => {
+    if(isActionLoading('resume', id)) return
     setActionLoading('resume', id, true)
     try {
       await AppAutomationService.resumeScheduledTask(id)
@@ -716,13 +730,15 @@ export function useAppAutomationScheduledTasks() {
         }
         return
       }
-      if (route.query.taskId) {
+      if (route.query.taskId && tab !== 'notifications') {
         void replaceAppAutomationQuery(route, router, { taskId: undefined })
       }
       visible.value = false
       detailVisible.value = false
     },
   )
+
+  watch(() => [filters.search,filters.status,filters.task_type,filters.trigger_type,pagination.pageSize], () => {pagination.current=1})
 
   watch(
     () => filteredTasks.value.length,
@@ -767,6 +783,7 @@ export function useAppAutomationScheduledTasks() {
         form.test_suite_id = undefined
       }
     },
+    {flush: 'sync'},
   )
 
   watch(
@@ -782,6 +799,7 @@ export function useAppAutomationScheduledTasks() {
         form.execute_at = ''
       }
     },
+    {flush: 'sync'},
   )
 
   watch(notificationsEnabled, enabled => {
@@ -791,7 +809,7 @@ export function useAppAutomationScheduledTasks() {
     } else if (!form.notification_type) {
       form.notification_type = 'email'
     }
-  })
+  }, {flush: 'sync'})
 
   watch(
     () => [route.query.tab, route.query.taskId, projectStore.currentProjectId],
@@ -818,6 +836,7 @@ export function useAppAutomationScheduledTasks() {
   return {
     projectStore,
     loading,
+    loadError,
     visible,
     detailVisible,
     detailLoading,

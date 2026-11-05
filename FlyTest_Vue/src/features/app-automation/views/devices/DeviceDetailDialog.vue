@@ -17,13 +17,15 @@
             <strong>{{ getConnectionLabel(currentDevice.connection_type) }}</strong>
           </div>
           <div class="detail-card">
-            <span class="detail-label">Android 版本</span>
-            <strong>{{ currentDevice.android_version || '-' }}</strong>
+            <span class="detail-label">平台版本</span>
+            <strong>{{ devicePlatform(currentDevice) }} {{ deviceVersion(currentDevice) }}</strong>
           </div>
         </div>
       </div>
 
       <div class="detail-grid">
+        <div class="detail-panel"><span class="detail-label">设备型号</span><strong>{{ deviceModel(currentDevice) }}</strong></div>
+        <div class="detail-panel"><span class="detail-label">设备类型</span><strong>{{ deviceKind(currentDevice) }}</strong></div>
         <div class="detail-panel">
           <span class="detail-label">序列号</span>
           <strong>{{ currentDevice.device_id }}</strong>
@@ -59,6 +61,7 @@
 
 <script setup lang="ts">
 import type { DeviceDetailDialogProps } from './deviceViewModels'
+import { devicePlatform, deviceVersion, deviceModel, deviceKind } from './devicePresentation'
 
 defineProps<DeviceDetailDialogProps>()
 

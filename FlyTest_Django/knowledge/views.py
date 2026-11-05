@@ -89,7 +89,7 @@ class KnowledgeBaseViewSet(BaseModelViewSet):
         filters.OrderingFilter,
     ]
     filterset_fields = ["project", "is_active"]
-    search_fields = ["name", "description"]
+    search_fields = ["name", "description", "project__name"]
     ordering_fields = ["created_at", "updated_at", "name"]
     ordering = ["-created_at"]
 
@@ -101,11 +101,19 @@ class KnowledgeBaseViewSet(BaseModelViewSet):
     def get_queryset(self):
         """只返回用户有权限访问的知识库"""
         user = self.request.user
-        if user.is_superuser:
-            return KnowledgeBase.objects.all()
+        from .workspace import workspace_queryset
+        queryset = KnowledgeBase.objects.all()
+        if not user.is_superuser:
+            queryset = queryset.filter(project__members__user=user).distinct()
+        return workspace_queryset(queryset, self.request.query_params)
 
-        # 普通用户只能看到自己是成员的项目的知识库
-        return KnowledgeBase.objects.filter(project__members__user=user).distinct()
+    @action(detail=False, methods=["get"])
+    def workspace(self, request):
+        from .workspace import workspace_summary
+        queryset = KnowledgeBase.objects.all()
+        if not request.user.is_superuser:
+            queryset = queryset.filter(project__members__user=request.user).distinct()
+        return Response(workspace_summary(queryset, request.query_params.get('project')))
 
     def perform_create(self, serializer):
         """创建知识库时自动设置创建人"""

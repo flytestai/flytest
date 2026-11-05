@@ -2,7 +2,7 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="执行详情"
-    width="960px"
+    :width="Math.min(960,width-24)"
     :footer="false"
   >
     <div v-if="currentExecution" class="detail-shell fc-detail-page">
@@ -87,6 +87,9 @@
 </template>
 
 <script setup lang="ts">
+import {useWindowSize} from '@vueuse/core'
+const {width}=useWindowSize()
+
 import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import type { ReportsExecutionDetailDialogEmits } from './reportEventModels'
 import type { ReportsExecutionDetailDialogProps } from './reportViewModels'

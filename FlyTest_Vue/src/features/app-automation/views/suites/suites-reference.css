@@ -1,0 +1,6 @@
+.app-suite-reference .app-case-metrics {grid-template-columns:repeat(4,minmax(0,1fr)) minmax(230px,1.3fr)}
+.app-suite-reference .app-case-metric.green strong {color:#16a34a}.app-suite-reference .app-case-metric.green .app-case-metric-icon {background:#e9f9ee;color:#16a34a}
+.app-suite-reference .suite-name {display:inline-flex;align-items:center;gap:9px;max-width:100%;font-size:13px}.app-suite-reference .suite-name>svg {color:#008f83;font-size:18px;flex-shrink:0}.app-suite-reference .app-case-table .platform-icon {vertical-align:middle}
+.suite-ai-proposal {margin-top:20px;padding:14px;border:1px solid var(--theme-border);border-radius:10px}.suite-ai-proposal ol {max-height:220px;overflow:auto;line-height:2}
+@media(max-width:1399px){.app-suite-reference .app-case-metrics {grid-template-columns:repeat(3,minmax(0,1fr))}.app-suite-reference .app-case-ai {grid-column:span 2}}
+@media(max-width:650px){.app-suite-reference .app-case-metrics {grid-template-columns:repeat(2,minmax(0,1fr))}.app-suite-reference .app-case-ai {grid-column:span 2}}

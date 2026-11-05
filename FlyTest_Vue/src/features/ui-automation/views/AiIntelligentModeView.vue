@@ -1,85 +1,14 @@
 <template>
   <div class="ai-mode-view fc-page">
-    <WorkspacePageHeader title="AI 智能模式" description="规划测试任务，配置运行条件并查看执行结果。" />
+
     <a-alert class="mode-tip" type="info" show-icon>
-      AI 智能模式会优先使用当前已启用的模型进行任务规划与真实浏览器执行；文本模式可直接使用，视觉模式需要支持图片能力的模型。
+      AI 智能模式会优先使用当前已启用的模型进行任务规划与真实浏览器执行；文本模式需要可用的模型配置，视觉模式还需要模型支持图片输入。
     </a-alert>
     <div v-if="!projectId" class="empty-state">
       <a-empty description="请先选择项目后再使用 AI 智能模式" />
     </div>
     <template v-else>
-      <div class="quick-run-card capability-card">
-        <div class="section-heading">
-          <div>
-            <h3>运行能力总览</h3>
-            <p>展示当前 AI 智能模式使用的执行链路、模型能力和默认环境。</p>
-          </div>
-          <a-button type="outline" size="small" :loading="capabilityLoading" @click="reloadRuntimeCapabilities">
-            <template #icon><icon-refresh /></template>
-            刷新能力
-          </a-button>
-        </div>
-        <a-spin :loading="capabilityLoading" style="width:100%">
-          <template v-if="runtimeCapabilities">
-            <div class="capability-grid">
-              <div class="summary-card fc-metric">
-                <span class="summary-label">执行后端</span>
-                <strong>{{ AI_BACKEND_LABELS[runtimeCapabilities.execution_backend] }}</strong>
-                <div class="capability-detail">
-                  {{ runtimeCapabilities.execution_backend === 'browser_use' ? '真实浏览器智能执行' : 'AI 规划回退执行' }}
-                </div>
-              </div>
-              <div class="summary-card fc-metric">
-                <span class="summary-label">当前模型</span>
-                <strong>{{ runtimeCapabilities.model_config_name || '未配置' }}</strong>
-                <div class="capability-detail">
-                  {{ runtimeCapabilities.model_provider && runtimeCapabilities.model_name ? `${runtimeCapabilities.model_provider} · ${runtimeCapabilities.model_name}` : '未启用 LLM 配置' }}
-                </div>
-              </div>
-              <div class="summary-card fc-metric">
-                <span class="summary-label">视觉模式</span>
-                <strong>{{ runtimeCapabilities.vision_mode_ready ? '可执行' : '暂不可用' }}</strong>
-                <div class="capability-detail">
-                  {{ runtimeCapabilities.supports_vision ? '当前模型支持图片输入' : '当前模型不支持视觉能力' }}
-                </div>
-              </div>
-              <div class="summary-card fc-metric">
-                <span class="summary-label">默认环境</span>
-                <strong>{{ runtimeCapabilities.default_environment?.name || '未配置' }}</strong>
-                <div class="capability-detail">
-                  {{ runtimeCapabilities.default_environment ? `${runtimeCapabilities.default_environment.browser} · ${runtimeCapabilities.default_environment.headless ? '无头模式' : '有头模式'}` : '建议补齐基础 URL 与浏览器配置' }}
-                </div>
-              </div>
-            </div>
-            <a-alert
-              v-if="runtimeCapabilityAlert"
-              class="status-alert"
-              :type="runtimeCapabilityAlert.type"
-              show-icon
-              :title="runtimeCapabilityAlert.title"
-            >
-              {{ runtimeCapabilityAlert.content }}
-            </a-alert>
-            <div v-if="runtimeCapabilities.issues?.length" class="error-list">
-              <a-alert
-                v-for="(item, index) in runtimeCapabilities.issues"
-                :key="`${item}-${index}`"
-                type="warning"
-                :title="item"
-              />
-            </div>
-            <div v-if="runtimeCapabilities.recommendations?.length" class="recommendation-list">
-              <a-alert
-                v-for="(item, index) in runtimeCapabilities.recommendations"
-                :key="`recommendation-${item}-${index}`"
-                type="info"
-                :title="item"
-              />
-            </div>
-          </template>
-          <a-empty v-else description="暂未读取到 AI 运行能力信息" />
-        </a-spin>
-      </div>
+      <WebAiOverview :capabilities="runtimeCapabilities" :summary="runtimeCapabilityAlert?.content" :loading="capabilityLoading" @refresh="reloadRuntimeCapabilities" />
 
       <div class="quick-run-layout">
         <div class="quick-run-card">
@@ -376,6 +305,7 @@
 </template>
 
 <script setup lang="ts">
+import WebAiOverview from '../components/WebAiOverview.vue'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { passRateTone, formatQualityPercent } from '@/utils/qualityStatus'
 import { computed, defineAsyncComponent, h, nextTick, onUnmounted, reactive, ref, watch } from 'vue'

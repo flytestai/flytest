@@ -1,10 +1,10 @@
 <template>
-  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="添加远程设备" @ok="emit('connect')">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="添加远程设备" :on-before-ok="connectDevice">
     <div class="dialog-shell">
       <div class="dialog-intro fc-dialog-intro">
         <span class="dialog-kicker">Remote Device</span>
         <strong>接入局域网或远程 Android 设备</strong>
-        <p>填写设备网络地址后即可纳入统一设备池，后续可直接分配给用例或套件执行。</p>
+        <p>请先开启设备的 ADB 网络调试，再填写网络地址。连接成功后可分配给用例或套件执行。</p>
       </div>
       <a-form :model="connectForm" layout="vertical" class="dialog-form fc-form">
         <div class="field-card">
@@ -23,14 +23,12 @@
 </template>
 
 <script setup lang="ts">
-import type { DeviceConnectDialogEmits } from './deviceEventModels'
 import type { DeviceConnectDialogProps } from './deviceViewModels'
 
 defineProps<DeviceConnectDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<DeviceConnectDialogEmits>()
 </script>
 
 <style scoped>

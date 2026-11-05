@@ -1,7 +1,7 @@
 <template>
   <a-modal class="fc-dialog"
     v-model:visible="visible"
-    :title="isEdit ? '编辑模版' : '新建模版'"
+    :title="isEdit ? '编辑模板' : '新建模板'"
     :width="860"
     :mask-closable="false"
     :modal-class="'template-form-modal'"
@@ -236,11 +236,11 @@
         <!-- Step 5: 基本信息 -->
         <div v-show="currentStep === 4">
           <a-form class="fc-form" :model="form" layout="vertical">
-            <a-form-item label="模版名称" required>
-              <a-input v-model="form.name" placeholder="请输入模版名称" :max-length="255" />
+            <a-form-item label="模板名称" required>
+              <a-input v-model="form.name" placeholder="请输入模板名称" :max-length="255" />
             </a-form-item>
 
-            <a-form-item label="模版类型">
+            <a-form-item label="模板类型">
               <a-radio-group v-model="form.template_type">
                 <a-radio value="import">导入</a-radio>
                 <a-radio value="export">导出</a-radio>
@@ -251,7 +251,7 @@
             <a-form-item label="描述">
               <a-textarea
                 v-model="form.description"
-                placeholder="请输入模版描述"
+                placeholder="请输入模板描述"
                 :max-length="500"
                 :auto-size="{ minRows: 2, maxRows: 4 }"
               />
@@ -434,7 +434,7 @@ const buildFormData = (): TemplateFormData => {
 
 const handleSave = async () => {
   if (!form.name) {
-    Message.warning('请输入模版名称');
+    Message.warning('请输入模板名称');
     return;
   }
 
@@ -451,7 +451,7 @@ const handleSave = async () => {
       if (templateId && sampleFile) {
         const uploadResult = await uploadTemplateFile(templateId, sampleFile);
         if (!uploadResult.success) {
-          Message.warning(uploadResult.error || '模版已保存，但模板文件上传失败（导出将无法完全复用原始样式）');
+          Message.warning(uploadResult.error || '模板已保存，但模板文件上传失败（导出将无法完全复用原始样式）');
         }
       }
       Message.success(isEdit.value ? '更新成功' : '创建成功');
@@ -531,7 +531,7 @@ const open = async (id?: number) => {
         form.module_path_delimiter = data.module_path_delimiter;
         form.is_active = data.is_active;
 
-        // 回填模版结构：优先使用后端保存的 template_headers
+        // 回填模板结构：优先使用后端保存的 template_headers
         parsedHeaders.value = (data.template_headers && data.template_headers.length > 0)
           ? data.template_headers
           : (Object.values(data.field_mappings).filter(v => v) as string[]);

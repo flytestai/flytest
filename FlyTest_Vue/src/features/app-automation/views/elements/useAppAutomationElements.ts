@@ -22,6 +22,11 @@ export function useAppAutomationElements() {
   const route = useRoute()
 
   const loading = ref(false)
+  const loadError = ref('')
+  const saving = ref(false)
+  let loadVersion = 0
+  let editorVersion = 0
+  let previewVersion = 0
   const visible = ref(false)
   const detailVisible = ref(false)
   const captureVisible = ref(false)
@@ -42,6 +47,7 @@ export function useAppAutomationElements() {
   })
 
   const typeLabelMap: Record<string, string> = {
+    locator: '定位元素',
     image: '图片',
     pos: '坐标',
     region: '区域',
@@ -123,6 +129,7 @@ export function useAppAutomationElements() {
   }
 
   const clearPreviewCache = () => {
+    previewVersion++
     Object.keys(previewUrlCache).forEach(imagePath => {
       revokePreviewUrl(imagePath)
     })
@@ -140,6 +147,7 @@ export function useAppAutomationElements() {
   }
 
   const ensurePreviewUrl = async (imagePath?: string) => {
+    const version = previewVersion
     const key = normalizePreviewPath(imagePath)
     if (!key) {
       return ''
@@ -154,10 +162,12 @@ export function useAppAutomationElements() {
     previewLoadState[key] = 'loading'
     try {
       const blobUrl = await AppAutomationService.fetchElementAssetBlobUrl(key)
+      if (version !== previewVersion) { URL.revokeObjectURL(blobUrl); return '' }
       previewUrlCache[key] = blobUrl
       previewLoadState[key] = 'loaded'
       return blobUrl
     } catch {
+      if (version !== previewVersion) return ''
       previewLoadState[key] = 'failed'
       return ''
     }
@@ -187,6 +197,8 @@ export function useAppAutomationElements() {
   }
 
   const resetForm = () => {
+    editorVersion++
+    uploading.value = false
     Object.assign(form, createDefaultElementFormModel())
     newCategoryName.value = ''
     updateLocalPreviewUrl('')
@@ -212,7 +224,9 @@ export function useAppAutomationElements() {
   }
 
   const loadElements = async () => {
-    if (!projectStore.currentProjectId) {
+    const projectId = projectStore.currentProjectId
+    const version = ++loadVersion
+    if (!projectId) {
       elements.value = []
       selectedElementIds.value = []
       clearPreviewCache()
@@ -222,11 +236,10 @@ export function useAppAutomationElements() {
 
     loading.value = true
     try {
-      elements.value = await AppAutomationService.getElements(
-        projectStore.currentProjectId,
-        search.value,
-        typeFilter.value,
-      )
+      const records = await AppAutomationService.getElements(projectId)
+      if (version !== loadVersion || projectStore.currentProjectId !== projectId) return
+      elements.value = records
+      loadError.value = ''
       selectedElementIds.value = selectedElementIds.value.filter(id =>
         elements.value.some(item => item.id === id),
       )
@@ -244,9 +257,11 @@ export function useAppAutomationElements() {
         pagination.current = maxPage
       }
     } catch (error: any) {
+      if (version !== loadVersion) return
+      loadError.value = error.message || '加载元素失败'
       Message.error(error.message || '加载元素失败')
     } finally {
-      loading.value = false
+      if (version === loadVersion) loading.value = false
     }
   }
 
@@ -260,15 +275,24 @@ export function useAppAutomationElements() {
     await loadElements()
   }
 
-  const openCreate = async () => {
+  const openCreate = async (pageName = '') => {
+    if (saving.value) return
+    const projectId = projectStore.currentProjectId
     resetForm()
+    const version = editorVersion
     await loadCategories()
+    if (projectStore.currentProjectId !== projectId || editorVersion !== version) return
+    form.pageName = pageName
     visible.value = true
   }
 
   const openEdit = async (record: AppElement) => {
+    if (saving.value) return
+    const projectId = projectStore.currentProjectId
     resetForm()
+    const version = editorVersion
     await loadCategories()
+    if (projectStore.currentProjectId !== projectId || editorVersion !== version) return
     Object.assign(form, buildElementFormPatchFromRecord(record))
     allowPreviewRetry(form.image_path)
     void ensurePreviewUrl(form.image_path)
@@ -282,20 +306,33 @@ export function useAppAutomationElements() {
     detailVisible.value = true
   }
 
+  const openDraft = async (record: AppElement) => {
+    if (saving.value) return
+    const projectId = projectStore.currentProjectId
+    resetForm()
+    const version = editorVersion
+    await loadCategories()
+    if (projectStore.currentProjectId !== projectId || editorVersion !== version) return
+    Object.assign(form, buildElementFormPatchFromRecord({...record,id:0}))
+    visible.value = true
+  }
+
   const handleFileChange = async (file: File | null) => {
-    if (!file || !projectStore.currentProjectId) {
+    if (!file || !projectStore.currentProjectId || uploading.value) {
       return
     }
 
+    const projectId = projectStore.currentProjectId, version = editorVersion
     updateLocalPreviewUrl(URL.createObjectURL(file))
     uploading.value = true
     try {
       const result = await AppAutomationService.uploadElementAsset(
         file,
-        projectStore.currentProjectId,
+        projectId,
         form.imageCategory || 'common',
         form.id || undefined,
       )
+      if (projectStore.currentProjectId !== projectId || version !== editorVersion) return
       form.image_path = result.image_path
       form.imageCategory = result.image_category || form.imageCategory
       form.fileHash = result.file_hash
@@ -305,9 +342,10 @@ export function useAppAutomationElements() {
       Message.success(result.duplicate ? '检测到重复图片，已复用现有资源' : '图片已上传')
       await loadCategories()
     } catch (error: any) {
+      if (version !== editorVersion) return
       Message.error(error.message || '上传图片失败')
     } finally {
-      uploading.value = false
+      if (version === editorVersion) uploading.value = false
     }
   }
 
@@ -360,20 +398,26 @@ export function useAppAutomationElements() {
   }
 
   const submit = async () => {
-    if (!projectStore.currentProjectId) {
-      return
+    if (!projectStore.currentProjectId || saving.value || uploading.value) {
+      return false
     }
-
+    const projectId = projectStore.currentProjectId
+    saving.value = true
     try {
       const payload = buildElementPayloadFromForm(form, projectStore.currentProjectId as number)
       if (!payload.name) {
         Message.warning('请输入元素名称')
-        return
+        return false
       }
       if (payload.element_type === 'image' && !payload.image_path) {
         Message.warning('请先上传图片资源')
-        return
+        return false
       }
+      if (!['image','pos','region'].includes(payload.element_type) && (!payload.selector_value || !['resource-id','id','xpath','text','desc','content-desc','accessibility_id','class'].includes(payload.selector_type))) {
+        Message.warning('请选择受支持的定位方式，并填写定位表达式')
+        return false
+      }
+      if (payload.config.review_status === 'pending' && payload.is_active) payload.config.review_status = 'approved'
 
       if (form.id) {
         await AppAutomationService.updateElement(form.id, payload)
@@ -383,10 +427,15 @@ export function useAppAutomationElements() {
         Message.success('元素已创建')
       }
 
+      if (projectStore.currentProjectId !== projectId) return true
       closeEditor()
       await Promise.all([loadElements(), loadCategories()])
+      return true
     } catch (error: any) {
       Message.error(error.message || '保存元素失败，请检查扩展配置 JSON')
+      return false
+    } finally {
+      saving.value = false
     }
   }
 
@@ -528,6 +577,9 @@ export function useAppAutomationElements() {
   watch(
     () => projectStore.currentProjectId,
     () => {
+      elements.value = []
+      selectedElementIds.value = []
+      loadError.value = ''
       clearPreviewCache()
       captureVisible.value = false
       detailVisible.value = false
@@ -544,6 +596,8 @@ export function useAppAutomationElements() {
   })
 
   return {
+    loadError,
+    saving,
     projectStore,
     loading,
     visible,
@@ -578,6 +632,7 @@ export function useAppAutomationElements() {
     openCreate,
     openEdit,
     openDetail,
+    openDraft,
     handleFileChange,
     createCategory,
     deleteCurrentCategory,

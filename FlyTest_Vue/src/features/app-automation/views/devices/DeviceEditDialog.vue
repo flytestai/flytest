@@ -3,7 +3,7 @@
     v-model:visible="visibleModel"
     title="编辑设备信息"
     :confirm-loading="editSaving"
-    @ok="emit('submit')"
+    :on-before-ok="submitDevice"
   >
     <div class="dialog-shell">
       <div class="dialog-intro fc-dialog-intro">
@@ -49,14 +49,12 @@
 </template>
 
 <script setup lang="ts">
-import type { DeviceEditDialogEmits } from './deviceEventModels'
 import type { DeviceEditDialogProps } from './deviceViewModels'
 
 defineProps<DeviceEditDialogProps>()
 
 const visibleModel = defineModel<boolean>('visible', { required: true })
 
-const emit = defineEmits<DeviceEditDialogEmits>()
 </script>
 
 <style scoped>

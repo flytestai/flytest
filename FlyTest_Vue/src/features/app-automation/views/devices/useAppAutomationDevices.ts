@@ -16,6 +16,7 @@ export function useAppAutomationDevices() {
   const route = useRoute()
 
   const loading = ref(false)
+  const loadError = ref('')
   const editSaving = ref(false)
   const autoRefreshEnabled = ref(true)
   const showConnectModal = ref(false)
@@ -156,13 +157,12 @@ export function useAppAutomationDevices() {
       loading.value = true
     }
     try {
-      devices.value = await AppAutomationService.getDevices({
-        search: filters.search.trim() || undefined,
-        status: filters.status || undefined,
-      })
+      devices.value = await AppAutomationService.getDevices()
+      loadError.value = ''
       lastUpdatedAt.value = new Date().toISOString()
       syncCurrentDevice()
     } catch (error: any) {
+      loadError.value = error.message || '加载设备失败'
       if (!options.silent) {
         Message.error(error.message || '加载设备失败')
       }
@@ -197,15 +197,21 @@ export function useAppAutomationDevices() {
   }
 
   const connect = async () => {
+    if (!connectForm.ip_address.trim() || !Number.isInteger(connectForm.port) || connectForm.port < 1 || connectForm.port > 65535) {
+      Message.warning('请输入设备网络地址与有效端口')
+      return false
+    }
     try {
-      await AppAutomationService.connectDevice(connectForm)
+      await AppAutomationService.connectDevice({ ip_address: connectForm.ip_address.trim(), port: connectForm.port })
       showConnectModal.value = false
       connectForm.ip_address = ''
       connectForm.port = 5555
       Message.success('远程设备连接成功')
       await loadDevices()
+      return true
     } catch (error: any) {
       Message.error(error.message || '连接设备失败')
+      return false
     }
   }
 
@@ -224,7 +230,7 @@ export function useAppAutomationDevices() {
   }
 
   const submitEdit = async () => {
-    if (!editingDeviceId.value) return
+    if (!editingDeviceId.value) return false
 
     editSaving.value = true
     try {
@@ -238,8 +244,10 @@ export function useAppAutomationDevices() {
       currentDevice.value = updated
       Message.success('设备信息已更新')
       await loadDevices()
+      return true
     } catch (error: any) {
       Message.error(error.message || '更新设备失败')
+      return false
     } finally {
       editSaving.value = false
     }
@@ -433,6 +441,7 @@ export function useAppAutomationDevices() {
 
   return {
     loading,
+    loadError,
     editSaving,
     autoRefreshEnabled,
     showConnectModal,

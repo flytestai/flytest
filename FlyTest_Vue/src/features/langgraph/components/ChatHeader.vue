@@ -1,15 +1,19 @@
 <template>
-  <div class="chat-header-container">
+  <div class="chat-header-container" :class="{ 'conversation-settings-open': settingsOpen }">
     <div class="chat-header">
+      <button class="conversation-settings-toggle" type="button" :aria-expanded="settingsOpen" @click="settingsOpen = !settingsOpen">对话设置 <span>知识库{{ useKnowledgeBase ? '已启用' : '未启用' }}</span><span aria-hidden="true">{{ settingsOpen ? '⌃' : '⌄' }}</span></button>
       <div class="chat-actions">
+        <div class="conversation-project"><icon-folder /><span>当前项目</span><a-select :model-value="projectId" placeholder="选择项目" aria-label="当前项目" @change="changeProject"><a-option v-for="project in projectStore.projectList" :key="project.id" :value="project.id">{{ project.name }}</a-option></a-select></div>
         <div class="kb-toggle">
-          <span class="kb-icon">📚</span>
+          <icon-book class="kb-icon" />
           <span class="toggle-label">知识库</span>
           <a-switch
             :model-value="useKnowledgeBase"
             @update:model-value="handleKnowledgeBaseToggle"
             size="small"
+            aria-label="启用知识库"
           />
+          <span class="knowledge-state">{{ useKnowledgeBase ? '已启用' : '未启用' }}</span>
         </div>
 
         <div class="prompt-selector">
@@ -87,12 +91,16 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button as AButton, Tag as ATag, Switch as ASwitch, Select as ASelect, Option as AOption } from '@arco-design/web-vue';
-import { IconDelete, IconSettings, IconThunderbolt, IconFile } from '@arco-design/web-vue/es/icon';
+import { IconDelete, IconSettings, IconThunderbolt, IconFile, IconFolder, IconBook } from '@arco-design/web-vue/es/icon';
+import { useProjectStore } from '@/store/projectStore';
 import KnowledgeBaseSelector from './KnowledgeBaseSelector.vue';
 import { getUserPrompts, getDefaultPrompt } from '@/features/prompts/services/promptService';
 import type { UserPrompt } from '@/features/prompts/types/prompt';
 
 const router = useRouter();
+const settingsOpen = ref(false);
+const projectStore = useProjectStore();
+function changeProject(id: string | number | boolean | Record<string, any> | undefined) { const project = projectStore.projectList.find(item => item.id === Number(id)); if (project) projectStore.setCurrentProject(project); }
 
 interface Props {
   sessionId: string;

@@ -8,6 +8,8 @@ export interface PackageFormModel {
   activity_name: string
   platform: string
   description: string
+  version_name: string
+  version_code: string
 }
 
 export interface PackageStats {
@@ -42,4 +44,8 @@ export interface PackagesTableCardProps {
 export interface PackageEditorDialogProps {
   form: PackageFormModel
   submitting: boolean
+  fileSupport: boolean
+  uploadProgress: number
+  selectedFile: File | null
+  submitPackage: () => Promise<boolean>
 }

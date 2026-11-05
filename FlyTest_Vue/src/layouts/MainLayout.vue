@@ -1164,7 +1164,7 @@ const pageMetaMap: Record<string, PageMeta> = {
   },
   "test-bugs": {
     eyebrow: "TEST MANAGEMENT",
-    title: "BUG 管理",
+    title: "缺陷管理",
     subtitle: "跟踪缺陷生命周期与修复验证",
   },
   "test-executions": {
@@ -1174,7 +1174,7 @@ const pageMetaMap: Record<string, PageMeta> = {
   },
   "api-automation-requests": {
     eyebrow: "API AUTOMATION",
-    title: "请求管理",
+    title: "接口自动化",
     subtitle: "维护接口资产、请求定义与环境变量",
   },
   "api-automation-test-cases": {

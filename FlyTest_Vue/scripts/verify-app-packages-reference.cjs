@@ -1,0 +1,55 @@
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const { installFixtures } = require('./verify-workspace-layout.cjs');
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
+const base = process.env.UI_BASE_URL || 'http://127.0.0.1:5175', output = path.resolve(__dirname, '../playwright-screenshots/app-packages-reference');
+async function fixtures(context) {
+  await installFixtures(context);
+  const now = new Date().toISOString(), state = { legacy: false, error: false, empty: false, failUpload: false, creates: 0, uploads: 0, installs: 0, records: Array.from({ length: 18 }, (_, i) => ({
+    id: i + 1, project_id: 1, name: i === 0 ? 'FeiCe 测试版' : i === 10 ? 'FeiCe iOS' : `演示应用 ${i + 1}`, package_name: `com.feice.demo${i + 1}`, platform: i < 10 ? 'android' : 'ios', activity_name: '.MainActivity', description: '回归测试', created_at: now, updated_at: now, uploaded_at: now,
+    has_file: i !== 17, file_name: `demo${i + 1}.${i < 9 ? 'apk' : i === 9 ? 'aab' : 'ipa'}`, file_type: i < 9 ? 'apk' : i === 9 ? 'aab' : 'ipa', file_size: 103179878,
+    version_name: i < 8 ? 'v2.6.0' : '', version_code: i < 8 ? '268' : '', asset_management_available: true,
+    installations: i < 12 ? [{ device_id: 1, device_name: 'Pixel 8', status: 'installed', progress: 100, updated_at: now }, ...(i === 1 ? [{ device_id: 3, device_name: 'Pixel 7', status: 'failed', progress: null, error: '签名不兼容', updated_at: now }] : [])] : [],
+  })) };
+  const fulfill = (route, data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ success: status === 200, status: status === 200 ? 'success' : 'error', code: status, data, message: status === 200 ? '' : '测试接口暂不可用' }) });
+  await context.route('**/api/app-automation/**', async route => {
+    const url = new URL(route.request().url()), method = route.request().method(), match = url.pathname.match(/packages\/(\d+)\//), id = match ? +match[1] : null;
+    if (url.pathname.endsWith('/packages/capabilities/')) return fulfill(route, { files: true, formats: ['apk','aab','ipa'], install_formats: ['apk'], max_bytes: 500 * 1024 * 1024 }, state.legacy ? 404 : 200);
+    if (url.pathname.endsWith('/packages/') && method === 'GET') return fulfill(route, state.empty ? [] : state.legacy ? state.records.map(({ id, project_id, name, package_name, platform, activity_name, description, created_at, updated_at }) => ({ id, project_id, name, package_name, platform, activity_name, description, created_at, updated_at })) : state.records, state.error ? 503 : 200);
+    if (url.pathname.endsWith('/packages/') && method === 'POST') { state.creates++; const record = { ...route.request().postDataJSON(), id: 90 + state.creates, created_at: now, updated_at: now }; state.records.push(record); return fulfill(route, record); }
+    if (match && method === 'PUT') { const record = state.records.find(item => item.id === id); Object.assign(record, route.request().postDataJSON()); return fulfill(route, record); }
+    if (url.pathname.endsWith('/upload/')) { state.uploads++; if (state.failUpload) return fulfill(route, null, 503); const record = state.records.find(item => item.id === id); Object.assign(record, { file_name: 'upload.apk', file_type: 'apk', has_file: true, version_name: url.searchParams.get('version_name'), version_code: url.searchParams.get('version_code'), uploaded_at: now, file_size: 42, installations: [] }); return fulfill(route, record); }
+    if (url.pathname.endsWith('/download/')) return route.fulfill({ contentType: 'application/octet-stream', body: Buffer.from('isolated test artifact') });
+    if (url.pathname.endsWith('/installations/')) return fulfill(route, state.records.find(item => item.id === id));
+    if (url.pathname.endsWith('/install/')) { state.installs++; const result = { device_id: 1, device_name: 'Pixel 8', status: 'installed', progress: 100, updated_at: now }; state.records.find(item => item.id === id).installations = [result]; return fulfill(route, result); }
+    if (url.pathname.endsWith('/devices/')) return fulfill(route, [{ id: 1, name: 'Pixel 8', device_id: 'emulator-5554', android_version: '14', status: 'available' }, { id: 2, name: 'iPhone 15', device_id: 'ios-01', status: 'online', device_specs: { platform: 'ios' } }]);
+    return fulfill(route, []);
+  }); return state;
+}
+async function select(page, label, value) { await page.getByLabel(label, { exact: true }).click(); await page.locator('.arco-select-option:visible').filter({ hasText: new RegExp('^' + value + '$') }).click(); }
+async function run() {
+  fs.mkdirSync(output, { recursive: true }); const browser = await chromium.launch({ headless: true, channel: 'msedge' }), report = [];
+  try {
+    for (const width of (process.env.UI_WIDTHS || '1672,1280,768,390,320').split(',').map(Number)) {
+      const context = await browser.newContext({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' }), state = await fixtures(context), page = await context.newPage(), errors = []; page.setDefaultTimeout(60000); page.on('pageerror', e => errors.push(e.message));
+      await page.goto(base + '/app-automation?tab=packages', { waitUntil: 'domcontentloaded' }); await page.locator('.package-metric').first().getByText('18', { exact: true }).waitFor();
+      assert.equal(await page.locator('.package-metric').count(), 5); assert.equal(await page.locator('.package-rate strong').innerText(), '66.7%'); assert.equal(await page.locator('.package-reference-table .package-name').count(), 10);
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'document overflow at ' + width);
+      const overflow = await page.locator('.package-metric,.package-rate,.package-filters,.package-actions').evaluateAll(nodes => nodes.filter(el => { const r = el.getBoundingClientRect(); return r.width && (r.left < -1 || r.right > innerWidth + 1) }).map(el => el.className)); assert.deepEqual(overflow, []);
+      await page.screenshot({ path: path.join(output, `packages-${width}.png`), fullPage: true }); report.push({ width, check: 'metrics, complete table and responsive containment', passed: true });
+      if (width === 1672) {
+        await select(page, '应用包平台', 'iOS'); assert.equal(await page.locator('.package-name').count(), 8); assert.equal(await page.locator('.package-rate strong').innerText(), '66.7%'); await page.getByRole('button', { name: '重置筛选', exact: true }).click();
+        await page.getByLabel('搜索应用包', { exact: true }).fill('com.feice.demo18'); await page.locator('.package-name').filter({ hasText: '演示应用 18' }).waitFor(); assert(await page.getByRole('button', { name: '下载应用包 演示应用 18', exact: true }).isDisabled()); await page.getByRole('button', { name: '重置筛选', exact: true }).click();
+        await select(page, '应用包格式', 'AAB'); assert.equal(await page.locator('.package-name').count(), 1); await page.getByRole('button', { name: '设备安装 演示应用 10', exact: true }).click(); await page.getByText('当前执行器直接支持 APK；AAB 需转换为 APK，IPA 需要接入 iOS 安装驱动。', { exact: true }).waitFor(); assert.equal(await page.getByRole('button', { name: '安装到设备', exact: true }).count(), 0); await page.locator('.arco-modal:visible .arco-modal-close-btn').click(); await page.getByRole('button', { name: '重置筛选', exact: true }).click(); report.push({ check: 'platform, serial, file format and unsupported installer behavior', passed: true });
+        await page.getByRole('button', { name: '设备安装 FeiCe 测试版', exact: true }).click(); await select(page, '安装目标设备', 'Pixel 8'); await page.getByRole('button', { name: '安装到设备', exact: true }).click(); await page.getByText('设备已确认安装完成', { exact: true }).waitFor(); assert.equal(state.installs, 1); await page.locator('.arco-modal:visible .arco-modal-close-btn').click(); report.push({ check: 'APK installation uses selected Android device and confirmed result', passed: true });
+        const downloadPromise = page.waitForEvent('download'); await page.getByRole('button', { name: '下载应用包 FeiCe 测试版', exact: true }).click(); assert.equal((await downloadPromise).suggestedFilename(), 'demo1.apk'); report.push({ check: 'authenticated file download creates correct filename', passed: true });
+        await page.locator('.package-reference-table .arco-checkbox').first().click(); await page.getByRole('button', { name: '批量操作', exact: true }).click(); const exportPromise = page.waitForEvent('download'); await page.getByText('导出应用信息', { exact: true }).click(); assert.equal((await exportPromise).suggestedFilename(), '应用包信息.csv'); await page.getByRole('button', { name: '取消选择', exact: true }).click(); report.push({ check: 'batch selected inventory export', passed: true });
+        await page.getByRole('button', { name: '上传应用包', exact: true }).click(); await page.getByPlaceholder('例如 Android 设置').fill('新建上传应用'); await page.getByPlaceholder('例如 com.android.settings').fill('com.feice.new'); await page.locator('#app-package-file').setInputFiles({ name: 'upload.apk', mimeType: 'application/octet-stream', buffer: Buffer.from('fixture package') }); await page.getByPlaceholder('例如 v2.6.0').fill('v3.0.0'); state.failUpload = true; await page.locator('.arco-modal:visible').getByRole('button', { name: '保存并上传', exact: true }).click(); await page.getByText('测试接口暂不可用', { exact: true }).waitFor(); assert.equal(await page.locator('.arco-modal:visible').count(), 1); state.failUpload = false; await page.locator('.arco-modal:visible').getByRole('button', { name: '保存并上传', exact: true }).click(); await page.getByText('应用包文件已上传并归档', { exact: true }).waitFor(); assert.equal(state.creates, 1); assert.equal(state.uploads, 2); report.push({ check: 'upload failure preserves form and retry reuses created record', passed: true });
+        state.legacy = true; await page.getByRole('button', { name: '刷新应用包', exact: true }).click(); await page.getByText('当前服务未提供文件接口，仍可维护应用信息', { exact: true }).waitFor(); assert.equal(await page.locator('.package-rate strong').innerText(), '—'); report.push({ check: 'legacy service does not fabricate files, versions or install counts', passed: true });
+        state.legacy = false; state.error = true; await page.getByRole('button', { name: '刷新应用包', exact: true }).click(); await page.getByText('应用包数据加载失败', { exact: true }).waitFor(); state.error = false; state.empty = true; await page.getByRole('button', { name: '刷新应用包', exact: true }).click(); await page.getByText('暂无应用包', { exact: true }).waitFor(); assert.equal(await page.locator('.package-rate strong').innerText(), '—'); report.push({ check: 'load error and empty inventory', passed: true });
+      }
+      assert.deepEqual(errors, []); await context.close(); console.log('PASS packages ' + width);
+    }
+    fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); console.log(report.length + ' package checks passed');
+  } finally { await browser.close(); }
+}
+module.exports = { fixtures }; if (require.main === module) run().catch(error => { console.error(error); process.exitCode = 1 });

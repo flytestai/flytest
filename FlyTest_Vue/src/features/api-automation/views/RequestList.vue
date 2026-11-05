@@ -27,7 +27,7 @@
             <a-option v-for="item in environments" :key="item.id" :value="item.id" :label="item.name" />
           </a-select>
         </div>
-        <div class="toolbar-group toolbar-group--actions">
+        <ApiActionPortal><div class="toolbar-group toolbar-group--actions">
           <a-dropdown trigger="click" position="br">
             <a-button :disabled="!projectId">执行测试</a-button>
             <template #content>
@@ -49,7 +49,7 @@
           <a-button type="primary" :disabled="!selectedCollectionId" @click="openCreateModal">
             新增接口
           </a-button>
-        </div>
+        </div></ApiActionPortal>
       </div></template>
     </WorkspacePageHeader>
 
@@ -418,6 +418,7 @@
 </template>
 
 <script setup lang="ts">
+import ApiActionPortal from "../components/ApiActionPortal.vue";
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -981,6 +982,7 @@ onUnmounted(() => {
 
 defineExpose({
   refresh: loadRequests,
+  refreshEnvironments:loadEnvironments,
 })
 </script>
 

@@ -3,10 +3,10 @@
     <template v-if="viewMode === 'list'">
       <WorkspacePageHeader title="缺陷管理">
         <template #meta>围绕当前测试套件查看、筛选、处理和追踪缺陷。</template>
-        <template #actions><div class="bug-panel-actions">
+        <template #actions><Teleport :to="assetActionsTarget || 'body'" :disabled="!assetActionsTarget"><div class="bug-panel-actions">
           <a-button @click="fetchBugs">刷新</a-button>
-          <a-button type="primary" @click="openCreateDetail">提 BUG</a-button>
-        </div></template>
+          <a-button type="primary" @click="openCreateDetail">新建缺陷</a-button>
+        </div></Teleport></template>
       </WorkspacePageHeader>
 
       <div class="bug-status-grid">
@@ -995,11 +995,12 @@ type BugTableColumnKey =
   | 'actions';
 
 const props = defineProps<{
+  assetActionsTarget?: HTMLElement;
   currentProjectId: number | null;
   selectedSuiteId: number | null;
   initialBugId?: number | null;
 }>();
-const emit = defineEmits<{ 'view-mode-change': [value: 'list' | 'detail'] }>();
+const emit = defineEmits<{ 'view-mode-change': [value: 'list' | 'detail']; 'statistics-changed': [] }>();
 
 const BUG_COLUMN_STORAGE_KEY_PREFIX = 'flytest_bug_management_visible_columns';
 const BUG_FILTER_STORAGE_KEY_PREFIX = 'flytest_bug_management_filters';
@@ -2712,6 +2713,7 @@ const saveDetailEdit = async () => {
     markUpdatedRows([nextBug.id]);
     setUpdateSummary((isDraftCreate ? '刚刚新增了 BUG #' : '刚刚更新了 BUG #') + nextBug.id);
     Message.success(isDraftCreate ? 'BUG 创建成功' : 'BUG 更新成功');
+    emit('statistics-changed');
     await fetchBugs();
   } finally {
     detailSaving.value = false;
@@ -2783,6 +2785,7 @@ const submitAction = async () => {
       syncBugRecord(response.data);
     }
     Message.success(getActionSuccessMessage(actionType.value));
+    emit('statistics-changed');
     markUpdatedRows(response.data ? [response.data.id] : [actionBug.value.id]);
     setUpdateSummary(getActionSuccessMessage(actionType.value));
     actionVisible.value = false;
@@ -2834,6 +2837,7 @@ const handleActionSelect = async (bug: TestBug, action: string) => {
 
         removeBugRecord(bug.id);
         Message.success('BUG 已删除');
+        emit('statistics-changed');
         setUpdateSummary('刚刚删除了 BUG #' + bug.id);
         await fetchBugs();
         return true;

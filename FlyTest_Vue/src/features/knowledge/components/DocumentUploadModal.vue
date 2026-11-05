@@ -288,7 +288,8 @@ const getDocumentType = (uploadType: string, file?: File): DocumentType => {
 const handleSubmit = async () => {
   try {
     // Arco Design 的 validate 方法：成功时返回 undefined，失败时抛出错误
-    await formRef.value?.validate();
+    const errors = await formRef.value?.validate();
+    if (errors) return;
 
     // 验证文件上传模式下是否选择了文件
     if (formData.uploadType === 'file' && !formData.file) {
@@ -313,21 +314,8 @@ const handleSubmit = async () => {
       uploadData.url = formData.url;
     }
 
-    // 模拟上传进度
-    const progressInterval = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += Math.random() * 20;
-      }
-    }, 200);
-
     await KnowledgeService.uploadDocument(uploadData);
-
-    clearInterval(progressInterval);
-    uploadProgress.value = 100;
-
-    setTimeout(() => {
-      emit('submit');
-    }, 500);
+    emit('submit');
 
   } catch (error: any) {
     console.error('上传文档失败:', error);

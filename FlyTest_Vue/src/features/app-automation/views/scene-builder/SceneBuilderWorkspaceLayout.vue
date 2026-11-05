@@ -1,14 +1,40 @@
 <template>
-  <div class="fc-builder-workspace">
-    <div class="fc-builder-viewbar">
-      <span>场景工作区</span>
-      <div>
-        <button type="button" class="fc-directory-toggle" :aria-expanded="libraryOpen" aria-controls="scene-library" @click="libraryOpen = !libraryOpen">组件库</button>
-        <button type="button" class="fc-directory-toggle" :aria-expanded="configOpen" aria-controls="scene-config" @click="configOpen = !configOpen">步骤属性</button>
-      </div>
+  <div class="scene-reference-workspace">
+    <aside class="scene-directory"><slot name="directory" /></aside>
+    <section class="scene-editor">
+      <slot name="toolbar" />
+      <div class="scene-editor-body">
+      <div class="scene-canvas-area">
+    <SceneBuilderCanvasPanel
+      :steps="steps"
+      :selected-step-index="canvasPanel.selectedStepIndex"
+      :selected-sub-step-index="canvasPanel.selectedSubStepIndex"
+      :selected-sub-step-group-key="canvasPanel.selectedSubStepGroupKey"
+      :sub-step-selections="canvasPanel.subStepSelections"
+      :components="canvasPanel.components"
+      :resolve-step-title="canvasPanel.resolveStepTitle"
+      :resolve-step-meta="canvasPanel.resolveStepMeta"
+      @update:steps="emit('update:steps', $event)"
+      @select-step="inspectorTab = 'config'; emit('select-step', $event)"
+      @toggle-expand="emit('toggle-expand', $event)"
+      @duplicate-step="emit('duplicate-step', $event)"
+      @remove-step="emit('remove-step', $event)"
+      @clear-steps="emit('clear-steps')"
+      @select-sub-step="inspectorTab = 'config'; emit('select-sub-step', $event)"
+      @update-sub-step-selection="emit('update-sub-step-selection', $event)"
+      @add-sub-step="emit('add-sub-step', $event)"
+      @duplicate-sub-step="emit('duplicate-sub-step', $event)"
+      @remove-sub-step="emit('remove-sub-step', $event)"
+      @update-step-group-items="emit('update-step-group-items', $event)"
+    />
+
     </div>
-    <div class="builder-grid fc-builder-grid" :class="{ 'fc-builder-grid--library': libraryOpen, 'fc-builder-grid--config': configOpen }">
-    <aside id="scene-library" v-show="libraryOpen" class="fc-builder-library" aria-label="步骤组件库">
+    <aside class="scene-inspector" aria-label="步骤与属性">
+      <div class="scene-inspector-tabs" role="tablist" aria-label="步骤面板">
+        <button role="tab" :aria-selected="inspectorTab === 'steps'" @click="inspectorTab = 'steps'">步骤</button>
+        <button role="tab" :aria-selected="inspectorTab === 'config'" @click="inspectorTab = 'config'">属性</button>
+      </div>
+      <div v-show="inspectorTab === 'steps'" class="scene-palette">
     <SceneBuilderLibraryPanel
       :component-search="componentSearch"
       :palette-tab="paletteTab"
@@ -23,33 +49,9 @@
       @edit-custom="emit('edit-custom', $event)"
       @delete-custom="emit('delete-custom', $event)"
     />
+      </div>
+      <div v-show="inspectorTab === 'config'">
 
-    </aside>
-
-    <SceneBuilderCanvasPanel
-      :steps="steps"
-      :selected-step-index="canvasPanel.selectedStepIndex"
-      :selected-sub-step-index="canvasPanel.selectedSubStepIndex"
-      :selected-sub-step-group-key="canvasPanel.selectedSubStepGroupKey"
-      :sub-step-selections="canvasPanel.subStepSelections"
-      :components="canvasPanel.components"
-      :resolve-step-title="canvasPanel.resolveStepTitle"
-      :resolve-step-meta="canvasPanel.resolveStepMeta"
-      @update:steps="emit('update:steps', $event)"
-      @select-step="emit('select-step', $event)"
-      @toggle-expand="emit('toggle-expand', $event)"
-      @duplicate-step="emit('duplicate-step', $event)"
-      @remove-step="emit('remove-step', $event)"
-      @clear-steps="emit('clear-steps')"
-      @select-sub-step="emit('select-sub-step', $event)"
-      @update-sub-step-selection="emit('update-sub-step-selection', $event)"
-      @add-sub-step="emit('add-sub-step', $event)"
-      @duplicate-sub-step="emit('duplicate-sub-step', $event)"
-      @remove-sub-step="emit('remove-sub-step', $event)"
-      @update-step-group-items="emit('update-step-group-items', $event)"
-    />
-
-    <aside id="scene-config" v-show="configOpen" class="fc-builder-config" aria-label="步骤属性">
     <SceneBuilderConfigPanel
       :step-config-text="stepConfigText"
       :selected-scene-step="configPanel.selectedSceneStep"
@@ -95,17 +97,16 @@
       @reset-selected-step-config="emit('reset-selected-step-config')"
       @apply-step-config="emit('apply-step-config')"
     />
+    </div>
     </aside>
     </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useWindowSize } from '@vueuse/core'
-const { width } = useWindowSize()
-const libraryOpen = ref(width.value >= 1440)
-const configOpen = ref(width.value >= 1440)
+const inspectorTab = ref<'steps' | 'config'>('steps')
 
 import type { AppComponent, AppCustomComponent, AppSceneStep } from '../../types'
 import SceneBuilderCanvasPanel from './SceneBuilderCanvasPanel.vue'
@@ -133,24 +134,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-watch(() => props.canvasPanel.selectedStepIndex, index => { if (index >= 0) configOpen.value = true })
+watch(() => props.canvasPanel.selectedStepIndex, index => { if (index !== null) inspectorTab.value = 'config' })
 
 const emit = defineEmits<SceneBuilderWorkspaceLayoutEmits>()
 </script>
-
-<style scoped>
-.builder-grid {
-  display: grid;
-  align-items: start;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 20px;
-  min-height: 620px;
-}
-
-@container workspace (max-width: 1000px) {
-  .builder-grid {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-}
-</style>

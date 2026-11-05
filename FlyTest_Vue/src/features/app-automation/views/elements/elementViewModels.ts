@@ -21,6 +21,10 @@ export interface ElementsEditorFormModel {
   regionY1: number
   regionX2: number
   regionY2: number
+  pageName: string
+  controlType: string
+  reuseStatus: 'yes' | 'no' | 'unknown'
+  maintenanceStatus: 'normal' | 'needs_maintenance' | 'unknown'
 }
 
 export interface ElementsPaginationState {
@@ -49,6 +53,8 @@ export interface ElementsEditorDialogProps {
   uploading: boolean
   categorySaving: boolean
   categoryDeleting: boolean
+  saving: boolean
+  submitElement: () => Promise<boolean>
 }
 
 export interface ElementsTableCardProps {

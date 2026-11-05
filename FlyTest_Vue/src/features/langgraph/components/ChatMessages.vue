@@ -4,7 +4,10 @@
       <div class="empty-icon">
         <img :src="brandLogoUrl" alt="" class="empty-logo" />
       </div>
-      <p>开始与 FeiCe 飞测的对话吧</p>
+      <h3>开始与 FeiCe 飞测对话</h3>
+      <p>描述测试目标、粘贴需求或选择工具，让 AI 协助完成测试工作。</p>
+      <div class="conversation-suggestion-label">你也可以试试</div>
+      <div class="conversation-suggestions"><button v-for="suggestion in suggestions" :key="suggestion.title" type="button" @click="$emit('use-suggestion', suggestion.prompt)"><span class="conversation-suggestion-icon" :class="suggestion.tone"><component :is="suggestion.icon" /></span><span>{{ suggestion.title }}</span><icon-right /></button></div>
     </div>
 
     <MessageItem
@@ -28,6 +31,12 @@
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import MessageItem from './MessageItem.vue';
 import { brandLogoUrl } from '@/utils/assetUrl';
+import { IconFile, IconLayers, IconCode, IconRight } from '@arco-design/web-vue/es/icon';
+const suggestions = [
+  { title: '需求分析与测试点', tone: 'teal', icon: IconFile, prompt: '请分析以下业务需求，梳理功能边界、风险和测试点：\n' },
+  { title: '生成测试用例', tone: 'violet', icon: IconLayers, prompt: '请根据以下需求生成测试用例，包含前置条件、测试步骤和预期结果：\n' },
+  { title: '接口问题排查', tone: 'neutral', icon: IconCode, prompt: '请协助排查以下接口问题，分析请求、响应和可能原因：\n' },
+];
 
 interface ChatMessage {
   content: string;
@@ -61,6 +70,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 defineEmits<{
+  'use-suggestion': [prompt: string];
   'toggle-expand': [message: ChatMessage];
   'quote': [message: ChatMessage];
   'retry': [message: ChatMessage];

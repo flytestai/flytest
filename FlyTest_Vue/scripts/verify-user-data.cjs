@@ -1,0 +1,9 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const scope={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.resolve(__dirname,'../src/features/users/userPresentation.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:scope.exports,module:scope,Date});
+const h=scope.exports, rows=[{id:1,username:'admin',is_staff:true,is_active:true,approval_status:'approved',groups:['研发中心']},{id:2,username:'member',real_name:'测试成员',phone_number:'13812345678',is_staff:false,is_active:false,approval_status:'pending',groups:['测试中心']},{id:3,username:'unknown',is_staff:false,is_active:true,groups:[]}];
+const empty={query:'',organization:'',role:'',account:'',approval:''};
+assert.equal(h.userOverview(rows).pending,1);assert.equal(h.approvalOf(rows[2]),'unknown');assert.equal(h.userOverview(rows).disabled,1);console.log('PASS unknown approval and independent disabled counts');
+assert.equal(h.filterUsers(rows,empty,'disabled')[0].id,2);assert.equal(h.filterUsers(rows,{...empty,approval:'pending',account:'enabled'},'all').length,0);assert.equal(h.filterUsers(rows,{...empty,organization:'测试中心',query:'1381234'},'all')[0].id,2);assert.equal(h.filterUsers(rows,{...empty,role:'admin'},'all')[0].id,1);assert.equal(rows.length,3);console.log('PASS intersected organization, phone, role and account filters');
+assert.equal(h.maskPhone('13812345678'),'138****5678');assert.equal(h.maskPhone('138****5678'),'138****5678');assert.equal(h.maskPhone('123'),'****');assert.equal(h.loginText(undefined),'未提供');assert.equal(h.loginText('invalid'),'未提供');assert.equal(h.loginText(null),'尚未登录');console.log('PASS masked phone and absent/invalid login semantics');
+console.log('3 user data checks passed');

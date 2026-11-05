@@ -1,6 +1,6 @@
 ﻿<template>
     <div ref="testcaseContentRef" class="testcase-content">
-      <WorkspacePageHeader title="测试用例" :local="localHeading"><template #actions><div class="fc-workspace-tools">
+      <WorkspacePageHeader title="测试用例" :local="localHeading" :class="{ 'asset-list-heading': referenceLayout }"><template #actions><div class="fc-workspace-tools">
         <div class="search-box">
         <a-input-search
           placeholder="搜索用例名称/前置条件"
@@ -10,11 +10,13 @@
           :style="{ width: isSmallScreen ? '84px' : '132px' }"
           v-model="localSearchKeyword"
         />
+        <a-select v-if="referenceLayout" v-model="selectedLevel" placeholder="优先级" allow-clear class="asset-priority-filter" @change="onLevelChange"><a-option v-for="level in ['P0','P1','P2','P3']" :key="level" :value="level">{{ level }}</a-option></a-select>
+        <a-select v-if="referenceLayout && showReviewStatus" v-model="selectedReviewStatuses" placeholder="审核状态" multiple allow-clear :max-tag-count="1" tag-nowrap class="asset-review-filter" @change="onReviewStatusChange"><a-option v-for="option in REVIEW_STATUS_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</a-option></a-select>
         <a-popover trigger="click" position="bottom" title="筛选条件">
           <a-button :type="activeFilterCount ? 'outline' : 'secondary'">筛选<span v-if="activeFilterCount" class="fc-filter-count">{{ activeFilterCount }}</span></a-button>
           <template #content><div class="fc-filter-popover">
         <a-select
-          v-model="selectedLevel"
+          v-if="!referenceLayout" v-model="selectedLevel"
           placeholder="优先级"
           allow-clear
           class="level-filter"
@@ -27,7 +29,7 @@
           <a-option value="P3">{{ isSmallScreen ? 'P3' : 'P3 - 低' }}</a-option>
         </a-select>
         <a-select
-          v-if="showReviewStatus"
+          v-if="showReviewStatus && !referenceLayout"
           v-model="selectedReviewStatuses"
           placeholder="审核状态"
           multiple
@@ -71,6 +73,9 @@
         </a-select>
           </div></template>
         </a-popover>
+        <a-select v-if="referenceLayout" v-model="selectedExecutionStatus" placeholder="最近执行" allow-clear class="asset-execution-filter" @change="resetPageAndFetch"><a-option v-for="option in EXECUTION_STATUS_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</a-option></a-select>
+        <a-button v-if="referenceLayout" type="outline" @click="resetAssetFilters">重置</a-button>
+        <Teleport :to="assetActionsTarget || 'body'" :disabled="!assetActionsTarget"><div class="asset-list-primary-actions">
         <a-dropdown trigger="click" position="br">
           <a-button>导入 / 导出</a-button>
           <template #content>
@@ -80,8 +85,9 @@
         </a-dropdown>
         <template v-if="showCreateActions && !isSuiteActionMode">
           <a-button class="fc-ai-action" type="outline" @click="handleGenerateTestCases">AI生成用例</a-button>
-          <a-button type="primary" @click="handleAddTestCase">添加用例</a-button>
+          <a-button type="primary" @click="handleAddTestCase">新建用例</a-button>
         </template>
+        </div></Teleport>
       </div>
       <div class="header-actions">
         <template v-if="hasSelection">
@@ -309,6 +315,8 @@ type TestCaseListItem = TestCase & {
 };
 
 const props = withDefaults(defineProps<{
+  referenceLayout?: boolean;
+  assetActionsTarget?: HTMLElement;
   localHeading?: boolean;
   compact?: boolean;
   selectedCaseId?: number | null;
@@ -357,6 +365,9 @@ const loading = ref(false);
 const localSearchKeyword = ref('');
 const selectedLevel = ref<string>('');
 const selectedTestType = ref<string>('');
+const selectedExecutionStatus = ref<ExecutionStatus | ''>('');
+function resetPageAndFetch() { paginationConfig.current = 1; void fetchTestCases(); }
+function resetAssetFilters() { localSearchKeyword.value = ''; selectedLevel.value = ''; selectedTestType.value = ''; selectedReviewStatuses.value = []; selectedAssigneeIds.value = []; selectedExecutionStatus.value = ''; resetPageAndFetch(); }
 const highlightedGeneratedCaseIds = ref<number[]>([]);
 const selectedReviewStatuses = ref<ReviewStatus[]>([]);
 const selectedAssigneeIds = ref<number[]>([]);
@@ -389,7 +400,7 @@ const handleResize = () => {
 
 // 琛ㄦ牸婊氬姩閰嶇疆
 const tableScroll = computed(() => ({
-  x: props.compact ? 540 : 900,
+  x: props.referenceLayout ? (props.compact ? 700 : 900) : props.compact ? 540 : 900,
   y: tableContainerHeight.value,
 }));
 
@@ -583,9 +594,10 @@ const columns = computed(() => {
   },
   ];
 
-  if (props.compact) {
-    const keys = ['selection','name','level','review_status','execution_status','assignee_detail'];
-    return keys.flatMap(key => baseColumns.filter(column => column.dataIndex === key).map(column => ({...column,title: key === 'execution_status' ? '最近执行' : column.title,width: key === 'selection' ? 34 : key === 'name' ? 198 : key === 'level' ? 60 : key === 'assignee_detail' ? 80 : 84,align: key === 'name' ? 'left' : 'center'})));
+  if (props.compact || props.referenceLayout) {
+    const keys = ['selection','name','level',...(props.showReviewStatus ? ['review_status'] : []),'execution_status','assignee_detail',...(props.referenceLayout ? ['updated_at'] : []),...(!props.compact ? ['operations'] : [])];
+    const referenceColumns = [...baseColumns, {title:'更新时间',dataIndex:'updated_at',width:120,render:({record}:{record:TestCase}) => record.updated_at ? formatDate(record.updated_at) : '—'}];
+    return keys.flatMap(key => referenceColumns.filter(column => column.dataIndex === key).map(column => ({...column,title: key === 'execution_status' ? '最近执行' : column.title,width: key === 'selection' ? 34 : key === 'name' ? 198 : key === 'level' ? 60 : key === 'assignee_detail' ? 80 : key === 'updated_at' ? 120 : key === 'operations' ? 208 : 84,align: key === 'name' ? 'left' : 'center'})));
   }
   if (!showReviewStatus.value) {
     return baseColumns.filter((column) => column.dataIndex !== 'review_status' && column.slotName !== 'reviewStatus');
@@ -824,6 +836,7 @@ const fetchTestCases = async () => {
       // 澶氶€夊鏍哥姸鎬佺瓫閫夛細鏈夐€変腑椤瑰垯浼犻€掞紝鍚﹀垯涓嶉檺鍒讹紙鏄剧ず鍏ㄩ儴锛?
       review_status_in: selectedReviewStatuses.value.length > 0 ? selectedReviewStatuses.value : undefined,
       assignee_id_in: selectedAssigneeIds.value.length > 0 ? selectedAssigneeIds.value : undefined,
+      execution_status: selectedExecutionStatus.value || undefined,
     });
     if (response.success && response.data) {
       testCaseData.value = response.data;

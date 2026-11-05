@@ -1,6 +1,6 @@
 <template>
   <div class="testcase-management-container fc-page">
-    <AssetModuleHeader />
+    <AssetModuleHeader ref="assetHeaderRef" />
 
     <!-- 目录仅辅助资源切换，详情与编辑优先使用完整内容区。 -->
     <WorkspaceDirectoryLayout compact-header storage-key="testcases" directory-label="模块目录" :prioritize-content="viewMode !== 'list'"
@@ -17,7 +17,7 @@
         <div class="fc-asset-layout"><div class="fc-asset-main">
         <!-- 列表视图 - 使用 v-show 保持组件状态（筛选条件等） -->
         <WorkspacePane :active="viewMode === 'list'"><TestCaseList
-          compact :selected-case-id="previewCaseId"
+          compact reference-layout :local-heading="true" :asset-actions-target="viewMode === 'list' ? assetHeaderRef?.actionsTarget : undefined" :selected-case-id="previewCaseId"
           :current-project-id="currentProjectId"
           :selected-module-id="selectedModuleId"
           :module-tree="moduleTreeForForm"
@@ -60,9 +60,9 @@
           @navigate="handleNavigateViewTestCase"
           @review-status-changed="handleReviewStatusChanged"
         />
-        </div><aside v-if="previewCaseId && viewMode === 'list' && !previewInDrawer" class="fc-asset-review"><TestCaseReviewPanel :key="currentProjectId || 0" :project-id="currentProjectId" :case-id="previewCaseId" :module-name="selectedModuleName" @close="previewCaseId = null" @edit="showEditTestCaseForm" @full="openRouteTestCaseDetail" @reviewed="testCaseListRef?.refreshTestCases()" /></aside></div>
+        </div><aside v-if="previewCaseId && viewMode === 'list' && !previewInDrawer" class="fc-asset-review"><TestCaseReviewPanel :key="currentProjectId || 0" :project-id="currentProjectId" :case-id="previewCaseId" :module-name="selectedModuleName" @close="previewCaseId = null" @edit="showEditTestCaseForm" @full="openRouteTestCaseDetail" @reviewed="testCaseListRef?.refreshTestCases(); assetHeaderRef?.refresh()" /></aside></div>
     </WorkspaceDirectoryLayout>
-    <a-drawer v-if="previewInDrawer" :visible="!!previewCaseId && viewMode === 'list'" :width="Math.min(windowWidth - 24, 390)" :footer="false" :header="false" unmount-on-close @cancel="previewCaseId = null" class="fc-case-review-drawer"><TestCaseReviewPanel v-if="previewCaseId" :project-id="currentProjectId" :case-id="previewCaseId" :module-name="selectedModuleName" @close="previewCaseId = null" @edit="showEditTestCaseForm" @full="openRouteTestCaseDetail" @reviewed="testCaseListRef?.refreshTestCases()" /></a-drawer>
+    <a-drawer v-if="previewInDrawer" :visible="!!previewCaseId && viewMode === 'list'" :width="Math.min(windowWidth - 24, 390)" :footer="false" :header="false" unmount-on-close @cancel="previewCaseId = null" class="fc-case-review-drawer"><TestCaseReviewPanel v-if="previewCaseId" :project-id="currentProjectId" :case-id="previewCaseId" :module-name="selectedModuleName" @close="previewCaseId = null" @edit="showEditTestCaseForm" @full="openRouteTestCaseDetail" @reviewed="testCaseListRef?.refreshTestCases(); assetHeaderRef?.refresh()" /></a-drawer>
 
     <GenerateCasesModal
       v-if="isGenerateCasesModalVisible"
@@ -113,6 +113,7 @@ import ModuleManagementPanel from '@/components/testcase/ModuleManagementPanel.v
 import TestCaseList from '@/components/testcase/TestCaseList.vue';
 import TestCaseReviewPanel from '@/components/testcase/TestCaseReviewPanel.vue';
 import { useMediaQuery, useWindowSize } from '@vueuse/core';
+const assetHeaderRef = ref<InstanceType<typeof AssetModuleHeader>>();
 const TestCaseForm = defineAsyncComponent(() => import('@/components/testcase/TestCaseForm.vue'));
 const TestCaseDetail = defineAsyncComponent(() => import('@/components/testcase/TestCaseDetail.vue'));
 const GenerateCasesModal = defineAsyncComponent(() => import('@/components/testcase/GenerateCasesModal.vue'));
@@ -443,6 +444,7 @@ const backToList = () => {
 };
 
 const handleFormSubmitSuccess = () => {
+  void assetHeaderRef.value?.refresh();
   backToList();
   testCaseListRef.value?.refreshTestCases(); // 刷新列表
   // 如果用例创建/更新影响了模块的用例数量，需要通知模块面板刷新
@@ -450,6 +452,7 @@ const handleFormSubmitSuccess = () => {
 };
 
 const handleTestCaseDeleted = () => {
+  void assetHeaderRef.value?.refresh();
   // 用例在列表组件内部删除并刷新列表，这里可能需要刷新模块面板的用例计数
   aiActivityStore.clearGenerationJob();
   modulePanelRef.value?.refreshModules();

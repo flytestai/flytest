@@ -1,38 +1,12 @@
 <template>
   <div class="page-shell fc-page">
-    <NotificationsHeaderBar :loading="loading" @refresh="loadData" />
-
-    <NotificationsTaskContextAlert
-      :task-context="taskContext"
-      @open-task-detail="openTaskDetail"
-      @clear-task-context="clearTaskContext"
-    />
-
-    <NotificationsFilterCard
-      :filters="filters"
-      @search="handleSearch"
-      @reset="resetFilters"
-    />
-
-    <NotificationsStatsGrid :statistics="statistics" />
-
-    <NotificationsTableCard
-      v-model:current="pagination.current"
-      v-model:page-size="pagination.pageSize"
-      :loading="loading"
-      :logs="pagedLogs"
-      :total="filteredLogs.length"
-      :format-date-time="formatDateTime"
-      :get-task-type-label="getTaskTypeLabel"
-      :get-notification-type-label="getNotificationTypeLabel"
-      :get-notification-type-color="getNotificationTypeColor"
-      :get-status-color="getStatusColor"
-      :recipient-summary="recipientSummary"
-      :get-delivery-summary="getDeliverySummary"
-      :get-primary-execution-id="getPrimaryExecutionId"
-      @view-detail="viewDetail"
-      @open-task-detail="openTaskDetail"
-      @open-execution="openExecution"
+    <a-empty v-if="!projectStore.currentProjectId" description="请选择项目后查看通知日志" />
+    <NotificationsReferenceWorkspace v-else
+      v-model:current="pagination.current" v-model:page-size="pagination.pageSize"
+      :project-id="projectStore.currentProjectId" :all-logs="logs" :logs="filteredLogs" :statistics="statistics"
+      :filters="filters" :loading="loading" :error="loadError" :task-id="currentTaskId" :task-name="taskContext?.name"
+      :format-time="formatDateTime" @refresh="loadData" @reset="resetFilters" @detail="viewDetail"
+      @task="openTaskDetail" @execution="openExecution" @clear-context="clearTaskContext"
     />
 
     <NotificationDetailDialog
@@ -53,17 +27,18 @@
 </template>
 
 <script setup lang="ts">
+import NotificationsReferenceWorkspace from './notifications/NotificationsReferenceWorkspace.vue'
+
 import {
   NotificationDetailDialog,
-  NotificationsFilterCard,
-  NotificationsHeaderBar,
-  NotificationsStatsGrid,
-  NotificationsTableCard,
-  NotificationsTaskContextAlert,
   useAppAutomationNotifications,
 } from './notifications'
 
 const {
+  projectStore,
+  logs,
+  currentTaskId,
+  loadError,
   loading,
   retrying,
   detailVisible,
@@ -72,19 +47,14 @@ const {
   filters,
   pagination,
   filteredLogs,
-  pagedLogs,
   statistics,
   parsedContent,
   formatDateTime,
   getTaskTypeLabel,
   getNotificationTypeLabel,
-  getNotificationTypeColor,
-  getStatusColor,
   getPrimaryExecutionId,
-  getDeliverySummary,
   recipientSummary,
   loadData,
-  handleSearch,
   resetFilters,
   openTaskDetail,
   clearTaskContext,
@@ -100,7 +70,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0 !important;
 }
 
 .page-shell :deep(.arco-card),

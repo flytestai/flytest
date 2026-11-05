@@ -1,6 +1,6 @@
 <template>
   <div class="test-case-list fc-page">
-    <WorkspacePageHeader>
+    <WorkspacePageHeader local class="api-local-toolbar">
         <template #title>测试用例</template>
         <template #description>面向接口维度统一管理自动化测试用例，支持执行、批量选择、AI 生成与请求覆盖配置。</template>
         <template #meta><div class="page-hero__meta">
@@ -28,12 +28,12 @@
         >
           <a-option v-for="item in environments" :key="item.id" :value="item.id" :label="item.name" />
         </a-select>
-        <div v-if="selectedRequestId" class="tools-group tools-group--soft">
+        <ApiActionPortal><div v-if="selectedRequestId" class="tools-group tools-group--soft">
           <a-button class="fc-ai-action" :loading="caseGenerationLoadingMode === 'generate'" :disabled="isCaseGenerationLoading" @click="generateCases('generate')">AI生成</a-button>
           <a-button :loading="caseGenerationLoadingMode === 'regenerate'" :disabled="isCaseGenerationLoading" @click="generateCases('regenerate')">重新生成</a-button>
           <a-button :loading="caseGenerationLoadingMode === 'append'" :disabled="isCaseGenerationLoading" @click="generateCases('append')">追加生成</a-button>
         </div>
-        <div class="tools-group">
+<a-button type="primary" :disabled="!selectedRequestId" title="先选择具体接口，再新建用例" @click="openCreateCase">新建用例</a-button></ApiActionPortal><a-select v-model="statusFilter" aria-label="筛选用例状态" placeholder="用例状态" allow-clear style="width:120px"><a-option value="draft">草稿</a-option><a-option value="ready">就绪</a-option><a-option value="disabled">停用</a-option></a-select><a-select v-model="resultFilter" aria-label="筛选最近执行" placeholder="最近执行" allow-clear style="width:120px"><a-option value="passed">通过</a-option><a-option value="failed">失败</a-option><a-option value="none">未执行</a-option></a-select><div class="tools-group">
           <a-button :disabled="!selectedTestCaseIds.length" @click="executeSelectedTestCases">批量执行</a-button>
           <a-button status="danger" :disabled="!selectedTestCaseIds.length" @click="confirmDeleteSelectedTestCases">批量删除</a-button>
           <a-button :disabled="!canExecuteCurrentScope" @click="executeCurrentScopeTestCases">{{ currentScopeExecuteLabel }}</a-button>
@@ -48,80 +48,28 @@
     <div v-else-if="loading" class="state-card">
       <a-spin size="large" />
     </div>
-    <div v-else-if="!groupedTestCases.length" class="state-card">
+    <div v-else-if="!filteredTestCases.length" class="state-card">
       <a-empty :description="selectedRequestId ? '当前接口下暂无测试用例' : '当前接口目录下暂无测试用例'" />
     </div>
 
-    <div v-else class="group-list">
-      <section v-for="group in groupedTestCases" :key="group.key" class="group-card">
-        <div class="group-card__head">
-          <div class="group-card__copy">
-            <div class="group-card__title">
-              <a-tag :color="methodColorMap[group.requestMethod] || 'arcoblue'">{{ group.requestMethod }}</a-tag>
-              <span>{{ group.requestName }}</span>
-            </div>
-            <div class="group-card__meta">
-              <span>{{ group.requestUrl || '-' }}</span>
-              <span>{{ group.totalCount }} 条用例</span>
-              <span>{{ group.readyCount }} 条就绪</span>
-            </div>
-          </div>
-          <div class="tools-group">
-            <a-button size="small" @click="toggleGroupSelection(group)">
-              {{ isGroupFullySelected(group) ? '取消全选' : '全选该接口用例' }}
-            </a-button>
-            <a-button size="small" @click="executeGroupTestCases(group)">执行该接口</a-button>
-          </div>
-        </div>
-
-        <a-table class="fc-table" :data="group.cases" :pagination="false" row-key="id" size="small">
-          <template #columns>
-            <a-table-column title="选择" :width="72" align="center">
-              <template #cell="{ record }">
-                <a-checkbox :model-value="isCaseSelected(record.id)" @change="value => toggleTestCaseSelection(record.id, value)" />
-              </template>
-            </a-table-column>
-            <a-table-column title="测试用例" :width="320">
-              <template #cell="{ record }">
-                <div class="case-name">
-                  <div class="case-name__title">{{ record.name }}</div>
-                  <div class="case-name__desc">{{ record.description || '暂无描述' }}</div>
-                </div>
-              </template>
-            </a-table-column>
-            <a-table-column title="状态" :width="120" align="center">
-              <template #cell="{ record }">
-                <a-tag :color="statusColorMap[record.status]">{{ statusLabelMap[record.status] }}</a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="标签" :width="120" align="center">
-              <template #cell="{ record }">
-                <a-tag color="cyan">{{ record.tags?.length || 0 }}</a-tag>
-              </template>
-            </a-table-column>
-            <a-table-column title="更新时间" :width="180">
-              <template #cell="{ record }">{{ formatDate(record.updated_at) }}</template>
-            </a-table-column>
-            <a-table-column title="操作" :width="250" align="center">
-              <template #cell="{ record }">
-                <a-space :size="4">
-                  <a-button type="text" size="small" @click="executeTestCase(record)">执行</a-button>
-                  <a-button type="text" size="small" @click="openEditModal(record)">编辑</a-button>
-                  <a-button type="text" size="small" @click="viewTestCase(record)">详情</a-button>
-                  <a-popconfirm content="确认删除该测试用例吗？" @ok="deleteTestCases([record.id])">
-                    <a-button type="text" size="small" status="danger">删除</a-button>
-                  </a-popconfirm>
-                </a-space>
-              </template>
-            </a-table-column>
-          </template>
-        </a-table>
-      </section>
-    </div>
+    <ApiDetailLayout v-else :open="!!previewCase" @close="previewCase=null">
+      <div class="api-table-panel"><a-table class="fc-table" :data="filteredTestCases" :pagination="{pageSize:20,showTotal:true}" row-key="id" size="small" :scroll="{x:820}" :row-class="record => previewCase?.id === record.id ? 'api-selected-row' : ''">
+        <template #columns>
+          <a-table-column title="选择" :width="44"><template #cell="{record}"><a-checkbox :model-value="isCaseSelected(record.id)" @change="value => toggleTestCaseSelection(record.id,value)" /></template></a-table-column>
+          <a-table-column title="用例名称 / 编号" :width="230"><template #cell="{record}"><button class="api-row-name" @click="previewCase=record">{{ record.name }}<span class="api-row-code">TC-{{ record.id }} · {{ record.request_name }}</span></button></template></a-table-column>
+          <a-table-column title="用例状态" :width="100"><template #cell="{record}"><a-tag :color="statusColorMap[record.status]">{{ statusLabelMap[record.status] }}</a-tag></template></a-table-column>
+          <a-table-column title="最近执行" :width="100"><template #cell="{record}"><a-tag :color="lastExecution(record.id) ? lastExecution(record.id)?.passed ? 'green' : 'red' : 'gray'">{{ lastExecution(record.id) ? lastExecution(record.id)?.passed ? '通过' : '失败' : '未执行' }}</a-tag></template></a-table-column>
+          <a-table-column title="创建人" :width="95"><template #cell="{record}">{{ record.creator_name || '未记录' }}</template></a-table-column>
+          <a-table-column title="更新时间" :width="165"><template #cell="{record}">{{ formatDate(record.updated_at) }}</template></a-table-column>
+          <a-table-column title="操作" :width="100"><template #cell="{record}"><a-dropdown trigger="click"><a-button type="text" aria-label="用例操作">更多</a-button><template #content><a-doption @click="executeTestCase(record)">执行</a-doption><a-doption @click="openEditModal(record)">编辑</a-doption><a-doption @click="viewTestCase(record)">完整详情</a-doption><a-doption @click="confirmDeleteCase(record)">删除</a-doption></template></a-dropdown></template></a-table-column>
+        </template>
+      </a-table></div>
+      <template #detail><ApiCasePreview v-if="previewCase" :record="previewCase" :saving="readySaving" @close="previewCase=null" @edit="openEditModal" @ready="markReady" @full="viewTestCase" /></template>
+    </ApiDetailLayout>
 
     <a-modal class="fc-dialog"
       v-model:visible="editorVisible"
-      title="编辑测试用例"
+      :title="editingTestCase?.id ? '编辑测试用例' : '新建测试用例'"
       width="1240px"
       :align-center="true"
       :ok-loading="editorSubmitting"
@@ -230,6 +178,13 @@
   </div>
 </template>
 <script setup lang="ts">
+import ApiActionPortal from '../components/ApiActionPortal.vue'
+import ApiDetailLayout from '../components/ApiDetailLayout.vue'
+import ApiCasePreview from '../components/ApiCasePreview.vue'
+import { useApiWorkspaceMetrics } from '../state/workspacePresentation'
+import { calculatePassRate,formatQualityPercent,passRateTone } from '@/utils/qualityStatus'
+import { executionRecordApi } from '../api'
+import type { ApiExecutionRecord } from '../types'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, h, ref, watch } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
@@ -247,7 +202,7 @@ type CaseGenerationMode = 'generate' | 'append' | 'regenerate'
 type CaseGenerationPayload = { scope: 'selected' | 'collection' | 'project'; ids?: number[]; collection_id?: number; project_id?: number; mode: CaseGenerationMode; count_per_request?: number; apply_changes?: boolean }
 
 const props = defineProps<{ selectedCollectionId?: number; selectedCollectionName?: string; selectedRequestId?: number; selectedRequestName?: string }>()
-const emit = defineEmits<{ (e: 'executed'): void }>()
+const emit = defineEmits<{ (e: 'executed'): void; (e: 'updated'): void }>()
 
 const projectStore = useProjectStore()
 const projectId = computed(() => projectStore.currentProject?.id)
@@ -268,6 +223,12 @@ const editorSubmitting = ref(false)
 const caseGenerationLoadingMode = ref<CaseGenerationMode | ''>('')
 const searchKeyword = ref('')
 const testCases = ref<ApiTestCase[]>([])
+const previewCase=ref<ApiTestCase|null>(null), readySaving=ref(false), statusFilter=ref<string>(),resultFilter=ref<string>(), caseExecutions=ref<ApiExecutionRecord[]>([])
+const lastExecution=(id:number) => caseExecutions.value.filter(item=>item.test_case===id).sort((a,b)=>+new Date(b.created_at)-+new Date(a.created_at))[0]
+useApiWorkspaceMetrics('test-cases',computed(() => {const rate=calculatePassRate(caseExecutions.value.filter(item=>item.passed).length,caseExecutions.value.length);return [{label:'范围用例',value:loading.value ? null : testCases.value.length},{label:'草稿用例',value:loading.value ? null : testCases.value.filter(item=>item.status==='draft').length,tone:'amber'},{label:'范围执行',value:caseExecutions.value.length,tone:'blue'},{label:'通过率',value:formatQualityPercent(rate),tone:passRateTone(rate)}]}))
+async function markReady(record:ApiTestCase) {readySaving.value=true;try{const result=await testCaseApi.update(record.id,{status:'ready'});Object.assign(record,result.data.data);Message.success('用例已设为就绪')}catch{Message.error('更新用例状态失败')}finally{readySaving.value=false}}
+const confirmDeleteCase=(record:ApiTestCase) => Modal.warning({title:'删除测试用例',content:'确认删除“'+record.name+'”？',onOk:()=>deleteTestCases([record.id])})
+
 const currentTestCase = ref<ApiTestCase | null>(null)
 const editingTestCase = ref<ApiTestCase | null>(null)
 const environments = ref<ApiEnvironment[]>([])
@@ -318,8 +279,9 @@ const requestBodyOverrideState = computed(() => {
 
 const filteredTestCases = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
-  if (!keyword) return testCases.value
-  return testCases.value.filter(item => [item.name, item.description || '', item.request_name || '', item.request_url || ''].some(text => text.toLowerCase().includes(keyword)))
+  const scoped=testCases.value.filter(item=>(!statusFilter.value || item.status===statusFilter.value)&&(!resultFilter.value || (resultFilter.value==='none' ? !lastExecution(item.id) : !!lastExecution(item.id) && lastExecution(item.id).passed === (resultFilter.value==='passed'))))
+  if (!keyword) return scoped
+  return scoped.filter(item => [item.name, item.description || '', item.request_name || '', item.request_url || ''].some(text => text.toLowerCase().includes(keyword)))
 })
 
 const groupedTestCases = computed<TestCaseGroup[]>(() => {
@@ -432,6 +394,8 @@ const loadEnvironments = async () => {
 }
 
 const loadTestCases = async () => {
+  previewCase.value=null;caseExecutions.value=[]
+    if(projectId.value) { const scope=props.selectedCollectionId,project=projectId.value,request=props.selectedRequestId;void executionRecordApi.list({project,collection:scope,request}).then(res=>{if(projectId.value===project && props.selectedCollectionId===scope && props.selectedRequestId===request)caseExecutions.value=Array.isArray(res.data?.data)?res.data.data:[]}).catch(()=>{}) }
   if (!projectId.value || !props.selectedCollectionId) { testCases.value = []; selectedTestCaseIds.value = []; currentTestCase.value = null; return }
   loading.value = true
   try {
@@ -480,6 +444,7 @@ const resetRequestBodyToMainRequest = () => {
   }
 }
 
+const openCreateCase=async()=>{if(!props.selectedRequestId || !projectId.value)return;const request=await ensureRequestDetail(props.selectedRequestId);if(!request)return;await openEditModal({id:0,project:projectId.value,request:request.id,request_name:request.name,request_method:request.method,request_url:request.url,name:'',description:'',status:'draft',tags:[],script:{},assertions:[],creator:null,created_at:'',updated_at:''})}
 const openEditModal = async (record: ApiTestCase) => {
   await loadAvailableRequests()
   const mainRequest = await ensureRequestDetail(record.request)
@@ -504,7 +469,7 @@ const submitTestCase = async (done: (closed: boolean) => void) => {
     if (workflowSteps.length) script.workflow_steps = workflowSteps
     else delete script.workflow_steps
 
-    const payload: Partial<ApiTestCaseForm> = {
+    const payload: ApiTestCaseForm = {
       project: editingTestCase.value.project,
       request: editingTestCase.value.request,
       name: formState.value.name.trim(),
@@ -517,9 +482,10 @@ const submitTestCase = async (done: (closed: boolean) => void) => {
       extractor_specs: httpEditorModelToExtractorSpecs(formState.value.editor),
     }
 
-    const res = await testCaseApi.update(editingTestCase.value.id, payload)
+    const res = editingTestCase.value.id ? await testCaseApi.update(editingTestCase.value.id, payload) : await testCaseApi.create(payload)
     const updated = res.data?.data || null
-    Message.success('测试用例更新成功')
+    Message.success(editingTestCase.value.id ? '测试用例更新成功' : '测试用例创建成功')
+    emit('updated')
     if (updated && currentTestCase.value?.id === updated.id) currentTestCase.value = updated
     done(true)
     resetEditor()
@@ -814,7 +780,7 @@ const generateCases = async (mode: CaseGenerationMode) => {
 watch(() => projectId.value, () => { syncCaseGenerationProject(projectId.value); selectedTestCaseIds.value = []; loadEnvironments(); loadAvailableRequests(); loadTestCases() }, { immediate: true })
 watch(() => [props.selectedCollectionId, props.selectedRequestId], () => { selectedTestCaseIds.value = []; loadTestCases() }, { immediate: true })
 
-defineExpose({ refresh: loadTestCases })
+defineExpose({ refresh: loadTestCases, refreshEnvironments:loadEnvironments })
 </script>
 
 <style scoped>

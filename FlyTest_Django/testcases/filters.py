@@ -19,6 +19,7 @@ class TestCaseFilter(django_filters.FilterSet):
 
     module_id = django_filters.NumberFilter(method="filter_by_module_and_descendants")
     level = django_filters.CharFilter(field_name="level", lookup_expr="exact")
+    execution_status = django_filters.ChoiceFilter(choices=TestCase.EXECUTION_STATUS_CHOICES)
     review_status = django_filters.CharFilter(field_name="review_status", lookup_expr="exact")
     review_status_in = CharInFilter(field_name="review_status", lookup_expr="in")
     test_type = django_filters.CharFilter(field_name="test_type", lookup_expr="exact")
@@ -32,6 +33,7 @@ class TestCaseFilter(django_filters.FilterSet):
         fields = [
             "module_id",
             "level",
+            "execution_status",
             "review_status",
             "review_status_in",
             "test_type",

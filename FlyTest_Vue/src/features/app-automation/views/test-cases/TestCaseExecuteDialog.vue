@@ -2,7 +2,7 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="mode === 'batch' ? '批量执行测试用例' : '执行测试用例'"
-    @ok="emit('execute')"
+    :on-before-ok="execute"
   >
     <a-form class="fc-form" :model="executeForm" layout="vertical">
       <a-form-item field="device_id" label="执行设备">

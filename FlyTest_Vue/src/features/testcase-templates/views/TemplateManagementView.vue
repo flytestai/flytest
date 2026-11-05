@@ -1,11 +1,10 @@
 <template>
   <div class="template-management-view fc-page">
-    <AssetModuleHeader>
+    <AssetModuleHeader :metrics="templateMetrics">
       <template #actions>
-        <a-button @click="$router.back()">返回</a-button>
         <a-button type="primary" @click="handleCreate">
           <template #icon><icon-plus /></template>
-          新建模版
+          新建模板
         </a-button>
       </template>
     </AssetModuleHeader>
@@ -13,13 +12,13 @@
     <a-card class="template-list-card fc-panel">
       <!-- 筛选栏 -->
       <div class="filter-bar fc-toolbar">
+        <a-input-search v-model="searchKeyword" placeholder="搜索模板名称或描述" allow-clear class="asset-template-search" />
         <a-space>
           <a-select
             v-model="filters.template_type"
-            placeholder="模版类型"
+            placeholder="模板类型"
             allow-clear
             style="width: 120px"
-            @change="loadTemplates"
           >
             <a-option value="import">导入</a-option>
             <a-option value="export">导出</a-option>
@@ -30,29 +29,25 @@
             placeholder="状态"
             allow-clear
             style="width: 100px"
-            @change="loadTemplates"
           >
             <a-option :value="true">启用</a-option>
             <a-option :value="false">禁用</a-option>
           </a-select>
         </a-space>
+        <a-button @click="resetFilters">重置</a-button>
       </div>
 
-      <!-- 模版列表 -->
+      <!-- 模板列表 -->
       <a-table class="fc-table"
         :columns="columns"
-        :data="templates"
+        :data="visibleTemplates"
         :loading="loading"
         :pagination="false"
         row-key="id"
         :scroll="{ x: 900 }"
       >
         <template #empty>
-          <div class="empty-state">
-            <icon-file-image style="font-size: 48px; color: var(--color-text-4);" />
-            <p class="empty-text">暂无模版</p>
-            <p class="empty-desc">点击上方"新建模版"创建您的第一个导入导出模版</p>
-          </div>
+          <WorkspaceEmptyState :title="hasFilters ? '没有匹配的用例模板' : '暂无用例模板'" :description="hasFilters ? '调整搜索条件或重置筛选，查看其他模板。' : '创建导入或导出模板，统一团队的用例字段与文件格式。'" :action-label="hasFilters ? '重置筛选' : '新建模板'" @action="hasFilters ? resetFilters() : handleCreate()" />
         </template>
         <template #template_type="{ record }">
           <a-tag :color="getTypeColor(record.template_type)">
@@ -76,7 +71,7 @@
             <a-button size="small" @click="handleEdit(record)">编辑</a-button>
             <a-button size="small" @click="handleDuplicate(record)">复制</a-button>
             <a-popconfirm
-              content="确定要删除此模版吗？"
+              content="确定要删除此模板吗？"
               @ok="handleDelete(record)"
             >
               <a-button size="small" status="danger">删除</a-button>
@@ -86,7 +81,7 @@
       </a-table>
     </a-card>
 
-    <!-- 创建/编辑模版弹窗 -->
+    <!-- 创建/编辑模板弹窗 -->
     <TemplateFormModal
       ref="formModalRef"
       @success="loadTemplates"
@@ -96,7 +91,8 @@
 
 <script setup lang="ts">
 import AssetModuleHeader from '@/components/workspace/AssetModuleHeader.vue'
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
+import WorkspaceEmptyState from '@/components/workspace/WorkspaceEmptyState.vue';
 import { Message } from '@arco-design/web-vue';
 import { IconPlus, IconFileImage } from '@arco-design/web-vue/es/icon';
 import {
@@ -111,15 +107,25 @@ import TemplateFormModal from '../components/TemplateFormModal.vue';
 
 const loading = ref(false);
 const templates = ref<ImportExportTemplateListItem[]>([]);
+const templatesLoaded = ref(false), searchKeyword = ref('');
 const formModalRef = ref<InstanceType<typeof TemplateFormModal> | null>(null);
 
 const filters = reactive({
   template_type: undefined as TemplateType | undefined,
   is_active: undefined as boolean | undefined,
 });
+const hasFilters = computed(() => Boolean(searchKeyword.value || filters.template_type || filters.is_active !== undefined));
+const visibleTemplates = computed(() => templates.value.filter(template => (!filters.template_type || template.template_type === filters.template_type) && (filters.is_active === undefined || template.is_active === filters.is_active) && (!searchKeyword.value.trim() || (template.name + ' ' + (template.description || '')).toLowerCase().includes(searchKeyword.value.trim().toLowerCase()))));
+const templateMetrics = computed(() => [
+  {label:'模板总量',value:templatesLoaded.value ? templates.value.length : null,tone:'teal'},
+  {label:'启用模板',value:templatesLoaded.value ? templates.value.filter(template => template.is_active).length : null,tone:'success'},
+  {label:'支持导入',value:templatesLoaded.value ? templates.value.filter(template => template.template_type !== 'export').length : null,tone:'blue',description:'包含导入/导出两用模板'},
+  {label:'支持导出',value:templatesLoaded.value ? templates.value.filter(template => template.template_type !== 'import').length : null,tone:'violet',description:'包含导入/导出两用模板'},
+]);
+function resetFilters() { searchKeyword.value = ''; filters.template_type = undefined; filters.is_active = undefined; }
 
 const columns = [
-  { title: '模版名称', dataIndex: 'name', width: 200 },
+  { title: '模板名称', dataIndex: 'name', width: 200 },
   { title: '类型', dataIndex: 'template_type', slotName: 'template_type', width: 100 },
   { title: '描述', dataIndex: 'description', ellipsis: true },
   { title: '状态', dataIndex: 'is_active', slotName: 'is_active', width: 80 },
@@ -152,14 +158,12 @@ const formatDate = (dateStr: string) => {
 const loadTemplates = async () => {
   loading.value = true;
   try {
-    const result = await getTemplateList({
-      template_type: filters.template_type,
-      is_active: filters.is_active,
-    });
+    const result = await getTemplateList();
     if (result.success && result.data) {
       templates.value = result.data;
+      templatesLoaded.value = true;
     } else {
-      Message.error(result.error || '加载模版列表失败');
+      Message.error(result.error || '加载模板列表失败');
     }
   } finally {
     loading.value = false;

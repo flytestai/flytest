@@ -1,6 +1,6 @@
 <template>
   <div class="execution-record-list fc-page">
-    <WorkspacePageHeader>
+    <WorkspacePageHeader local class="api-local-toolbar">
         <template #title>执行历史</template>
         <template #description>按执行批次聚合查看接口和测试用例的历史结果，适合快速定位失败批次与异常热点。</template>
         <template #meta><div class="page-summary__meta">
@@ -18,7 +18,7 @@
           @search="loadRecords"
           @clear="loadRecords"
         />
-        <a-button @click="loadRecords">刷新</a-button>
+        <a-select v-model="resultFilter" aria-label="筛选执行结果" placeholder="执行结果" allow-clear style="width:120px"><a-option value="passed">通过</a-option><a-option value="failed">失败</a-option><a-option value="error">异常</a-option></a-select><a-select v-model="environmentFilter" aria-label="筛选执行环境" placeholder="执行环境" allow-clear style="width:140px"><a-option v-for="name in environmentNames" :key="name" :value="name">{{ name }}</a-option></a-select><a-button @click="loadRecords">刷新</a-button>
       </div></template>
       </WorkspacePageHeader>
 
@@ -34,98 +34,17 @@
       <a-empty description="当前筛选条件下还没有执行记录" />
     </div>
 
-    <div v-else class="content-section">
-      <section v-for="run in groupedRuns" :key="run.key" class="run-card">
-        <div class="run-card__header">
-          <div class="run-card__copy">
-            <div class="run-card__eyebrow">{{ run.runTypeLabel }}</div>
-            <div class="run-card__title">{{ run.runName }}</div>
-            <div class="run-card__meta">
-              <span>{{ formatDate(run.latestExecutedAt) }}</span>
-              <span>{{ run.totalCount }} 条执行</span>
-              <span>{{ run.passedCount }} 通过 / {{ run.failedCount + run.errorCount }} 未通过</span>
-              <span v-if="run.environmentNames.length">{{ run.environmentNames.join(' / ') }}</span>
-            </div>
-          </div>
-          <div class="run-card__stats">
-            <a-tag color="green">通过 {{ run.passedCount }}</a-tag>
-            <a-tag color="orange">失败 {{ run.failedCount }}</a-tag>
-            <a-tag color="red">异常 {{ run.errorCount }}</a-tag>
-          </div>
-        </div>
-
-        <div class="interface-stack">
-          <section v-for="interfaceItem in run.interfaces" :key="interfaceItem.key" class="interface-card">
-            <div class="interface-card__header">
-              <div class="interface-card__copy">
-                <div class="interface-card__title">
-                  <a-tag :color="methodColorMap[interfaceItem.method] || 'arcoblue'">{{ interfaceItem.method }}</a-tag>
-                  <span>{{ interfaceItem.interfaceName }}</span>
-                </div>
-                <div class="interface-card__meta">
-                  <span>{{ interfaceItem.url || '-' }}</span>
-                  <span>{{ interfaceItem.collectionName || '未分组' }}</span>
-                  <span>{{ interfaceItem.totalCount }} 条记录</span>
-                  <span>{{ interfaceItem.failedCaseCount }} 条未通过用例</span>
-                </div>
-              </div>
-              <div class="interface-card__summary">
-                <a-tag color="green">通过 {{ interfaceItem.passedCount }}</a-tag>
-                <a-tag color="red">未通过 {{ interfaceItem.failedCount + interfaceItem.errorCount }}</a-tag>
-              </div>
-            </div>
-
-            <a-table class="fc-table" :data="interfaceItem.cases" :pagination="false" row-key="key" size="small">
-              <template #columns>
-                <a-table-column title="执行对象" :width="280">
-                  <template #cell="{ record }">
-                    <div class="case-cell">
-                      <div class="case-cell__title">{{ record.caseName }}</div>
-                      <div class="case-cell__desc">
-                        <span>{{ record.isDirectRequest ? '接口直接执行' : '接口用例执行' }}</span>
-                        <span v-if="getWorkflowSummaryText(pickCaseRecord(record))">
-                          / {{ getWorkflowSummaryText(pickCaseRecord(record)) }}
-                        </span>
-                      </div>
-                    </div>
-                  </template>
-                </a-table-column>
-                <a-table-column title="结果" :width="120" align="center">
-                  <template #cell="{ record }">
-                    <a-tag :color="getRecordStatusTag(pickCaseRecord(record)).color">
-                      {{ getRecordStatusTag(pickCaseRecord(record)).label }}
-                    </a-tag>
-                  </template>
-                </a-table-column>
-                <a-table-column title="状态码" :width="100" align="center">
-                  <template #cell="{ record }">{{ pickCaseRecord(record).status_code ?? '-' }}</template>
-                </a-table-column>
-                <a-table-column title="执行时间" :width="180">
-                  <template #cell="{ record }">{{ formatDate(pickCaseRecord(record).created_at) }}</template>
-                </a-table-column>
-                <a-table-column title="失败详情">
-                  <template #cell="{ record }">
-                    <span class="failure-text">
-                      {{ record.failedRecord?.error_message || pickCaseRecord(record).error_message || '-' }}
-                    </span>
-                  </template>
-                </a-table-column>
-                <a-table-column title="操作" :width="170" align="center">
-                  <template #cell="{ record }">
-                    <a-space :size="4">
-                      <a-button type="text" size="small" @click="viewRecord(pickCaseRecord(record))">详情</a-button>
-                      <a-popconfirm content="确认删除这条执行记录吗？" @ok="deleteRecord(pickCaseRecord(record).id)">
-                        <a-button type="text" size="small" status="danger">删除</a-button>
-                      </a-popconfirm>
-                    </a-space>
-                  </template>
-                </a-table-column>
-              </template>
-            </a-table>
-          </section>
-        </div>
-      </section>
-    </div>
+    <ApiDetailLayout v-else :open="!!currentRecord" @close="currentRecord=null"><div class="api-table-panel"><a-table class="fc-table" :data="filteredRecords" :pagination="{pageSize:20,showTotal:true}" row-key="id" size="small" :scroll="{x:900}" :row-class="record => currentRecord?.id === record.id ? 'api-selected-row' : ''" @row-click="viewRecord">
+      <template #columns>
+        <a-table-column title="执行批次" :width="180"><template #cell="{record}"><button class="api-row-name" @click="viewRecord(record)">{{ record.run_name || record.run_id || 'RUN-'+record.id }}<span class="api-row-code">#{{ record.id }}</span></button></template></a-table-column>
+        <a-table-column title="接口 / 用例" :width="210"><template #cell="{record}">{{ record.test_case_name || record.interface_name || record.request_name }}</template></a-table-column>
+        <a-table-column title="执行环境" :width="110"><template #cell="{record}">{{ record.environment_name || '默认环境' }}</template></a-table-column>
+        <a-table-column title="结果" :width="90"><template #cell="{record}"><a-tag :color="record.passed ? 'green' : 'red'">{{ record.passed ? '通过' : record.status === 'error' ? '异常' : '失败' }}</a-tag></template></a-table-column>
+        <a-table-column title="耗时" :width="90"><template #cell="{record}">{{ record.response_time == null ? '—' : record.response_time+' ms' }}</template></a-table-column>
+        <a-table-column title="执行时间" :width="170"><template #cell="{record}">{{ formatDate(record.created_at) }}</template></a-table-column>
+        <a-table-column title="执行人" :width="95"><template #cell="{record}">{{ record.executor_name || '未记录' }}</template></a-table-column>
+        <a-table-column title="操作" :width="100"><template #cell="{record}"><a-button type="text" @click.stop="viewFullRecord(record)">日志</a-button><a-popconfirm content="确认删除这条执行记录？" @ok="deleteRecord(record.id)"><a-button type="text" status="danger" @click.stop>删除</a-button></a-popconfirm></template></a-table-column>
+      </template></a-table></div><template #detail><ApiRecordPreview v-if="currentRecord" :record="currentRecord" @close="currentRecord=null" @logs="viewFullRecord" /></template></ApiDetailLayout>
 
     <a-modal
       v-model:visible="detailVisible"
@@ -142,6 +61,10 @@
 </template>
 
 <script setup lang="ts">
+import ApiDetailLayout from '../components/ApiDetailLayout.vue'
+import ApiRecordPreview from '../components/ApiRecordPreview.vue'
+import { useApiWorkspaceMetrics } from '../state/workspacePresentation'
+import { calculatePassRate,formatQualityPercent,passRateTone } from '@/utils/qualityStatus'
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -227,10 +150,15 @@ const runTypeLabelMap: Record<RecordRunGroup['runType'], string> = {
   mixed: '混合执行批次',
 }
 
+const resultFilter=ref<string>(),environmentFilter=ref<string>()
+const environmentNames=computed(()=>[...new Set(records.value.map(item=>item.environment_name || '默认环境'))])
+useApiWorkspaceMetrics('execution-records',computed(()=>{const rate=calculatePassRate(records.value.filter(item=>item.passed).length,records.value.length),durations=records.value.map(item=>item.response_time).filter((item):item is number=>item!=null);return [{label:'范围执行记录',value:loading.value ? null : records.value.length},{label:'通过率',value:formatQualityPercent(rate),tone:passRateTone(rate)},{label:'平均耗时',value:durations.length ? Math.round(durations.reduce((a,b)=>a+b,0)/durations.length)+' ms' : '—',tone:'purple'},{label:'失败与异常',value:loading.value ? null : records.value.filter(item=>!item.passed).length,tone:'danger'}]}))
+const viewFullRecord=(record:ApiExecutionRecord)=>{currentRecord.value=record;detailVisible.value=true}
 const filteredRecords = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase()
-  if (!keyword) return records.value
-  return records.value.filter(item => {
+  const scoped=records.value.filter(item=>(!resultFilter.value || (resultFilter.value==='passed' ? item.passed : resultFilter.value==='error' ? item.status==='error' : !item.passed && item.status!=='error')) && (!environmentFilter.value || (item.environment_name || '默认环境')===environmentFilter.value))
+  if (!keyword) return scoped
+  return scoped.filter(item => {
     return (
       (item.interface_name || item.request_name || '').toLowerCase().includes(keyword) ||
       (item.test_case_name || '').toLowerCase().includes(keyword) ||
@@ -420,6 +348,7 @@ const loadRecords = async () => {
     })
     const data = res.data?.data || []
     records.value = Array.isArray(data) ? data : []
+    if(currentRecord.value) currentRecord.value=records.value.find(item=>item.id===currentRecord.value?.id) || null
   } catch (error) {
     console.error('[ExecutionRecordList] 获取执行记录失败:', error)
     Message.error('获取执行记录失败')
@@ -429,10 +358,7 @@ const loadRecords = async () => {
   }
 }
 
-const viewRecord = (record: ApiExecutionRecord) => {
-  currentRecord.value = record
-  detailVisible.value = true
-}
+const viewRecord = (record: ApiExecutionRecord) => { currentRecord.value = record }
 
 const deleteRecord = async (id: number) => {
   try {

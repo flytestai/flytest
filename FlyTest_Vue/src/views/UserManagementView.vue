@@ -1,100 +1,9 @@
 <template>
   <div class="user-management fc-page">
-    <WorkspacePageHeader title="用户管理" description="管理成员账号、审核申请与账号状态" />
-    <div class="approval-filter-bar">
-      <a-radio-group
-        v-model="approvalFilter"
-        type="button"
-        @change="handleApprovalFilterChange"
-      >
-        <a-radio value="all">全部用户 {{ approvalSummary.all }}</a-radio>
-        <a-radio value="pending">待审核 {{ approvalSummary.pending }}</a-radio>
-        <a-radio value="approved">已通过 {{ approvalSummary.approved }}</a-radio>
-        <a-radio value="rejected">已驳回 {{ approvalSummary.rejected }}</a-radio>
-      </a-radio-group>
-    </div>
-
-    <div class="page-header fc-toolbar">
-      <div class="search-box">
-        <a-input-search
-          placeholder="搜索系统用户名/姓名/手机号/邮箱"
-          allow-clear
-          style="width: min(300px, 100%)"
-          @search="onSearch"
-        />
-      </div>
-      <div class="action-buttons">
-        <a-button type="primary" @click="showAddUserModal">添加用户</a-button>
-      </div>
-    </div>
-
-    <a-table class="fc-table"
-      :columns="columns"
-      :data="userData"
-      :pagination="pagination"
-      :loading="loading"
-      @page-change="onPageChange"
-      @page-size-change="onPageSizeChange"
-    >
-      <template #status="{ record }">
-        <a-tag :color="record.is_active ? 'green' : 'gray'">
-          {{ record.is_active ? '启用' : '禁用' }}
-        </a-tag>
-      </template>
-      <template #approvalStatus="{ record }">
-        <a-tag
-          :color="
-            record.approval_status === 'approved'
-              ? 'green'
-              : record.approval_status === 'rejected'
-                ? 'red'
-                : 'orange'
-          "
-        >
-          {{ record.approval_status_display || '待审核' }}
-        </a-tag>
-      </template>
-      <template #username="{ record }">
-        <div class="username-cell">
-          <span class="username-text">{{ record.username }}</span>
-          <a-tooltip content="查看操作记录">
-            <a-button
-              type="text"
-              size="mini"
-              class="username-log-button"
-              aria-label="查看操作记录"
-              @click.stop="openUserOperationLogs(record)"
-            >
-              <template #icon><icon-history /></template>
-            </a-button>
-          </a-tooltip>
-        </div>
-      </template>
-      <template #operations="{ record }">
-        <a-space :size="4">
-          <a-button
-            v-if="record.approval_status !== 'approved'"
-            type="text"
-            size="mini"
-            @click="approvePendingUser(record)"
-          >
-            通过
-          </a-button>
-          <a-button
-            v-if="record.approval_status !== 'rejected'"
-            type="text"
-            status="warning"
-            size="mini"
-            @click="rejectPendingUser(record)"
-          >
-            驳回
-          </a-button>
-          <a-button type="text" size="mini" @click="viewUserPermissions(record)">权限</a-button>
-          <a-button type="text" size="mini" @click="editUser(record)">编辑</a-button>
-          <a-button type="text" status="danger" size="mini" @click="deleteUser(record)">删除</a-button>
-        </a-space>
-      </template>
-    </a-table>
+    <UserReferenceWorkspace :users="userData" :loading="loading" :error="listError"
+      @create="showAddUserModal" @refresh="refreshUserList" @edit="editUser"
+      @permissions="viewUserPermissions" @toggle="toggleUser" @logs="openUserOperationLogs"
+      @approve="approvePendingUser" @reject="rejectPendingUser" @delete="deleteUser" />
 
     <!-- 用户权限管理模态框 -->
     <a-modal class="fc-dialog"
@@ -246,12 +155,12 @@
             <a-row :gutter="16">
               <a-col :span="12">
                 <a-form-item field="is_staff" label=" ">
-                  <a-checkbox v-model="editUserForm.is_staff">管理员权限</a-checkbox>
+                  <a-checkbox v-model="editUserForm.is_staff" :disabled="editUserForm.id === authStore.user?.id">管理员权限</a-checkbox>
                 </a-form-item>
               </a-col>
               <a-col :span="12">
                 <a-form-item field="is_active" label=" ">
-                  <a-checkbox v-model="editUserForm.is_active">启用账户</a-checkbox>
+                  <a-checkbox v-model="editUserForm.is_active" :disabled="editUserForm.id === authStore.user?.id">启用账户</a-checkbox>
                 </a-form-item>
               </a-col>
             </a-row>
@@ -275,6 +184,7 @@
         
         <a-tab-pane key="permissions" title="权限管理">
           <permission-tree-selector
+            ref="editPermissionTreeSelectorRef"
             v-if="editUserModalVisible && editUserForm.id"
             type="user"
             :id="editUserForm.id"
@@ -288,122 +198,44 @@
 </template>
 
 <script setup lang="ts">
-import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
-import { ref, reactive, onMounted, watch, nextTick } from 'vue';
+import UserReferenceWorkspace from '@/features/users/components/UserReferenceWorkspace.vue'
+import { useAuthStore } from '@/store/authStore'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message, Modal, Row as ARow, Col as ACol, Divider as ADivider } from '@arco-design/web-vue';
-import { IconHistory } from '@arco-design/web-vue/es/icon';
 import {
   getUserList,
   createUser,
   deleteUser as deleteUserService,
   approveUser,
-  getUserApprovalSummary,
   rejectUser,
   updateUser,
   type User,
   type CreateUserRequest,
-  type UpdateUserRequest,
-  type UserApprovalSummary
+  type UpdateUserRequest
 } from '@/services/userService';
 import PermissionTreeSelector from '@/components/permission/PermissionTreeSelector.vue';
-import { useProjectStore } from '@/store/projectStore';
 import { getUserDisplayName } from '@/utils/userDisplay';
 
-const projectStore = useProjectStore();
+const authStore = useAuthStore();
 const router = useRouter();
 
 // 加载状态
 const loading = ref(false);
-// 搜索关键词
-const searchKeyword = ref('');
-const approvalFilter = ref<'all' | 'pending' | 'approved' | 'rejected'>('all');
-const approvalSummary = reactive<UserApprovalSummary>({
-  all: 0,
-  pending: 0,
-  approved: 0,
-  rejected: 0,
-});
-
-// 表格列定义
-const columns = [
-  {
-    title: '用户ID',
-    dataIndex: 'id',
-    width: 80,
-    align: 'center',
-  },
-  {
-    title: '系统用户名',
-    dataIndex: 'username',
-    slotName: 'username',
-    align: 'center',
-  },
-  {
-    title: '联系邮箱',
-    dataIndex: 'email',
-    align: 'center',
-  },
-  {
-    title: '姓名',
-    dataIndex: 'name',
-    align: 'center',
-    render: ({ record }: { record: User }) => {
-      if (record.real_name) return record.real_name;
-      const fullName = [record.first_name, record.last_name].filter(Boolean).join(' ');
-      return fullName || '-';
-    },
-  },
-  {
-    title: '登录手机号',
-    dataIndex: 'phone_number',
-    align: 'center',
-    render: ({ record }: { record: User }) => record.phone_number || '-',
-  },
-  {
-    title: '所属组织',
-    dataIndex: 'groups',
-    align: 'center',
-    render: ({ record }: { record: User }) =>
-      record.groups && record.groups.length ? record.groups.join('、') : '-',
-  },
-  {
-    title: '管理员',
-    dataIndex: 'is_staff',
-    align: 'center',
-    render: ({ record }: { record: User }) => record.is_staff ? '是' : '否',
-  },
-  {
-    title: '账户状态',
-    dataIndex: 'is_active',
-    slotName: 'status',
-    align: 'center',
-  },
-  {
-    title: '审核状态',
-    dataIndex: 'approval_status',
-    slotName: 'approvalStatus',
-    align: 'center',
-  },
-  {
-    title: '操作',
-    slotName: 'operations',
-    width: 280,
-    fixed: 'right',
-    align: 'center',
-  },
-];
-
+const listError = ref('');
+let requestVersion = 0;
 // 用户数据
 const userData = ref<User[]>([]);
 
 // 用户权限管理相关
 const permissionsModalVisible = ref(false);
 const selectedUserId = ref<number>(0);
+const editPermissionTreeSelectorRef = ref<{ loadPermissions: (userId?: number) => Promise<void> } | null>(null);
 const permissionTreeSelectorRef = ref<{ loadPermissions: (userId?: number) => Promise<void> } | null>(null);
 
 // 查看用户权限
 const viewUserPermissions = async (user: User) => {
+  if (!authStore.hasPermission('auth.change_user')) return;
   selectedUserId.value = user.id;
   permissionsModalVisible.value = true;
   
@@ -418,102 +250,52 @@ const openUserOperationLogs = (user: User) => {
   router.push({ name: 'UserOperationLogs', params: { id: user.id } });
 };
 
-// 刷新用户列表
-const refreshUserList = () => {
-  fetchUserList();
-  fetchApprovalSummary();
-};
-
-// 分页配置
-const pagination = reactive({
-  total: 0,
-  current: 1,
-  pageSize: 10,
-  showTotal: true,
-  showJumper: true,
-  showPageSize: true,
-  pageSizeOptions: [10, 20, 50, 100],
-});
-
-// 获取用户列表数据
+// User management is global; project changes do not reset its filters.
 const fetchUserList = async () => {
+  const version = ++requestVersion;
   loading.value = true;
+  listError.value = '';
   try {
-    const response = await getUserList({
-      page: pagination.current,
-      pageSize: pagination.pageSize,
-      search: searchKeyword.value,
-      approvalStatus: approvalFilter.value,
-    });
-
-    if (response.success && response.data) {
-      userData.value = response.data;
-      pagination.total = response.total || response.data.length;
-    } else {
-      Message.error(response.error || '获取用户列表失败');
-      userData.value = [];
-      pagination.total = 0;
+    const collected = new Map<number, User>();
+    let page = 1;
+    while (true) {
+      const response = await getUserList({ page, pageSize: 100, approvalStatus: 'all' });
+      if (version !== requestVersion) return;
+      if (!response.success || !response.data) throw new Error(response.error || '获取用户列表失败');
+      const before = collected.size;
+      response.data.forEach(user => collected.set(user.id, user));
+      if (collected.size >= (response.total ?? response.data.length)) break;
+      if (collected.size === before) throw new Error('用户列表加载不完整，请重试');
+      page += 1;
     }
+    userData.value = [...collected.values()];
   } catch (error) {
-    console.error('获取用户列表出错:', error);
-    Message.error('获取用户列表时发生错误');
+    if (version !== requestVersion) return;
     userData.value = [];
-    pagination.total = 0;
+    listError.value = error instanceof Error ? error.message : '获取用户列表失败';
   } finally {
-    loading.value = false;
+    if (version === requestVersion) loading.value = false;
   }
 };
+const refreshUserList = () => { void fetchUserList(); };
+onMounted(fetchUserList);
+onBeforeUnmount(() => { requestVersion += 1; });
 
-const fetchApprovalSummary = async () => {
-  const response = await getUserApprovalSummary();
-  if (response.success && response.data) {
-    Object.assign(approvalSummary, response.data);
-  }
+const toggleUser = (user: User) => {
+  if (user.id === authStore.user?.id || !authStore.hasPermission('auth.change_user')) return;
+  const active = !user.is_active;
+  Modal.confirm({
+    title: active ? '启用账号' : '禁用账号',
+    content: `确认${active ? '启用' : '禁用'}用户“${getUserDisplayName(user)}”的账号吗？`,
+    okText: active ? '确认启用' : '确认禁用', cancelText: '取消',
+    onOk: async () => {
+      const response = await updateUser(user.id, { is_active: active });
+      if (!response.success) { Message.error(response.error || '更新账号状态失败'); return false; }
+      Message.success('账号状态已更新');
+      await fetchUserList();
+    },
+  });
 };
-
-// 搜索用户
-const onSearch = (value: string) => {
-  searchKeyword.value = value;
-  pagination.current = 1; // 重置到第一页
-  fetchUserList();
-};
-
-const handleApprovalFilterChange = () => {
-  pagination.current = 1;
-  fetchUserList();
-};
-
-// 分页变化
-const onPageChange = (page: number) => {
-  pagination.current = page;
-  fetchUserList();
-};
-
-// 每页显示数量变化
-const onPageSizeChange = (pageSize: number) => {
-  pagination.pageSize = pageSize;
-  pagination.current = 1; // 重置到第一页
-  fetchUserList();
-};
-
-// 监听项目变化，重新加载数据
-watch(() => projectStore.currentProjectId, (newProjectId, oldProjectId) => {
-  if (newProjectId !== oldProjectId) {
-    // 项目切换时重置状态
-    pagination.current = 1;
-    searchKeyword.value = '';
-
-    // 重新获取用户列表
-    fetchUserList();
-    fetchApprovalSummary();
-  }
-}, { immediate: false });
-
-// 在组件挂载时加载用户数据
-onMounted(() => {
-  fetchUserList();
-  fetchApprovalSummary();
-});
 
 // 添加用户模态框相关
 const addUserModalVisible = ref(false);
@@ -584,6 +366,7 @@ const addUserRules = {
 
 // 显示添加用户模态框
 const showAddUserModal = () => {
+  if (!authStore.hasPermission('auth.add_user')) return;
   // 重置表单
   Object.assign(addUserForm, {
     username: '',
@@ -611,7 +394,7 @@ const cancelAddUser = () => {
 const handleAddUser = async (done: (closed: boolean) => void) => {
   // 验证表单
   try {
-    await addUserFormRef.value.validate();
+    if (await addUserFormRef.value.validate()) { done(false); return; }
     // 验证通过，继续处理
   } catch (errors) {
     // 表单验证失败
@@ -641,7 +424,6 @@ const handleAddUser = async (done: (closed: boolean) => void) => {
       Message.success('用户创建成功');
       // 刷新用户列表
       fetchUserList();
-      fetchApprovalSummary();
       done(true); // 关闭模态框
     } else {
       Message.error(response.error || '创建用户失败');
@@ -716,11 +498,12 @@ const editUserRules = {
 const onEditUserTabChange = async (key: string) => {
   if (key === 'permissions' && editUserForm.id) {
     await nextTick()
-    permissionTreeSelectorRef.value?.loadPermissions(editUserForm.id)
+    editPermissionTreeSelectorRef.value?.loadPermissions(editUserForm.id)
   }
 }
 
 const editUser = async (user: User) => {
+  if (!authStore.hasPermission('auth.change_user')) return;
   // 设置表单数据
   Object.assign(editUserForm, {
     id: user.id,
@@ -749,7 +532,7 @@ const cancelEditUser = () => {
 const handleEditUser = async (done: (closed: boolean) => void) => {
   // 验证表单
   try {
-    await editUserFormRef.value.validate();
+    if (await editUserFormRef.value.validate()) { done(false); return; }
     // 验证通过，继续处理
   } catch (errors) {
     // 表单验证失败
@@ -767,8 +550,8 @@ const handleEditUser = async (done: (closed: boolean) => void) => {
   if (editUserForm.last_name !== undefined) updateData.last_name = editUserForm.last_name;
   if (editUserForm.real_name !== undefined) updateData.real_name = editUserForm.real_name;
   if (editUserForm.phone_number !== undefined) updateData.phone_number = editUserForm.phone_number;
-  if (editUserForm.is_staff !== undefined) updateData.is_staff = editUserForm.is_staff;
-  if (editUserForm.is_active !== undefined) updateData.is_active = editUserForm.is_active;
+  if (editUserForm.id !== authStore.user?.id && editUserForm.is_staff !== undefined) updateData.is_staff = editUserForm.is_staff;
+  if (editUserForm.id !== authStore.user?.id && editUserForm.is_active !== undefined) updateData.is_active = editUserForm.is_active;
 
   // 如果输入了密码，则包含密码字段
   if (editUserForm.password) {
@@ -783,7 +566,6 @@ const handleEditUser = async (done: (closed: boolean) => void) => {
       Message.success('用户更新成功');
       // 刷新用户列表
       fetchUserList();
-      fetchApprovalSummary();
       done(true); // 关闭模态框
     } else {
       Message.error(response.error || '更新用户失败');
@@ -797,50 +579,56 @@ const handleEditUser = async (done: (closed: boolean) => void) => {
 };
 
 const approvePendingUser = (user: User) => {
+  if (!authStore.hasPermission('auth.change_user')) return;
   Modal.confirm({
     title: '审核通过',
     content: `确认审核通过用户“${getUserDisplayName(user)}”吗？通过后需要继续分配权限，用户才能看到对应菜单。`,
     okText: '确认通过',
     cancelText: '取消',
+    hideCancel: false,
     onOk: async () => {
       const response = await approveUser(user.id);
       if (response.success) {
         Message.success(`已审核通过 ${getUserDisplayName(user)}`);
         fetchUserList();
-        fetchApprovalSummary();
-        return;
+          return;
       }
       Message.error(response.error || '审核通过失败');
+      return false;
     },
   });
 };
 
 const rejectPendingUser = (user: User) => {
+  if (user.id === authStore.user?.id || !authStore.hasPermission('auth.change_user')) return;
   Modal.warning({
     title: '驳回注册',
     content: `确认驳回用户“${getUserDisplayName(user)}”吗？驳回后该用户仍可登录，但不会拥有任何后台权限。`,
     okText: '确认驳回',
     cancelText: '取消',
+    hideCancel: false,
     onOk: async () => {
       const response = await rejectUser(user.id);
       if (response.success) {
         Message.success(`已驳回 ${getUserDisplayName(user)}`);
         fetchUserList();
-        fetchApprovalSummary();
-        return;
+          return;
       }
       Message.error(response.error || '驳回失败');
+      return false;
     },
   });
 };
 
 // 删除用户
 const deleteUser = (user: User) => {
+  if (user.id === authStore.user?.id || !authStore.hasPermission('auth.delete_user')) return;
   Modal.warning({
     title: '确认删除',
     content: `确定要删除用户 "${getUserDisplayName(user)}" 吗？此操作不可恢复。`,
     okText: '确定删除',
     cancelText: '取消',
+    hideCancel: false,
     onOk: async () => {
       try {
         const response = await deleteUserService(user.id);
@@ -849,13 +637,14 @@ const deleteUser = (user: User) => {
           Message.success(response.message || '用户删除成功');
           // 刷新用户列表
           fetchUserList();
-          fetchApprovalSummary();
-        } else {
+            } else {
           Message.error(response.error || '删除用户失败');
+          return false;
         }
       } catch (error) {
         console.error('删除用户出错:', error);
         Message.error('删除用户时发生错误');
+        return false;
       }
     }
   });
@@ -863,185 +652,6 @@ const deleteUser = (user: User) => {
 </script>
 
 <style scoped>
-.user-management {
-  background: var(--ui-panel-bg);
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid var(--ui-panel-border);
-  box-shadow: var(--theme-card-shadow);
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.approval-filter-bar {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--ui-toolbar-border);
-  background: var(--ui-toolbar-bg);
-  box-shadow: var(--theme-card-shadow);
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 18px 20px;
-  border-radius: 12px;
-  border: 1px solid var(--ui-toolbar-border);
-  background:
-    var(--theme-surface);
-  box-shadow: var(--theme-card-shadow);
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.form-field-tip {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--color-text-3);
-}
-
-.username-cell {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  gap: 6px;
-}
-
-.username-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.username-log-button {
-  width: 24px;
-  height: 24px;
-  color: var(--color-text-2);
-  background: var(--color-fill-2);
-}
-
-.username-log-button:hover {
-  color: rgb(var(--primary-6));
-  background: rgba(var(--primary-6), 0.12);
-}
-
-/* 操作按钮样式优化 */
-:deep(.arco-table-th.operations-header) {
-  white-space: nowrap;
-}
-
-:deep(.arco-table-td.operations-cell) {
-  padding: 8px 4px;
-}
-
-:deep(.arco-btn-size-mini) {
-  padding: 0 8px;
-  font-size: 12px;
-  height: 24px;
-  line-height: 22px;
-}
-
-/* 确保操作列按钮不溢出 */
-:deep(.arco-space-item) {
-  margin-right: 2px !important;
-}
-
-:deep(.arco-space-item:last-child) {
-  margin-right: 0 !important;
-}
-
-.user-management :deep(.arco-table) {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: var(--theme-card-shadow);
-}
-
-.user-management :deep(.arco-table-container) {
-  border: 1px solid rgba(149, 161, 187, 0.16);
-  border-radius: 12px;
-}
-
-.user-management :deep(.arco-table-th) {
-  background: rgba(248, 250, 252, 0.92);
-  color: var(--theme-text-secondary);
-  font-weight: 600;
-}
-
-.user-management :deep(.arco-table-td) {
-  background: var(--theme-surface);
-}
-
-.user-management :deep(.arco-table-tr:hover .arco-table-td) {
-  background: rgba(var(--theme-accent-rgb), 0.035);
-}
-
-.user-management :deep(.arco-pagination) {
-  margin-top: 16px;
-  padding: 14px 16px 0;
-  border-top: 1px solid rgba(149, 161, 187, 0.12);
-}
-
-.user-management :deep(.arco-card),
-.user-management :deep(.arco-statistic) {
-  border-radius: 12px;
-}
-
-.user-management :deep(.arco-modal-content) {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.user-management :deep(.arco-modal-header) {
-  padding: 18px 24px;
-  border-bottom: 1px solid rgba(149, 161, 187, 0.14);
-  background: var(--theme-surface);
-}
-
-.user-management :deep(.arco-modal-body) {
-  padding: 22px 24px;
-}
-
-.user-management :deep(.arco-tabs-content) {
-  padding-top: 16px;
-}
-
-.user-management :deep(.arco-input-wrapper),
-.user-management :deep(.arco-input-tag),
-.user-management :deep(.arco-select-view),
-.user-management :deep(.arco-picker),
-.user-management :deep(.arco-textarea-wrapper) {
-  border-radius: 10px;
-}
-
-.user-management :deep(.arco-btn) {
-  border-radius: 10px;
-}
-
-@media (max-width: 900px) {
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .search-box :deep(.arco-input-wrapper) {
-    width: 100% !important;
-  }
-}
+.user-management { min-width: 0; }
+.form-field-tip { margin-top: 6px; font-size: 12px; color: var(--color-text-3); }
 </style>

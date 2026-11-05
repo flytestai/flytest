@@ -1,42 +1,23 @@
 <template>
-  <div class="page-shell fc-page">
+  <div class="page-shell fc-page app-elements-page">
     <div v-if="!projectStore.currentProjectId" class="empty-shell fc-empty-state">
       <a-empty description="请先选择项目后再管理 APP 自动化元素" />
     </div>
     <template v-else>
-      <ElementsHeaderBar
-        v-model:search="search"
-        v-model:type-filter="typeFilter"
+      <ElementsReferenceWorkspace
+        :elements="elements"
         :loading="loading"
-        @search="handleSearch"
-        @type-change="handleTypeChange"
+        :load-error="loadError"
+        :project-id="projectStore.currentProjectId"
+        :project-name="projectStore.projectList.find(item=>item.id === projectStore.currentProjectId)?.name || ''"
         @refresh="loadElements"
-        @open-capture="captureVisible = true"
-        @open-create="openCreate"
-      />
-
-      <ElementsTableCard
-        v-model:selected-element-ids="selectedElementIds"
-        v-model:current="pagination.current"
-        v-model:page-size="pagination.pageSize"
-        :loading="loading"
-        :batch-deleting="batchDeleting"
-        :elements="pagedElements"
-        :total="elements.length"
-        :format-date-time="formatDateTime"
-        :get-type-label="getTypeLabel"
-        :get-type-color="getTypeColor"
-        :get-preview-url="getPreviewUrl"
-        :render-pos="renderPos"
-        :render-region="renderRegion"
-        :get-image-category="getImageCategory"
-        @open-detail="openDetail"
-        @duplicate-element="duplicateElement"
-        @open-edit="openEdit"
+        @create="openCreate"
+        @detail="openDetail"
+        @duplicate="duplicateElement"
+        @edit="openEdit"
         @remove="remove"
-        @toggle-active="toggleActive"
-        @remove-selected="removeSelected"
-        @clear-selection="clearSelection"
+        @toggle="toggleActive"
+        @recognize="openRecognition"
       />
 
       <ElementsEditorDialog
@@ -48,7 +29,8 @@
         :uploading="uploading"
         :category-saving="categorySaving"
         :category-deleting="categoryDeleting"
-        @submit="submit"
+        :saving="saving"
+        :submit-element="submit"
         @cancel="closeEditor"
         @file-change="handleFileChange"
         @create-category="createCategory"
@@ -69,57 +51,53 @@
       <AppAutomationCaptureElementModal
         v-model:visible="captureVisible"
         :project-id="projectStore.currentProjectId"
+        :page-name="recognitionPage"
         @success="handleCaptureSuccess"
       />
+      <ElementRecognitionDialog v-model:visible="recognitionVisible" :project-id="projectStore.currentProjectId" :default-page="recognitionPage" @draft="openDraft" @capture="openCapture"/>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import ElementsReferenceWorkspace from './elements/ElementsReferenceWorkspace.vue'
+import ElementRecognitionDialog from './elements/ElementRecognitionDialog.vue'
 import AppAutomationCaptureElementModal from '../components/AppAutomationCaptureElementModal.vue'
 import {
   ElementsDetailDialog,
   ElementsEditorDialog,
-  ElementsHeaderBar,
-  ElementsTableCard,
   useAppAutomationElements,
 } from './elements'
 
 const {
+  loadError,
+  saving,
   projectStore,
   loading,
   visible,
   detailVisible,
   captureVisible,
   uploading,
-  batchDeleting,
   categorySaving,
   categoryDeleting,
-  search,
-  typeFilter,
   elements,
   imageCategories,
   newCategoryName,
   detailRecord,
-  selectedElementIds,
-  pagination,
   form,
   imagePreviewUrl,
-  pagedElements,
   formatDateTime,
   formatConfig,
   getTypeLabel,
-  getTypeColor,
   getPreviewUrl,
-  getImageCategory,
   renderPos,
   renderRegion,
   loadElements,
-  handleSearch,
-  handleTypeChange,
   openCreate,
   openEdit,
   openDetail,
+  openDraft,
   handleFileChange,
   createCategory,
   deleteCurrentCategory,
@@ -128,10 +106,11 @@ const {
   duplicateElement,
   toggleActive,
   remove,
-  clearSelection,
-  removeSelected,
   handleCaptureSuccess,
 } = useAppAutomationElements()
+const recognitionVisible = ref(false), recognitionPage = ref('')
+function openRecognition(pageName: string) { recognitionPage.value = pageName; recognitionVisible.value = true }
+function openCapture(pageName: string) { recognitionPage.value = pageName; captureVisible.value = true }
 </script>
 
 <style scoped>
@@ -177,3 +156,4 @@ const {
   }
 }
 </style>
+<style>.app-automation-shell .app-elements-page{padding:0!important}</style>

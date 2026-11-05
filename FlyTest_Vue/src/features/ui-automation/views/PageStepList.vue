@@ -1,6 +1,7 @@
 <template>
   <div class="page-step-list fc-page">
-    <WorkspacePageHeader title="页面步骤"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="page-steps" :rows="pageStepData" :total="pagination.total" :loading="loading" @edit="editPageStep" @inspect="viewStepDetails">
+    <WorkspacePageHeader local title="页面步骤"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-select
           v-model="filters.page"
@@ -25,13 +26,13 @@
       </div>
       <div class="action-buttons">
         <a-button type="primary" @click="showAddModal">
-          <template #icon><icon-plus /></template>
+      <template #icon><icon-plus /></template>
           新增步骤
         </a-button>
       </div>
     </div></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="pageStepData"
       :pagination="pagination"
@@ -40,6 +41,7 @@
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.name }}</button></template>
       <template #page_name="{ record }">
         <a-tag color="arcoblue">{{ record.page_name }}</a-tag>
       </template>
@@ -73,6 +75,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <!-- 新增/编辑弹窗 -->
     <a-modal class="fc-dialog"
@@ -125,6 +128,8 @@
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -183,12 +188,12 @@ const statusColors: Record<ExecutionStatus, string> = { 0: 'gray', 1: 'blue', 2:
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
   { title: '页面', slotName: 'page_name', width: 120, align: 'center' as const },
-  { title: '步骤名称', dataIndex: 'name', ellipsis: true, tooltip: true, width: 150, align: 'center' as const },
+  { title: '步骤名称', slotName: 'workspace_name', ellipsis: true, tooltip: true, width: 150, align: 'center' as const },
   { title: '状态', slotName: 'status', width: 90, align: 'center' as const },
   { title: '操作数', slotName: 'step_count', width: 80, align: 'center' as const },
   { title: '创建者', dataIndex: 'creator_name', width: 100, align: 'center' as const },
   { title: '创建时间', slotName: 'created_at', width: 160, align: 'center' as const },
-  { title: '操作', slotName: 'operations', width: 220, fixed: 'right' as const, align: 'center' as const },
+  { title: '操作', slotName: 'operations', width: 125, fixed: 'right' as const, align: 'center' as const },
 ]
 
 const formatDate = (dateStr: string) => dateStr ? new Date(dateStr).toLocaleString('zh-CN') : '-'

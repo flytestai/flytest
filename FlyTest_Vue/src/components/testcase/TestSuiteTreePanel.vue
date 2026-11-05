@@ -635,6 +635,7 @@ watch(() => props.initialSuiteId, id => {
 });
 
 defineExpose({
+  createRootSuite: () => handleSuiteAction('addRoot'),
   refreshSuites: fetchSuites,
   getSelectedSuiteId: () => selectedSuiteKey.value,
 });

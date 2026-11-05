@@ -27,6 +27,7 @@
             @keydown.enter.self.prevent="emit('append-base', item)"
             @keydown.space.self.prevent="emit('append-base', item)"
           >
+            <SceneBuilderStepIcon :type="item.type" class="scene-component-icon" />
             <div class="component-copy">
               <span class="component-name">{{ item.name }}</span>
               <span class="component-meta">{{ item.type }}</span>
@@ -49,6 +50,7 @@
             @keydown.enter.self.prevent="emit('append-custom', item)"
             @keydown.space.self.prevent="emit('append-custom', item)"
           >
+            <SceneBuilderStepIcon :type="item.type" class="scene-component-icon" />
             <div class="component-copy">
               <span class="component-name">{{ item.name }}</span>
               <span class="component-meta">{{ item.type }} · {{ item.steps?.length || 0 }} 个子步骤</span>
@@ -69,6 +71,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import SceneBuilderStepIcon from './SceneBuilderStepIcon.vue'
 import type { AppComponent, AppCustomComponent } from '../../types'
 
 interface Props {

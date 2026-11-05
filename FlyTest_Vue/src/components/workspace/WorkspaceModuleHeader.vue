@@ -1,6 +1,6 @@
 <template>
   <div class="fc-module-header">
-    <header class="fc-module-heading">
+    <header v-if="!navigationOnly" class="fc-module-heading">
       <div>
         <h2>{{ pageTitle || title }}</h2>
         <p v-if="description">{{ description }}</p>
@@ -41,6 +41,7 @@ import type { RouteLocationRaw } from "vue-router";
 const props = defineProps<{
   title: string;
   pageTitle?: string;
+  navigationOnly?: boolean;
   description?: string;
   activeKey: string;
   tabs: Array<{ key: string; label: string; to: RouteLocationRaw }>;

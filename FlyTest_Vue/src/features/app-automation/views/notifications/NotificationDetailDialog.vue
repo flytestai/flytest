@@ -2,10 +2,13 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="通知详情"
-    width="900px"
+    :width="Math.min(900,width-24)"
     :footer="false"
   >
     <div v-if="currentLog" class="detail-shell fc-detail-page">
+      <h3 class="notification-detail-title">{{notificationTitle(currentLog)}}</h3>
+      <a-alert v-if="simulatedDelivery(currentLog)" type="warning">当前为模拟投递记录，不代表邮件或机器人消息已实际发送。</a-alert>
+      <a-alert v-if="currentLog.response_info?.retry_status==='not_supported'" type="warning">当前服务不支持真实重发。已保留请求记录及原投递状态，可根据下方错误信息排查。</a-alert>
       <div class="detail-grid">
         <div class="detail-card">
           <span class="detail-label">任务名称</span>
@@ -16,12 +19,12 @@
           <strong>{{ getTaskTypeLabel(currentLog.task_type) }}</strong>
         </div>
         <div class="detail-card">
-          <span class="detail-label">通知类型</span>
-          <strong>{{ getNotificationTypeLabel(currentLog.actual_notification_type || currentLog.notification_type) }}</strong>
+          <span class="detail-label">通知类型 / 发送渠道</span>
+          <strong>{{ eventLabel(notificationEvent(currentLog)) }} / {{ channelLabels[notificationChannel(currentLog)] }}</strong>
         </div>
         <div class="detail-card">
           <span class="detail-label">发送状态</span>
-          <strong>{{ currentLog.status }}</strong>
+          <a-tag :color="deliveryMeta(currentLog).color">{{ deliveryMeta(currentLog).label }}</a-tag>
         </div>
       </div>
 
@@ -36,12 +39,13 @@
         </div>
         <a-space wrap>
           <a-button
-            v-if="currentLog.status !== 'success'"
+            v-if="currentLog.status === 'failed' && !simulatedDelivery(currentLog)"
+            :disabled="currentLog.response_info?.retry_status === 'not_supported'"
             status="warning"
             :loading="retrying"
             @click="emit('retry', currentLog)"
           >
-            重试通知
+            请求重试
           </a-button>
           <a-button v-if="currentLog.task_id" @click="emit('open-task-detail', currentLog.task_id)">
             查看任务
@@ -86,6 +90,10 @@
 </template>
 
 <script setup lang="ts">
+import {useWindowSize} from '@vueuse/core'
+import {notificationTitle,notificationEvent,eventLabel,notificationChannel,channelLabels,deliveryMeta,simulatedDelivery} from './notificationPresentation'
+const {width}=useWindowSize()
+
 import type { NotificationDetailDialogEmits } from './notificationEventModels'
 import type { NotificationDetailDialogProps } from './notificationViewModels'
 
@@ -97,6 +105,7 @@ const emit = defineEmits<NotificationDetailDialogEmits>()
 </script>
 
 <style scoped>
+.notification-detail-title {margin:0;font-size:18px;overflow-wrap:anywhere}
 .detail-shell {
   display: flex;
   flex-direction: column;

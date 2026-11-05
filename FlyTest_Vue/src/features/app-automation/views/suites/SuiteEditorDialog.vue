@@ -2,13 +2,15 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     :title="form.id ? '编辑测试套件' : '新建测试套件'"
-    width="860px"
-    @ok="emit('save')"
+    width="min(860px, calc(100vw - 24px))"
+    :on-before-ok="save" :ok-loading="saving"
   >
     <a-form class="fc-form" :model="form" layout="vertical">
       <a-form-item field="name" label="套件名称">
-        <a-input v-model="form.name" />
+        <a-input v-model="form.name" placeholder="请输入套件名称" />
       </a-form-item>
+      <a-row :gutter="12"><a-col :xs="24" :md="12"><a-form-item label="业务分组"><a-input v-model="form.group" :disabled="!metadataAvailable" placeholder="例如：回归测试" :max-length="80" /></a-form-item></a-col><a-col :xs="24" :md="12"><a-form-item label="执行策略"><a-select v-model="form.execution_strategy"><a-option value="sequential">顺序执行</a-option><a-option value="parallel" :disabled="!parallelAvailable">并行执行（多设备）</a-option></a-select></a-form-item></a-col></a-row>
+      <a-alert v-if="!metadataAvailable">服务尚未加载分组与并行执行接口，当前可维护套件并顺序执行。</a-alert>
       <a-form-item field="description" label="描述">
         <a-textarea v-model="form.description" :auto-size="{ minRows: 3, maxRows: 5 }" />
       </a-form-item>

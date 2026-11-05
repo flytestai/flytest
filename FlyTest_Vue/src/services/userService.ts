@@ -14,6 +14,7 @@ export interface User {
   real_name?: string;
   phone_number?: string;
   avatar_url?: string;
+  last_login?: string | null;
   is_staff: boolean;
   is_active: boolean;
   groups?: string[];

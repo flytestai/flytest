@@ -1,26 +1,32 @@
-﻿<template>
+<template>
   <div class="requirement-management fc-page">
-    <WorkspacePageHeader>
-        <template #title>需求管理</template>
-        <template #description>上传和评审需求文档，跟踪分析结果，为测试设计提供依据。</template>
-        <template #meta><div class="fc-inline-metrics">
-        <div class="fc-inline-metric">
-          <span class="fc-inline-metric-value">{{ pagination.total || documentList.length }}</span>
-          <span class="fc-inline-metric-label">需求文档</span>
-        </div>
-        <div class="fc-inline-metric">
-          <span class="fc-inline-metric-value">{{ currentProjectId || '--' }}</span>
-          <span class="fc-inline-metric-label">项目编号</span>
-        </div>
-      </div></template>
-      </WorkspacePageHeader>
+    <header class="requirement-hero">
+      <svg class="requirement-hero__waves" viewBox="0 0 1400 180" preserveAspectRatio="none" aria-hidden="true"><path d="M400 180C750 180 840 -90 1130 50S1400 70 1400 70V180Z" fill="currentColor" opacity=".09"/><path d="M550 180C900 180 1000 10 1220 35S1400 -30 1400 -30V180Z" fill="currentColor" opacity=".05"/></svg>
+      <div class="requirement-hero__copy"><span class="requirement-hero__icon" aria-hidden="true"><icon-file /></span><div><h2>需求管理</h2><p>上传、评审与分析需求文档，为测试设计与 AI 协作提供依据</p></div></div>
+      <div class="requirement-hero__actions"><a-button type="primary" :disabled="!currentProjectId" @click="showUploadModal"><template #icon><icon-upload /></template>上传需求文档</a-button><a-button :disabled="!currentProjectId" @click="openReviewPicker"><template #icon><icon-plus /></template>新建评审</a-button></div>
+    </header>
 
-    <div class="filter-section fc-toolbar">
+    <section class="requirement-overview" aria-label="项目需求概览" :aria-busy="overviewLoading">
+      <article v-for="metric in overviewMetrics" :key="metric.key" class="requirement-metric" :class="'requirement-metric--' + metric.tone" :title="metric.description">
+        <span class="requirement-metric__icon" aria-hidden="true"><component :is="metric.icon" /></span><div><h3>{{ metric.label }}</h3><strong>{{ overview[metric.key] === null ? '—' : overview[metric.key]?.toLocaleString() }}</strong></div>
+      </article>
+      <button class="requirement-ai" type="button" @click="router.push('/langgraph-chat')"><span><span class="requirement-ai__title"><icon-robot /> AI 助手</span><span class="requirement-ai__description">前往 AI 对话，辅助梳理需求与测试思路</span></span><span class="requirement-ai__arrow" aria-hidden="true"><icon-right /></span></button>
+    </section>
+    <a-alert v-if="overviewError" type="warning" class="requirement-overview-error">{{ overviewError }}<template #action><a-button type="text" size="small" @click="loadOverview">重新加载</a-button></template></a-alert>
+
+    <div class="requirement-tabs" role="tablist" aria-label="需求管理视图" @keydown="handleTabKeys">
+      <button v-for="tab in tabs" :id="'requirement-tab-' + tab.key" :key="tab.key" type="button" role="tab" :aria-selected="activeTab === tab.key" aria-controls="requirement-panel" :tabindex="activeTab === tab.key ? 0 : -1" @click="selectTab(tab.key)"><component :is="tab.icon" aria-hidden="true" />{{ tab.label }}</button>
+    </div>
+
+    <section id="requirement-panel" role="tabpanel" :aria-labelledby="'requirement-tab-' + activeTab" class="requirement-body">
+
+    <div class="requirement-filters">
       <div class="filter-row fc-filter-row">
         <a-input-search
           v-model="searchKeyword"
           class="filter-search"
           placeholder="搜索文档标题或描述"
+          :input-attrs="{ 'aria-label': '搜索需求文档' }"
           @search="handleSearch"
           @clear="handleSearch"
           allow-clear
@@ -29,6 +35,8 @@
           v-model="statusFilter"
           class="filter-select"
           placeholder="文档状态"
+          aria-label="文档状态"
+          :disabled="activeTab === 'reports'"
           @change="handleSearch"
           allow-clear
         >
@@ -46,25 +54,26 @@
           v-model="typeFilter"
           class="filter-select"
           placeholder="文档类型"
+          aria-label="文档类型"
           @change="handleSearch"
           allow-clear
         >
           <a-option value="">全部类型</a-option>
           <a-option value="pdf">PDF</a-option>
           <a-option value="docx">Word</a-option>
-          <a-option value="pptx">PPT</a-option>
+          <a-option value="doc">Word (.doc)</a-option>
           <a-option value="md">Markdown</a-option>
           <a-option value="txt">文本</a-option>
-          <a-option value="html">HTML</a-option>
         </a-select>
-        <a-button type="primary" class="filter-upload-button" @click="showUploadModal">
-          <template #icon><icon-plus /></template>
-          上传需求文档
-        </a-button>
+        <a-select v-model="uploaderFilter" class="filter-select" placeholder="上传者" aria-label="上传者" allow-clear @change="handleSearch"><a-option v-for="member in uploaderOptions" :key="member.value" :value="member.value">{{ member.label }}</a-option></a-select>
+        <a-button class="filter-reset" @click="resetFilters"><template #icon><icon-refresh /></template>重置</a-button>
       </div>
     </div>
 
-    <div class="content-section">
+    <div class="requirement-list">
+      <div v-if="listError" class="requirement-list-error" role="alert"><icon-file /><h3>暂时无法加载需求文档</h3><p>{{ listError }}</p><a-button @click="loadDocuments()">重新加载</a-button></div>
+      <div v-else-if="!currentProjectId && !projectStore.loading" class="requirement-empty"><icon-file class="requirement-empty__simple-icon" /><h3>先选择一个项目</h3><p>在顶部项目选择器中选择项目，开始管理需求文档与评审。</p></div>
+      <template v-else>
       <a-table class="fc-table"
         :columns="columns"
         :data="documentList"
@@ -75,6 +84,11 @@
         @page-size-change="handlePageSizeChange"
         row-key="id"
       >
+        <template #empty><div class="requirement-empty">
+          <svg class="requirement-empty__illustration" viewBox="0 0 240 132" aria-hidden="true"><ellipse cx="120" cy="119" rx="100" ry="9" fill="currentColor" opacity=".05"/><path d="M22 111C9 91 33 74 50 84 52 55 91 46 108 73 126 52 155 64 157 86 180 61 215 76 218 111Z" fill="currentColor" opacity=".07"/><path d="M63 39Q63 31 71 31H112L123 44H172Q180 44 179 53L172 108H60Z" fill="currentColor" opacity=".3"/><rect x="79" y="43" width="87" height="61" rx="6" fill="var(--theme-surface)"/><path d="M91 56h62M91 66h54M91 76h35" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".25"/><path d="M52 66Q50 59 59 59H101L113 70H181Q188 70 185 78L174 116H63Z" fill="currentColor" opacity=".55"/><circle cx="153" cy="93" r="16" fill="var(--theme-accent)"/><path d="M153 101V85m-6 6 6-6 6 6" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M190 27v-9m13 17 6-7m-5 21 8-3" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".8"/></svg>
+          <h3>{{ emptyState.title }}</h3><p>{{ emptyState.description }}</p><a-button :type="hasFilters ? 'outline' : 'primary'" :disabled="!currentProjectId" @click="handleEmptyAction"><template #icon><icon-refresh v-if="hasFilters" /><icon-upload v-else-if="activeTab === 'documents'" /><icon-plus v-else /></template>{{ emptyState.action }}</a-button>
+        </div></template>
+        <template #title="{ record }"><button class="requirement-document-title" type="button" @click="viewDocument(record)"><span class="requirement-document-icon" aria-hidden="true"><icon-file /></span><span><strong>{{ record.title }}</strong><small>{{ record.modules_count || 0 }} 个模块 · {{ (record.word_count || 0).toLocaleString() }} 字</small></span></button></template>
         <template #status="{ record }">
           <a-tag :color="getStatusColor(record.status)">
             {{ getStatusText(record.status) }}
@@ -86,11 +100,7 @@
         </template>
 
         <template #stats="{ record }">
-          <div class="stats-info">
-            <span class="stat-item">{{ record.word_count || 0 }} 字</span>
-            <span class="stat-item">{{ record.page_count || 0 }} 页</span>
-            <span class="stat-item">{{ record.modules_count || 0 }} 模块</span>
-          </div>
+          <span class="requirement-review-state" :class="'requirement-review-state--' + record.status"><span aria-hidden="true"></span>{{ getReviewStage(record.status) }}</span>
         </template>
 
         <template #actions="{ record }">
@@ -158,13 +168,19 @@
           </div>
         </template>
       </a-table>
+      </template>
     </div>
+    </section>
+
+    <a-modal v-model:visible="reviewPickerVisible" class="fc-dialog" title="新建评审" :width="520" :ok-button-props="{ disabled: !selectedReviewId || pickerLoading }" @ok="confirmReviewSelection">
+      <a-spin :loading="pickerLoading" style="width:100%"><a-alert v-if="pickerError" type="error">{{ pickerError }}<template #action><a-button type="text" @click="openReviewPicker">重试</a-button></template></a-alert><template v-else-if="reviewCandidates.length"><p class="requirement-picker-hint">选择已完成模块调整的文档，继续配置评审参数。</p><a-select v-model="selectedReviewId" aria-label="选择待评审文档" placeholder="请选择待评审文档" allow-search><a-option v-for="document in reviewCandidates" :key="document.id" :value="document.id">{{ document.title }}</a-option></a-select></template><div v-else class="requirement-picker-empty"><icon-file /><h3>暂无待评审文档</h3><p>上传文档后，先在详情中完成模块拆分和确认，再发起评审。</p><a-button type="primary" @click="reviewPickerVisible = false; showUploadModal()">上传需求文档</a-button></div></a-spin>
+    </a-modal>
 
     <a-modal class="fc-dialog"
       v-model:visible="uploadModalVisible"
       title="上传需求文档"
       width="600px"
-      @ok="handleUpload"
+      @before-ok="handleUpload"
       @cancel="resetUploadForm"
       :confirm-loading="uploadLoading"
     >
@@ -272,11 +288,11 @@
 </template>
 
 <script setup lang="ts">
-import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
-import { IconPlus, IconUpload, IconFile, IconDelete } from '@arco-design/web-vue/es/icon';
+import { IconPlus, IconUpload, IconFile, IconDelete, IconRefresh, IconRobot, IconRight, IconCheckCircle, IconSchedule, IconBarChart } from '@arco-design/web-vue/es/icon';
+import { getProjectMembers, type ProjectMember } from '@/services/projectService';
 import { useProjectStore } from '@/store/projectStore';
 import { RequirementDocumentService } from '../services/requirementService';
 import type {
@@ -300,6 +316,77 @@ const documentList = ref<RequirementDocument[]>([]);
 const searchKeyword = ref('');
 const statusFilter = ref<DocumentStatus | ''>('');
 const typeFilter = ref<DocumentType | ''>('');
+const uploaderFilter = ref('');
+const projectMembers = ref<ProjectMember[]>([]);
+const listError = ref('');
+let listRequestId = 0;
+type RequirementTab = 'documents' | 'reviews' | 'reports';
+const activeTab = ref<RequirementTab>('documents');
+const tabs = [
+  { key: 'documents' as const, label: '需求文档', icon: IconFile },
+  { key: 'reviews' as const, label: '评审记录', icon: IconSchedule },
+  { key: 'reports' as const, label: '分析报告', icon: IconBarChart },
+];
+const overviewMetrics = [
+  { key: 'documents' as const, label: '需求文档', icon: IconFile, tone: 'teal', description: '当前项目的需求文档总量' },
+  { key: 'reviews' as const, label: '评审任务', icon: IconSchedule, tone: 'cyan', description: '当前项目已发起过评审的文档数量' },
+  { key: 'pending' as const, label: '待分析', icon: IconBarChart, tone: 'amber', description: '已上传，尚未开始模块拆分的文档' },
+  { key: 'completed' as const, label: '已完成评审', icon: IconCheckCircle, tone: 'green', description: '当前项目评审完成、可查看报告的文档' },
+];
+const overview = reactive<Record<'documents' | 'reviews' | 'pending' | 'completed', number | null>>({ documents: null, reviews: null, pending: null, completed: null });
+const overviewLoading = ref(false), overviewError = ref('');
+let overviewRequestId = 0;
+const hasFilters = computed(() => Boolean(searchKeyword.value || statusFilter.value || typeFilter.value || uploaderFilter.value));
+const uploaderOptions = computed(() => {
+  const options = new Map<string, string>();
+  projectMembers.value.forEach(member => options.set(String(member.user), member.user_detail?.username || String(member.user)));
+  documentList.value.forEach(document => options.set(String(document.uploader), document.uploader_name));
+  return [...options].map(([value, label]) => ({ value, label }));
+});
+const emptyState = computed(() => {
+  if (hasFilters.value) return { title: '没有找到匹配的文档', description: '尝试调整搜索条件，或重置筛选查看全部内容。', action: '重置筛选' };
+  if (activeTab.value === 'reviews') return { title: '暂无评审记录', description: '选择已完成模块拆分的需求文档，发起第一次评审。', action: '新建评审' };
+  if (activeTab.value === 'reports') return { title: '暂无分析报告', description: '需求评审完成后，可在这里查看分析结果与改进建议。', action: '新建评审' };
+  return { title: '暂无需求文档', description: '上传 PRD、原型说明或需求文档后，可在此发起评审、追踪分析结果并沉淀测试依据。', action: '立即上传' };
+});
+function resetFilters() { searchKeyword.value = ''; statusFilter.value = ''; typeFilter.value = ''; uploaderFilter.value = ''; handleSearch(); }
+function selectTab(tab: RequirementTab) { if (activeTab.value === tab) return; activeTab.value = tab; statusFilter.value = ''; handleSearch(); }
+async function handleTabKeys(event: KeyboardEvent) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault(); const index = tabs.findIndex(tab => tab.key === activeTab.value);
+  const target = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  selectTab(tabs[target].key); await nextTick(); document.getElementById('requirement-tab-' + activeTab.value)?.focus();
+}
+function handleEmptyAction() { if (hasFilters.value) resetFilters(); else if (activeTab.value === 'documents') showUploadModal(); else void openReviewPicker(); }
+function getReviewStage(status: DocumentStatus) {
+  return ({ uploaded: '等待分析', processing: '解析文档中', module_split: '拆分模块中', user_reviewing: '待确认模块', ready_for_review: '等待评审', reviewing: '评审进行中', review_completed: '评审已完成', failed: '处理失败' })[status] || '等待处理';
+}
+async function loadOverview() {
+  const project = currentProjectId.value; if (!project) return;
+  const requestId = ++overviewRequestId; overviewLoading.value = true; overviewError.value = '';
+  const params: Partial<DocumentListParams>[] = [{}, { has_review: true }, { status: 'uploaded' }, { status: 'review_completed' }];
+  const responses = await Promise.allSettled(params.map(filter => RequirementDocumentService.getDocumentList({ project: String(project), page: 1, page_size: 1, ...filter })));
+  if (requestId !== overviewRequestId || currentProjectId.value !== project) return;
+  responses.forEach((result, index) => {
+    const data = result.status === 'fulfilled' && result.value.status === 'success' ? result.value.data : null;
+    overview[overviewMetrics[index].key] = data ? (Array.isArray(data) ? data.length : data.count) : null;
+  });
+  if (responses.some(result => result.status === 'rejected' || result.value.status !== 'success')) overviewError.value = '部分项目统计暂不可用，文档列表仍可继续操作。';
+  overviewLoading.value = false;
+}
+const reviewPickerVisible = ref(false), pickerLoading = ref(false), pickerError = ref(''), selectedReviewId = ref('');
+const reviewCandidates = ref<RequirementDocument[]>([]);
+async function openReviewPicker() {
+  if (!currentProjectId.value) return;
+  const project = currentProjectId.value; reviewPickerVisible.value = true; pickerLoading.value = true; pickerError.value = ''; selectedReviewId.value = ''; reviewCandidates.value = [];
+  try {
+    const response = await RequirementDocumentService.getDocumentList({ project: String(project), status: 'ready_for_review', page_size: 100 });
+    if (currentProjectId.value !== project) return;
+    if (response.status !== 'success' || !response.data) throw new Error(response.message || '加载待评审文档失败');
+    reviewCandidates.value = Array.isArray(response.data) ? response.data : response.data.results;
+  } catch { pickerError.value = '待评审文档加载失败，请重试。'; } finally { pickerLoading.value = false; }
+}
+function confirmReviewSelection() { const document = reviewCandidates.value.find(item => item.id === selectedReviewId.value); if (!document) return; reviewPickerVisible.value = false; startReview(document); }
 
 const pagination = reactive({
   current: 1,
@@ -377,7 +464,8 @@ const columns = [
   {
     title: '文档标题',
     dataIndex: 'title',
-    width: 200,
+    slotName: 'title',
+    width: 270,
     ellipsis: true,
     tooltip: true
   },
@@ -391,12 +479,12 @@ const columns = [
     title: '类型',
     dataIndex: 'document_type',
     slotName: 'document_type',
-    width: 80
+    width: 110
   },
   {
-    title: '统计',
+    title: '评审进度',
     slotName: 'stats',
-    width: 180
+    width: 150
   },
   {
     title: '上传者',
@@ -409,13 +497,14 @@ const columns = [
     dataIndex: 'uploaded_at',
     width: 170,
     render: ({ record }: { record: RequirementDocument }) => {
-      return new Date(record.uploaded_at).toLocaleString();
+      const date = new Date(record.uploaded_at);
+      return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
     }
   },
   {
     title: '操作',
     slotName: 'actions',
-    width: 260,
+    width: 240,
     fixed: 'right',
     align: 'center'
   }
@@ -613,6 +702,8 @@ const getTypeText = (type: DocumentType) => {
 };
 
 const loadDocuments = async ({ silent = false }: { silent?: boolean } = {}) => {
+  const requestId = ++listRequestId;
+  const projectId = currentProjectId.value;
   if (!currentProjectId.value) {
     stopReviewPolling();
     resetTrackedReviewingDocuments();
@@ -629,6 +720,7 @@ const loadDocuments = async ({ silent = false }: { silent?: boolean } = {}) => {
   if (!silent) {
     loading.value = true;
   }
+  listError.value = '';
   try {
     const params: DocumentListParams = {
       project: String(currentProjectId.value),
@@ -645,10 +737,13 @@ const loadDocuments = async ({ silent = false }: { silent?: boolean } = {}) => {
     if (typeFilter.value) {
       params.document_type = typeFilter.value;
     }
+    if (uploaderFilter.value) params.uploader = uploaderFilter.value;
+    if (activeTab.value === 'reviews') params.has_review = true;
+    if (activeTab.value === 'reports') params.status = 'review_completed';
 
     const response = await RequirementDocumentService.getDocumentList(params);
 
-    console.log('API响应:', response);
+    if (requestId !== listRequestId || currentProjectId.value !== projectId) return false;
 
     if (response.status === 'success') {
       if (Array.isArray(response.data)) {
@@ -662,6 +757,7 @@ const loadDocuments = async ({ silent = false }: { silent?: boolean } = {}) => {
         pagination.total = 0;
       }
       notifyReviewStatusChanges(previousStatuses, documentList.value);
+      if (documentList.value.some(document => previousStatuses.has(document.id) && previousStatuses.get(document.id) !== document.status)) void loadOverview();
       syncTrackedReviewingDocuments(documentList.value);
       if (hasReviewingDocuments(documentList.value)) {
         scheduleReviewPolling();
@@ -671,16 +767,18 @@ const loadDocuments = async ({ silent = false }: { silent?: boolean } = {}) => {
       return true;
     } else {
       if (!silent) {
+      listError.value = response.message || '加载文档列表失败，请稍后重试。';
       Message.error(response.message || '加载文档列表失败');
       }
     }
   } catch (error) {
-    if (!silent) {
+    if (!silent && requestId === listRequestId && currentProjectId.value === projectId) {
+    listError.value = '加载文档列表失败，请检查网络后重试。';
     console.error('加载文档列表失败:', error);
     Message.error('加载文档列表失败');
     }
   } finally {
-    if (!silent) {
+    if (requestId === listRequestId) {
       loading.value = false;
     }
   }
@@ -748,47 +846,53 @@ const handleUploadTypeChange = () => {
   }
 };
 
-const handleUpload = async () => {
+const handleUpload = async (done: (closed: boolean) => void) => {
   try {
+    const errors = await uploadFormRef.value?.validate();
+    if (errors) { done(false); return; }
     if (!uploadForm.title.trim()) {
       Message.error('请输入文档标题');
+      done(false);
       return;
     }
 
     if (uploadForm.uploadType === 'file' && !uploadForm.file) {
       Message.error('请选择文件');
+      done(false);
       return;
     }
 
     if (uploadForm.uploadType === 'content' && (!uploadForm.content || !uploadForm.content.trim())) {
       Message.error('请输入文档内容');
+      done(false);
       return;
     }
 
     if (!uploadForm.project) {
       Message.error('请先选择项目');
+      done(false);
       return;
     }
 
     uploadLoading.value = true;
 
-    console.log('涓婁紶鏁版嵁:', uploadForm);
-
     const response = await RequirementDocumentService.uploadDocument(uploadForm);
-
-    console.log('涓婁紶鍝嶅簲:', response);
 
     if (response.status === 'success') {
       Message.success('文档上传成功');
+      void loadOverview();
       uploadModalVisible.value = false;
+      done(true);
       resetUploadForm();
       await loadDocuments();
     } else {
       Message.error(response.message || '文档上传失败');
+      done(false);
     }
   } catch (error) {
     console.error('文档上传失败:', error);
     Message.error('文档上传失败');
+    done(false);
   } finally {
     uploadLoading.value = false;
   }
@@ -868,6 +972,7 @@ const confirmReview = async () => {
     if (response.status === 'success') {
       const actionText = reviewAction.value === 'restart' ? '重新评审' : '需求评审';
       Message.success(`${actionText}已启动（并发数：${reviewConfig.value.max_workers}）`);
+      void loadOverview();
       markDocumentAsReviewing(documentId);
       reviewPollAttempts = 0;
       scheduleReviewPolling();
@@ -899,6 +1004,7 @@ const deleteDocument = async (document: RequirementDocument) => {
 
     if (response.status === 'success') {
       Message.success('文档删除成功');
+      void loadOverview();
       loadDocuments();
     } else {
       Message.error(response.message || '文档删除失败');
@@ -914,9 +1020,6 @@ const deleteDocument = async (document: RequirementDocument) => {
 onMounted(() => {
   window.addEventListener('focus', handleWindowFocus);
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  if (currentProjectId.value) {
-    void loadDocuments();
-  }
 });
 
 onUnmounted(() => {
@@ -926,315 +1029,19 @@ onUnmounted(() => {
   resetTrackedReviewingDocuments();
 });
 
-projectStore.$subscribe((_mutation, state) => {
-  const projectId = state.currentProject?.id;
-  if (projectId && String(projectId) !== uploadForm.project) {
-    uploadForm.project = String(projectId);
-    stopReviewPolling();
-    resetTrackedReviewingDocuments();
-    loadDocuments();
-  }
-});
+watch(currentProjectId, async projectId => {
+  ++listRequestId; ++overviewRequestId; loading.value = false; overviewLoading.value = false;
+  stopReviewPolling(); resetTrackedReviewingDocuments(); documentList.value = []; projectMembers.value = [];
+  pagination.current = 1; pagination.total = 0; listError.value = ''; overviewError.value = '';
+  searchKeyword.value = ''; statusFilter.value = ''; typeFilter.value = ''; uploaderFilter.value = '';
+  reviewPickerVisible.value = false; reviewConfigVisible.value = false; uploadModalVisible.value = false;
+  overviewMetrics.forEach(metric => overview[metric.key] = null);
+  uploadForm.project = projectId ? String(projectId) : '';
+  if (!projectId) return;
+  void loadDocuments(); void loadOverview();
+  const response = await getProjectMembers(projectId);
+  if (currentProjectId.value === projectId && response.success) projectMembers.value = response.data || [];
+}, { immediate: true });
 </script>
 
-<style scoped>
-.requirement-management {
-  padding: 24px;
-  background: transparent; /* 浣跨敤涓诲竷灞€鐨勮儗鏅?*/
-}
-
-.workspace-hero--requirement-command {
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: 12px;
-  border: 1px solid var(--theme-card-border);
-  background:
-    var(--theme-surface);
-  box-shadow: var(--theme-card-shadow);
-  backdrop-filter: blur(16px);
-}
-
-.workspace-hero--requirement-command::before {
-  background-image:
-    none;
-  background-size: 30px 30px;
-  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.08));
-}
-
-.workspace-hero--requirement-command::after {
-  width: 160px;
-  height: 160px;
-  right: -44px;
-  top: -56px;
-  background: none;
-  filter: blur(10px);
-}
-
-.workspace-hero--requirement-command .workspace-hero-copy {
-  gap: 8px;
-}
-
-.workspace-hero--requirement-command .workspace-hero-eyebrow {
-  padding: 5px 10px;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: var(--theme-accent);
-  background: rgba(var(--theme-accent-rgb), 0.08);
-  border-color: rgba(var(--theme-accent-rgb), 0.14);
-}
-
-.workspace-hero--requirement-command .workspace-hero-title {
-  font-size: clamp(24px, 2.5vw, 30px);
-  line-height: 1.08;
-  color: var(--theme-text);
-}
-
-.workspace-hero--requirement-command .workspace-hero-description {
-  max-width: 620px;
-  font-size: 13px;
-  line-height: 1.58;
-  color: var(--theme-text-secondary);
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.workspace-hero--requirement-command .workspace-chip-row {
-  gap: 8px;
-}
-
-.workspace-hero--requirement-command .workspace-chip {
-  padding: 6px 10px;
-  border-color: rgba(var(--theme-accent-rgb), 0.12);
-  background: rgba(var(--theme-accent-rgb), 0.08);
-  color: var(--theme-accent);
-  font-size: 11px;
-  backdrop-filter: blur(10px);
-}
-
-.workspace-hero--requirement-command .workspace-hero-stats {
-  grid-template-columns: repeat(2, minmax(108px, 128px));
-  gap: 10px;
-}
-
-.workspace-hero--requirement-command .workspace-stat-card {
-  min-height: 92px;
-  gap: 6px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border-color: rgba(var(--theme-accent-rgb), 0.12);
-  background:
-    var(--theme-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(14px);
-}
-
-.workspace-hero--requirement-command .workspace-stat-value {
-  font-size: clamp(20px, 1.8vw, 28px);
-  color: var(--theme-text);
-}
-
-.workspace-hero--requirement-command .workspace-stat-label {
-  font-size: 11px;
-  color: var(--theme-text-tertiary);
-}
-
-.workspace-hero--requirement-command .workspace-hero-orb {
-  width: 118px;
-  height: 118px;
-  right: 8px;
-  bottom: -18px;
-  opacity: 0.58;
-  background:
-    var(--theme-surface);
-}
-
-.filter-section {
-  margin-bottom: 16px;
-  padding: 16px 24px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: var(--theme-card-shadow);
-}
-
-.filter-row {
-  display: grid;
-  grid-template-columns: minmax(240px, 280px) 128px 128px 150px;
-  align-items: center;
-  justify-content: start;
-  gap: 10px;
-}
-
-.filter-search,
-.filter-select,
-.filter-upload-button {
-  min-width: 0;
-}
-
-.filter-search {
-  width: 100%;
-}
-
-.filter-select {
-  width: 128px;
-}
-
-.filter-upload-button {
-  width: 150px;
-  justify-content: center;
-  padding-inline: 14px;
-  white-space: nowrap;
-}
-
-.content-section {
-  background: white;
-  border-radius: 8px;
-  box-shadow: var(--theme-card-shadow);
-  overflow: hidden;
-}
-
-.stats-info {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.stat-item {
-  font-size: 12px;
-  color: var(--theme-text-tertiary);
-  white-space: nowrap;
-}
-
-.upload-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  border: 2px dashed var(--theme-border);
-  border-radius: 6px;
-  background: var(--theme-surface-soft);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.upload-area:hover {
-  border-color: var(--theme-accent);
-  background: #f0f8ff;
-}
-
-.upload-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--theme-text-tertiary);
-}
-
-.upload-file-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  margin-top: 8px;
-  background: var(--theme-surface-soft);
-  border-radius: 4px;
-  border: 1px solid var(--theme-border);
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-
-.file-name {
-  font-size: 14px;
-  color: var(--theme-text);
-  font-weight: 500;
-}
-
-.file-size {
-  font-size: 12px;
-  color: var(--theme-text-tertiary);
-}
-
-.actions-wrapper {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-}
-
-.requirement-management {
-  gap: 16px;
-}
-
-.filter-section {
-  position: relative;
-  overflow: hidden;
-}
-
-.filter-section::before,
-.content-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    none;
-  pointer-events: none;
-}
-
-.filter-row,
-.content-section > * {
-  position: relative;
-  z-index: 1;
-}
-
-.filter-section {
-  padding: 18px 22px;
-  border-radius: 12px;
-}
-
-.filter-search :deep(.arco-input-wrapper),
-.filter-select :deep(.arco-select-view),
-.filter-upload-button {
-  height: 36px;
-  border-radius: 12px;
-}
-
-.filter-search :deep(.arco-input-wrapper),
-.filter-select :deep(.arco-select-view) {
-  font-size: 13px;
-}
-
-.filter-upload-button {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.content-section {
-  border-radius: 12px;
-}
-
-@media (max-width: 768px) {
-  .workspace-hero--requirement-command {
-    padding: 14px;
-    border-radius: 12px;
-  }
-
-  .workspace-hero--requirement-command .workspace-hero-title {
-    font-size: 22px;
-  }
-
-  .filter-row {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
-
-
-
-
-
-
+<style scoped src="./requirement-management.css"></style>

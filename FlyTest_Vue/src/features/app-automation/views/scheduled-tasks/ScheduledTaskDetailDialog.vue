@@ -2,7 +2,7 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="任务详情"
-    width="980px"
+    :width="Math.min(980,width-24)"
     :footer="false"
   >
     <div v-if="detailLoading" class="modal-state">正在加载任务详情...</div>
@@ -112,6 +112,9 @@
 </template>
 
 <script setup lang="ts">
+import {useWindowSize} from '@vueuse/core'
+const {width}=useWindowSize()
+
 import type { ScheduledTaskDetailDialogEmits } from './scheduledTaskEventModels'
 import type { ScheduledTaskDetailDialogProps } from './scheduledTaskViewModels'
 

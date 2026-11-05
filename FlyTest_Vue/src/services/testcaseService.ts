@@ -73,6 +73,7 @@ export interface TestCase {
   screenshots?: TestCaseScreenshot[]; // 新的多截图字段
   review_status?: ReviewStatus; // 审核状态
   creator: number;
+  assignee_detail?: { id: number; username: string; first_name?: string; last_name?: string; real_name?: string } | null;
   creator_detail: {
     id: number;
     username: string;
@@ -116,6 +117,7 @@ export interface UpdateTestCaseRequest {
 
 // 分页参数接口
 export interface PaginationParams {
+  execution_status?: ExecutionStatus;
   page: number;
   pageSize: number;
   search?: string;
@@ -307,6 +309,7 @@ export const getTestCaseList = async (projectId: number, params?: PaginationPara
         test_type_in: params.test_type_in?.join(','),
         assignee_id: params.assignee_id,
         assignee_id_in: params.assignee_id_in?.join(','),
+        execution_status: params.execution_status,
       }
         : undefined,
     });

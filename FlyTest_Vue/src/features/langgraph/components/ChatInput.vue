@@ -38,10 +38,12 @@
       <div class="textarea-wrapper">
         <a-textarea
           v-model="inputMessage"
+          ref="textareaRef"
+          :textarea-attrs="{ 'aria-label': '对话消息' }"
           :placeholder="supportsVision ? '输入消息、拖拽或粘贴图片... (Shift+Enter换行，Enter发送)' : '请输入你的消息... (Shift+Enter换行，Enter发送)'"
           :disabled="isLoading"
           class="chat-input"
-          :auto-size="{ minRows: 1, maxRows: 6 }"
+          :auto-size="{ minRows: 2, maxRows: 6 }"
           @keydown="handleKeyDown"
           @paste="handlePaste"
         />
@@ -53,7 +55,7 @@
         </div>
       </div>
 
-      <!-- Token 使用率指示器 -->
+      <div class="conversation-composer-footer"><div class="conversation-composer-tools"><a-tooltip :content="supportsVision ? '支持选择、粘贴或拖拽图片' : '当前模型尚未启用图片输入'"><a-button type="text" :disabled="!supportsVision || isLoading" @click="fileInputRef?.click()"><template #icon><icon-attachment /></template>添加图片</a-button></a-tooltip><input ref="fileInputRef" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="conversation-file-input" aria-label="选择图片附件" @change="handleImageSelection" /><a-button type="text" @click="$emit('tool-settings')"><template #icon><icon-apps /></template>工具设置</a-button></div><div class="conversation-composer-send"><button type="button" class="conversation-model-state" @click="router.push('/llm-configs')" :title="modelConfigured ? modelName : '先配置并激活 AI 模型，再发送消息'"><span :class="{ ready: modelConfigured }"></span>{{ modelConfigured ? modelName || '模型已就绪' : '模型未配置' }}</button>
       <TokenUsageIndicator
         v-if="contextTokenCount > 0 || contextLimit > 0"
         :current-tokens="contextTokenCount"
@@ -65,6 +67,7 @@
         v-if="!isLoading"
         type="primary"
         class="send-button"
+        :disabled="!modelConfigured || (!inputMessage.trim() && !imageFile)"
         @click="handleSendMessage"
       >
         <template #icon>
@@ -84,18 +87,20 @@
         </template>
         <span>停止</span>
       </a-button>
+      </div></div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   Textarea as ATextarea,
   Button as AButton,
   Message
 } from '@arco-design/web-vue';
-import { IconImage, IconClose, IconReply, IconSend, IconRecordStop } from '@arco-design/web-vue/es/icon';
+import { IconImage, IconClose, IconReply, IconSend, IconRecordStop, IconAttachment, IconApps } from '@arco-design/web-vue/es/icon';
 import TokenUsageIndicator from './TokenUsageIndicator.vue';
 
 interface ChatMessage {
@@ -108,6 +113,8 @@ interface ChatMessage {
 }
 
 interface Props {
+  modelConfigured?: boolean;
+  modelName?: string;
   isLoading: boolean;
   supportsVision?: boolean;
   contextTokenCount?: number;
@@ -116,6 +123,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  modelConfigured: false,
+  modelName: '',
   supportsVision: false,
   contextTokenCount: 0,
   contextLimit: 128000,
@@ -123,6 +132,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
+  'tool-settings': [];
   'send-message': [data: { message: string; image?: string; imageDataUrl?: string; quotedMessage?: ChatMessage | null }];
   'clear-quote': [];
   'stop-generation': [];
@@ -136,6 +146,12 @@ const truncateQuote = (text: string): string => {
 };
 
 const inputMessage = ref('');
+const router = useRouter();
+const textareaRef = ref<InstanceType<typeof ATextarea>>();
+const fileInputRef = ref<HTMLInputElement>();
+async function setDraft(message: string) { inputMessage.value = message; await nextTick(); textareaRef.value?.focus(); }
+function handleImageSelection(event: Event) { const input = event.target as HTMLInputElement; if (input.files?.[0]) processImageFile(input.files[0]); input.value = ''; }
+defineExpose({ setDraft });
 const imageFile = ref<File | null>(null);
 const imagePreview = ref<string>('');
 const isDragOver = ref(false);
@@ -153,6 +169,8 @@ const removeImage = () => {
 
 // 发送消息
 const handleSendMessage = async () => {
+  if (props.isLoading) return;
+  if (!props.modelConfigured) { Message.warning('请先配置并激活 AI 模型，消息草稿已保留'); return; }
   const message = inputMessage.value.trim();
   
   // 检查是否有内容（文本或图片）
@@ -217,7 +235,7 @@ const fileToBase64WithDataUrl = (file: File): Promise<{ base64: string; dataUrl:
 // 处理键盘事件
 const handleKeyDown = (event: KeyboardEvent) => {
   // Enter键发送消息，Shift+Enter换行
-  if (event.key === 'Enter' && !event.shiftKey) {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
     event.preventDefault(); // 阻止默认的换行行为
     handleSendMessage();
   }

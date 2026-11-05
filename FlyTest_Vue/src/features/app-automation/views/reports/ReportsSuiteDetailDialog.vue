@@ -2,7 +2,7 @@
   <a-modal class="fc-dialog"
     v-model:visible="visibleModel"
     title="套件详情"
-    width="880px"
+    :width="Math.min(880,width-24)"
     :footer="false"
   >
     <div v-if="selectedSuite" class="detail-shell fc-detail-page">
@@ -49,6 +49,9 @@
 </template>
 
 <script setup lang="ts">
+import {useWindowSize} from '@vueuse/core'
+const {width}=useWindowSize()
+
 import type { ReportsSuiteDetailDialogProps } from './reportViewModels'
 
 defineProps<ReportsSuiteDetailDialogProps>()

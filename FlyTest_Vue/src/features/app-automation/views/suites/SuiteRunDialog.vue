@@ -1,7 +1,9 @@
 <template>
-  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="执行测试套件" @ok="emit('run')">
+  <a-modal class="fc-dialog" v-model:visible="visibleModel" title="执行测试套件" :on-before-ok="run" :ok-loading="running">
     <a-form class="fc-form" :model="runForm" layout="vertical">
-      <a-form-item field="device_id" label="执行设备">
+      <a-form-item label="执行策略"><a-select v-model="runForm.execution_strategy"><a-option value="sequential">顺序执行</a-option><a-option value="parallel" :disabled="!parallelAvailable">并行执行（多设备隔离）</a-option></a-select></a-form-item>
+      <a-form-item v-if="runForm.execution_strategy === 'parallel'" label="并行设备"><a-select v-model="runForm.device_ids" multiple placeholder="至少选择 2 台不同设备" :max-tag-count="3"><a-option v-for="item in availableDevices" :key="item.id" :value="item.id">{{ item.name || item.device_id }}</a-option></a-select><small>每台设备按顺序执行分配的用例，各设备之间并行。</small></a-form-item>
+      <a-form-item v-else field="device_id" label="执行设备">
         <a-select v-model="runForm.device_id" placeholder="请选择可用设备">
           <a-option v-for="item in availableDevices" :key="item.id" :value="item.id">
             {{ item.name || item.device_id }}

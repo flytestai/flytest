@@ -247,6 +247,7 @@ export function useAppAutomationSceneBuilder() {
   })
 
   const {
+    loadError,
     loading,
     saving,
     executing,
@@ -497,7 +498,7 @@ export function useAppAutomationSceneBuilder() {
   const executeCurrentDraft = () => runWorkflowExecuteCurrentDraft(executeVisible)
 
   const saveDraft = async () => {
-    await persistDraft()
+    return await persistDraft()
   }
 
   watch(
@@ -541,6 +542,7 @@ export function useAppAutomationSceneBuilder() {
   })
 
   return {
+    loadError,
     projectStore,
     aiGenerating,
     loading,

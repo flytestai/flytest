@@ -56,11 +56,13 @@ export interface DevicesTableCardProps {
 
 export interface DeviceConnectDialogProps {
   connectForm: DeviceConnectFormModel
+  connectDevice: () => Promise<boolean>
 }
 
 export interface DeviceEditDialogProps {
   editForm: DeviceEditFormModel
   editSaving: boolean
+  submitDevice: () => Promise<boolean>
 }
 
 export interface DeviceDetailDialogProps {

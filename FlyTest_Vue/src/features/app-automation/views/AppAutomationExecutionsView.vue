@@ -4,43 +4,12 @@
       <a-empty description="请先选择项目后再查看 APP 自动化执行记录" />
     </div>
     <template v-else>
-      <ExecutionsHeaderBar
-        :loading="loading"
-        :last-updated-text="lastUpdatedText"
-        @refresh="loadData"
-      />
-
-      <ExecutionsFilterCard
-        :filters="filters"
-        :suites="suites"
-        @search="handleSearch"
-        @reset="resetFilters"
-      />
-
-      <ExecutionsStatsGrid :statistics="statistics" />
-
-      <ExecutionsTableCard
-        v-model:current="pagination.current"
-        v-model:page-size="pagination.pageSize"
-        :loading="loading"
-        :executions="pagedExecutions"
-        :total="filteredExecutions.length"
-        :stopping-ids="stoppingIds"
-        :format-date-time="formatDateTime"
-        :format-duration="formatDuration"
-        :format-rate="formatRate"
-        :format-progress="formatProgress"
-        :get-execution-source="getExecutionSource"
-        :get-execution-status-meta="getExecutionStatusMeta"
-        :can-open-report="canOpenReport"
-        :is-execution-running="isExecutionRunning"
-        @view-detail="viewDetail"
-        @open-report="openReport"
-        @stop-execution="stopExecution"
-      />
+      <ExecutionsReferenceWorkspace :records="executions" :paged="pagedExecutions" :total="filteredExecutions.length" :filters="filters" :pagination="pagination" :devices="devices" :cases="cases" :packages="packages" :suites="suites" :tasks="tasks" :loading="loading" :error="loadError" :related-error="relatedError" :last-updated="lastUpdatedText" :status-meta="getExecutionStatusMeta" :can-report="canOpenReport" :stopping-ids="stoppingIds"
+        @reload="loadData" @reset="resetFilters" @detail="openDetail" @logs="openLogs" @report="openReport" @stop="stopExecution" />
 
       <ExecutionsDetailDialog
         v-model:visible="detailVisible"
+        v-model:section="detailSection"
         :detail-loading="detailLoading"
         :current-execution="currentExecution"
         :execution-artifacts="executionArtifacts"
@@ -63,16 +32,15 @@
 </template>
 
 <script setup lang="ts">
+import {ref} from 'vue'
+import ExecutionsReferenceWorkspace from './executions/ExecutionsReferenceWorkspace.vue'
 import {
   ExecutionsDetailDialog,
-  ExecutionsFilterCard,
-  ExecutionsHeaderBar,
-  ExecutionsStatsGrid,
-  ExecutionsTableCard,
   useAppAutomationExecutions,
 } from './executions'
 
 const {
+  devices, packages, cases, tasks, executions, loadError, relatedError,
   projectStore,
   loading,
   detailLoading,
@@ -94,16 +62,17 @@ const {
   getLogLevelColor,
   filteredExecutions,
   pagedExecutions,
-  statistics,
   executionArtifacts,
   loadData,
-  handleSearch,
   resetFilters,
   viewDetail,
   openReport,
   openExecutionArtifact,
   stopExecution,
 } = useAppAutomationExecutions()
+const detailSection=ref<'summary'|'logs'>('summary')
+const openDetail=(id:number)=>{detailSection.value='summary';void viewDetail(id)}
+const openLogs=(id:number)=>{detailSection.value='logs';void viewDetail(id)}
 </script>
 
 <style scoped>
@@ -112,7 +81,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0!important;
 }
 
 .empty-shell {

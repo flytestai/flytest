@@ -8,6 +8,7 @@ import {
   openExecutionReportWindow,
   replaceAppAutomationQuery,
 } from '../appAutomationNavigation'
+import {executionState,reportAvailable} from './reportPresentation'
 import type { AppExecution, AppTestSuite } from '../../types'
 import type {
   ReportCaseFilters,
@@ -26,6 +27,9 @@ export function useAppAutomationReports() {
 
   const activeTab = ref<'suite' | 'case'>('suite')
   const loading = ref(false)
+  const loadError = ref(false)
+  let loadVersion=0
+  let detailVersion=0
   const loadedProjectId = ref<number | null>(null)
   const suites = ref<AppTestSuite[]>([])
   const executions = ref<AppExecution[]>([])
@@ -128,14 +132,7 @@ export function useAppAutomationReports() {
     return { label: '未执行', color: 'gray' }
   }
 
-  const getExecutionState = (record: AppExecution) => {
-    if (record.result === 'passed') return 'passed'
-    if (record.result === 'failed' || record.status === 'failed') return 'failed'
-    if (record.result === 'stopped' || record.status === 'stopped') return 'stopped'
-    if (record.status === 'running') return 'running'
-    if (record.status === 'pending') return 'pending'
-    return 'unknown'
-  }
+  const getExecutionState = executionState
 
   const getExecutionStatus = (record: AppExecution): ReportStatusMeta => {
     const state = getExecutionState(record)
@@ -143,6 +140,7 @@ export function useAppAutomationReports() {
     if (state === 'pending') return { label: '等待执行', color: 'gold' }
     if (state === 'passed') return { label: '执行通过', color: 'green' }
     if (state === 'failed') return { label: '执行失败', color: 'red' }
+    if (state === 'error') return { label: '执行异常', color: 'orange' }
     if (state === 'stopped') return { label: '已停止', color: 'orange' }
     return { label: record.result || record.status || '未知', color: 'gray' }
   }
@@ -160,10 +158,7 @@ export function useAppAutomationReports() {
       ? suiteNameMap.value[record.test_suite_id] || `套件 #${record.test_suite_id}`
       : '独立执行'
 
-  const canOpenReport = (record: AppExecution) =>
-    Boolean(record.report_path) ||
-    ['completed', 'failed', 'stopped'].includes(record.status) ||
-    ['passed', 'failed', 'stopped'].includes(record.result)
+  const canOpenReport = reportAvailable
 
   const filteredSuites = computed(() => {
     const keyword = suiteFilters.search.trim().toLowerCase()
@@ -287,6 +282,7 @@ export function useAppAutomationReports() {
   }
 
   const loadData = async () => {
+    const version=++loadVersion,projectId=projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       clearLoadedData()
       loading.value = false
@@ -294,12 +290,14 @@ export function useAppAutomationReports() {
     }
 
     loading.value = true
+    loadError.value = false
     try {
       const [suiteList, executionList] = await Promise.all([
         AppAutomationService.getTestSuites(projectStore.currentProjectId),
         AppAutomationService.getExecutions(projectStore.currentProjectId),
       ])
 
+      if(version!==loadVersion || projectId!==projectStore.currentProjectId)return
       suites.value = suiteList
       executions.value = executionList
       lastUpdatedAt.value = new Date().toISOString()
@@ -307,9 +305,11 @@ export function useAppAutomationReports() {
 
       await syncRouteContext()
     } catch (error: any) {
+      if(version!==loadVersion || projectId!==projectStore.currentProjectId)return
+      loadError.value=true
       Message.error(error.message || '加载执行报告失败')
     } finally {
-      loading.value = false
+      if(version===loadVersion)loading.value = false
     }
   }
 
@@ -381,6 +381,7 @@ export function useAppAutomationReports() {
   }
 
   const openExecutionDetail = async (id: number, options: { syncRoute?: boolean } = {}) => {
+    const version=++detailVersion,project=projectStore.currentProjectId
     if (!projectStore.currentProjectId) {
       currentExecution.value = null
       executionDetailVisible.value = false
@@ -388,7 +389,10 @@ export function useAppAutomationReports() {
     }
 
     try {
-      currentExecution.value = await AppAutomationService.getExecutionDetail(id)
+      const detail=await AppAutomationService.getExecutionDetail(id)
+      if(version!==detailVersion || project!==projectStore.currentProjectId || route.query.tab!=='reports')return
+      if(detail.project_id!==project)throw new Error('报告不属于当前项目')
+      currentExecution.value = detail
       executionDetailVisible.value = true
       activeTab.value = 'case'
 
@@ -401,6 +405,7 @@ export function useAppAutomationReports() {
         })
       }
     } catch (error: any) {
+      if(version!==detailVersion || project!==projectStore.currentProjectId)return
       if (currentExecution.value?.id === id || options.syncRoute === false) {
         executionDetailVisible.value = false
         currentExecution.value = null
@@ -603,6 +608,7 @@ export function useAppAutomationReports() {
     projectStore,
     activeTab,
     loading,
+    loadError,
     suites,
     executions,
     selectedSuite,

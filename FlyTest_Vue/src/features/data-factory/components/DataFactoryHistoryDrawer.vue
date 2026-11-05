@@ -11,9 +11,10 @@
           <a-input-search
             v-model="recordFilters.search"
             allow-clear
-            placeholder="搜索工具、标签或结果预览"
+            placeholder="搜索工具名称或标签"
             :disabled="!projectReady"
             @search="searchRecords"
+            @press-enter="searchRecords"
             @clear="searchRecords"
           />
           <a-select v-model="recordFilters.category" :disabled="!projectReady" @change="searchRecords">

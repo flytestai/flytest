@@ -1,6 +1,6 @@
 <template>
   <div class="api-automation-shell fc-page">
-    <WorkspaceModuleHeader title="接口自动化" :page-title="activeTab === 'requests' ? '接口自动化' : workspaceTabs.find(tab => tab.key === activeTab)?.label" description="连接接口设计、调试与自动化验证" :tabs="workspaceTabs.map(tab => ({...tab,to:{path:'/api-automation',query:{tab:tab.key}}}))" :active-key="activeTab" />
+    <ApiWorkspaceHeader ref="presentationRef" :title="activeTab === 'requests' ? '接口自动化' : workspaceTabs.find(tab => tab.key === activeTab)?.label || '接口自动化'" :description="pageDescription" :metrics="workspaceMetrics" :tabs="workspaceTabs.map(tab => ({...tab,to:{path:'/api-automation',query:{tab:tab.key}}}))" :active-key="activeTab" />
     <WorkspaceDirectoryLayout compact-header
       ref="workspaceRef"
       storage-key="api-automation"
@@ -18,6 +18,7 @@
           @navigate="workspaceRef?.closeDirectory()"
           @updated="onCollectionUpdated"
         />
+        <section v-if="activeTab === 'requests' && recentExecutions.length" class="api-directory-recent"><h4>最近执行</h4><button v-for="record in recentExecutions" :key="record.id" type="button" @click="router.push('/api-automation?tab=execution-records')"><span :class="record.passed ? 'quality-success' : 'quality-danger'">{{ record.passed ? '✓' : '×' }}</span><span>{{ record.interface_name || record.request_name }}</span><small>{{ new Date(record.created_at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) }}</small></button></section>
       </template>
       <template v-if="isSummaryTab" #filters>
         <a-select
@@ -72,13 +73,14 @@
           :selected-request-id="selectedRequestId"
           :selected-request-name="selectedRequest?.name"
           @executed="handleExecutionUpdated"
+          @updated="onRequestUpdated"
         />
       </WorkspacePane>
       <WorkspacePane
         v-if="mountedTabs.includes('environments')"
         :active="activeTab === 'environments'"
       >
-        <EnvironmentList ref="environmentListRef" />
+        <EnvironmentList ref="environmentListRef" @updated="onEnvironmentUpdated" />
       </WorkspacePane>
       <WorkspacePane
         v-if="mountedTabs.includes('execution-records')"
@@ -110,17 +112,22 @@ import WorkspaceModuleHeader from "@/components/workspace/WorkspaceModuleHeader.
 import WorkspaceDirectoryLayout from "@/components/workspace/WorkspaceDirectoryLayout.vue";
 import WorkspacePane from "@/components/workspace/WorkspacePane.vue";
 
-import { computed, defineAsyncComponent, ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch, provide } from "vue";
+import ApiWorkspaceHeader from '../components/ApiWorkspaceHeader.vue';
+import { apiWorkspaceKey, type ApiWorkspaceMetric } from '../state/workspacePresentation';
+import { getProjectStatistics } from '@/services/projectService';
+import { calculatePassRate, formatQualityPercent, passRateTone } from '@/utils/qualityStatus';
 import { useRoute, useRouter } from "vue-router";
 import { useProjectStore } from "@/store/projectStore";
 import type {
   ApiAutomationSelection,
   ApiCollection,
   ApiRequest,
+  ApiExecutionRecord,
 } from "../types";
 import CollectionPanel from "../components/CollectionPanel.vue";
 import RequestWorkbench from "../components/RequestWorkbench.vue";
-import { collectionApi } from "../api";
+import { collectionApi, executionRecordApi } from "../api";
 import { Message } from "@arco-design/web-vue";
 
 const EnvironmentList = defineAsyncComponent(
@@ -192,6 +199,26 @@ const normalizeTab = (value: unknown): ApiAutomationTab => {
 const activeTab = computed<ApiAutomationTab>(() =>
   normalizeTab(route.query.tab),
 );
+const presentationRef = ref<InstanceType<typeof ApiWorkspaceHeader>>();
+const presentedMetrics = ref<Record<string, ApiWorkspaceMetric[]>>({});
+const recentExecutions=ref<ApiExecutionRecord[]>([]);
+const defaultMetrics = ref<ApiWorkspaceMetric[]>([{label:'接口总数',value:null},{label:'测试用例',value:null,tone:'purple'},{label:'近 7 天执行',value:null,tone:'blue'},{label:'通过率',value:null,tone:'neutral'}]);
+provide(apiWorkspaceKey, {actions:computed(() => presentationRef.value?.actions), publish:(tab,metrics) => {presentedMetrics.value[tab]=metrics}});
+const workspaceMetrics = computed(() => activeTab.value === 'requests' ? defaultMetrics.value : presentedMetrics.value[activeTab.value] || Array.from({length:4},(_,index) => ({label:['当前总量','配置状态','执行情况','通过率'][index],value:null,tone:'neutral'})));
+const pageDescription = computed(() => ({requests:'连接接口设计、调试与自动化验证','test-cases':'按接口管理自动化用例，连接配置、执行与验证结果',environments:'统一管理环境地址、变量与公共请求头','execution-records':'追踪运行批次、耗时、响应与失败信息','execution-report':'汇总执行趋势与问题分布，为质量决策提供依据'}[activeTab.value]));
+let summaryRequest=0;
+async function refreshWorkspaceSummary() {
+  const project=currentProjectId.value,id=++summaryRequest;
+  if(!project) return;
+  const [stats,report]=await Promise.allSettled([getProjectStatistics(project),executionRecordApi.report({project,days:7})]);
+  if(id!==summaryRequest || project!==currentProjectId.value) return;
+  const data=stats.status==='fulfilled' && stats.value.success ? stats.value.data?.api_automation : undefined;
+  const summary=report.status==='fulfilled' ? report.value.data?.data?.summary : undefined;
+  recentExecutions.value=report.status==='fulfilled' ? (report.value.data?.data?.recent_records || []).slice(0,3) : [];
+  const rate=summary ? calculatePassRate(summary.passed_count,summary.total_count) : null;
+  defaultMetrics.value=[{label:'接口总数',value:data?.requests ?? null},{label:'测试用例',value:data?.test_cases ?? null,tone:'purple'},{label:'近 7 天执行',value:summary?.total_count ?? null,tone:'blue'},{label:'通过率',value:formatQualityPercent(rate),tone:passRateTone(rate)}];
+}
+watch(currentProjectId,() => {++summaryRequest;presentedMetrics.value={};defaultMetrics.value=defaultMetrics.value.map(item=>({...item,value:null}));void refreshWorkspaceSummary()},{immediate:true});
 const workspaceRef = ref<InstanceType<typeof WorkspaceDirectoryLayout>>();
 const needsDirectory = computed(
   () => activeTab.value === "requests" || activeTab.value === "test-cases",
@@ -316,13 +343,21 @@ const onCollectionUpdated = () => {
 };
 
 const onRequestUpdated = () => {
+  void refreshWorkspaceSummary();
   collectionPanelRef.value?.refresh?.();
   testCaseListRef.value?.refresh?.();
   environmentListRef.value?.refresh?.();
   testReportViewRef.value?.refresh?.();
 };
+const onEnvironmentUpdated = () => {
+  requestListRef.value?.refreshEnvironments?.();
+  requestWorkbenchRef.value?.refreshEnvironments?.();
+  testCaseListRef.value?.refreshEnvironments?.();
+};
 
 const handleExecutionUpdated = () => {
+  void refreshWorkspaceSummary();
+  testCaseListRef.value?.refresh?.();
   executionRecordListRef.value?.refresh?.();
   testReportViewRef.value?.refresh?.();
 };

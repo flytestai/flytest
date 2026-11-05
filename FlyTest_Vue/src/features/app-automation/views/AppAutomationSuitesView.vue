@@ -4,37 +4,15 @@
       <a-empty description="请先选择项目后再管理 APP 测试套件" />
     </div>
     <template v-else>
-      <SuitesHeaderBar
-        v-model:search="filters.search"
-        v-model:status="filters.status"
-        @search="loadData"
-        @reset="resetFilters"
-        @refresh="loadData"
-        @create="openCreate"
-      />
-
-      <SuitesStatsGrid :statistics="suiteStats" />
-
-      <SuitesTableCard
-        :loading="loading"
-        :suites="filteredSuites"
-        :format-date-time="formatDateTime"
-        :get-suite-status-meta="getSuiteStatusMeta"
-        :get-suite-health-rate="getSuiteHealthRate"
-        @open-run="openRun"
-        @open-detail="openDetail"
-        @open-history="openHistory"
-        @duplicate-suite="duplicateSuite"
-        @open-edit="openEdit"
-        @remove="remove"
-      />
+      <SuitesReferenceWorkspace :project-id="projectStore.currentProjectId" :suites="suites" :cases="testCases" :packages="packages" :executions="executions" :loading="loading" :error="loadError" :execution-error="executionError" :metadata-available="capabilities.metadata" :status-meta="getSuiteStatusMeta"
+        @reload="loadData" @create="openCreate" @edit="openEdit" @run="openRun" @detail="openDetail" @history="openHistory" @duplicate="duplicateSuite" @remove="remove" @ai-apply="applyAiProposal" />
 
       <SuiteEditorDialog
         v-model:visible="visible"
         :form="form"
         :test-cases="testCases"
         :selected-cases="selectedCases"
-        @save="saveSuite"
+        :save="saveSuite" :saving="saving" :metadata-available="capabilities.metadata" :parallel-available="capabilities.parallel"
         @move-case="moveCase"
       />
 
@@ -43,7 +21,7 @@
         :run-form="runForm"
         :available-devices="availableDevices"
         :packages="packages"
-        @run="runSuite"
+        :run="runSuite" :running="running" :parallel-available="capabilities.parallel"
       />
 
       <SuiteDetailDialog
@@ -89,19 +67,18 @@
 </template>
 
 <script setup lang="ts">
+import SuitesReferenceWorkspace from './suites/SuitesReferenceWorkspace.vue'
 import {
   SuiteDetailDialog,
   SuiteEditorDialog,
   SuiteExecutionDetailDialog,
   SuiteHistoryDialog,
   SuiteRunDialog,
-  SuitesHeaderBar,
-  SuitesStatsGrid,
-  SuitesTableCard,
   useAppAutomationSuites,
 } from './suites'
 
 const {
+  saving, running, loadError, executionError, capabilities, executions,
   projectStore,
   loading,
   visible,
@@ -116,7 +93,6 @@ const {
   history,
   selectedSuite,
   currentExecution,
-  filters,
   form,
   runForm,
   availableDevices,
@@ -129,11 +105,8 @@ const {
   formatRate,
   formatDuration,
   getLogLevelColor,
-  filteredSuites,
-  suiteStats,
   executionArtifacts,
   loadData,
-  resetFilters,
   openCreate,
   openEdit,
   saveSuite,
@@ -149,6 +122,7 @@ const {
   duplicateSuite,
   remove,
 } = useAppAutomationSuites()
+const applyAiProposal = (proposal:{name:string;description:string;test_case_ids:number[]}) => { openCreate(); form.name=proposal.name; form.description=proposal.description; form.test_case_ids=proposal.test_case_ids.filter(id=>testCases.value.some(item=>item.id===id)) }
 </script>
 
 <style scoped>
@@ -157,7 +131,7 @@ const {
   flex-direction: column;
   gap: 18px;
   min-height: 0;
-  padding: 8px 6px 10px;
+  padding: 0!important;
 }
 
 .empty-shell {

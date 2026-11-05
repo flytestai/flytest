@@ -1,6 +1,7 @@
 <template>
   <div class="actuator-list fc-page">
-    <WorkspacePageHeader title="在线执行器"><template #meta>共 {{ actuators.length }} 个</template><template #actions><a-button @click="loadActuators" :loading="loading"><template #icon><icon-refresh /></template>刷新</a-button></template></WorkspacePageHeader>
+    <WebDataWorkspace ref="webWorkspace" kind="actuators" :rows="actuators" :loading="loading">
+    <WorkspacePageHeader local title="在线执行器"><template #meta>共 {{ actuators.length }} 个</template><template #actions><a-button @click="loadActuators" :loading="loading"><template #icon><icon-refresh /></template>刷新</a-button></template></WorkspacePageHeader>
 
     <a-alert
       v-if="!loading && actuators.length === 0"
@@ -8,14 +9,14 @@
       class="mb-4"
     >
       <template #title>暂无在线执行器</template>
-      请先启动执行器服务：`cd FlyTest_Actuator && .venv\Scripts\python.exe main.py --no-gui`
+      请连接 Web 执行器；连接后可在此查看浏览器与任务接收状态。
     </a-alert>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :data="actuators"
       :loading="loading"
       :pagination="false"
-      stripe
+      :scroll="{x:1000}"
     >
       <template #columns>
         <a-table-column title="状态" :width="70" align="center">
@@ -23,7 +24,7 @@
             <div class="online-dot"></div>
           </template>
         </a-table-column>
-        <a-table-column title="名称" data-index="name" :width="160" />
+        <a-table-column title="名称" :width="160"><template #cell="{record}"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{record.name}}</button></template></a-table-column>
         <a-table-column title="IP 地址" data-index="ip" :width="150" />
         <a-table-column title="类型" :width="100">
           <template #cell="{ record }">
@@ -57,10 +58,13 @@
         </a-table-column>
       </template>
     </a-table>
+    </WebDataWorkspace>
   </div>
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { IconRefresh } from '@arco-design/web-vue/es/icon'

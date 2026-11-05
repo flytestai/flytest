@@ -35,12 +35,12 @@ const parseTagsText = (value: string) =>
 export const createDefaultElementFormModel = (): ElementsEditorFormModel => ({
   id: 0,
   name: '',
-  element_type: 'image',
-  selector_type: 'image',
+  element_type: 'locator',
+  selector_type: 'resource-id',
   selector_value: '',
   description: '',
   tagsText: '',
-  configText: '{\n  "threshold": 0.7\n}',
+  configText: '{}',
   image_path: '',
   imageCategory: 'common',
   fileHash: '',
@@ -53,6 +53,10 @@ export const createDefaultElementFormModel = (): ElementsEditorFormModel => ({
   regionY1: 0,
   regionX2: 0,
   regionY2: 0,
+  pageName: '',
+  controlType: 'generic',
+  reuseStatus: 'no',
+  maintenanceStatus: 'normal',
 })
 
 export const resolveElementImageCategory = (
@@ -92,6 +96,10 @@ export const buildElementFormPatchFromRecord = (record: AppElement): ElementsEdi
     regionY1: toFiniteNumber((config as Record<string, unknown>).y1),
     regionX2: toFiniteNumber((config as Record<string, unknown>).x2),
     regionY2: toFiniteNumber((config as Record<string, unknown>).y2),
+    pageName: String(config.page_name || ''),
+    controlType: String(config.ui_type || 'generic'),
+    reuseStatus: config.reusable === true ? 'yes' : config.reusable === false ? 'no' : 'unknown',
+    maintenanceStatus: config.maintenance_status === 'needs_maintenance' ? 'needs_maintenance' : config.maintenance_status === 'normal' ? 'normal' : 'unknown',
   }
 }
 
@@ -104,7 +112,7 @@ export const buildElementPayloadFromForm = (
       ? form.image_path.trim()
       : form.element_type === 'pos'
         ? `${form.posX},${form.posY}`
-        : `${form.regionX1},${form.regionY1},${form.regionX2},${form.regionY2}`)
+        : form.element_type === 'region' ? `${form.regionX1},${form.regionY1},${form.regionX2},${form.regionY2}` : '')
 
   const selectorType = form.selector_type.trim()
     || (form.element_type === 'image' ? 'image' : form.element_type)
@@ -123,7 +131,7 @@ export const buildElementPayloadFromForm = (
   } else if (form.element_type === 'pos') {
     config.x = form.posX
     config.y = form.posY
-  } else {
+  } else if (form.element_type === 'region') {
     config.x1 = form.regionX1
     config.y1 = form.regionY1
     config.x2 = form.regionX2
@@ -131,6 +139,12 @@ export const buildElementPayloadFromForm = (
     config.width = Math.max(form.regionX2 - form.regionX1, 0)
     config.height = Math.max(form.regionY2 - form.regionY1, 0)
   }
+  config.page_name = form.pageName.trim()
+  config.ui_type = form.controlType
+  if (form.reuseStatus === 'unknown') delete config.reusable
+  else config.reusable = form.reuseStatus === 'yes'
+  if (form.maintenanceStatus === 'unknown') delete config.maintenance_status
+  else config.maintenance_status = form.maintenanceStatus
 
   return {
     project_id: projectId,
@@ -157,7 +171,7 @@ export const buildElementPayloadFromRecord = (
   selector_value: String(overrides?.selector_value ?? record.selector_value),
   description: String(overrides?.description ?? record.description),
   tags: [...record.tags],
-  config: cloneElementValue(record.config || {}),
+  config: cloneElementValue(overrides?.config ?? record.config ?? {}),
   image_path: String(overrides?.image_path ?? record.image_path),
   is_active: typeof overrides?.is_active === 'boolean' ? overrides.is_active : record.is_active,
 })

@@ -1,6 +1,6 @@
 <template>
   <div class="testsuite-management-container fc-page">
-    <AssetModuleHeader />
+    <AssetModuleHeader ref="assetHeaderRef"><template #actions><a-button type="primary" :disabled="!currentProjectId" @click="suitePanelRef?.createRootSuite()">＋ 新建套件</a-button></template></AssetModuleHeader>
     <div v-if="!currentProjectId" class="empty-state">
       <a-empty description="请先选择项目" />
     </div>
@@ -13,12 +13,11 @@
           @suite-selected="handleSuiteSelected"
           @suite-updated="handleSuiteUpdated"
         /></template>
-<template v-if="!selectedSuiteId" #heading><WorkspacePageHeader local title="测试套件" description="从套件目录选择需要查看的内容" /></template>
 
         <template v-if="selectedSuiteId">
           <WorkspacePageHeader v-if="viewMode === 'list'" :title="selectedSuiteDetail?.name || '测试套件'">
 <template #meta>{{ selectedSuiteDetail?.description || '查看并执行套件中的用例' }}</template>
-<template #actions><div class="suite-toolbar-actions">
+<template #actions><Teleport :to="assetHeaderRef?.actionsTarget || 'body'" :disabled="!assetHeaderRef?.actionsTarget"><div class="suite-toolbar-actions">
               <a-button @click="goToTestReport">测试报告</a-button>
               <a-button @click="showDetailModal = true">套件详情</a-button>
               <a-button
@@ -28,19 +27,19 @@
               >
                 执行套件
               </a-button>
-            </div>
+            </div></Teleport>
           </template>
 </WorkspacePageHeader>
 
           <WorkspacePane :active="viewMode === 'list'" class="suite-list-stack">
-            <TestCaseList :local-heading="true"
+            <TestCaseList :local-heading="true" reference-layout :asset-actions-target="viewMode === 'list' ? assetHeaderRef?.actionsTarget : undefined"
               ref="testCaseListRef"
               :current-project-id="currentProjectId"
               :selected-suite-id="selectedSuiteId"
               :selected-module-id="selectedModuleId"
               :module-tree="moduleTreeForForm"
               :show-create-actions="false"
-              :show-review-status="false"
+              :show-review-status="true"
               action-mode="suite"
               time-column-mode="assigned"
               @edit-test-case="showEditTestCaseForm"
@@ -138,6 +137,7 @@ const projectStore = useProjectStore();
 const currentProjectId = computed(() => projectStore.currentProjectId || null);
 
 const suitePanelRef = ref<InstanceType<typeof TestSuiteTreePanel> | null>(null);
+const assetHeaderRef = ref<InstanceType<typeof AssetModuleHeader>>();
 const testCaseListRef = ref<InstanceType<typeof TestCaseList> | null>(null);
 
 const selectedSuiteId = ref<number | null>(null);

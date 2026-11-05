@@ -1,5 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .element_recognition import ElementRecognitionAPIView
+from .suite_planning import SuitePlanningAPIView
+from .task_planning import TaskPlanningAPIView
 from .views import (
     LLMConfigViewSet,
     ChatAPIView,
@@ -21,6 +24,9 @@ router.register(r"tool-approvals", UserToolApprovalViewSet, basename="tool-appro
 # API 路由地址由 router 自动生成。
 # 同时包含可浏览 API 所需的登录相关路由。
 urlpatterns = [
+    path("task-planning/", TaskPlanningAPIView.as_view(), name="task_planning_api"),
+    path("suite-planning/", SuitePlanningAPIView.as_view(), name="suite_planning_api"),
+    path("element-recognition/", ElementRecognitionAPIView.as_view(), name="element_recognition_api"),
     path("", include(router.urls)),
     path("providers/", ProviderChoicesAPIView.as_view(), name="provider_choices_api"),
     path("chat/", ChatAPIView.as_view(), name="chat_api"),

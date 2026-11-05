@@ -1,6 +1,7 @@
 <template>
   <div class="page-management fc-page">
-    <WorkspacePageHeader title="页面管理"><template #actions><div class="fc-workspace-tools">
+    <WebDataWorkspace ref="webWorkspace" kind="pages" :rows="pageData" :total="pagination.total" :loading="loading" @edit="editPage" @inspect="viewElements">
+    <WorkspacePageHeader local title="页面管理"><template #actions><div class="fc-workspace-tools">
       <div class="search-box">
         <a-input-search
           v-model="filters.search"
@@ -13,13 +14,13 @@
       </div>
       <div class="action-buttons">
         <a-button type="primary" @click="showAddModal">
-          <template #icon><icon-plus /></template>
+      <template #icon><icon-plus /></template>
           新增页面
         </a-button>
       </div>
     </div></template></WorkspacePageHeader>
 
-    <a-table class="fc-table"
+    <a-table class="fc-table" size="small" row-key="id" :row-class="record => webWorkspace?.rowClass(record)" @row-click="(record,event) => webWorkspace?.onRowClick(record,event)"
       :columns="columns"
       :data="pageData"
       :pagination="pagination"
@@ -28,6 +29,7 @@
       @page-change="onPageChange"
       @page-size-change="onPageSizeChange"
     >
+      <template #workspace_name="{ record }"><button class="web-row-link" @click.stop="webWorkspace?.select(record)">{{ record.name }}</button></template>
       <template #module_name="{ record }">
         <a-tag color="arcoblue">{{ record.module_name }}</a-tag>
       </template>
@@ -65,6 +67,7 @@
         </a-space>
       </template>
     </a-table>
+    </WebDataWorkspace>
 
     <!-- 新增/编辑弹窗 -->
     <a-modal class="fc-dialog"
@@ -107,6 +110,8 @@
 </template>
 
 <script setup lang="ts">
+import WebDataWorkspace from '../components/WebDataWorkspace.vue'
+const webWorkspace = ref<InstanceType<typeof WebDataWorkspace>>()
 import WorkspacePageHeader from '@/components/workspace/WorkspacePageHeader.vue';
 import { ref, reactive, computed, watch } from 'vue'
 import { Message } from '@arco-design/web-vue'
@@ -153,12 +158,12 @@ const rules = {
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 70, align: 'center' as const },
   { title: '模块', slotName: 'module_name', width: 120, align: 'center' as const },
-  { title: '页面名称', dataIndex: 'name', ellipsis: true, tooltip: true, width: 150, align: 'center' as const },
+  { title: '页面名称', slotName: 'workspace_name', ellipsis: true, tooltip: true, width: 150, align: 'center' as const },
   { title: 'URL', slotName: 'url', width: 200, align: 'center' as const },
   { title: '元素数', slotName: 'element_count', width: 80, align: 'center' as const },
   { title: '创建者', dataIndex: 'creator_name', width: 100, align: 'center' as const },
   { title: '创建时间', slotName: 'created_at', width: 160, align: 'center' as const },
-  { title: '操作', slotName: 'operations', width: 220, fixed: 'right' as const, align: 'center' as const },
+  { title: '操作', slotName: 'operations', width: 125, fixed: 'right' as const, align: 'center' as const },
 ]
 
 const formatDate = (dateStr: string) => {

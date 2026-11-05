@@ -1,0 +1,19 @@
+<template>
+  <div class="api-report-overview">
+    <div class="api-chart-grid"><section class="api-chart-card"><h3>执行趋势</h3><div v-if="trend.length" class="api-trend-chart" role="img" aria-label="通过与失败执行趋势"><div v-for="day in trend" :key="day.label" class="api-trend-day" :title="day.label+'：通过 '+day.passed+'，失败与异常 '+day.failed"><div class="api-trend-bars"><span :style="{height:day.passed/max*100+'%'}" /><span :style="{height:day.failed/max*100+'%'}" /></div><small>{{ day.label.slice(5,10) }}</small></div></div><a-empty v-else description="暂无执行趋势" /><div class="api-chart-legend"><span><i />通过</span><span><i />失败与异常</span></div></section><section class="api-chart-card"><h3>结果分布</h3><div class="api-result-donut" :style="{background:donut}" role="img" :aria-label="'通过 '+report.summary.passed_count+'，失败与异常 '+failed"><div><strong>{{ report.summary.total_count }}</strong><small>总执行</small></div></div><div class="api-result-list"><span class="quality-success">通过 {{ report.summary.passed_count }}</span><span class="quality-danger">失败与异常 {{ failed }}</span><span v-if="other">其他 {{ other }}</span></div></section></div>
+    <div class="api-chart-grid"><section class="api-chart-card"><h3>失败接口排行</h3><div v-for="(item,index) in report.failing_requests.slice(0,5)" :key="item.request_id || index" class="api-ranking-row"><span>{{ index+1 }}</span><strong>{{ item.request_name || '已删除接口' }}</strong><div><i :style="{width:item.total/failureMax*100+'%'}" /></div><b>{{ item.total }} 次</b></div><a-empty v-if="!report.failing_requests.length" description="当前范围没有失败接口" /></section><section class="api-chart-card"><h3>近期错误样本分类</h3><div v-for="item in errors" :key="item.label" class="api-error-row"><span>{{ item.label }}</span><div><i :style="{width:item.count/errorMax*100+'%'}" /></div><b>{{ item.count }}</b></div><a-empty v-if="!errors.length" description="近期执行记录中没有失败样本" /><p class="api-preview-hint">根据报告返回的近期执行记录分类，不代表完整周期的错误总量。</p></section></div>
+  </div>
+</template>
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { ApiExecutionReport } from '../types'
+const props=defineProps<{report:ApiExecutionReport}>()
+const failed=computed(()=>props.report.summary.failed_count+props.report.summary.error_count)
+const other=computed(()=>Math.max(0,props.report.summary.total_count-props.report.summary.passed_count-failed.value))
+const donut=computed(()=>{const total=props.report.summary.total_count||1,pass=props.report.summary.passed_count/total*100,fail=failed.value/total*100;return `conic-gradient(#00a65a 0 ${pass}%,#e53935 ${pass}% ${pass+fail}%,#c5ced8 ${pass+fail}% 100%)`})
+const trend=computed(()=>{const items=props.report.trend || [],size=Math.max(1,Math.ceil(items.length/12)),bins:Array<{label:string;passed:number;failed:number}>=[];for(let start=0;start<items.length;start+=size){const group=items.slice(start,start+size);bins.push({label:group[0].day,passed:group.reduce((sum,item)=>sum+item.passed,0),failed:group.reduce((sum,item)=>sum+item.failed+item.error,0)})}return bins})
+const max=computed(()=>Math.max(1,...trend.value.flatMap(item=>[item.passed,item.failed])))
+const failureMax=computed(()=>Math.max(1,...props.report.failing_requests.map(item=>item.total)))
+const errors=computed(()=>{const counts=new Map<string,number>();for(const item of props.report.recent_records || []){if(item.passed)continue;const message=item.error_message || '';const label=/timeout|超时/i.test(message)?'请求超时':[401,403].includes(item.status_code || 0)?'鉴权失败':item.assertions_results?.some(assertion=>!assertion.passed)?'断言失败':item.status==='error'?'请求异常':'其他失败';counts.set(label,(counts.get(label)||0)+1)}return [...counts].map(([label,count])=>({label,count})).sort((a,b)=>b.count-a.count)})
+const errorMax=computed(()=>Math.max(1,...errors.value.map(item=>item.count)))
+</script>
